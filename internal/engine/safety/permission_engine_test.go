@@ -12,7 +12,7 @@ import (
 // no autonomy level (including YOLO) can bypass it while a spec workflow is
 // mid-flight.
 func TestCheckTool_SpecStageBlocksEvenYOLO(t *testing.T) {
-	for _, stage := range []SpecStage{SpecStageSpecify, SpecStagePlan, SpecStageTasks} {
+	for _, stage := range []SpecStage{SpecStageProposal, SpecStageSpecify, SpecStageDesign, SpecStagePlan, SpecStageTasks} {
 		pe := NewPermissionEngine()
 		pe.Stage = stage
 		pe.Autonomy = AutonomyYOLO
@@ -50,8 +50,13 @@ func TestCheckTool_SpecStageAllowsWorkflowAndReadTools(t *testing.T) {
 		t.Fatalf("Plan should wait for Specify, allowed=%v reason=%q", allowed, reason)
 	}
 	pe.SpecSlug = "test-spec"
+	pe.specDone = doneSpecify
+	if allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Plan"}); allowed || reason == "" {
+		t.Fatalf("Plan should wait for both Specify and Design, allowed=%v reason=%q", allowed, reason)
+	}
+	pe.specDone = doneSpecify | doneDesign
 	if allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Plan"}); !allowed || reason != "" {
-		t.Fatalf("Plan should be allowed after Specify, allowed=%v reason=%q", allowed, reason)
+		t.Fatalf("Plan should be allowed after both Specify and Design, allowed=%v reason=%q", allowed, reason)
 	}
 	if allowed, reason := pe.CheckTool(context.Background(), ToolCallInfo{Name: "Tasks"}); allowed || reason == "" {
 		t.Fatalf("Tasks should wait for Plan, allowed=%v reason=%q", allowed, reason)

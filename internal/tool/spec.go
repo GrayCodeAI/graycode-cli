@@ -100,23 +100,21 @@ func writeSpecArtifactInDir(dir, filename, content string) (string, error) {
 	return path, nil
 }
 
-// SpecifyTool starts (or restarts) a spec workflow: writes spec.md with the
-// model's understanding of the problem. First of the Specify -> Plan ->
-// Tasks -> ApproveImplementation sequence.
+// SpecifyTool writes spec.md — WHAT the system should do. Call after
+// Proposal; can run in parallel with Design.
 type SpecifyTool struct{}
 
 func (SpecifyTool) Name() string      { return "Specify" }
 func (SpecifyTool) Aliases() []string { return []string{"specify"} }
 func (SpecifyTool) Description() string {
-	return "Write spec.md describing the problem and requirements, starting a spec-driven workflow. Call this first when working through a gated spec stage. Write/Edit/Bash stay blocked until ApproveImplementation is called and approved."
+	return "Write spec.md describing requirements and constraints. Call after Proposal, can run in parallel with Design. Write/Edit/Bash stay blocked until ApproveImplementation."
 }
 
 func (SpecifyTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"title": map[string]interface{}{"type": "string", "description": "Short title for this spec, used to name its directory"},
-			"spec":  map[string]interface{}{"type": "string", "description": "The spec content: problem statement, requirements, constraints"},
+			"spec": map[string]interface{}{"type": "string", "description": "The spec content: problem statement, requirements, constraints"},
 		},
 		"required": []string{"spec"},
 	}
@@ -133,33 +131,35 @@ func (SpecifyTool) Execute(ctx context.Context, input json.RawMessage) (string, 
 	if strings.TrimSpace(p.Spec) == "" {
 		return "", fmt.Errorf("spec is required")
 	}
-	slug := slugify(p.Title)
-	if slug == "spec" {
-		slug = slugify(firstLine(p.Spec))
+	slug, _ := specSlug(ctx)
+	if slug == "" {
+		slug = slugify(p.Title)
+		if slug == "spec" {
+			slug = slugify(firstLine(p.Spec))
+		}
+		slug = fmt.Sprintf("%s-%d", slug, time.Now().Unix())
+		if err := setSpecSlug(ctx, slug); err != nil {
+			return "", err
+		}
+		if err := os.MkdirAll(filepath.Join(".hawk", "specs", slug), 0o700); err != nil {
+			return "", fmt.Errorf("mkdir: %w", err)
+		}
 	}
-	slug = fmt.Sprintf("%s-%d", slug, time.Now().Unix())
-	// Clear a previous slug before attempting the new artifact. A failed
-	// Specify must not leave a stale slug that lets Plan proceed.
-	if err := setSpecSlug(ctx, ""); err != nil {
-		return "", err
-	}
-	path, err := writeSpecArtifactForSlug(ctx, slug, "spec.md", p.Spec)
+	path, err := writeSpecArtifact(ctx, "spec.md", p.Spec)
 	if err != nil {
 		return "", err
 	}
-	if err := setSpecSlug(ctx, slug); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("Wrote %s. Next, call Plan with your technical approach.", path), nil
+	return fmt.Sprintf("Wrote %s. Next, call Plan (after both Specify and Design are complete).", path), nil
 }
 
-// PlanTool writes plan.md — the technical approach for an active spec.
+// PlanTool writes plan.md — the implementation plan. Requires both
+// Specify and Design to be complete.
 type PlanTool struct{}
 
 func (PlanTool) Name() string      { return "Plan" }
 func (PlanTool) Aliases() []string { return []string{"plan"} }
 func (PlanTool) Description() string {
-	return "Write plan.md describing the technical approach for the active spec. Call after Specify."
+	return "Write plan.md describing the implementation approach. Call after both Specify and Design are complete."
 }
 
 func (PlanTool) Parameters() map[string]interface{} {
@@ -304,7 +304,7 @@ func (SpecStatusTool) Execute(ctx context.Context, input json.RawMessage) (strin
 	}
 
 	b.WriteString("Artifacts:\n")
-	for _, f := range []string{"spec.md", "plan.md", "tasks.md", "specs.md"} {
+	for _, f := range []string{"proposal.md", "spec.md", "design.md", "plan.md", "tasks.md"} {
 		path := filepath.Join(specDir, f)
 		info, err := os.Stat(path)
 		if err != nil {
@@ -787,4 +787,96 @@ func firstLine(s string) string {
 		return s[:i]
 	}
 	return s
+}
+
+// ProposalTool starts a spec workflow by writing proposal.md — the "why"
+// document that establishes the problem and goals before any technical work.
+type ProposalTool struct{}
+
+func (ProposalTool) Name() string      { return "Proposal" }
+func (ProposalTool) Aliases() []string { return []string{"proposal"} }
+func (ProposalTool) Description() string {
+	return "Write proposal.md outlining WHY this change is needed. Call this first to start a spec-driven workflow."
+}
+
+func (ProposalTool) Parameters() map[string]interface{} {
+	return map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"title":    map[string]interface{}{"type": "string", "description": "Short title for this spec, used to name its directory"},
+			"proposal": map[string]interface{}{"type": "string", "description": "The proposal content: problem statement, goals, out of scope, success criteria"},
+		},
+		"required": []string{"proposal"},
+	}
+}
+
+func (ProposalTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
+	var p struct {
+		Title    string `json:"title"`
+		Proposal string `json:"proposal"`
+	}
+	if err := json.Unmarshal(input, &p); err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(p.Proposal) == "" {
+		return "", fmt.Errorf("proposal is required")
+	}
+	slug := slugify(p.Title)
+	if slug == "spec" {
+		slug = slugify(firstLine(p.Proposal))
+	}
+	slug = fmt.Sprintf("%s-%d", slug, time.Now().Unix())
+	if err := setSpecSlug(ctx, ""); err != nil {
+		return "", err
+	}
+	path, err := writeSpecArtifactForSlug(ctx, slug, "proposal.md", p.Proposal)
+	if err != nil {
+		return "", err
+	}
+	if err := setSpecSlug(ctx, slug); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Wrote %s. Next, call Specify (requirements) and/or Design (technical approach) in parallel.", path), nil
+}
+
+// DesignTool writes design.md — the technical approach for an active spec.
+// Can run in parallel with Specify after Proposal completes.
+type DesignTool struct{}
+
+func (DesignTool) Name() string      { return "Design" }
+func (DesignTool) Aliases() []string { return []string{"design"} }
+func (DesignTool) Description() string {
+	return "Write design.md describing the technical approach. Call after Proposal, can run in parallel with Specify."
+}
+
+func (DesignTool) Parameters() map[string]interface{} {
+	return map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"design": map[string]interface{}{"type": "string", "description": "The technical design: architecture, data flow, key decisions, components, interfaces"},
+		},
+		"required": []string{"design"},
+	}
+}
+
+func (DesignTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
+	var p struct {
+		Design string `json:"design"`
+	}
+	if err := json.Unmarshal(input, &p); err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(p.Design) == "" {
+		return "", fmt.Errorf("design is required")
+	}
+	path, err := writeSpecArtifact(ctx, "design.md", p.Design)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Wrote %s. Next, call Plan (after both Specify and Design are complete).", path), nil
+}
+
+func init() {
+	_ = ProposalTool{}
+	_ = DesignTool{}
 }

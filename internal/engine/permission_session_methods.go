@@ -17,9 +17,7 @@ func specConfigForPrompt() string {
 
 // specStageSystemPrompt is appended to the system prompt (ephemerally) while
 // a spec workflow is active and not yet approved for implementation. It
-// steers the model through discovery → Specify → Plan → Tasks → approval,
-// mirroring the old Plan Mode's research-then-approve shape but with real,
-// persisted documents at each stage.
+// steers the model through the full spec-driven workflow.
 const specStageSystemPrompt = "\n\n## Spec Stage (workflow gate)\n" +
 	"You are working through a spec-driven workflow. Research is unrestricted, but write/execute tools are blocked until you complete the workflow. " +
 	"\n\n### Workflow\n" +
@@ -31,14 +29,16 @@ const specStageSystemPrompt = "\n\n## Spec Stage (workflow gate)\n" +
 	"Use the `AskUser` tool for questions — you can ask one at a time or batch them. " +
 	"There is no limit on questions — ask what you need. " +
 	"If the user says 'you decide' or gives you freedom, make reasonable choices based on the codebase context.\n" +
-	"2. **Specify**: Call `Specify` with your full understanding to write spec.md. " +
-	"Use `[NEEDS CLARIFICATION: ...]` markers in the spec for any remaining unknowns (max 3 unresolved at a time).\n" +
-	"3. **Plan**: Call `Plan` with your technical approach to write plan.md.\n" +
-	"4. **Tasks**: Call `Tasks` with a breakdown to write tasks.md.\n" +
-	"5. **Approve**: Call `ApproveImplementation` to ask the user to approve moving to implementation. " +
+	"2. **Proposal**: Call `Proposal` to write proposal.md — establish WHY this change is needed (problem, goals, scope, success criteria).\n" +
+	"3. **Specify** + **Design** (parallel): After Proposal, call both `Specify` (requirements — WHAT the system does) and `Design` (technical approach — HOW). These can be done in either order or concurrently.\n" +
+	"4. **Plan**: Call `Plan` with your implementation plan to write plan.md. Requires both Specify and Design to be complete.\n" +
+	"5. **Tasks**: Call `Tasks` with a breakdown to write tasks.md.\n" +
+	"6. **Approve**: Call `ApproveImplementation` to ask the user to approve moving to implementation. " +
 	"Only after they approve will Write/Edit/Bash be permitted.\n" +
 	"\n### Quality checks\n" +
-	"- Spec should focus on WHAT and WHY, not HOW (no implementation details).\n" +
+	"- Proposal should be concise (1-2 pages) focusing on WHY.\n" +
+	"- Spec should focus on WHAT (requirements, scenarios), not HOW.\n" +
+	"- Design should focus on HOW (architecture, decisions, trade-offs).\n" +
 	"- Requirements should be testable, unambiguous, with measurable success criteria.\n" +
 	"- Edge cases, scope boundaries, and assumptions should be documented.\n" +
 	"- Tasks must use `- [ ]` checkbox format.\n" +

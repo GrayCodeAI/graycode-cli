@@ -532,8 +532,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if chosen != nil && m.session != nil {
 					switch chosen.Action {
 					case specActionStart:
-						m.session.PermSvc().SetSpecStage(engine.SpecStageSpecify)
-						m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow started — Write/Edit/Bash are gated until spec.md, plan.md, and tasks.md are written and ApproveImplementation is approved."})
+						m.session.PermSvc().SetSpecStage(engine.SpecStageProposal)
+						m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow started — Write/Edit/Bash are gated. Start with Proposal, then Specify + Design (parallel), then Plan, Tasks, and ApproveImplementation."})
 					case specActionStatus:
 						m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Spec stage: %s", specStageLabel(m.session))})
 					case specActionEdit:

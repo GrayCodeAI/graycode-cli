@@ -30,7 +30,9 @@ const (
 	AutonomyFull          = safety.AutonomyFull
 	AutonomyYOLO          = safety.AutonomyYOLO
 	SpecStageNone         = safety.SpecStageNone
+	SpecStageProposal     = safety.SpecStageProposal
 	SpecStageSpecify      = safety.SpecStageSpecify
+	SpecStageDesign       = safety.SpecStageDesign
 	SpecStagePlan         = safety.SpecStagePlan
 	SpecStageTasks        = safety.SpecStageTasks
 	SpecStageImplementing = safety.SpecStageImplementing

@@ -55,8 +55,8 @@ func (s *specSubcommand) Handle(m *chatModel, args []string, text string) (tea.M
 		return handleSpecConfig(m, arg)
 	}
 
-	m.session.PermSvc().SetSpecStage(engine.SpecStageSpecify)
-	m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow started — Write/Edit/Bash are gated until spec.md, plan.md, and tasks.md are written and ApproveImplementation is approved."})
+	m.session.PermSvc().SetSpecStage(engine.SpecStageProposal)
+	m.messages = append(m.messages, displayMsg{role: "system", content: "Spec workflow started — Write/Edit/Bash are gated. Start with Proposal, then Specify + Design (parallel), then Plan, Tasks, and ApproveImplementation."})
 	if arg == "" {
 		return m, nil
 	}

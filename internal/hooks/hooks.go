@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/trust"
+	"gopkg.in/yaml.v3"
 )
 
 // allowProjectHookDir gates project-scoped hook directories behind folder trust.
@@ -217,7 +219,18 @@ func AdaptLegacyFn(fn func(ctx context.Context, data map[string]interface{}) err
 	}
 }
 
-// LoadHooksDir loads hooks from a directory.
+// CommandHook defines a hook that runs a shell command when triggered.
+type CommandHook struct {
+	Name    string `yaml:"name"`
+	Event   string `yaml:"event"`
+	Pattern string `yaml:"pattern,omitempty"`
+	Command string `yaml:"command"`
+	Timeout int    `yaml:"timeout,omitempty"`
+	Async   bool   `yaml:"async,omitempty"`
+}
+
+// LoadHooksDir loads hooks from a directory. Each .md file may contain
+// YAML frontmatter defining a command hook.
 // Project-scoped directories require folder trust when HAWK_Y0_FOLDER_TRUST is on.
 func LoadHooksDir(dir string) error {
 	if err := allowProjectHookDir(dir); err != nil {
@@ -235,9 +248,105 @@ func LoadHooksDir(dir string) error {
 			continue
 		}
 		path := filepath.Join(dir, e.Name())
-		_ = path // hooks are loaded from markdown frontmatter
+		ch, err := parseCommandHook(path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "WARNING: failed to parse hook %s: %v\n", path, err)
+			continue
+		}
+		if ch == nil {
+			continue
+		}
+		registerCommandHook(ch)
 	}
 	return nil
+}
+
+func parseCommandHook(path string) (*CommandHook, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	content := string(data)
+	front, body := splitFrontmatter(content)
+	if front == "" {
+		return nil, nil
+	}
+	var ch CommandHook
+	if err := yamlUnmarshal([]byte(front), &ch); err != nil {
+		return nil, err
+	}
+	if ch.Name == "" {
+		ch.Name = strings.TrimSuffix(filepath.Base(path), ".md")
+	}
+	if ch.Event == "" || ch.Command == "" {
+		return nil, nil
+	}
+	_ = body
+	return &ch, nil
+}
+
+func registerCommandHook(ch *CommandHook) {
+	eventType := EventType(ch.Event)
+	h := Hook{
+		Name:     ch.Name,
+		Event:    eventType,
+		Priority: 50,
+		Fn: func(ctx context.Context, data map[string]interface{}) error {
+			if ch.Pattern != "" {
+				if path, ok := data["path"].(string); ok {
+					if !matchPattern(ch.Pattern, path) {
+						return nil
+					}
+				}
+			}
+			return executeHookCommand(ch, data)
+		},
+	}
+	if ch.Async {
+		h.Fn = func(ctx context.Context, data map[string]interface{}) error {
+			if ch.Pattern != "" {
+				if path, ok := data["path"].(string); ok {
+					if !matchPattern(ch.Pattern, path) {
+						return nil
+					}
+				}
+			}
+			go func() { _ = executeHookCommand(ch, data) }()
+			return nil
+		}
+	}
+	Register(h)
+}
+
+func executeHookCommand(ch *CommandHook, data map[string]interface{}) error {
+	cmd := os.Expand(ch.Command, func(key string) string {
+		if v, ok := data[key]; ok {
+			if s, ok := v.(string); ok {
+				return s
+			}
+		}
+		return os.Getenv(key)
+	})
+	timeout := time.Duration(ch.Timeout) * time.Second
+	if timeout == 0 {
+		timeout = 30 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	parts := strings.Fields(cmd)
+	if len(parts) == 0 {
+		return fmt.Errorf("empty command for hook %q", ch.Name)
+	}
+	return runCommand(ctx, parts[0], parts[1:])
+}
+
+func matchPattern(pattern, path string) bool {
+	matched, err := filepath.Match(pattern, filepath.Base(path))
+	if err == nil && matched {
+		return true
+	}
+	matched, err = filepath.Match(pattern, path)
+	return err == nil && matched
 }
 
 // LoadConventionPolicies discovers and loads convention policy files.
@@ -288,29 +397,15 @@ func loadPolicyDir(dir string, scope string) int {
 func BuiltinHooks() []Hook {
 	return []Hook{
 		{
-			Name:     "cost_tracker",
-			Event:    EventPostQuery,
-			Priority: 100,
-			Fn: func(ctx context.Context, data map[string]interface{}) error {
-				// Cost tracking is handled by the engine
-				return nil
-			},
-		},
-		{
-			Name:     "file_watcher",
-			Event:    EventFileChanged,
-			Priority: 10,
-			Fn: func(ctx context.Context, data map[string]interface{}) error {
-				// File change notifications
-				return nil
-			},
-		},
-		{
 			Name:     "session_logger",
 			Event:    EventSessionStart,
 			Priority: 1,
 			Fn: func(ctx context.Context, data map[string]interface{}) error {
-				// Session start logging
+				sid, _ := data["session_id"].(string)
+				if sid == "" {
+					sid = "unknown"
+				}
+				fmt.Fprintf(os.Stderr, "[hook] session start: %s\n", sid)
 				return nil
 			},
 		},
@@ -319,9 +414,33 @@ func BuiltinHooks() []Hook {
 			Event:    EventPermissionAsk,
 			Priority: 1,
 			Fn: func(ctx context.Context, data map[string]interface{}) error {
-				// Permission ask logging
+				tool, _ := data["tool"].(string)
+				fmt.Fprintf(os.Stderr, "[hook] permission ask: %s\n", tool)
 				return nil
 			},
 		},
 	}
+}
+
+func splitFrontmatter(content string) (front, body string) {
+	if !strings.HasPrefix(content, "---") {
+		return "", content
+	}
+	rest := content[3:]
+	idx := strings.Index(rest, "\n---")
+	if idx < 0 {
+		return "", content
+	}
+	return strings.TrimSpace(rest[:idx]), strings.TrimSpace(rest[idx+4:])
+}
+
+func yamlUnmarshal(data []byte, v interface{}) error {
+	return yaml.Unmarshal(data, v)
+}
+
+func runCommand(ctx context.Context, name string, args []string) error {
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
