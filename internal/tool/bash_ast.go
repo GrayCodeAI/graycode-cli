@@ -11,7 +11,7 @@ import (
 // dangerous patterns the existing regex layer misses, small enough to be
 // reviewable in one sitting and free of the 50K-LOC mvdan.cc/sh dependency
 // (which currently can't be added to this codebase due to internal
-// version conflicts in the hawk-eco go workspace).
+// version conflicts in the graycode-eco go workspace).
 //
 // Pipeline: tokenize → parse → walk. The walker emits findings tagged with
 // the dangerous category. BashTool.Execute calls bashASTAnalyze as a

@@ -12,7 +12,7 @@ dashboards), not a Hawk runtime dependency, and Hawk must remain fully
 functional as an OSS tool without it.
 
 At the same time, `graycode-core`'s backend already anticipates
-hawk-ecosystem data: its `POST /usage/log` and activity routes validate a
+graycode-ecosystem data: its `POST /usage/log` and activity routes validate a
 `tool` enum of `hawk | trace | tok | yaad | inspect | sight`. Without a
 written rule, the first person to wire usage reporting into hawk will either
 violate the forbidden edge or invent an ad-hoc mechanism with unclear
@@ -53,10 +53,10 @@ A single, narrow *runtime* exception is sanctioned:
 ## Consequences
 
 - The forbidden-edges lists in `hawk-current-vs-proposed.md` and
-  `hawk-ecosystem-summary.md` now read
+  `graycode-ecosystem-summary.md` now read
   `hawk runtime -> graycode-core (compile time; runtime telemetry only per ADR-0001)`.
 - Boundary-check tooling keeps rejecting any `graycode-core` import in any
-  hawk-ecosystem repo; nothing in this ADR weakens that check.
+  graycode-ecosystem repo; nothing in this ADR weakens that check.
 - If graycode-core's API changes incompatibly, hawk telemetry silently stops
   until hawk updates — acceptable by the fail-open rule.
 - Any broadening of this edge (engines reporting directly, hawk *reading*

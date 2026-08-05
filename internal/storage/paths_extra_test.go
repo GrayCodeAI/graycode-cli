@@ -174,17 +174,6 @@ func TestWorkspaceSnapshotsDir(t *testing.T) {
 	}
 }
 
-func TestBundledSkillsDir(t *testing.T) {
-	stateDir := filepath.Join(t.TempDir(), "state")
-	t.Setenv(envStateDir, stateDir)
-
-	got := BundledSkillsDir()
-	want := filepath.Join(stateDir, "bundled-skills")
-	if got != want {
-		t.Errorf("BundledSkillsDir() = %q, want %q", got, want)
-	}
-}
-
 func TestPersonasDir(t *testing.T) {
 	stateDir := filepath.Join(t.TempDir(), "state")
 	t.Setenv(envStateDir, stateDir)

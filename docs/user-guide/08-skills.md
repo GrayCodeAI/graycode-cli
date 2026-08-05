@@ -130,13 +130,18 @@ hawk skills audit
 
 ---
 
-## Bundled Skills
+## Installing Skills
 
-Hawk ships with built-in skills that are extracted on first run:
+Hawk ships **no bundled skills** by default. Skills are installed on demand
+from the separate `GrayCodeAI/hawk-community-skills` repo (or any GitHub repo):
 
-- `/create-skill` — Create a new skill interactively
-- `/help` — Show help information
-- `/check-work` — Verify code changes
+```bash
+hawk skills search <query>                  # find a skill in the registry
+hawk skills install <owner/repo> [skill]    # install after user approval
+hawk skills audit                           # security-scan installed skills
+```
+
+Once installed, skills are discovered from the locations listed above.
 
 ---
 

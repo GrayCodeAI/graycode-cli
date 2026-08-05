@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Read-only drift report: compares each external/<repo> submodule's pinned
 # commit against the HEAD of the sibling dev clone at ../<repo> (relative to
-# the hawk-eco workspace root). Unlike `make sync-submodules` (which mutates
+# the graycode-eco workspace root). Unlike `make sync-submodules` (which mutates
 # the submodule checkout), this makes no changes — it only reports.
 #
 # Typical drift: you commit changes in ../tok, but forget `make

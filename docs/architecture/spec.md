@@ -44,7 +44,7 @@ The `internal/` directory SHALL contain the following packages:
 | `engine/` | Agent loop, session management, all sub-systems |
 | `tool/` | 40+ built-in tools (file edit, git, codegen, spec tools, etc.) |
 | `permissions/` | Guardian, rules DSL, boundary checker |
-| `plugin/` | Skills loader, registry, auto-skill, bundled skills |
+| `plugin/` | Skills loader, registry, auto-skill, marketplace install |
 | `config/` | Product settings, Eyrie composition, state migration |
 | `session/` | SQLite persistence, search, export, replay |
 | `hooks/` | Event-driven plugin system |

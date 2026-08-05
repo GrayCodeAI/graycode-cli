@@ -1,10 +1,10 @@
-# hawk-eco OpenTelemetry Semantic Conventions for AI Agent Spans
+# graycode-eco OpenTelemetry Semantic Conventions for AI Agent Spans
 
 Status: Draft / shared spec
 Applies to: hawk, eyrie, yaad, tok, trace
 
 This document defines the **ecosystem-wide** OpenTelemetry (OTel) semantic
-conventions that every hawk-eco repo should follow when emitting spans for AI
+conventions that every graycode-eco repo should follow when emitting spans for AI
 agent and LLM operations. The goal is that a single trace backend (Jaeger,
 Tempo, Honeycomb, an OTLP collector, etc.) can correlate model calls, tool
 invocations, token usage, and cost **across all five repos** using one common

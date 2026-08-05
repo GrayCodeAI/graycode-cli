@@ -59,7 +59,7 @@ Today, the workspace is a multi-repo development area, and `hawk` also vendors o
 pins support repos under `hawk/external` for reproducible integration work.
 
 ```text
-hawk-eco/
+graycode-eco/
 ├── hawk                       # primary product repo
 │   └── external/
 │       ├── eyrie
@@ -167,7 +167,7 @@ Owns:
 - coordination of memory, context, tracing, review, and verification
 - public product APIs used by SDKs and skills
 
-This is the only primary end-user product in the Hawk ecosystem.
+This is the only primary end-user product in the graycode-eco ecosystem.
 
 ### 2. Support engine repos
 

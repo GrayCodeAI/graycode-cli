@@ -1,8 +1,8 @@
-# Hawk Ecosystem Summary
+# graycode-eco ecosystem Summary
 
 ## One-line view
 
-`hawk` is the product. Everything else in the Hawk ecosystem either powers Hawk,
+`hawk` is the product. Everything else in the graycode-eco ecosystem either powers Hawk,
 extends Hawk, or provides shared contracts for Hawk.
 
 ## Final repo map

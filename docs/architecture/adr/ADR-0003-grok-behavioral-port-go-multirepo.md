@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-07-16
 - Owners: Hawk maintainers
-- Related: `docs/plans/FULL-GROK-ECO-TO-HAWK-ECO-PORT-PLAN.md`,
+- Related: `docs/plans/FULL-GROK-ECO-TO-GRAYCODE-ECO-PORT-PLAN.md`,
   `docs/plans/GROK-CLASS-CAPABILITY-LONG-HORIZON-PLAN.md`,
   `docs/plans/YEAR-0-ACTIVE.md`
 

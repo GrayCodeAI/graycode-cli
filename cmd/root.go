@@ -180,11 +180,6 @@ Run hawk and use /config to set up your first provider.`, registeredProviderCoun
 			}
 		}
 
-		// Extract bundled skills on first run.
-		if n, _ := plugin.ExtractBundledSkills(); n > 0 {
-			fmt.Printf("Extracted %d bundled skills to Hawk user state\n", n)
-		}
-
 		// Recovery: scan for interrupted sessions before launching TUI.
 		if recoverFlag {
 			candidates := session.ScanForRecovery()

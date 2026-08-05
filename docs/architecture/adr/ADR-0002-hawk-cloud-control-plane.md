@@ -1,4 +1,4 @@
-# ADR-0002: Hawk Cloud is the Hawk ecosystem control plane
+# ADR-0002: Hawk Cloud is the graycode-eco ecosystem control plane
 
 - Status: Accepted
 - Date: 2026-07-10

@@ -22,7 +22,7 @@ type BenchmarkResult struct {
 	Details  string        `json:"details,omitempty"`
 }
 
-// BenchmarkSuite runs benchmarks across the hawk-eco ecosystem.
+// BenchmarkSuite runs benchmarks across the graycode-eco ecosystem.
 type BenchmarkSuite struct {
 	Results []BenchmarkResult `json:"results"`
 }
@@ -128,7 +128,7 @@ func runHawkBuildBench(projectDir string) (BenchmarkResult, error) {
 // FormatReport returns a human-readable benchmark report.
 func (s *BenchmarkSuite) FormatReport() string {
 	var report string
-	report += "## Hawk-Eco Benchmark Report\n\n"
+	report += "## graycode-eco Benchmark Report\n\n"
 	report += fmt.Sprintf("Generated: %s\n\n", time.Now().Format(time.RFC3339))
 	report += "| Benchmark | Duration | Score | Status |\n"
 	report += "|-----------|----------|-------|--------|\n"

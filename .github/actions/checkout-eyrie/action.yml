@@ -1,5 +1,5 @@
 name: Checkout ecosystem
-description: Clone Hawk ecosystem repos into hawk/external for hawk go.work
+description: Clone graycode-eco ecosystem repos into hawk/external for hawk go.work
 
 inputs:
   ref:

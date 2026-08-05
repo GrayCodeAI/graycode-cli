@@ -1,12 +1,15 @@
 ---
-description: Extending hawk-eco — how to write AGENTS.md files, custom specialists, skills, hooks, MCP servers, and plugins.
+description: Extending hawk — how to write AGENTS.md files, custom specialists, skills, hooks, MCP servers, and plugins.
 globs: "*.go, *.js, *.md, *.json, *.toml, *.yaml, *.yml"
 alwaysApply: false
 ---
 
-# Extending hawk-eco
+# Extending hawk
 
-hawk-eco is an open-source code intelligence platform. This document describes how to extend it with custom tools, skills, hooks, and integrations.
+hawk is an open-source code intelligence platform. It lives in the `graycode-eco`
+workspace alongside the ecosystem repos that power it (`eyrie`, `hawk-core-contracts`,
+`tok`, `yaad`, `trace`, `sight`, `inspect`). This document describes how to extend
+hawk with custom tools, skills, hooks, and integrations.
 
 ## Development workflow
 
@@ -14,7 +17,7 @@ When starting any new work (feature, fix, refactor, chore), always create a feat
 
 ## 1. Drop a project `AGENTS.md`
 
-When hawk-eco starts in a directory, it looks for project-level instructions and injects them into the system prompt. The lookup walks from your current working directory **up to the nearest git root** and reads the first matching file at each level — general rules at the repo root, more specific rules in sub-trees. Files are labeled with their directory in the prompt (e.g. `## Project guidelines (services/api/AGENTS.md)`).
+When hawk starts in a directory, it looks for project-level instructions and injects them into the system prompt. The lookup walks from your current working directory **up to the nearest git root** and reads the first matching file at each level — general rules at the repo root, more specific rules in sub-trees. Files are labeled with their directory in the prompt (e.g. `## Project guidelines (services/api/AGENTS.md)`).
 
 Accepted file names, in priority order at each level:
 
@@ -26,7 +29,7 @@ Accepted file names, in priority order at each level:
 
 Matching is **case-insensitive** on the basename, so `AGENTS.md`, `Agents.md`, and `agents.md` resolve to the same file on Windows and macOS. The git-tracked filename in this repo is `AGENTS.md` — keep that on case-sensitive filesystems (Linux, the WSL filesystem, or a CI runner) to match what the loader looks for.
 
-Both files use the same format. YAML frontmatter is optional; the markdown body is loaded as instructions for the agent. hawk-eco reads the file once at session start, so changes take effect on the next launch — not mid-session.
+Both files use the same format. YAML frontmatter is optional; the markdown body is loaded as instructions for the agent. hawk reads the file once at session start, so changes take effect on the next launch — not mid-session.
 
 ```markdown
 # Project conventions for <your project>
@@ -39,26 +42,26 @@ Both files use the same format. YAML frontmatter is optional; the markdown body 
 
 Tips:
 
-- Keep each file under ~8 KiB. hawk-eco caps the **total** across all matched files at 32 KiB; everything past the cap is dropped.
+- Keep each file under ~8 KiB. hawk caps the **total** across all matched files at 32 KiB; everything past the cap is dropped.
 - Re-state rules in the imperative voice: "Run `make lint`", not "you should consider running the linter".
 - Don't put secrets, model IDs, or environment-specific paths in `AGENTS.md`. Use config files for those.
-- In a monorepo, drop a narrower `AGENTS.md` in each sub-tree (e.g. `services/api/AGENTS.md`). hawk-eco picks those up automatically when you launch from inside the sub-tree.
+- In a monorepo, drop a narrower `AGENTS.md` in each sub-tree (e.g. `services/api/AGENTS.md`). hawk picks those up automatically when you launch from inside the sub-tree.
 - A YAML frontmatter block (`---\n...\n---`) at the top is preserved verbatim in the injected prompt but is not parsed for `globs:` or `alwaysApply:` scoping today — keep the body self-contained.
 
 ### Personal guidelines, across every project
 
-For preferences that follow *you*, not a specific repo (tone, tooling habits, workflow), drop a `ZERO.md` in your user config directory: `~/.config/hawk-eco/ZERO.md` on Linux/macOS, `%AppData%\Roaming\hawk-eco\ZERO.md` on Windows — the same directory as config files and your personal specialists. Same format and 8 KiB cap as the project files above, and the same case-insensitive basename match.
+For preferences that follow *you*, not a specific repo (tone, tooling habits, workflow), drop a `ZERO.md` in your user config directory: `~/.hawk/ZERO.md` on Linux/macOS, `%AppData%\hawk\ZERO.md` on Windows — the same directory as config files and your personal specialists. Same format and 8 KiB cap as the project files above, and the same case-insensitive basename match.
 
 This file is injected as its own `## User guidelines` section, before the project's `AGENTS.md`/`ZERO.md`, and is labeled as personal preference in the prompt: project guidelines are the later, more specific instruction and take precedence over it when the two conflict.
 
 ## 2. Custom specialists
 
-Specialists are hawk-eco's sub-agents. Three scopes, in priority order:
+Specialists are hawk's sub-agents. Three scopes, in priority order:
 
 | Scope | Path | Shared? |
 | --- | --- | --- |
-| Built-in | compiled into hawk-eco | yes |
-| User | `~/.config/hawk-eco/specialists/*.md` | no — your machine only |
+| Built-in | compiled into hawk | yes |
+| User | `~/.hawk/specialists/*.md` | no — your machine only |
 | Project | `./.zero/specialists/*.md` | yes — the repo team |
 
 Project overrides user overrides built-in when names collide.
@@ -86,23 +89,34 @@ Reply with one JSON object per finding: `{"file", "line", "severity", "message",
 CLI management:
 
 ```bash
-hawk-eco specialist list
-hawk-eco specialist show api-reviewer
-hawk-eco specialist create api-reviewer \
+hawk specialist list
+hawk specialist show api-reviewer
+hawk specialist create api-reviewer \
     --project \
     --description "Reviews API changes" \
     --tools read-only,plan \
     --prompt "$(cat api-reviewer.md)"
-hawk-eco specialist edit api-reviewer --project
-hawk-eco specialist delete api-reviewer --project
-hawk-eco specialist path                       # prints the resolved specialists directory
+hawk specialist edit api-reviewer --project
+hawk specialist delete api-reviewer --project
+hawk specialist path                       # prints the resolved specialists directory
 ```
 
 ## 3. Skills
 
-Skills are markdown instruction files that extend agent capabilities. They can be:
-- Project-scoped: dropped in `./.zero/skills/` or `./skills/`
-- User-scoped: dropped in `~/.config/hawk-eco/skills/`
+hawk ships **no bundled skills** by default. Skills are markdown instruction
+files that extend agent capabilities, sourced from the separate
+`GrayCodeAI/hawk-community-skills` repo and installed on demand:
+
+```bash
+hawk skills search <query>          # find skills in hawk-community-skills
+hawk skills install <owner/repo> [skill-name]   # install after user approval
+hawk skills list                    # list installed skills
+hawk skills remove <name>
+```
+
+Installed skills live in user or project scope:
+- User-scoped: `~/.hawk/skills/`
+- Project-scoped: `./.zero/skills/` or `./skills/`
 
 A skill manifest:
 
@@ -130,45 +144,45 @@ Hooks allow custom commands to run at specific lifecycle points:
 - `sessionEnd` — runs at session teardown
 
 ```bash
-hawk-eco hook add beforeReview --command "lint-check"
-hawk-eco hook remove beforeReview
-hawk-eco hook list
+hawk hook add beforeReview --command "lint-check"
+hawk hook remove beforeReview
+hawk hook list
 ```
 
 ## 5. MCP integration
 
-MCP (Model Context Protocol) servers can expose tools to hawk-eco:
+MCP (Model Context Protocol) servers can expose tools to hawk:
 
 ```bash
-hawk-eco mcp add --name server --url http://localhost:8080
-hawk-eco mcp remove server
-hawk-eco mcp list
+hawk mcp add --name server --url http://localhost:8080
+hawk mcp remove server
+hawk mcp list
 ```
 
 ## 6. Plugins
 
-Plugins extend hawk-eco with custom tools and capabilities:
+Plugins extend hawk with custom tools and capabilities:
 
 ```bash
-hawk-eco plugin add --name my-plugin --path ./my-plugin
-hawk-eco plugin remove my-plugin
-hawk-eco plugin list
+hawk plugin add --name my-plugin --path ./my-plugin
+hawk plugin remove my-plugin
+hawk plugin list
 ```
 
 ## 7. Verification
 
-hawk-eco includes a self-verification system to validate local changes before contributing:
+hawk includes a self-verification system to validate local changes before contributing:
 
 ```bash
-hawk-eco verify
-hawk-eco verify --fix
+hawk verify
+hawk verify --fix
 ```
 
 ## Development
 
 ```bash
 make lint
-hawk-eco verify
+hawk verify
 ```
 
 ### Architecture note: cross-repo contracts

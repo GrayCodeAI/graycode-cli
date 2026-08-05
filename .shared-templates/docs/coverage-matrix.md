@@ -1,4 +1,4 @@
-# hawk-eco coverage thresholds
+# graycode-eco coverage thresholds
 
 Each repo's CI enforces its own minimum test-coverage percentage, hardcoded
 into that repo's `.github/workflows/ci.yml` (`THRESHOLD=` for the `go-ci.yml`

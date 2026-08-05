@@ -37,7 +37,7 @@ func TestRecordDeliveryContextUsesDeviceScopedEndpoint(t *testing.T) {
 	}))
 	defer s.Close()
 	event := DeliveryContext{ProjectID: "project_0123456789", Branch: "main", CommitSHA: "abc123"}
-	event.Repository.Provider, event.Repository.ExternalID, event.Repository.Name = "git", "hawk-eco", "GrayCodeAI/hawk-eco"
+	event.Repository.Provider, event.Repository.ExternalID, event.Repository.Name = "git", "graycode-eco", "GrayCodeAI/graycode-eco"
 	New(Config{Endpoint: s.URL, DeviceToken: "hwc_test"}).RecordDeliveryContext(context.Background(), event)
 	if gotPath != "/v1/delivery-context" || gotAuth != "Bearer hwc_test" {
 		t.Fatalf("path/auth = %q/%q", gotPath, gotAuth)

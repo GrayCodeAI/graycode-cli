@@ -13,7 +13,6 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
-	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/resilience/health"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/storage"
@@ -84,13 +83,12 @@ func doctorReport(settings hawkconfig.Settings) string {
 		b.WriteString("\nProject instructions: not found (consider creating AGENTS.md)\n")
 	}
 
-	// Bundled skills
-	bundledDir := plugin.BundledSkillsDir()
-	if _, err := os.Stat(bundledDir); err == nil {
-		entries, _ := os.ReadDir(bundledDir)
-		b.WriteString(fmt.Sprintf("Bundled skills: %d extracted\n", len(entries)))
+	// Installed skills (hawk ships none; skills come from user/marketplace installs)
+	skillsDir := filepath.Join(storage.StateDir(), "skills")
+	if entries, err := os.ReadDir(skillsDir); err == nil && len(entries) > 0 {
+		b.WriteString(fmt.Sprintf("Installed skills: %d\n", len(entries)))
 	} else {
-		b.WriteString("Bundled skills: not yet extracted\n")
+		b.WriteString("Installed skills: none (install with `hawk skills install`)\n")
 	}
 
 	b.WriteString(fmt.Sprintf("Configured MCP servers: %d\n", len(settings.MCPServers)+len(mcpServers)))
