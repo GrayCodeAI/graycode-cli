@@ -117,6 +117,10 @@ These were previously "ideas"; they are now implemented:
   Hawk additionally runs `check-shared-types-imports.sh`,
   `check-eyrie-client-imports.sh`, `check-eyrie-engine-boundary.sh`, and
   `check-support-repo-coupling.sh`
+- Hawk runs `scripts/check-package-boundaries.sh`, an AST-based package graph
+  guard that checks the same production rules with file/line diagnostics and
+  scans available pinned or sibling support repositories without requiring
+  them to build from the parent workspace
 - `hawk-core-contracts` is kept minimal (leaf module, no external dependencies)
 
 The Hawk boundary guards use ripgrep when available and fall back to recursive

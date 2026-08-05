@@ -6,9 +6,6 @@ import (
 	lipgloss "charm.land/lipgloss/v2"
 )
 
-// stickyHeaderHeight is the maximum number of lines the sticky header occupies.
-const stickyHeaderHeight = 2
-
 // lastUserPromptBeforeScroll finds the content of the most recent user message
 // that has scrolled above the visible viewport area. Returns empty if the
 // viewport is at the top or no user message is found.

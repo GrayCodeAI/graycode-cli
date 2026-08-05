@@ -28,9 +28,6 @@ func TestAppendSystemContext_Persists(t *testing.T) {
 	if got := sess.Persistence().System(); got != want {
 		t.Fatalf("Persistence().System() = %q, want %q", got, want)
 	}
-	if got := sess.system; got != want {
-		t.Fatalf("sess.system = %q, want %q", got, want)
-	}
 }
 
 // TestAppendSystemContext_DedupeEmpty ensures empty/whitespace input is a no-op
@@ -67,9 +64,6 @@ func TestReplaceSystemContextSection_AppendBranch_Persists(t *testing.T) {
 	want := "base system\n\n" + content
 	if got := sess.Persistence().System(); got != want {
 		t.Fatalf("Persistence().System() = %q, want %q", got, want)
-	}
-	if got := sess.system; got != want {
-		t.Fatalf("sess.system = %q, want %q", got, want)
 	}
 
 	// The next call to AppendSystemContext must NOT deadlock. This is the
@@ -113,11 +107,6 @@ func TestReplaceSystemContextSection_ReplaceBranch_Persists(t *testing.T) {
 	}
 	if !strings.Contains(got, "keep me") {
 		t.Fatalf("replace branch clobbered trailing section: %q", got)
-	}
-	// Mirror the in-memory field to Persistence so an inconsistency is loud.
-	if sess.Persistence().System() != sess.system {
-		t.Fatalf("Persistence().System() = %q does not match sess.system = %q",
-			sess.Persistence().System(), sess.system)
 	}
 }
 

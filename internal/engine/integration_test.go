@@ -48,7 +48,7 @@ func TestSessionLifecycle(t *testing.T) {
 
 	// Test system context
 	sess.AppendSystemContext("Additional context")
-	if sess.system == "" {
+	if sess.Persistence().System() == "" {
 		t.Fatal("expected system prompt")
 	}
 

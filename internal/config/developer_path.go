@@ -11,8 +11,8 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/token"
 	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/tok"
 
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
@@ -219,7 +219,7 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 		})
 	}
 
-	sample := tok.EstimateTokens("hawk developer path readiness")
+	sample := token.CountTokensFast("hawk developer path readiness")
 	checks = append(checks, PathCheck{
 		Section: "Ecosystem", Name: "tok", Status: PathPass,
 		Detail: fmt.Sprintf("Embedded token/compress pipeline OK (sample=%d tokens)", sample),

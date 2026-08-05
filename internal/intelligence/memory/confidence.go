@@ -4,8 +4,6 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/GrayCodeAI/yaad/storage"
 )
 
 // ConfidenceTracker adjusts memory confidence based on session outcomes.
@@ -101,50 +99,11 @@ func (ct *ConfidenceTracker) AccessedCount() int {
 }
 
 func (ct *ConfidenceTracker) boostNode(id string, amount float64) {
-	ct.bridge.mu.Lock()
-	defer ct.bridge.mu.Unlock()
-
-	if !ct.bridge.ready {
-		return
-	}
-
-	node, err := ct.bridge.store.GetNode(context.Background(), id)
-	if err != nil || node == nil {
-		return
-	}
-
-	newConf := node.Confidence + amount
-	if newConf > 1.0 {
-		newConf = 1.0
-	}
-	node.Confidence = newConf
-	_ = ct.bridge.store.UpdateNode(context.Background(), node)
+	_ = ct.bridge.adjustNodeConfidence(context.Background(), id, amount, false)
 }
 
 func (ct *ConfidenceTracker) penalizeNode(id string, rate float64) {
-	ct.bridge.mu.Lock()
-	defer ct.bridge.mu.Unlock()
-
-	if !ct.bridge.ready {
-		return
-	}
-
-	node, err := ct.bridge.store.GetNode(context.Background(), id)
-	if err != nil || node == nil {
-		return
-	}
-
-	// Don't penalize pinned nodes
-	if node.Pinned {
-		return
-	}
-
-	newConf := node.Confidence - rate
-	if newConf < 0.1 {
-		newConf = 0.1
-	}
-	node.Confidence = newConf
-	_ = ct.bridge.store.UpdateNode(context.Background(), node)
+	_ = ct.bridge.adjustNodeConfidence(context.Background(), id, -rate, true)
 }
 
 // BoostByType boosts all memories of a given type (useful for post-success reinforcement).
@@ -152,10 +111,7 @@ func (ct *ConfidenceTracker) BoostByType(nodeType string, amount float64) {
 	if !ct.bridge.Ready() {
 		return
 	}
-	nodes, err := ct.bridge.store.ListNodes(context.Background(), storage.NodeFilter{
-		Type:  nodeType,
-		Limit: 50,
-	})
+	nodes, err := ct.bridge.listNodesByType(context.Background(), nodeType, 0, 50)
 	if err != nil {
 		return
 	}

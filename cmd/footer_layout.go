@@ -21,7 +21,7 @@ func (m chatModel) finishFooterLine(line string, totalW int) string {
 	return clipFooterLine(line, m.footerContentWidth(totalW))
 }
 
-const minFooterRightCols = 40 // ● Nk tokens · $cost · duration · HH:MM
+const minFooterGap = 2 // minimum spaces separating left and right footer segments
 
 // layoutFooterRow places left and right footer segments on one line without wrapping.
 // Right text is aligned with lipgloss (not a long run of spaces) so terminals do not
@@ -40,22 +40,22 @@ func layoutFooterRow(left, right string, width int) string {
 
 	leftW := lipgloss.Width(left)
 	rightW := lipgloss.Width(right)
-	reserve := rightW
-	if leftW+rightW > width {
-		if reserve < minFooterRightCols {
-			reserve = minFooterRightCols
-		}
-	}
-	if reserve > width {
-		reserve = width
-	}
 
-	maxLeft := width - reserve
-	if maxLeft < 1 {
-		maxLeft = 1
-	}
-	if lipgloss.Width(left) > maxLeft {
-		left = ansi.Truncate(left, maxLeft, "…")
+	if leftW+rightW+minFooterGap > width {
+		reserve := rightW
+		if reserve > width-minFooterGap-5 {
+			reserve = width - minFooterGap - 5
+		}
+		if reserve < 1 {
+			reserve = 1
+		}
+		maxLeft := width - reserve - minFooterGap
+		if maxLeft < 1 {
+			maxLeft = 1
+		}
+		if lipgloss.Width(left) > maxLeft {
+			left = ansi.Truncate(left, maxLeft, "…")
+		}
 	}
 
 	leftW = lipgloss.Width(left)

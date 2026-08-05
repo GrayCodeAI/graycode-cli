@@ -10,10 +10,9 @@ import (
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
 	policycontracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
+	"github.com/GrayCodeAI/hawk/internal/engine/token"
 	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 	"github.com/GrayCodeAI/hawk/internal/types"
-	"github.com/GrayCodeAI/tok"
-	tokgraph "github.com/GrayCodeAI/tok/runtimegraph"
 )
 
 func (s *Session) recordPolicyObservation(tc types.ToolCall, stage string, allowed bool, reason string) {
@@ -92,9 +91,17 @@ func (s *Session) executionGraphSessionID() string {
 	if s == nil {
 		return ""
 	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return strings.TrimSpace(s.persistID)
+	if p := s.Persistence(); p != nil {
+		return strings.TrimSpace(p.PersistID())
+	}
+	return ""
+}
+
+func (s *Session) configuredWorkingDir() string {
+	if s == nil || s.Tools() == nil {
+		return ""
+	}
+	return strings.TrimSpace(s.Tools().WorkingDir())
 }
 
 // SessionID returns the persistence ID of this session, or "" before one is
@@ -123,14 +130,12 @@ func (s *Session) ConfigureContextGraphObservation(repositoryDir string) {
 	)
 }
 
-func (s *Session) recordTokCompressionObservation(source, stage string, stats tok.Stats) {
+func (s *Session) recordTokCompressionObservation(source, stage string, stats token.Stats) {
 	sessionID := s.executionGraphSessionID()
 	if sessionID == "" || stats.OriginalTokens <= 0 {
 		return
 	}
-	s.mu.RLock()
-	repositoryDir := strings.TrimSpace(s.workingDir)
-	s.mu.RUnlock()
+	repositoryDir := s.configuredWorkingDir()
 	if repositoryDir == "" {
 		repositoryDir, _ = os.Getwd()
 	}
@@ -139,7 +144,7 @@ func (s *Session) recordTokCompressionObservation(source, stage string, stats to
 		repositoryID = filepath.Base(filepath.Clean(repositoryDir))
 	}
 	observedAt := time.Now().UTC()
-	export, err := tokgraph.Build(tokgraph.Input{
+	export, err := token.BuildRuntimeGraph(token.RuntimeGraphInput{
 		Compression:   &stats,
 		Source:        source,
 		ObservedAt:    observedAt,
@@ -165,9 +170,7 @@ func (s *Session) recordTokRedactionObservation(source string, matchCount int, t
 	if sessionID == "" || matchCount <= 0 {
 		return
 	}
-	s.mu.RLock()
-	repositoryDir := strings.TrimSpace(s.workingDir)
-	s.mu.RUnlock()
+	repositoryDir := s.configuredWorkingDir()
 	if repositoryDir == "" {
 		repositoryDir, _ = os.Getwd()
 	}
@@ -176,8 +179,8 @@ func (s *Session) recordTokRedactionObservation(source string, matchCount int, t
 		repositoryID = filepath.Base(filepath.Clean(repositoryDir))
 	}
 	observedAt := time.Now().UTC()
-	export, err := tokgraph.Build(tokgraph.Input{
-		Redaction: &tokgraph.RedactionSummary{
+	export, err := token.BuildRuntimeGraph(token.RuntimeGraphInput{
+		Redaction: &token.RedactionSummary{
 			MatchCount: matchCount,
 			Types:      types,
 		},
@@ -218,9 +221,7 @@ func (s *Session) recordTokUsageBudgetObservation(
 	if sessionID == "" {
 		return
 	}
-	s.mu.RLock()
-	repositoryDir := strings.TrimSpace(s.workingDir)
-	s.mu.RUnlock()
+	repositoryDir := s.configuredWorkingDir()
 	if repositoryDir == "" {
 		repositoryDir, _ = os.Getwd()
 	}
@@ -230,9 +231,9 @@ func (s *Session) recordTokUsageBudgetObservation(
 	}
 
 	observedAt := time.Now().UTC()
-	export, err := tokgraph.Build(tokgraph.Input{
+	export, err := token.BuildRuntimeGraph(token.RuntimeGraphInput{
 		Usage: &usage,
-		Budget: &tokgraph.BudgetDecision{
+		Budget: &token.BudgetDecision{
 			Allowed:      allowed,
 			Reason:       reason,
 			HourlyLimit:  limits.HourlyTokens,
@@ -260,27 +261,18 @@ func (s *Session) recordTokUsageBudgetObservation(
 	}
 }
 
-func (s *Session) ensureTokUsageTracker() *tok.UsageTracker {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.tokUsage == nil {
-		// Default: token ceilings off (provider rate limits own throughput).
-		// tok.NewUsageTracker ships non-zero defaults; explicitly disable them
-		// so a fresh session doesn't fire usage-alerts. Budget caps are opt-in
-		// via SetMaxBudgetUSD, which writes CostUSD into this tracker.
-		s.tokUsage = tok.NewUsageTracker()
-		s.tokUsage.SetLimits(tok.UsageLimits{})
-	}
-	return s.tokUsage
-}
-
-func (s *Session) currentTokUsageTracker() *tok.UsageTracker {
-	if s == nil {
+func (s *Session) ensureTokUsageTracker() *token.UsageTracker {
+	if s == nil || s.LifecycleSvc() == nil {
 		return nil
 	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.tokUsage
+	return s.LifecycleSvc().EnsureUsageTracker()
+}
+
+func (s *Session) currentTokUsageTracker() *token.UsageTracker {
+	if s == nil || s.LifecycleSvc() == nil {
+		return nil
+	}
+	return s.LifecycleSvc().UsageTracker()
 }
 
 func (s *Session) tokUsageCanProceed() (bool, string) {
@@ -300,9 +292,7 @@ func (s *Session) recordEyrieOperationObservation(
 	if sessionID == "" || usage == nil {
 		return
 	}
-	s.mu.RLock()
-	repositoryDir := strings.TrimSpace(s.workingDir)
-	s.mu.RUnlock()
+	repositoryDir := s.configuredWorkingDir()
 	if repositoryDir == "" {
 		repositoryDir, _ = os.Getwd()
 	}

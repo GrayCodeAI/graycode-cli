@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -33,10 +33,10 @@ func (s *ProviderNativeCompactStrategy) Compact(ctx context.Context, sess *Sessi
 
 	messagesBefore := sess.Persistence().RawMessages()
 	tokensBefore := EstimateTokens(messagesBefore)
-	summary, err := compactor.CompactNative(ctx, gateway.NativeCompactionRequest{
+	summary, err := compactor.CompactNative(ctx, llm.NativeCompactionRequest{
 		Provider:        sess.ChatLLM().Provider(),
 		Model:           sess.ChatLLM().Model(),
-		Messages:        gateway.ToEngineMessages(messagesBefore),
+		Messages:        messagesBefore,
 		ContextWindow:   sess.ContextWindowSize(),
 		ThresholdPct:    sess.compactThresholdPct(),
 		MaxOutputTokens: 8192,

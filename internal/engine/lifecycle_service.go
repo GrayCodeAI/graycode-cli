@@ -2,11 +2,14 @@ package engine
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
+	"github.com/GrayCodeAI/hawk/internal/engine/token"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -64,6 +67,10 @@ type LifecycleService struct {
 	costTracker *CostTracker
 	teach       TeachConfig
 	trajectory  *TrajectoryDistiller
+	// smartSkills caches loaded SmartSkills for auto-discovery per-turn.
+	smartSkills []plugin.SmartSkill
+	usageMu     sync.Mutex
+	usage       *token.UsageTracker
 	verbose     bool
 	// log is the session logger.
 	log *logger.Logger
@@ -110,8 +117,9 @@ func (s *LifecycleService) OnSessionStart(ctx context.Context, s2 *Session, last
 func (s *LifecycleService) OnSessionEnd(ctx context.Context, s2 *Session, success bool, duration time.Duration) {
 	if s.lifecycle != nil {
 		outcome := SessionOutcome{Success: success, Duration: duration}
-		if len(s2.messages) > 0 {
-			for _, m := range s2.messages {
+		messages := s2.Persistence().RawMessages()
+		if len(messages) > 0 {
+			for _, m := range messages {
 				if m.Role == "user" && len(m.ToolResults) == 0 && outcome.TaskGoal == "" {
 					outcome.TaskGoal = m.Content
 				}
@@ -120,7 +128,7 @@ func (s *LifecycleService) OnSessionEnd(ctx context.Context, s2 *Session, succes
 		_ = s.lifecycle.OnSessionEnd(ctx, s2, outcome)
 	}
 	if s.adaptivePrompt != nil {
-		for _, m := range s2.messages {
+		for _, m := range s2.Persistence().RawMessages() {
 			if m.Role == "user" && len(m.ToolResults) == 0 {
 				s.adaptivePrompt.LearnFromFeedback(m.Content)
 			}
@@ -278,6 +286,67 @@ func (s *LifecycleService) Teach() TeachConfig                   { return s.teac
 func (s *LifecycleService) SetTeach(t TeachConfig)               { s.teach = t }
 func (s *LifecycleService) Trajectory() *TrajectoryDistiller     { return s.trajectory }
 func (s *LifecycleService) SetTrajectory(t *TrajectoryDistiller) { s.trajectory = t }
+
+// LoadSmartSkills loads the session's auto-discovery skills once.
+func (s *LifecycleService) LoadSmartSkills() {
+	if s == nil || s.smartSkills != nil {
+		return
+	}
+	s.smartSkills = plugin.LoadSmartSkills(plugin.DefaultSkillDirs())
+}
+
+// SmartSkills returns the loaded auto-discovery skills.
+func (s *LifecycleService) SmartSkills() []plugin.SmartSkill {
+	if s == nil {
+		return nil
+	}
+	return s.smartSkills
+}
+
+// EnsureUsageTracker returns the session token-budget tracker, creating it
+// with ceilings disabled until the caller opts into local limits.
+func (s *LifecycleService) EnsureUsageTracker() *token.UsageTracker {
+	if s == nil {
+		return nil
+	}
+	s.usageMu.Lock()
+	defer s.usageMu.Unlock()
+	if s.usage == nil {
+		s.usage = token.NewUsageTracker()
+		s.usage.SetLimits(token.UsageLimits{})
+	}
+	return s.usage
+}
+
+// UsageTracker returns the initialized token-budget tracker, if any.
+func (s *LifecycleService) UsageTracker() *token.UsageTracker {
+	if s == nil {
+		return nil
+	}
+	s.usageMu.Lock()
+	defer s.usageMu.Unlock()
+	return s.usage
+}
+
+// Logger returns the logger shared by lifecycle collaborators.
+func (s *LifecycleService) Logger() *logger.Logger {
+	if s == nil {
+		return nil
+	}
+	return s.log
+}
+
+// SetLogger replaces the logger shared by lifecycle collaborators.
+func (s *LifecycleService) SetLogger(l *logger.Logger) {
+	if s == nil {
+		return
+	}
+	if l == nil {
+		l = logger.Default()
+	}
+	s.log = l
+}
+
 func (s *LifecycleService) ToggleVerbose() bool {
 	if s == nil {
 		return false

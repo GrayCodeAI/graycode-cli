@@ -20,7 +20,9 @@ Hawk is an AI-powered coding agent for the terminal. This specification defines 
 
 ### REQ-1: Repository Structure
 
-Hawk SHALL be organized as a Go monorepo with the following top-level layout:
+Hawk SHALL be organized as a Go repository and workspace entry point within a
+multi-repository ecosystem. The Hawk repository has the following top-level
+layout:
 
 | Directory | Purpose |
 |-----------|---------|

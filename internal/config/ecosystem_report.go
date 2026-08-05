@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
-	"github.com/GrayCodeAI/tok"
+	"github.com/GrayCodeAI/hawk/internal/token"
 )
 
 // EcosystemReport is the structured view of the ecosystem panel.
@@ -63,7 +63,7 @@ func BuildEcosystemReport(ctx context.Context, provider, model string) Ecosystem
 
 	// tok
 	r.Tok.Embedded = true
-	r.Tok.SampleTokens = tok.EstimateTokens("hawk context compression pipeline")
+	r.Tok.SampleTokens = token.CountTokensFast("hawk context compression pipeline")
 
 	return r
 }
@@ -109,7 +109,7 @@ func FormatEcosystemPanel(ctx context.Context, provider, model string) string {
 	}
 
 	// tok — token counting and context compression (always embedded)
-	sample := tok.EstimateTokens("hawk context compression pipeline")
+	sample := token.CountTokensFast("hawk context compression pipeline")
 	b.WriteString(fmt.Sprintf("  tok: embedded · token/compress pipeline OK (sample=%d tokens)\n", sample))
 
 	return strings.TrimRight(b.String(), "\n")

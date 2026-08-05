@@ -32,10 +32,6 @@ func TestSession_NewSessionWithClient_WiresAllSubServices(t *testing.T) {
 	if s.ChatLLM().Client() == nil {
 		t.Error("ChatLLM().Client() should not be nil")
 	}
-	// The legacy s.client should be aliased to the service's client.
-	if s.client != s.ChatLLM().Client() {
-		t.Error("s.client should be the same instance as s.ChatLLM().Client()")
-	}
 
 	// PermissionService: PermissionEngine, legacy shims, autonomy, mode.
 	if s.PermSvc() == nil {
@@ -102,7 +98,7 @@ func TestSession_NewSessionWithClient_WiresAllSubServices(t *testing.T) {
 
 // TestSession_Stream_UsesChatService proves that the Stream() agent loop
 // actually goes through s.ChatLLM().Stream() rather than the legacy
-// s.client.StreamChatContinue(). The mock client is injected via
+// ChatService.StreamChatContinue(). The mock client is injected via
 // SetTestClient, which also reattaches the ChatService, so the agent
 // loop's call site must hit the mock and not the real eyrie client.
 func TestSession_Stream_UsesChatService(t *testing.T) {
@@ -146,8 +142,8 @@ func TestSession_ReattachTransport_UpdatesChatService(t *testing.T) {
 	if s.ChatLLM().Client() == originalClient {
 		t.Error("ChatLLM().Client() should have changed after ReattachTransport")
 	}
-	if s.client != mc {
-		t.Error("s.client should be the reattached mock")
+	if s.ChatLLM().Client() != mc {
+		t.Error("ChatService client should be the reattached mock")
 	}
 }
 
@@ -160,8 +156,8 @@ func TestSession_SetTestClient_UpdatesChatService(t *testing.T) {
 	if s.ChatLLM().Client() != mc {
 		t.Error("ChatLLM().Client() should be the test mock after SetTestClient")
 	}
-	if s.client != mc {
-		t.Error("s.client should be the test mock after SetTestClient")
+	if s.ChatLLM().Client() != mc {
+		t.Error("ChatService client should be the test mock after SetTestClient")
 	}
 }
 

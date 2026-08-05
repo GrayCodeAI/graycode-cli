@@ -89,20 +89,22 @@ func (s *Session) AddUserWithAttachment(content, imageBase64, mediaType string) 
 		return false
 	}
 
-	s.mu.Lock()
-	s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{
+	persist := s.Persistence()
+	if persist == nil {
+		return false
+	}
+	persist.SetRawMessages(append(persist.RawMessages(), types.EyrieMessage{
 		Role:    "user",
 		Content: content,
 		Images:  []string{"data:" + mediaType + ";base64," + imageBase64},
 	}))
-	s.mu.Unlock()
 
-	if s.Persistence().Graph() != nil {
+	if persist.Graph() != nil {
 		parentID := ""
-		if head, err := s.Persistence().Graph().Head(); err == nil && head != nil {
+		if head, err := persist.Graph().Head(); err == nil && head != nil {
 			parentID = head.ID
 		}
-		_, _ = s.Persistence().Graph().Append(parentID, "user", content+" [image attached]")
+		_, _ = persist.Graph().Append(parentID, "user", content+" [image attached]")
 	}
 	return true
 }

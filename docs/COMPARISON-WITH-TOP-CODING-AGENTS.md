@@ -2,9 +2,15 @@
 
 ## Executive Summary
 
-Hawk-Eco is a **professional-grade terminal coding agent ecosystem** with a unique monorepo architecture that separates concerns cleanly. While other coding agents (Cursor, Copilot, Windsurf, etc.) focus on IDE integration, Hawk-Eco excels in **terminal-native experience** with advanced security sandboxing, multi-agent orchestration, and comprehensive tool systems.
+Hawk-Eco is a terminal coding-agent ecosystem with a multi-repository product
+architecture. Hawk is the primary product; Eyrie, Yaad, Tok, Trace, Sight, and
+Inspect are independently owned support engines. While other coding agents
+often optimize for IDE integration, Hawk-Eco emphasizes terminal workflows,
+sandboxing, multi-agent orchestration, and tool systems.
 
-**Overall Score: 9.2/10**
+This document is a dated qualitative comparison, not an objective benchmark or
+release-readiness assessment. Repository stars, feature claims, and numeric
+scores must be independently revalidated before use.
 
 ---
 
@@ -126,7 +132,7 @@ Hawk-Eco is a **professional-grade terminal coding agent ecosystem** with a uniq
 
 ## Architecture Comparison
 
-### Hawk-Eco: Clean Monorepo Separation
+### Hawk-Eco: Layered Multi-Repository Separation
 
 ```
 Layer 1: Product (hawk)
@@ -138,7 +144,7 @@ Layer 3: Foundation (hawk-core-contracts, hawk-mcpkit)
 
 | Agent | Architecture | Coupling | Scalability |
 |-------|--------------|----------|-------------|
-| **Hawk-Eco** | **Monorepo with layers** | **Low** | **High** |
+| **Hawk-Eco** | **Multi-repository ecosystem with layers** | **Low at guarded boundaries; transitional internally** | **High, with release coordination cost** |
 | Cursor | Single repo | High | Medium |
 | Copilot | Single repo | High | Medium |
 | Windsurf | Single repo | High | Medium |
@@ -170,7 +176,7 @@ Layer 3: Foundation (hawk-core-contracts, hawk-mcpkit)
 - ✅ **Tool discovery** and help system
 
 ### 4. Architecture
-- ✅ **Clean monorepo** with dependency isolation
+- ✅ **Layered multi-repository ecosystem** with guarded dependency isolation
 - ✅ **Foundation layer** (contracts, MCP) never imports product
 - ✅ **Extension-friendly** with MCP protocol
 - ✅ **Cross-language SDKs** (Go, Python)
@@ -331,7 +337,7 @@ func (t *IDETransport) Receive() (Event, error)
 | MEDIUM | Add AI code completion | Large | +0.3 |
 | LOW | Add Web UI for monitoring | Small | +0.2 |
 
-**Current Score: 9.5/10**
+**No numeric score is assigned; see the dated architecture baseline for verified state.**
 
 ---
 
@@ -342,7 +348,7 @@ func (t *IDETransport) Receive() (Event, error)
 | LOW | Add SDK analytics | Small | +0.1 |
 | LOW | Add IDE integration examples | Small | +0.2 |
 
-**Current Score: 8.5/10**
+**No numeric score is assigned in this comparison.**
 
 ---
 
@@ -353,7 +359,7 @@ func (t *IDETransport) Receive() (Event, error)
 | LOW | Add deprecation warnings | Small | +0.1 |
 | LOW | Add type stubs | Small | +0.1 |
 
-**Current Score: 8.5/10**
+**Historical self-assessment; no current numeric score is assigned.**
 
 ---
 
@@ -365,7 +371,7 @@ func (t *IDETransport) Receive() (Event, error)
 | MEDIUM | Add community forum | Large | +0.2 |
 | MEDIUM | Add API analytics | Medium | +0.2 |
 
-**Current Score: 7.5/10**
+**Historical self-assessment; no current numeric score is assigned.**
 
 ---
 
@@ -376,7 +382,7 @@ func (t *IDETransport) Receive() (Event, error)
 | LOW | Add completion endpoint | Medium | +0.2 |
 | LOW | Add streaming optimizations | Small | +0.1 |
 
-**Current Score: 8/10**
+**No numeric score is assigned in this comparison.**
 
 ---
 
@@ -386,7 +392,7 @@ func (t *IDETransport) Receive() (Event, error)
 |----------|--------------|--------|--------|
 | LOW | Add version compatibility checks | Small | +0.1 |
 
-**Current Score: 8/10**
+**No numeric score is assigned in this comparison.**
 
 ---
 
@@ -396,7 +402,7 @@ func (t *IDETransport) Receive() (Event, error)
 |----------|--------------|--------|--------|
 | LOW | Add more transport options | Small | +0.1 |
 
-**Current Score: 8/10**
+**Historical self-assessment; no current numeric score is assigned.**
 
 ---
 
@@ -406,7 +412,7 @@ func (t *IDETransport) Receive() (Event, error)
 |----------|--------------|--------|--------|
 | LOW | Add memory analytics | Small | +0.1 |
 
-**Current Score: 8/10**
+**Historical self-assessment; no current numeric score is assigned.**
 
 ---
 
@@ -416,7 +422,7 @@ func (t *IDETransport) Receive() (Event, error)
 |----------|--------------|--------|--------|
 | LOW | Add token usage prediction | Small | +0.1 |
 
-**Current Score: 8/10**
+**Historical self-assessment; no current numeric score is assigned.**
 
 ---
 
@@ -426,7 +432,7 @@ func (t *IDETransport) Receive() (Event, error)
 |----------|--------------|--------|--------|
 | LOW | Add trace sharing | Small | +0.1 |
 
-**Current Score: 8/10**
+**Historical self-assessment; no current numeric score is assigned.**
 
 ---
 
@@ -436,7 +442,7 @@ func (t *IDETransport) Receive() (Event, error)
 |----------|--------------|--------|--------|
 | LOW | Add review templates | Small | +0.1 |
 
-**Current Score: 8/10**
+**Historical self-assessment; no current numeric score is assigned.**
 
 ---
 
@@ -446,22 +452,19 @@ func (t *IDETransport) Receive() (Event, error)
 |----------|--------------|--------|--------|
 | LOW | Add verification templates | Small | +0.1 |
 
-**Current Score: 8/10**
+**Historical self-assessment; no current numeric score is assigned.**
 
 ---
 
-## Overall Ecosystem Score
+## Qualitative assessment
 
 | Category | Score | Max |
 |----------|-------|-----|
-| **Core Features** | **10/10** | 10 |
-| **Terminal Experience** | **10/10** | 10 |
-| **Security** | **10/10** | 10 |
-| **Architecture** | **9/10** | 10 |
-| **Documentation** | **8/10** | 10 |
-| **Community** | **6/10** | 10 |
-| **IDE Features** | **7/10** | 10 |
-| **Total** | **9.2/10** | 10 |
+| **Architecture** | Strong ecosystem boundaries; internal consolidation remains in progress |
+| **Terminal experience** | Core product strength |
+| **Security** | Requires continuous verification; do not infer completeness from feature count |
+| **Documentation** | Requires reconciliation and dated evidence |
+| **IDE and SDK reach** | Separate product roadmap, not an architecture score |
 
 ---
 
@@ -487,12 +490,12 @@ func (t *IDETransport) Receive() (Event, error)
 
 ## Conclusion
 
-Hawk-Eco is a **professional-grade coding agent ecosystem** with:
+Hawk-Eco is a coding-agent ecosystem with:
 - ✅ **Best-in-class terminal experience**
 - ✅ **Advanced sandbox security**
 - ✅ **Multi-agent orchestration**
 - ✅ **Comprehensive tool system**
-- ✅ **Clean monorepo architecture**
+- ✅ **Layered multi-repository architecture**
 
 **To reach parity with top IDE agents (Cursor, Copilot):**
 - Add VS Code extension integration
@@ -501,7 +504,8 @@ Hawk-Eco is a **professional-grade coding agent ecosystem** with:
 
 **These are strategic moves** that would differentiate Hawk-Eco as the **only terminal agent with professional IDE integration capabilities**.
 
-**Target Score: 10/10**
+Architecture progress should be tracked through verified dependency, migration,
+replay, recovery, and release checks rather than a target score.
 
 ---
 

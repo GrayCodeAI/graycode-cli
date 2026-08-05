@@ -6,8 +6,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	yaadEngine "github.com/GrayCodeAI/yaad/engine"
 )
 
 // SharedMemory enables real-time memory sharing between parallel agents
@@ -70,17 +68,7 @@ func (sm *SharedMemory) Share(content, nodeType string) error {
 		})
 	}
 
-	if !yaadEngine.IsValidNodeType(nodeType) {
-		nodeType = "convention"
-	}
-
-	_, err := sm.bridge.engine.Remember(context.Background(), yaadEngine.RememberInput{
-		Type:    nodeType,
-		Content: content,
-		Scope:   "project",
-		Project: "mission:" + sm.missionID,
-		Agent:   sm.agentID,
-	})
+	err := sm.bridge.rememberProject(context.Background(), content, nodeType, "mission:"+sm.missionID, sm.agentID)
 	if err != nil {
 		return err
 	}
@@ -105,13 +93,7 @@ func (sm *SharedMemory) Recall(query string, budget int) (string, error) {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
-	result, err := sm.bridge.recallResultWithContext(context.Background(), yaadEngine.RecallOpts{
-		Query:   query,
-		Budget:  budget,
-		Limit:   10,
-		Depth:   2,
-		Project: "mission:" + sm.missionID,
-	})
+	result, err := sm.bridge.recallProject(context.Background(), query, "mission:"+sm.missionID, budget, 10, 2)
 	if err != nil || result == nil || len(result.Nodes) == 0 {
 		return "", err
 	}
@@ -136,10 +118,7 @@ func (sm *SharedMemory) GetAllShared() ([]string, error) {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
-	result, err := sm.bridge.engine.Recall(context.Background(), yaadEngine.RecallOpts{
-		Limit:   20,
-		Project: "mission:" + sm.missionID,
-	})
+	result, err := sm.bridge.recallProject(context.Background(), "", "mission:"+sm.missionID, 0, 20, 0)
 	if err != nil || result == nil {
 		return nil, err
 	}
@@ -168,12 +147,7 @@ func (sm *SharedMemory) detectConflict(newContent, nodeType string) *ConflictInf
 	ctx := context.Background()
 
 	// Search for existing memories of the same type in this mission
-	result, err := sm.bridge.engine.Recall(ctx, yaadEngine.RecallOpts{
-		Query:   newContent,
-		Limit:   5,
-		Depth:   1,
-		Project: "mission:" + sm.missionID,
-	})
+	result, err := sm.bridge.recallProject(ctx, newContent, "mission:"+sm.missionID, 0, 5, 1)
 	if err != nil || result == nil {
 		return nil
 	}

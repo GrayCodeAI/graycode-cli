@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/engine/token"
 	"github.com/GrayCodeAI/hawk/internal/types"
-	"github.com/GrayCodeAI/tok"
 
 	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
@@ -20,7 +20,7 @@ func (s *Session) ShouldAutoCompact() bool {
 	// Check token count using tok estimation
 	totalTokens := 0
 	for _, msg := range s.Persistence().RawMessages() {
-		totalTokens += tok.EstimateTokens(msg.Content)
+		totalTokens += token.CountTokensFast(msg.Content)
 	}
 	window := s.ContextWindowSize()
 	threshold := window * s.compactThresholdPct() / 100
@@ -116,7 +116,7 @@ func (s *Session) generateSummary() string {
 	// Try tok compression first as a fast, zero-cost alternative
 	conversationText := summaryMsgs[0].Content
 	targetBudget := 1000 // Keep summary under 1K tokens
-	compressed, stats := tok.Compress(conversationText, tok.WithBudget(targetBudget))
+	compressed, stats := token.Compress(conversationText, targetBudget)
 	s.recordTokCompressionObservation(conversationText, "context-compaction", stats)
 	reductionRatio := float64(stats.FinalTokens) / float64(stats.OriginalTokens)
 	if reductionRatio < 0.5 && stats.OriginalTokens > targetBudget*2 {
@@ -166,10 +166,10 @@ func extractSummaryFromCompressed(compressed string) string {
 // CompressMessageContent compresses a single message's content if it exceeds the limit.
 // Uses tok for fast, zero-cost compression. Returns the original if already short enough.
 func CompressMessageContent(content string, maxTokens int) string {
-	if tok.EstimateTokens(content) <= maxTokens {
+	if token.CountTokensFast(content) <= maxTokens {
 		return content
 	}
-	compressed, stats := tok.Compress(content, tok.WithBudget(maxTokens))
+	compressed, stats := token.Compress(content, maxTokens)
 	if stats.FinalTokens < stats.OriginalTokens {
 		return compressed
 	}

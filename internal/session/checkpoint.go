@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/tok"
+	"github.com/GrayCodeAI/hawk/internal/token"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -529,7 +529,7 @@ func estimateTokens(messages []Message) int {
 			b.WriteString(tr.Content)
 		}
 	}
-	total := tok.EstimateTokens(b.String())
+	total := token.CountTokensFast(b.String())
 	if total == 0 && len(messages) > 0 {
 		total = len(messages)
 	}

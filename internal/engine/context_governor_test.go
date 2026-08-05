@@ -51,10 +51,10 @@ func TestMaybeSpillToolOutput_LargeSpills(t *testing.T) {
 
 func TestManageContextBeforeTurn_CollapseOnly(t *testing.T) {
 	s := NewSession("", "test-model", "sys", nil)
-	s.messages = []types.EyrieMessage{
+	s.Persistence().SetRawMessages([]types.EyrieMessage{
 		{Role: "user", ToolResults: []types.ToolResult{{Content: "err", IsError: true}}},
 		{Role: "user", ToolResults: []types.ToolResult{{Content: "err", IsError: true}}},
-	}
+	})
 	_, compacted := s.ManageContextBeforeTurn(context.Background())
 	if compacted {
 		t.Fatal("expected no compaction for tiny history")

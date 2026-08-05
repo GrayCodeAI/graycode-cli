@@ -17,7 +17,7 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/GrayCodeAI/tok"
+	"github.com/GrayCodeAI/hawk/internal/token"
 )
 
 // CodeIndexer is the interface used by IncrementalReindex to store and query
@@ -178,12 +178,12 @@ func IncrementalReindex(dir string, ignore []string, indexer CodeIndexer) (added
 				return
 			}
 
-			opts := tok.ChunkOptions{
+			opts := token.ChunkOptions{
 				MaxTokens: 500,
 				MinTokens: 50,
 				Language:  fw.lang,
 			}
-			chunks := tok.ChunkCode(string(data), opts)
+			chunks := token.ChunkCode(string(data), opts)
 
 			for i, chunk := range chunks {
 				chunkID := fmt.Sprintf("%s:%d", fw.relPath, i)

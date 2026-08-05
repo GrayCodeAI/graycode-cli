@@ -39,9 +39,8 @@ func runPrint(text string) error {
 		return err
 	}
 
-	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
-	sess.SetLogger(logger.New(io.Discard, logger.Error))
-	if cfgErr := configureSession(sess, settings); cfgErr != nil {
+	sess, cfgErr := newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error))
+	if cfgErr != nil {
 		return cfgErr
 	}
 	projectDir, err := os.Getwd()
@@ -281,9 +280,8 @@ func runRepl() error {
 		return err
 	}
 
-	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
-	sess.SetLogger(logger.New(io.Discard, logger.Error))
-	if cfgErr := configureSession(sess, settings); cfgErr != nil {
+	sess, cfgErr := newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error))
+	if cfgErr != nil {
 		return cfgErr
 	}
 	projectDir, err := os.Getwd()

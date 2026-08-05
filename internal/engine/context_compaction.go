@@ -25,10 +25,6 @@ func (s *Session) SetPersistID(id string) {
 	if s == nil {
 		return
 	}
-	s.mu.Lock()
-	s.persistID = id
-	s.checkpointMgr = nil
-	s.mu.Unlock()
 	if p := s.Persistence(); p != nil {
 		p.SetPersistID(id)
 		p.SetCheckpointManager(nil)
@@ -40,14 +36,6 @@ func (s *Session) SetPersistID(id string) {
 func (s *Session) RecordAPIUsage(prompt, completion int) {
 	if s == nil {
 		return
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if prompt > 0 {
-		s.lastPromptTokens = prompt
-	}
-	if completion > 0 {
-		s.lastCompletionTokens = completion
 	}
 	if p := s.Persistence(); p != nil {
 		p.SetTokenUsage(prompt, completion)
@@ -62,9 +50,7 @@ func (s *Session) LastPromptTokens() int {
 	if p := s.Persistence(); p != nil {
 		return p.LastPromptTokens()
 	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.lastPromptTokens
+	return 0
 }
 
 // ContextUsedTokens returns API prompt tokens when available, else an estimate.
@@ -72,30 +58,23 @@ func (s *Session) ContextUsedTokens() int {
 	if p := s.LastPromptTokens(); p > 0 {
 		return p
 	}
-	msgs := s.Persistence().RawMessages()
+	persist := s.Persistence()
+	if persist == nil {
+		return 0
+	}
+	msgs := persist.RawMessages()
 	count := len(msgs)
 	var lastLen int
 	if count > 0 {
 		lastLen = len(msgs[count-1].Content)
 	}
 
-	if p := s.Persistence(); p != nil {
-		if cache, cachedCount, cachedLen := p.TokenEstimateCache(); cachedCount == count && cachedLen == lastLen && cache > 0 {
-			return cache
-		}
+	if cache, cachedCount, cachedLen := persist.TokenEstimateCache(); cachedCount == count && cachedLen == lastLen && cache > 0 {
+		return cache
 	}
 
 	est := EstimateTokens(msgs)
-
-	if p := s.Persistence(); p != nil {
-		p.SetTokenEstimateCache(est, count, lastLen)
-	} else {
-		s.mu.Lock()
-		s.estTokensMsgCount = count
-		s.estTokensLastLen = lastLen
-		s.estTokensCache = est
-		s.mu.Unlock()
-	}
+	persist.SetTokenEstimateCache(est, count, lastLen)
 
 	return est
 }
@@ -143,6 +122,9 @@ func (s *Session) checkpointManager() *session.CheckpointManager {
 		return nil
 	}
 	p := s.Persistence()
+	if p == nil {
+		return nil
+	}
 	if p.CheckpointManager() == nil {
 		cm := session.NewCheckpointManager(dir)
 		_ = cm.Load()

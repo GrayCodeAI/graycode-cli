@@ -210,10 +210,8 @@ func runExec(_ *cobra.Command, args []string) error {
 	}
 
 	// Create engine session
-	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
-	sess.SetLogger(logger.New(io.Discard, logger.Error))
-
-	if cfgErr := configureSession(sess, settings, execMaxTurns); cfgErr != nil {
+	sess, cfgErr := newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error), execMaxTurns)
+	if cfgErr != nil {
 		return cfgErr
 	}
 	projectDir, err := os.Getwd()

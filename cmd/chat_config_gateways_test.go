@@ -119,7 +119,7 @@ func TestConfigGatewayRefreshTargetIndex_UsesSelectedRow(t *testing.T) {
 	_ = store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 
-	sess := &engine.Session{}
+	sess := engine.NewSession("", "", "", nil)
 	sess.SetProvider("openrouter")
 	m := chatModel{
 		configTab:           configTabGateways,
@@ -168,7 +168,7 @@ func TestFocusConfigActiveGateway_SelectsActiveRow(t *testing.T) {
 	_ = store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
 	hawkconfig.InvalidateConfigUICache()
 
-	sess := &engine.Session{}
+	sess := engine.NewSession("", "", "", nil)
 	sess.SetProvider("openrouter")
 	m := chatModel{
 		configTab:           configTabGateways,

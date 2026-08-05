@@ -30,6 +30,9 @@ type ToolService struct {
 	agentSpawn        tool.AgentSpawnFn
 	snapshots         SnapshotTracker
 	bgMu              sync.Mutex
+	executionConfigMu sync.RWMutex
+	workingDir        string
+	readOnlyBash      bool
 	bgManager         *tool.BackgroundAgentManager
 	sandbox           *diff.DiffSandbox
 	deps              toolExecutionDeps
@@ -59,7 +62,6 @@ type toolExecutionDeps struct {
 	memory             *MemoryService
 	agentSpawn         tool.AgentSpawnFn
 	askUser            func(string) (string, error)
-	readOnlyBash       bool
 	workingDir         string
 	checkApproval      func(context.Context, string, map[string]interface{}) (bool, string)
 	recordPolicy       func(types.ToolCall, string, bool, string)
@@ -75,8 +77,55 @@ func NewToolService(registry *tool.Registry) *ToolService {
 
 // WithExecutionDeps binds the extracted service graph used by ExecuteOne.
 func (s *ToolService) WithExecutionDeps(deps toolExecutionDeps) *ToolService {
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
 	s.deps = deps
+	s.workingDir = deps.workingDir
 	return s
+}
+
+// SetWorkingDir configures the preferred working directory for tool execution
+// and graph observations.
+func (s *ToolService) SetWorkingDir(dir string) {
+	if s == nil {
+		return
+	}
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
+	s.workingDir = dir
+	s.deps.workingDir = dir
+}
+
+// WorkingDir returns the preferred working directory for tool execution.
+func (s *ToolService) WorkingDir() string {
+	if s == nil {
+		return ""
+	}
+	s.executionConfigMu.RLock()
+	defer s.executionConfigMu.RUnlock()
+	return s.workingDir
+}
+
+// SetReadOnlyBash enables the explore/plan Bash allowlist for this tool
+// service and all subsequent tool contexts.
+func (s *ToolService) SetReadOnlyBash(enabled bool) {
+	if s == nil {
+		return
+	}
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
+	s.readOnlyBash = enabled
+}
+
+// ReadOnlyBash reports whether Bash is restricted to the explore/plan
+// allowlist.
+func (s *ToolService) ReadOnlyBash() bool {
+	if s == nil {
+		return false
+	}
+	s.executionConfigMu.RLock()
+	defer s.executionConfigMu.RUnlock()
+	return s.readOnlyBash
 }
 
 // WithMetrics attaches the registry used for tool execution counters.
@@ -87,9 +136,37 @@ func (s *ToolService) WithMetrics(registry *metrics.Registry) *ToolService {
 
 // WithContainerExecutor configures container isolation.
 func (s *ToolService) WithContainerExecutor(ce tool.ContainerExecutor, required bool) *ToolService {
+	if s == nil {
+		return s
+	}
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
 	s.containerExecutor = ce
 	s.containerRequired = required
 	return s
+}
+
+// SetContainerRequired updates container-first mode without replacing the
+// currently configured executor.
+func (s *ToolService) SetContainerRequired(required bool) {
+	if s == nil {
+		return
+	}
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
+	s.containerRequired = required
+}
+
+// SetContainerExecutor updates the executor without changing container-first
+// mode. Keeping the mutation on ToolService makes the pair safe to update
+// while asynchronous container startup/retry is in progress.
+func (s *ToolService) SetContainerExecutor(ce tool.ContainerExecutor) {
+	if s == nil {
+		return
+	}
+	s.executionConfigMu.Lock()
+	defer s.executionConfigMu.Unlock()
+	s.containerExecutor = ce
 }
 
 // WithTracer configures the OTel tracer.
@@ -216,7 +293,8 @@ func (s *ToolService) ExecuteAll(ctx context.Context, calls []types.ToolCall, ch
 func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, override tool.Tool, ch chan<- StreamEvent, turn int, intent string) toolExecResult {
 	result := toolExecResult{tc: tc}
 	ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
-	if s.containerRequired && (s.containerExecutor == nil || !s.containerExecutor.Running()) {
+	containerExecutor, containerRequired := s.containerState()
+	if containerRequired && (containerExecutor == nil || !containerExecutor.Running()) {
 		msg := "Container not ready — tools are disabled until the sandbox is running."
 		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg}
 		result.output, result.isErr, result.err = msg, true, fmt.Errorf("%s", msg)
@@ -284,11 +362,11 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 		AllowedDirectories:  s.deps.permissions.AllowedDirs(),
 		SandboxMode:         s.deps.permissions.SandboxMode(),
 		BackgroundManager:   s.EnsureBackgroundManager(),
-		ReadOnlyBash:        s.deps.readOnlyBash,
-		WorkingDir:          s.deps.workingDir,
+		ReadOnlyBash:        s.ReadOnlyBash(),
+		WorkingDir:          s.WorkingDir(),
 	})
-	if s.containerExecutor != nil && s.containerExecutor.Running() {
-		toolCtx = tool.WithContainerExecutor(toolCtx, s.containerExecutor)
+	if containerExecutor != nil && containerExecutor.Running() {
+		toolCtx = tool.WithContainerExecutor(toolCtx, containerExecutor)
 	}
 	toolCtx, cancel := context.WithTimeout(toolCtx, toolTimeout(tc.Name))
 	t := override
@@ -551,8 +629,9 @@ func (s *ToolService) EstimateBlastRadius(planned []PlannedCall) *BlastRadiusRep
 // retry policy. Returns the (output, isErr) pair. The tool_result
 // StreamEvent is emitted on ch.
 func (s *ToolService) ExecuteRegistered(ctx context.Context, tc types.ToolCall, ch chan<- StreamEvent) (string, bool) {
-	if s.containerRequired {
-		if s.containerExecutor == nil || !s.containerExecutor.Running() {
+	containerExecutor, containerRequired := s.containerState()
+	if containerRequired {
+		if containerExecutor == nil || !containerExecutor.Running() {
 			msg := "Container not ready — tools are disabled until the sandbox is running."
 			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg}
 			return msg, true
@@ -588,11 +667,28 @@ func (s *ToolService) BackgroundManager() *tool.BackgroundAgentManager {
 	return s.bgManager
 }
 
+// containerState returns one consistent view for a tool invocation. The
+// executor can be replaced asynchronously by the TUI's container retry path.
+func (s *ToolService) containerState() (tool.ContainerExecutor, bool) {
+	if s == nil {
+		return nil, false
+	}
+	s.executionConfigMu.RLock()
+	defer s.executionConfigMu.RUnlock()
+	return s.containerExecutor, s.containerRequired
+}
+
 // ContainerRequired reports whether container-first mode is on.
-func (s *ToolService) ContainerRequired() bool { return s.containerRequired }
+func (s *ToolService) ContainerRequired() bool {
+	_, required := s.containerState()
+	return required
+}
 
 // ContainerExecutor returns the configured container executor, or nil.
-func (s *ToolService) ContainerExecutor() tool.ContainerExecutor { return s.containerExecutor }
+func (s *ToolService) ContainerExecutor() tool.ContainerExecutor {
+	executor, _ := s.containerState()
+	return executor
+}
 
 // Snapshots returns the configured automatic snapshot tracker.
 func (s *ToolService) Snapshots() SnapshotTracker { return s.snapshots }

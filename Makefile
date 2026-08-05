@@ -34,7 +34,7 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench boundaries build check-replace ci clean contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard submodule-release-parity cover cover-new fmt help install lint lint-fix \
+.PHONY: all bench boundaries build check-replace ci clean contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard package-boundaries-guard submodule-release-parity cover cover-new fmt help install lint lint-fix \
         release security setup smoke path sync-external test test-10x test-live test-new test-race tidy version vet
 
 check-replace: ## Fail if go.mod has local replace directives (run before tagging)
@@ -116,7 +116,10 @@ peer-guard: ## Fail if support engines import each other instead of depending on
 internal-layers-guard: ## Enforce one-way dependencies across stable Hawk internal layers.
 	bash ./scripts/check-internal-layer-imports.sh
 
-boundaries: contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard ## Alias for all boundary guards (matches `make boundaries` in engine repos).
+package-boundaries-guard: ## Enforce AST/package-graph boundaries with file/line diagnostics.
+	bash ./scripts/check-package-boundaries.sh
+
+boundaries: contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard package-boundaries-guard ## Alias for all boundary guards (matches `make boundaries` in engine repos).
 
 submodule-release-parity: ## Verify every go.mod ecosystem version resolves to its pinned Gitlink.
 	bash ./scripts/check-submodule-release-parity.sh

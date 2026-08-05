@@ -53,7 +53,7 @@ func TestAddUserWithAttachment_VisionModel(t *testing.T) {
 	t.Parallel()
 	mc := newMockClient()
 	s := NewSession("anthropic", "claude-3-5-sonnet-20241022", "sys", nil)
-	s.client = mc
+	s.SetTestClient(mc)
 
 	attached := s.AddUserWithAttachment("describe this", "QUJD", "image/png")
 	if !attached {
@@ -80,7 +80,7 @@ func TestAddUserWithAttachment_DefaultMediaType(t *testing.T) {
 	t.Parallel()
 	mc := newMockClient()
 	s := NewSession("anthropic", "claude-opus-4-8", "sys", nil)
-	s.client = mc
+	s.SetTestClient(mc)
 
 	if !s.AddUserWithAttachment("hi", "ZZZ", "") {
 		t.Fatal("expected attached=true")
@@ -95,7 +95,7 @@ func TestAddUserWithAttachment_NonVisionModelDegrades(t *testing.T) {
 	t.Parallel()
 	mc := newMockClient()
 	s := NewSession("openai", "gpt-3.5-turbo", "sys", nil)
-	s.client = mc
+	s.SetTestClient(mc)
 
 	attached := s.AddUserWithAttachment("look at this", "QUJD", "image/png")
 	if attached {

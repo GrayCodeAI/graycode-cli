@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"github.com/GrayCodeAI/yaad/storage"
 )
 
 // CodeMemoryLinker creates bidirectional links between indexed code chunks
@@ -39,13 +37,16 @@ func (cl *CodeMemoryLinker) LinkFileToMemories(path string) error {
 	basename := filepath.Base(path)
 
 	// Search for memories mentioning this file
-	nodes, err := cl.bridge.store.SearchNodes(ctx, basename, 20)
+	nodes, err := cl.bridge.searchNodes(ctx, basename, 20)
 	if err != nil || len(nodes) == 0 {
 		return nil
 	}
 
 	// Find or create a file anchor node
-	anchor := cl.getOrCreateFileAnchor(ctx, path)
+	anchor, err := cl.bridge.getOrCreateFileAnchor(ctx, path)
+	if err != nil {
+		return nil
+	}
 	if anchor == nil {
 		return nil
 	}
@@ -59,13 +60,7 @@ func (cl *CodeMemoryLinker) LinkFileToMemories(path string) error {
 		if !mentionsFile(node.Content, basename, path) {
 			continue
 		}
-		edge := &storage.Edge{
-			FromID: node.ID,
-			ToID:   anchor.ID,
-			Type:   "touches",
-			Weight: 0.8,
-		}
-		if err := cl.bridge.store.CreateEdge(ctx, edge); err != nil {
+		if err := cl.bridge.createTouchEdge(ctx, node.ID, anchor.ID); err != nil {
 			continue
 		}
 		linkedIDs = append(linkedIDs, node.ID)
@@ -90,7 +85,7 @@ func (cl *CodeMemoryLinker) MemoriesForFile(path string) ([]string, error) {
 
 	// Search for the file anchor
 	basename := filepath.Base(path)
-	nodes, err := cl.bridge.store.SearchNodes(context.Background(), basename, 20)
+	nodes, err := cl.bridge.searchNodes(context.Background(), basename, 20)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +107,7 @@ func (cl *CodeMemoryLinker) MemoriesForSymbol(symbol string) ([]string, error) {
 		return nil, nil
 	}
 
-	nodes, err := cl.bridge.store.SearchNodes(context.Background(), symbol, 10)
+	nodes, err := cl.bridge.searchNodes(context.Background(), symbol, 10)
 	if err != nil {
 		return nil, err
 	}
@@ -149,30 +144,6 @@ func (cl *CodeMemoryLinker) InvalidateCache(path string) {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
 	delete(cl.cache, path)
-}
-
-func (cl *CodeMemoryLinker) getOrCreateFileAnchor(ctx context.Context, path string) *storage.Node {
-	basename := filepath.Base(path)
-	key := "file:" + path
-
-	// Try to find existing anchor
-	if node, err := cl.bridge.store.GetNodeByKey(ctx, key, ""); err == nil && node != nil {
-		return node
-	}
-
-	// Create new file anchor
-	node := &storage.Node{
-		Type:       "file",
-		Content:    "File: " + basename + " (" + path + ")",
-		Scope:      "project",
-		Tier:       2,
-		Confidence: 0.9,
-		Key:        key,
-	}
-	if err := cl.bridge.store.CreateNode(ctx, node); err != nil {
-		return nil
-	}
-	return node
 }
 
 func mentionsFile(content, basename, fullPath string) bool {

@@ -30,3 +30,7 @@ User: "Add input validation to the signup handler"
 1. Read signup handler and existing validation patterns → verify: understand current flow
 2. Write tests for invalid inputs → verify: tests fail as expected
 3. Add minimal validation → verify: tests pass, no unrelated files changed
+
+### Example 6: Simple greeting or conversational prompt
+User: "Hi"
+1. Respond directly with a concise greeting (e.g., "Hello! I am Hawk Sandbox Coding Agents developed by GrayCodeAI. How can I help you with your project today?") without invoking any tools.

@@ -187,6 +187,171 @@ func (b *YaadBridge) recallResultWithContext(
 	return result, nil
 }
 
+// listNodes is the memory package's read boundary for Yaad node queries.
+// Callers stay independent of the storage lifecycle and synchronization.
+func (b *YaadBridge) listNodes(ctx context.Context, filter storage.NodeFilter) ([]*storage.Node, error) {
+	if !b.ready {
+		return nil, b.notReadyError("ListNodes")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.store.ListNodes(ctx, filter)
+}
+
+func (b *YaadBridge) listPinnedNodes(ctx context.Context, limit int) ([]*storage.Node, error) {
+	pinned := true
+	return b.listNodes(ctx, storage.NodeFilter{Pinned: &pinned, Limit: limit})
+}
+
+func (b *YaadBridge) listNodesByType(ctx context.Context, nodeType string, minConfidence float64, limit int) ([]*storage.Node, error) {
+	return b.listNodes(ctx, storage.NodeFilter{
+		Type:          nodeType,
+		MinConfidence: minConfidence,
+		Limit:         limit,
+	})
+}
+
+func (b *YaadBridge) listNodesByScope(ctx context.Context, nodeType, scope string, minConfidence float64, limit int) ([]*storage.Node, error) {
+	return b.listNodes(ctx, storage.NodeFilter{
+		Type:          nodeType,
+		Scope:         scope,
+		MinConfidence: minConfidence,
+		Limit:         limit,
+	})
+}
+
+func (b *YaadBridge) adjustNodeConfidence(ctx context.Context, id string, delta float64, skipPinned bool) error {
+	if !b.ready {
+		return b.notReadyError("AdjustNodeConfidence")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	node, err := b.store.GetNode(ctx, id)
+	if err != nil || node == nil {
+		return err
+	}
+	if skipPinned && node.Pinned {
+		return nil
+	}
+
+	node.Confidence += delta
+	if node.Confidence > 1.0 {
+		node.Confidence = 1.0
+	}
+	if node.Confidence < 0.1 {
+		node.Confidence = 0.1
+	}
+	return b.store.UpdateNode(ctx, node)
+}
+
+func (b *YaadBridge) recallBudget(ctx context.Context, query string, budget, limit, depth int) (*yaadEngine.RecallResult, error) {
+	return b.recallResultWithContext(ctx, yaadEngine.RecallOpts{
+		Query:  query,
+		Budget: budget,
+		Limit:  limit,
+		Depth:  depth,
+	})
+}
+
+func (b *YaadBridge) recallProject(ctx context.Context, query, project string, budget, limit, depth int) (*yaadEngine.RecallResult, error) {
+	return b.recallResultWithContext(ctx, yaadEngine.RecallOpts{
+		Query:   query,
+		Budget:  budget,
+		Limit:   limit,
+		Depth:   depth,
+		Project: project,
+	})
+}
+
+func (b *YaadBridge) rememberProject(ctx context.Context, content, nodeType, project, agent string) error {
+	if !b.ready {
+		return b.notReadyError("RememberProject")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if !yaadEngine.IsValidNodeType(nodeType) {
+		nodeType = "convention"
+	}
+	_, err := b.engine.Remember(ctx, yaadEngine.RememberInput{
+		Type:    nodeType,
+		Content: content,
+		Scope:   "project",
+		Project: project,
+		Agent:   agent,
+	})
+	return err
+}
+
+func (b *YaadBridge) rememberGlobal(ctx context.Context, content, nodeType string) error {
+	if !b.ready {
+		return b.notReadyError("RememberGlobal")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if !yaadEngine.IsValidNodeType(nodeType) {
+		nodeType = "preference"
+	}
+	_, err := b.engine.Remember(ctx, yaadEngine.RememberInput{
+		Type:    nodeType,
+		Content: content,
+		Scope:   "global",
+		Project: "__global__",
+	})
+	return err
+}
+
+func (b *YaadBridge) searchNodes(ctx context.Context, query string, limit int) ([]*storage.Node, error) {
+	if !b.ready {
+		return nil, b.notReadyError("SearchNodes")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.store.SearchNodes(ctx, query, limit)
+}
+
+func (b *YaadBridge) createTouchEdge(ctx context.Context, fromID, toID string) error {
+	if !b.ready {
+		return b.notReadyError("CreateEdge")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.store.CreateEdge(ctx, &storage.Edge{
+		FromID: fromID,
+		ToID:   toID,
+		Type:   "touches",
+		Weight: 0.8,
+	})
+}
+
+func (b *YaadBridge) getOrCreateFileAnchor(ctx context.Context, path string) (*storage.Node, error) {
+	if !b.ready {
+		return nil, b.notReadyError("GetOrCreateFileAnchor")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	key := "file:" + path
+	if node, err := b.store.GetNodeByKey(ctx, key, ""); err == nil && node != nil {
+		return node, nil
+	}
+
+	node := &storage.Node{
+		Type:       "file",
+		Content:    "File: " + filepath.Base(path) + " (" + path + ")",
+		Scope:      "project",
+		Tier:       2,
+		Confidence: 0.9,
+		Key:        key,
+	}
+	if err := b.store.CreateNode(ctx, node); err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
 func (b *YaadBridge) recordContextGraph(query string, result *yaadEngine.RecallResult) {
 	if b.graphSessionID == "" || result == nil || len(result.Nodes) == 0 {
 		return

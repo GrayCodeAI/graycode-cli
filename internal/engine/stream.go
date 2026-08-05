@@ -93,7 +93,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	}
 
 	// Auto-skill: load smart skills once at session start for per-turn matching
-	s.smartSkills = plugin.LoadSmartSkills(plugin.DefaultSkillDirs())
+	s.LifecycleSvc().LoadSmartSkills()
 
 	recoveryCount := 0
 	turnCount := 0
@@ -231,7 +231,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 		// Auto-skill: match smart skills against the last user message and
 		// inject a compact listing. The LLM uses the Skill tool for full content.
-		if len(s.smartSkills) > 0 {
+		smartSkills := s.LifecycleSvc().SmartSkills()
+		if len(smartSkills) > 0 {
 			lastUserMsg := ""
 			for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
 				if s.Persistence().RawMessages()[i].Role == "user" && len(s.Persistence().RawMessages()[i].ToolResults) == 0 {
@@ -240,7 +241,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}
 			}
 			if lastUserMsg != "" {
-				if matched := plugin.MatchSkillsByContext(s.smartSkills, lastUserMsg); len(matched) > 0 {
+				if matched := plugin.MatchSkillsByContext(smartSkills, lastUserMsg); len(matched) > 0 {
 					if skillsPrompt := plugin.FormatSkillsCompact(matched); skillsPrompt != "" {
 						opts.System += "\n\n" + skillsPrompt
 					}

@@ -28,24 +28,15 @@ func init() {
 
 func runACP(cmd *cobra.Command, _ []string) error {
 	settings := hawkconfig.LoadSettings()
+	newSession := newConfiguredHawkSessionFactory(settings, logger.New(io.Discard, logger.Error))
 
 	factory := func() (*engine.Session, error) {
 		systemPrompt, err := buildSystemPrompt()
 		if err != nil {
 			return nil, err
 		}
-		registry, err := defaultRegistry(settings)
-		if err != nil {
-			return nil, err
-		}
-		effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
-		sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 		// stdout is the JSON-RPC channel; keep logs off it.
-		sess.SetLogger(logger.New(io.Discard, logger.Error))
-		if err := configureSession(sess, settings); err != nil {
-			return nil, err
-		}
-		return sess, nil
+		return newSession(systemPrompt, "")
 	}
 
 	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)

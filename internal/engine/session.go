@@ -16,13 +16,11 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
-	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/tok"
 )
 
 // MemoryRecaller abstracts memory recall/remember so engine avoids importing memory directly.
@@ -38,8 +36,8 @@ type SnapshotTracker interface {
 }
 
 // Session manages a conversation with an LLM via eyrie.
-// The mu RWMutex protects messages and system for concurrent access
-// (e.g. daemon handling concurrent requests, background memory goroutines).
+// The mu RWMutex protects the remaining session metadata for concurrent
+// access. Transcript and system-context state are owned by PersistenceService.
 //
 // Phases 1-7 of the god-object decomposition (see
 // docs/session-decomposition.md) have extracted the 35-collaborator
@@ -57,20 +55,11 @@ type SnapshotTracker interface {
 // have a dedicated service. Permission, tool execution, transcript, memory,
 // and lifecycle state are owned by the corresponding services below.
 type Session struct {
-	mu       sync.RWMutex
-	client   ChatClient
-	registry *tool.Registry
-	messages []types.EyrieMessage
-	provider string
-	model    string
-	system   string
-	log      *logger.Logger
-	metrics  *metrics.Registry
-	Cost     Cost
+	mu   sync.RWMutex
+	Cost Cost
 
 	// llm is the LLM transport service (Phase 1 extraction). All new
-	// code should go through s.llm.* rather than touching the legacy
-	// client/provider/model/Router/DeploymentRouting fields.
+	// code should go through s.llm.* rather than duplicating transport state.
 	// Named lowercase (unexported) to avoid colliding with the public
 	// Session.Chat() method used by Reflector and SelfReview.
 	llm *ChatService
@@ -83,20 +72,6 @@ type Session struct {
 	memory  *MemoryService
 	persist *PersistenceService
 	tools   *ToolService
-	// Permission and approval state is owned exclusively by PermissionService.
-	// readOnlyBash gates Bash via ExploreBashAllowed for explore/plan subagents.
-	readOnlyBash bool
-	// workingDir is the preferred cwd for tools (worktree isolation).
-	workingDir string
-
-	persistID            string
-	lastPromptTokens     int
-	lastCompletionTokens int
-	estTokensCache       int
-	estTokensMsgCount    int
-	estTokensLastLen     int
-	tokUsage             *tok.UsageTracker
-	checkpointMgr        *session.CheckpointManager
 	// GLMThinkingEnabled toggles GLM/Z.ai extended reasoning on outgoing requests
 	// (applied only when provider is zai_payg or zai_coding). nil leaves the model default.
 
@@ -133,9 +108,6 @@ type Session struct {
 	//   Snapshots      -> legacy field; not yet on Persistence
 	//   Tracer         -> legacy field; oteltrace.NewTracer() for new code
 	// Backtrack and limits are owned by LifecycleService.
-
-	// smartSkills caches loaded SmartSkills for auto-discovery per-turn.
-	smartSkills []plugin.SmartSkill
 }
 
 // NewSession creates a conversation session through Eyrie's engine facade.
@@ -152,17 +124,9 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		slog.Debug("NewSessionWithClient called with empty provider or model", "provider", provider, "model", model)
 	}
 	log := logger.Default()
-	s := &Session{
-		client:   chat,
-		registry: registry,
-		provider: provider,
-		model:    model,
-		system:   systemPrompt,
-		log:      log,
-		metrics:  metrics.NewRegistry(),
-	}
+	s := &Session{}
 	rateLimiter := ratelimit.PerSecond(10)
-	s.Cost.Model = model
+	s.Cost.SetModel(model)
 	s.refreshContextWindowCache()
 
 	// Initialize agents accumulator for project learnings.
@@ -179,7 +143,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		Model:             model,
 		DeploymentRouting: deploymentRouting,
 		RateLimiter:       rateLimiter,
-		Metrics:           s.metrics,
+		Metrics:           metrics.NewRegistry(),
 	})
 	s.perms = NewPermissionService(log)
 	s.life = NewLifecycleService(log)
@@ -187,7 +151,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.persist = NewPersistenceService(log)
 	s.persist.SetAutoCompactThresholdPct(DefaultAutoCompactThresholdPct)
 	s.persist.SetSystem(systemPrompt)
-	s.tools = NewToolService(registry).WithMetrics(s.metrics).WithTracer(oteltrace.NewTracer())
+	s.tools = NewToolService(registry).WithMetrics(s.llm.Metrics()).WithTracer(oteltrace.NewTracer())
 	s.tools.WithExecutionDeps(toolExecutionDeps{
 		permissions: s.perms,
 		chat:        s.llm,
@@ -204,8 +168,6 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 			}
 			return s.perms.AskUserFn()(question)
 		},
-		readOnlyBash:       s.readOnlyBash,
-		workingDir:         s.workingDir,
 		checkApproval:      s.CheckApproval,
 		recordPolicy:       s.recordPolicyObservation,
 		recordVerification: s.recordVerificationObservation,
@@ -226,16 +188,8 @@ func (s *Session) ReattachTransport(chat ChatClient, provider string, deployment
 	if chat == nil {
 		return
 	}
-	s.mu.Lock()
-	s.client = chat
-	if strings.TrimSpace(provider) != "" {
-		s.provider = strings.TrimSpace(provider)
-	}
-	prov := s.provider
-	llm := s.llm
-	s.mu.Unlock()
-	if llm != nil {
-		llm.Reattach(chat, prov)
+	if llm := s.ChatLLM(); llm != nil {
+		llm.Reattach(chat, strings.TrimSpace(provider))
 	}
 	// deploymentRouting is now read through ChatService; the ChatService
 	// constructed at session creation already holds the value. If a
@@ -247,27 +201,56 @@ func (s *Session) ReattachTransport(chat ChatClient, provider string, deployment
 // SubSession clones transport and routing mode for explore/general sub-agents.
 func (s *Session) SubSession(model, systemPrompt string, registry *tool.Registry) *Session {
 	if registry == nil {
-		registry = s.registry
+		if tools := s.Tools(); tools != nil {
+			registry = tools.Registry()
+		}
 	}
-	sub := NewSessionWithClient(s.client, s.provider, model, systemPrompt, registry, s.DeploymentRouting())
+	var chat ChatClient
+	provider := ""
+	deploymentRouting := false
+	if llm := s.ChatLLM(); llm != nil {
+		chat = llm.Client()
+		provider = llm.Provider()
+		deploymentRouting = llm.DeploymentRouting()
+	}
+	sub := NewSessionWithClient(chat, provider, model, systemPrompt, registry, deploymentRouting)
 	return sub
 }
 
 func (s *Session) Model() string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.model
+	if llm := s.ChatLLM(); llm != nil {
+		return llm.Model()
+	}
+	return ""
 }
 
 func (s *Session) Provider() string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.provider
+	if llm := s.ChatLLM(); llm != nil {
+		return llm.Provider()
+	}
+	return ""
 }
-func (s *Session) Metrics() *metrics.Registry { return s.metrics }
 
-// Logger returns the session logger through the observability boundary.
-func (s *Session) Logger() *logger.Logger { return s.log }
+func (s *Session) Metrics() *metrics.Registry {
+	if s == nil || s.ChatLLM() == nil {
+		return nil
+	}
+	return s.ChatLLM().Metrics()
+}
+
+// Logger returns the shared session logger through the observability boundary.
+func (s *Session) Logger() *logger.Logger {
+	if s == nil {
+		return nil
+	}
+	if s.life != nil && s.life.Logger() != nil {
+		return s.life.Logger()
+	}
+	if s.perms != nil && s.perms.Logger() != nil {
+		return s.perms.Logger()
+	}
+	return logger.Default()
+}
 
 // TracerValue returns the session tracer through the observability boundary.
 func (s *Session) TracerValue() *oteltrace.Tracer {
@@ -302,15 +285,22 @@ func (s *Session) Persistence() *PersistenceService {
 	if s == nil {
 		return nil
 	}
+	s.mu.RLock()
+	persist := s.persist
+	s.mu.RUnlock()
+	if persist != nil {
+		return persist
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.persist != nil {
 		return s.persist
 	}
-	// A handful of focused tests and compatibility integrations still build a
-	// Session literal. Lazily materialize the persistence service and import
-	// their legacy transcript once, so the service boundary remains total.
-	s.persist = NewPersistenceService(s.log)
-	s.persist.SetSystem(s.system)
-	s.persist.SetRawMessages(s.messages)
+	// A zero-value Session can still be used by narrow UI/test adapters. Keep
+	// lazy service materialization for that compatibility case, but there is no
+	// second transcript or system-prompt state to import.
+	s.persist = NewPersistenceService(s.Logger())
 	return s.persist
 }
 
@@ -386,10 +376,7 @@ func (s *Session) SubServices() SubServices {
 // SetModel updates the active model for subsequent requests.
 func (s *Session) SetModel(model string) {
 	m := strings.TrimSpace(model)
-	s.mu.Lock()
-	s.model = m
-	s.Cost.Model = m
-	s.mu.Unlock()
+	s.Cost.SetModel(m)
 	if s.llm != nil {
 		s.llm.SetModel(m)
 	}
@@ -402,7 +389,7 @@ func (s *Session) syncCascadeDefaultModel() {
 	if s == nil || s.LifecycleSvc() == nil || s.LifecycleSvc().Cascade() == nil {
 		return
 	}
-	if m := strings.TrimSpace(s.model); m != "" {
+	if m := strings.TrimSpace(s.Model()); m != "" {
 		cascade := s.LifecycleSvc().Cascade()
 		cascade.DefaultModel = m
 	}
@@ -411,11 +398,7 @@ func (s *Session) syncCascadeDefaultModel() {
 // SetProvider updates the active provider for subsequent requests.
 func (s *Session) SetProvider(provider string) {
 	p := strings.TrimSpace(provider)
-	s.mu.Lock()
-	s.provider = p
-	llm := s.llm
-	s.mu.Unlock()
-	if llm != nil {
+	if llm := s.ChatLLM(); llm != nil {
 		llm.SetProvider(p)
 	}
 }
@@ -501,9 +484,6 @@ func (s *Session) ForkConversation(nodeID string) (string, error) {
 		}
 	}
 	p.SetRawMessages(msgs)
-	s.mu.Lock()
-	s.messages = append(s.messages[:0], msgs...)
-	s.mu.Unlock()
 	return fork.ID, nil
 }
 
@@ -531,9 +511,6 @@ func (s *Session) SwitchBranch(nodeID string) error {
 		}
 	}
 	p.SetRawMessages(msgs)
-	s.mu.Lock()
-	s.messages = append(s.messages[:0], msgs...)
-	s.mu.Unlock()
 	return nil
 }
 
@@ -570,9 +547,6 @@ func (s *Session) ConvoHead() string {
 func (s *Session) AppendSystemContext(content string) {
 	if p := s.Persistence(); p != nil {
 		p.AppendSystemContext(content)
-		s.mu.Lock()
-		s.system = p.System()
-		s.mu.Unlock()
 	}
 }
 
@@ -581,15 +555,26 @@ func (s *Session) AppendSystemContext(content string) {
 func (s *Session) ReplaceSystemContextSection(header, content string) {
 	if p := s.Persistence(); p != nil {
 		p.ReplaceSystemContextSection(header, content)
-		s.mu.Lock()
-		s.system = p.System()
-		s.mu.Unlock()
 	}
 }
 
 // SetLogger replaces the session logger.
 func (s *Session) SetLogger(l *logger.Logger) {
-	s.log = l
+	if l == nil {
+		l = logger.Default()
+	}
+	if s.perms != nil {
+		s.perms.SetLogger(l)
+	}
+	if s.life != nil {
+		s.life.SetLogger(l)
+	}
+	if s.memory != nil {
+		s.memory.SetLogger(l)
+	}
+	if s.persist != nil {
+		s.persist.SetLogger(l)
+	}
 }
 
 // SetAllowedDirs sets directories that file tools are allowed to access.
@@ -638,7 +623,7 @@ func (s *Session) SetSnapshots(snap *snapshot.Tracker) {
 // ToolService (the source of truth).
 func (s *Session) SetContainerRequired(v bool) {
 	if s.tools != nil {
-		s.tools.WithContainerExecutor(s.tools.ContainerExecutor(), v)
+		s.tools.SetContainerRequired(v)
 	}
 }
 
@@ -646,7 +631,7 @@ func (s *Session) SetContainerRequired(v bool) {
 // (the source of truth), preserving the current required flag.
 func (s *Session) SetContainerExecutor(ce tool.ContainerExecutor) {
 	if s.tools != nil {
-		s.tools.WithContainerExecutor(ce, s.ContainerRequired())
+		s.tools.SetContainerExecutor(ce)
 	}
 }
 
@@ -727,27 +712,22 @@ func (s *Session) MessageCount() int {
 //
 // PersistenceService is the single source of truth for the live transcript:
 // AddUser/AddAssistant and the agent loop (stream.go) all write through it,
-// and compaction/governor paths read it. The legacy s.messages field is kept
-// only for Sessions constructed without a PersistenceService (some unit
-// tests). Delegating here means TUI/CLI consumers — notably saveSession,
-// which returned early when the legacy slice was empty — see the real,
-// populated transcript instead of a stale empty slice.
+// and compaction/governor paths read it. Delegating here means TUI/CLI
+// consumers — notably saveSession — see the real, populated transcript.
 func (s *Session) RawMessages() []types.EyrieMessage {
 	if p := s.Persistence(); p != nil {
 		return p.RawMessages()
 	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.messages
+	return nil
 }
 
 // Chat implements the LLMClient interface by delegating to the underlying client.
 // This allows Session to be passed to components that need LLM access (e.g. Reflector, SelfReview).
 func (s *Session) Chat(ctx context.Context, msgs []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
-	if s.client == nil {
+	if s.ChatLLM() == nil {
 		return nil, fmt.Errorf("session: no LLM client configured")
 	}
-	return s.client.Chat(ctx, msgs, opts)
+	return s.ChatLLM().Chat(ctx, msgs, opts)
 }
 
 // RemoveLastExchange removes the last user+assistant message pair.

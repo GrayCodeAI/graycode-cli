@@ -16,6 +16,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
+	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/prompt"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	hawkmodel "github.com/GrayCodeAI/hawk/internal/provider/routing"
@@ -247,6 +248,47 @@ func newHawkSession(settings hawkconfig.Settings, effectiveProvider, effectiveMo
 	// container remains fail-closed at the engine tool boundary.
 	sess.SetContainerRequired(true)
 	return sess
+}
+
+// newConfiguredHawkSession is the non-interactive command composition root.
+// Interactive chat intentionally keeps its lightweight startup and deferred
+// heavy configuration split; batch/daemon/ACP callers use this atomic path.
+func newConfiguredHawkSession(settings hawkconfig.Settings, effectiveProvider, effectiveModel, systemPrompt string, registry *tool.Registry, sessionLogger *logger.Logger, maxTurnsOverride ...int) (*engine.Session, error) {
+	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
+	if sessionLogger != nil {
+		sess.SetLogger(sessionLogger)
+	}
+	if err := configureSession(sess, settings, maxTurnsOverride...); err != nil {
+		return nil, err
+	}
+	return sess, nil
+}
+
+// newConfiguredHawkSessionFactory is the shared composition seam for
+// non-interactive protocol/server entry points. It owns registry creation and
+// settings-based model selection while allowing each protocol to provide its
+// own prompt and optional model override.
+func newConfiguredHawkSessionFactory(settings hawkconfig.Settings, sessionLogger *logger.Logger) func(string, string, ...int) (*engine.Session, error) {
+	return func(systemPrompt, modelOverride string, maxTurnsOverride ...int) (*engine.Session, error) {
+		registry, err := defaultRegistry(settings)
+		if err != nil {
+			return nil, err
+		}
+		effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
+		if strings.TrimSpace(modelOverride) != "" {
+			effectiveModel = modelOverride
+		}
+		return newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, sessionLogger, maxTurnsOverride...)
+	}
+}
+
+// prepareInteractiveSessionStartup applies only the cheap TUI startup slice.
+// Transport rebuild and heavy memory setup remain deferred until the first
+// real chat request in bootstrapSessionForChat.
+func prepareInteractiveSessionStartup(sess *engine.Session, settings hawkconfig.Settings) error {
+	syncSessionFromPersistedSelection(sess)
+	sess.SetLogger(logger.New(io.Discard, logger.Error))
+	return configureSessionStartup(sess, settings)
 }
 
 func firstNonEmptyTrimmed(values ...string) string {

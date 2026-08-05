@@ -3,7 +3,7 @@ package engine
 import (
 	"context"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/hawk-core-contracts/llm"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -32,7 +32,7 @@ func clientManagesResilience(client ChatClient) bool {
 // Session never needs to unwrap the raw engine.
 type nativeCompactionCapable interface {
 	NativeCompaction(ctx context.Context, provider, model string) bool
-	CompactNative(ctx context.Context, req gateway.NativeCompactionRequest) (string, error)
+	CompactNative(ctx context.Context, req llm.NativeCompactionRequest) (string, error)
 }
 
 func clientNativeCompaction(client ChatClient, ctx context.Context, provider, model string) bool {
@@ -46,9 +46,8 @@ func clientNativeCompaction(client ChatClient, ctx context.Context, provider, mo
 // Also reattaches the ChatService so the agent loop's `s.ChatLLM().Stream`
 // call site sees the mock (Phase 7 migration).
 func (s *Session) SetTestClient(c ChatClient) {
-	s.client = c
 	if s.llm != nil {
-		s.llm.Reattach(c, s.provider)
+		s.llm.Reattach(c, s.llm.Provider())
 	}
 }
 

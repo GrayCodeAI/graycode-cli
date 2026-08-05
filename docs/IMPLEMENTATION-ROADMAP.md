@@ -1,15 +1,17 @@
 # Hawk-Eco Implementation Roadmap
 
-## Based on Comparison with Top 20 Coding Agents
+## Historical product roadmap
 
 **Date:** 2026-07-05
-**Source:** Comprehensive analysis of 20 leading coding agents
+**Source:** Historical comparison document; feature and market claims require
+independent revalidation. Architecture status is tracked in
+`docs/architecture/hawk-architecture-baseline.md`.
 
 ---
 
 ## Current Status
 
-**Overall Score: 9.2/10**
+Numeric scores are intentionally not used as current architecture evidence.
 
 | Category | Score | Max |
 |----------|-------|-----|
@@ -588,7 +590,7 @@ func main() {
 | 3 | Add Web UI for monitoring | Small | +0.2 | Planned |
 | 3 | Add SDK analytics | Small | +0.1 | Planned |
 
-**Current Score: 9.5/10**
+Current architecture status: see `docs/architecture/hawk-architecture-baseline.md`.
 
 ---
 
@@ -600,7 +602,7 @@ func main() {
 | 2 | Add community forum | Large | +0.2 | Planned |
 | 3 | Add API analytics | Medium | +0.2 | Planned |
 
-**Current Score: 7.5/10**
+**Historical self-assessment; no current numeric score is assigned.**
 
 ---
 
@@ -611,7 +613,7 @@ func main() {
 | 3 | Add SDK analytics | Small | +0.1 | Planned |
 | 3 | Add IDE integration examples | Small | +0.2 | Planned |
 
-**Current Score: 8.5/10**
+**Historical self-assessment; no current numeric score is assigned.**
 
 ---
 
@@ -622,7 +624,7 @@ func main() {
 | 3 | Add deprecation warnings | Small | +0.1 | Planned |
 | 3 | Add type stubs | Small | +0.1 | Planned |
 
-**Current Score: 8.5/10**
+**Historical self-assessment; no current numeric score is assigned.**
 
 ---
 
@@ -633,7 +635,7 @@ func main() {
 | 3 | Add completion endpoint | Medium | +0.2 | Planned |
 | 3 | Add streaming optimizations | Small | +0.1 | Planned |
 
-**Current Score: 8/10**
+**Historical self-assessment; no current numeric score is assigned.**
 
 ---
 
@@ -647,18 +649,15 @@ func main() {
 | sight | 3 | Add review templates | Small | +0.1 |
 | inspect | 3 | Add verification templates | Small | +0.1 |
 
-**Current Score: 8/10**
+**Historical self-assessment; no current numeric score is assigned.**
 
 ---
 
-## Target Scores
+## Roadmap sequencing
 
-| Phase | Target Score | Improvement |
-|-------|--------------|-------------|
-| Current | 9.2/10 | - |
-| Phase 1 | 9.7/10 | +0.5 |
-| Phase 2 | 9.5/10 | +0.3 (with IDE) |
-| Phase 3 | 10/10 | +0.2 (complete IDE parity) |
+The roadmap is sequenced by product value and implementation effort. It does
+not assign target architecture scores. Current architecture status is tracked
+in `docs/architecture/hawk-architecture-baseline.md`.
 
 ---
 

@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-
-	yaadEngine "github.com/GrayCodeAI/yaad/engine"
-	"github.com/GrayCodeAI/yaad/storage"
 )
 
 // GraphAwareBudget makes memory allocation smarter by using yaad's graph
@@ -134,11 +131,7 @@ func (gb *GraphAwareBudget) BuildInjection(query string, activeFiles []string, b
 }
 
 func (gb *GraphAwareBudget) getPinnedMemories() string {
-	pinned := true
-	nodes, err := gb.bridge.store.ListNodes(context.Background(), storage.NodeFilter{
-		Pinned: &pinned,
-		Limit:  10,
-	})
+	nodes, err := gb.bridge.listPinnedNodes(context.Background(), 10)
 	if err != nil || len(nodes) == 0 {
 		return ""
 	}
@@ -153,11 +146,7 @@ func (gb *GraphAwareBudget) getPinnedMemories() string {
 }
 
 func (gb *GraphAwareBudget) getHighConfidenceConventions() string {
-	nodes, err := gb.bridge.store.ListNodes(context.Background(), storage.NodeFilter{
-		Type:          "convention",
-		MinConfidence: 0.7,
-		Limit:         10,
-	})
+	nodes, err := gb.bridge.listNodesByType(context.Background(), "convention", 0.7, 10)
 	if err != nil || len(nodes) == 0 {
 		return ""
 	}
@@ -172,12 +161,7 @@ func (gb *GraphAwareBudget) getHighConfidenceConventions() string {
 }
 
 func (gb *GraphAwareBudget) getQueryRelevant(query string, budget int) string {
-	result, err := gb.bridge.recallResultWithContext(context.Background(), yaadEngine.RecallOpts{
-		Query:  query,
-		Budget: budget,
-		Limit:  5,
-		Depth:  2,
-	})
+	result, err := gb.bridge.recallBudget(context.Background(), query, budget, 5, 2)
 	if err != nil || result == nil || len(result.Nodes) == 0 {
 		return ""
 	}
@@ -190,11 +174,7 @@ func (gb *GraphAwareBudget) getQueryRelevant(query string, budget int) string {
 }
 
 func (gb *GraphAwareBudget) getActiveTasks() string {
-	nodes, err := gb.bridge.store.ListNodes(context.Background(), storage.NodeFilter{
-		Type:          "task",
-		MinConfidence: 0.3,
-		Limit:         5,
-	})
+	nodes, err := gb.bridge.listNodesByType(context.Background(), "task", 0.3, 5)
 	if err != nil || len(nodes) == 0 {
 		return ""
 	}
