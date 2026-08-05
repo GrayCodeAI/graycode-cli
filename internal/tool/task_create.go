@@ -16,7 +16,13 @@ const (
 	TaskStatusPending    TaskStatus = "pending"
 	TaskStatusInProgress TaskStatus = "in_progress"
 	TaskStatusCompleted  TaskStatus = "completed"
+	TaskStatusFailed     TaskStatus = "failed"
 )
+
+// DefaultMaxAttempts is the retry budget used when a task does not declare
+// its own MaxAttempts. After the budget is exhausted the task is left in the
+// failed state for replanning rather than being retried forever.
+const DefaultMaxAttempts = 3
 
 // TaskDependency represents a typed dependency between tasks.
 type TaskDependency struct {
@@ -37,13 +43,35 @@ type Task struct {
 	Metadata     map[string]any   `json:"metadata,omitempty"`
 	CreatedAt    time.Time        `json:"createdAt"`
 	UpdatedAt    time.Time        `json:"updatedAt"`
+	// Attempts is the number of times execution of this task has been
+	// attempted. Incremented by MarkFailed; a task is requeued (back to
+	// pending) while Attempts < MaxAttempts and parked in failed afterwards.
+	Attempts int `json:"attempts,omitempty"`
+	// MaxAttempts is the retry budget for this task. 0 means the store-wide
+	// DefaultMaxAttempts.
+	MaxAttempts int `json:"maxAttempts,omitempty"`
+	// LastError records the most recent failure message for diagnostics and
+	// replanning input.
+	LastError string `json:"lastError,omitempty"`
+	// Checkpoint holds arbitrary resumable progress (e.g. last completed
+	// phase, partial outputs) so a replan or resume does not start from zero.
+	Checkpoint map[string]any `json:"checkpoint,omitempty"`
+}
+
+// EffectiveMaxAttempts resolves the retry budget for a task.
+func (t *Task) EffectiveMaxAttempts() int {
+	if t.MaxAttempts > 0 {
+		return t.MaxAttempts
+	}
+	return DefaultMaxAttempts
 }
 
 // TaskStore is a thread-safe in-memory store for tasks.
 type TaskStore struct {
-	mu    sync.RWMutex
-	tasks map[string]*Task
-	next  int
+	mu      sync.RWMutex
+	tasks   map[string]*Task
+	next    int
+	persist *persistState // non-nil when disk persistence is enabled
 }
 
 // Global task store.
@@ -58,7 +86,6 @@ func (s *TaskStore) Create(subject, description, activeForm string, metadata map
 
 func (s *TaskStore) CreateWithParent(subject, description, activeForm string, metadata map[string]any, parentID string) *Task {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	var id string
 	if parentID != "" {
@@ -92,6 +119,8 @@ func (s *TaskStore) CreateWithParent(subject, description, activeForm string, me
 		t.Dependencies = append(t.Dependencies, TaskDependency{TargetID: parentID, Type: "parent-child"})
 	}
 	s.tasks[id] = t
+	s.mu.Unlock()
+	s.persistOnMutation()
 	return t
 }
 
@@ -114,31 +143,37 @@ func (s *TaskStore) List() []*Task {
 
 func (s *TaskStore) Update(id string, fn func(*Task)) bool {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	t, ok := s.tasks[id]
 	if !ok {
+		s.mu.Unlock()
 		return false
 	}
 	fn(t)
 	t.UpdatedAt = time.Now()
+	s.mu.Unlock()
+	s.persistOnMutation()
 	return true
 }
 
 func (s *TaskStore) Delete(id string) bool {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	_, ok := s.tasks[id]
 	if ok {
 		delete(s.tasks, id)
+	}
+	s.mu.Unlock()
+	if ok {
+		s.persistOnMutation()
 	}
 	return ok
 }
 
 func (s *TaskStore) Reset() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.tasks = make(map[string]*Task)
 	s.next = 0
+	s.mu.Unlock()
+	s.persistOnMutation()
 }
 
 // GetReadyWork returns pending tasks with no open blocking dependencies.
@@ -156,7 +191,6 @@ func (s *TaskStore) GetSchedule() (TaskSchedule, error) { return s.Schedule() }
 // CompactCompleted removes completed tasks and returns a summary.
 func (s *TaskStore) CompactCompleted() string {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	var removed []string
 	for id, t := range s.tasks {
 		if t.Status == TaskStatusCompleted {
@@ -164,6 +198,8 @@ func (s *TaskStore) CompactCompleted() string {
 			delete(s.tasks, id)
 		}
 	}
+	s.mu.Unlock()
+	s.persistOnMutation()
 	if len(removed) == 0 {
 		return "No completed tasks to compact."
 	}
@@ -257,6 +293,15 @@ func (TaskGetTool) Execute(_ context.Context, input json.RawMessage) (string, er
 			"description":  task.Description,
 			"status":       task.Status,
 			"dependencies": task.Dependencies,
+			"attempts":     task.Attempts,
+			"maxAttempts":  task.EffectiveMaxAttempts(),
+			"lastError":    task.LastError,
+			"checkpoint":   task.Checkpoint,
+			"owner":        task.Owner,
+			"activeForm":   task.ActiveForm,
+			"createdAt":    task.CreatedAt,
+			"updatedAt":    task.UpdatedAt,
+			"retryBackoff": task.Metadata["retryBackoffTick"],
 		},
 	})
 	return string(out), nil
@@ -273,7 +318,7 @@ func (TaskListTool) Parameters() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
-			"action": map[string]interface{}{"type": "string", "enum": []string{"list", "ready", "compact"}, "description": "Action: list (default), ready (pending with no blockers), compact (remove completed)"},
+			"action": map[string]interface{}{"type": "string", "enum": []string{"list", "ready", "failed", "compact"}, "description": "Action: list (default), ready (pending with no blockers), failed (replan candidates), compact (remove completed)"},
 		},
 	}
 }
@@ -304,6 +349,22 @@ func (TaskListTool) Execute(_ context.Context, input json.RawMessage) (string, e
 			})
 		}
 		out, _ := json.Marshal(map[string]any{"tasks": summaries, "waves": schedule.Waves})
+		return string(out), nil
+	case "failed":
+		tasks := globalTaskStore.FailedTasks()
+		summaries := make([]map[string]any, 0, len(tasks))
+		for _, t := range tasks {
+			summaries = append(summaries, map[string]any{
+				"id":         t.ID,
+				"subject":    t.Subject,
+				"status":     t.Status,
+				"attempts":   t.Attempts,
+				"lastError":  t.LastError,
+				"checkpoint": t.Checkpoint,
+				"owner":      t.Owner,
+			})
+		}
+		out, _ := json.Marshal(map[string]any{"tasks": summaries})
 		return string(out), nil
 	case "compact":
 		summary := globalTaskStore.CompactCompleted()
@@ -338,7 +399,7 @@ func (TaskUpdateTool) Parameters() map[string]interface{} {
 		"type": "object",
 		"properties": map[string]interface{}{
 			"taskId":       map[string]interface{}{"type": "string", "description": "The ID of the task to update"},
-			"status":       map[string]interface{}{"type": "string", "enum": []string{"pending", "in_progress", "completed"}, "description": "New task status"},
+			"status":       map[string]interface{}{"type": "string", "enum": []string{"pending", "in_progress", "completed", "failed"}, "description": "New task status"},
 			"owner":        map[string]interface{}{"type": "string", "description": "Agent name to assign"},
 			"dependencies": map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "object", "properties": map[string]interface{}{"targetId": map[string]interface{}{"type": "string"}, "type": map[string]interface{}{"type": "string", "enum": []string{"blocks", "related", "parent-child"}}}}, "description": "Replace dependencies"},
 		},
@@ -361,6 +422,12 @@ func (TaskUpdateTool) Execute(_ context.Context, input json.RawMessage) (string,
 	}
 	ok := globalTaskStore.Update(p.TaskID, func(t *Task) {
 		if p.Status != "" {
+			// Moving a failed task back to pending is an explicit replan
+			// signal: reset the retry budget and error so it starts fresh.
+			if TaskStatus(p.Status) == TaskStatusPending && t.Status == TaskStatusFailed {
+				t.Attempts = 0
+				t.LastError = ""
+			}
 			t.Status = TaskStatus(p.Status)
 		}
 		if p.Owner != "" {
