@@ -3,9 +3,11 @@ package hooks
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -67,6 +69,9 @@ func CloseFileWatcher() error {
 }
 
 func runFileWatcher(ctx context.Context) {
+	testQueue := make(chan string, 32)
+	go runTestWorker(ctx, testQueue)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -87,6 +92,12 @@ func runFileWatcher(ctx context.Context) {
 					"dir":  filepath.Dir(rel),
 					"abs":  event.Name,
 				})
+				if cmd := testCommandForFile(rel); cmd != "" {
+					select {
+					case testQueue <- cmd:
+					default:
+					}
+				}
 			}
 		case _, ok := <-watcher.Errors:
 			if !ok {
@@ -94,6 +105,63 @@ func runFileWatcher(ctx context.Context) {
 			}
 		}
 	}
+}
+
+func testCommandForFile(path string) string {
+	if strings.HasSuffix(path, "_test.go") {
+		dir := filepath.Dir(path)
+		return "go test -run " + strings.TrimSuffix(filepath.Base(path), "_test.go") + " " + dir
+	}
+	if strings.HasSuffix(path, ".test.ts") || strings.HasSuffix(path, ".test.js") {
+		return "npx vitest run " + path
+	}
+	if strings.HasSuffix(path, ".go") {
+		dir := filepath.Dir(path)
+		return "go test " + dir
+	}
+	if strings.HasSuffix(path, "_test.py") {
+		return "pytest " + path
+	}
+	return ""
+}
+
+func runTestWorker(ctx context.Context, queue <-chan string) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case cmd := <-queue:
+			result := runTestCommand(ctx, cmd)
+			ExecuteAsync(ctx, EventTestResult, result)
+		}
+	}
+}
+
+func runTestCommand(ctx context.Context, cmd string) map[string]interface{} {
+	parts := strings.Fields(cmd)
+	if len(parts) == 0 {
+		return map[string]interface{}{"status": "error", "error": "empty command"}
+	}
+	if !isValidTestCommand(parts[0]) {
+		return map[string]interface{}{"status": "error", "error": "disallowed command: " + parts[0]}
+	}
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	execCmd := exec.CommandContext(ctx, parts[0], parts[1:]...) // #nosec G204 -- command whitelist validated
+	output, err := execCmd.CombinedOutput()
+
+	result := map[string]interface{}{
+		"command": cmd,
+		"output":  string(output),
+	}
+	if err != nil {
+		result["status"] = "failed"
+		result["error"] = err.Error()
+	} else {
+		result["status"] = "passed"
+	}
+	return result
 }
 
 func relPath(abs string) string {
@@ -117,6 +185,21 @@ func shouldIgnore(path string) bool {
 		}
 	}
 	return false
+}
+
+var allowedTestCommands = map[string]bool{
+	"go":     true,
+	"npx":    true,
+	"pytest": true,
+	"npm":    true,
+	"yarn":   true,
+	"pnpm":   true,
+	"bun":    true,
+}
+
+func isValidTestCommand(name string) bool {
+	base := filepath.Base(name)
+	return allowedTestCommands[base]
 }
 
 func init() {

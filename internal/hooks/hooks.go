@@ -35,6 +35,7 @@ const (
 	EventSessionEnd    EventType = "session_end"
 	EventPermissionAsk EventType = "permission_ask"
 	EventError         EventType = "error"
+	EventTestResult    EventType = "test_result"
 )
 
 // EventEnvelope provides structured, typed metadata for hook events.
