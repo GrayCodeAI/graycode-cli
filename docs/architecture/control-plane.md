@@ -132,6 +132,7 @@ Single entry for subagents + background tasks:
 - True 60s binary install path (packaging/CI)
 - Deeper ACP (session/setMode, client fs routing)
 
+
 - Public Terminal-Bench scorecard
 - Optional: deprecate BackgroundAgentPool reexports
 
