@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // trustSubcommand manages folder trust from the chat TUI.
@@ -31,7 +32,7 @@ func (c *trustSubcommand) Handle(m *chatModel, args []string, text string) (tea.
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: "✓ Project trusted. Project hooks/MCP/plugins may load.\n" + engine.ProjectTrust("").Detail()})
+		m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Project trusted. Project hooks/MCP/plugins may load.\n" + engine.ProjectTrust("").Detail()})
 	case "remove", "revoke", "untrust":
 		if err := engine.UntrustProject(""); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})

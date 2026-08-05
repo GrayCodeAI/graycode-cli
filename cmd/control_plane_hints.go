@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // controlPlaneOnboardingHint is a short first-session tip (not a wall of text).
@@ -14,10 +15,10 @@ func controlPlaneOnboardingHint(sess *engine.Session) string {
 
 	tr := engine.ProjectTrust("")
 	if tr.Blocked {
-		lines = append(lines, "⚠ Folder not trusted — project hooks/MCP blocked.  /trust add")
+		lines = append(lines, icons.Alert()+" Folder not trusted — project hooks/MCP blocked.  /trust add")
 	}
 	if gi := engine.InspectGitBranch(""); gi.OnDefault {
-		lines = append(lines, fmt.Sprintf("⚠ On %s — /branch-agent before large edits", gi.Branch))
+		lines = append(lines, fmt.Sprintf("%s On %s — /branch-agent before large edits", icons.Alert(), gi.Branch))
 	}
 	if sess != nil {
 		lines = append(lines, fmt.Sprintf("Now: work=%s · iso=%s · auto-commit=%v",

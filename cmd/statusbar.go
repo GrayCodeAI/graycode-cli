@@ -116,9 +116,9 @@ func controlPlaneChip(m *chatModel) string {
 	tr := engine.ProjectTrust("")
 	trust := "ut" // untrusted
 	if !tr.Enforced {
-		trust = "—"
+		trust = "-"
 	} else if tr.Trusted {
-		trust = "✓"
+		trust = icons.CheckBold()
 	}
 	chip := statusSpecStyle.Render(work) + statusDimStyle.Render("/") +
 		statusDimStyle.Render(iso) + statusDimStyle.Render("/") +
@@ -199,7 +199,7 @@ func renderStatusBarSecondaryLeft(m *chatModel) string {
 		trustStyle.Render(trustLabel),
 	}
 	if gi := engine.InspectGitBranch(""); gi.OnDefault {
-		parts = append(parts, dryRunStyle.Render("⚠ default-branch"))
+		parts = append(parts, dryRunStyle.Render(icons.Alert()+" default-branch"))
 	}
 	return strings.Join(parts, statusDimStyle.Render(" · "))
 }

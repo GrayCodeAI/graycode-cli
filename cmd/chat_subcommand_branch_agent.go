@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // branchAgentSubcommand creates a hawk/agent-* branch from main/master.
@@ -37,8 +38,8 @@ func (c *branchAgentSubcommand) Handle(m *chatModel, args []string, text string)
 	}
 	m.refreshStatusBarLeft(true)
 	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf(
-		"✓ Checked out `%s` — agent edits stay off %s.\nTip: `/commit` when ready.",
-		name, info.Branch,
+		"%s Checked out `%s` — agent edits stay off %s.\nTip: `/commit` when ready.",
+		icons.CheckBold(), name, info.Branch,
 	)})
 	return m, nil
 }

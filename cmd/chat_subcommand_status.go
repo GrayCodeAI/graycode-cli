@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // statusSubcommand implements the /status slash command. It prints
@@ -61,7 +62,7 @@ func buildStatusInfo(m *chatModel) string {
 		m.session.CostValue().Summary(),
 	)
 	if tr.Blocked {
-		info += "\n⚠ " + tr.Detail()
+		info += "\n" + icons.Alert() + " " + tr.Detail()
 	}
 	if len(addDirs) > 0 {
 		info += "\nAdditional dirs: " + strings.Join(addDirs, ", ")
