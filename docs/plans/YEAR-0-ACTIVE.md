@@ -5,7 +5,6 @@
 **ADR:** [ADR-0003](../architecture/adr/ADR-0003-grok-behavioral-port-go-multirepo.md)  
 **Full matrices:** [FULL-GROK-ECO-TO-HAWK-ECO-PORT-PLAN.md](./FULL-GROK-ECO-TO-HAWK-ECO-PORT-PLAN.md),
 [GROK-CLASS-CAPABILITY-LONG-HORIZON-PLAN.md](./GROK-CLASS-CAPABILITY-LONG-HORIZON-PLAN.md)  
-**Call-site inventory:** [Y0-CALL-SITE-INVENTORY.md](./Y0-CALL-SITE-INVENTORY.md)
 
 This is the **executable Year 0 program**. It does not replace the full
 port matrices; it freezes what “Year 0 done” means and tracks pack status.

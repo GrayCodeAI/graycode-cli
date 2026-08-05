@@ -16,7 +16,6 @@ func TestArchitectureDocsDoNotContainStaleContractsLanguage(t *testing.T) {
 		"docs/architecture/README.md",
 		"docs/architecture/hawk-product-architecture.md",
 		"docs/architecture/hawk-core-contracts-spec.md",
-		"docs/architecture/hawk-contract-migration-inventory.md",
 		"docs/plans/hawk-contracts-migration-backlog.md",
 	}
 
