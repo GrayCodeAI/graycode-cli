@@ -1,5 +1,3 @@
-//go:build otel
-
 package oteltrace
 
 import (
@@ -9,6 +7,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -26,6 +25,8 @@ type OTelProviders struct {
 }
 
 // InitOTelSDK initializes the full OpenTelemetry SDK with OTLP exporters.
+// When telemetry is disabled (cfg.Enabled == false), returns a no-op provider
+// set — the caller should not call OTel methods in that case.
 func InitOTelSDK(cfg TelemetryConfig) (*OTelProviders, error) {
 	if !cfg.Enabled {
 		return &OTelProviders{config: cfg}, nil
@@ -50,9 +51,6 @@ func InitOTelSDK(cfg TelemetryConfig) (*OTelProviders, error) {
 	opts := []otlptracehttp.Option{}
 	if cfg.Endpoint != "" {
 		opts = append(opts, otlptracehttp.WithEndpoint(cfg.Endpoint))
-	}
-	if cfg.ExporterProto == "http/json" {
-		// default is protobuf, no extra option needed for json
 	}
 	for k, v := range cfg.Headers {
 		opts = append(opts, otlptracehttp.WithHeaders(map[string]string{k: v}))
@@ -89,12 +87,12 @@ func InitOTelSDK(cfg TelemetryConfig) (*OTelProviders, error) {
 	}, nil
 }
 
-// Tracer returns the OTel tracer for creating spans.
+// OTelTracer returns the OTel tracer for creating spans.
 func (p *OTelProviders) OTelTracer() oteltrace.Tracer {
 	return p.tracer
 }
 
-// StartSpan creates a new OTel span.
+// StartOTelSpan creates a new OTel span.
 func (p *OTelProviders) StartOTelSpan(ctx context.Context, name string, attrs ...attribute.KeyValue) (context.Context, oteltrace.Span) {
 	if p.tracer == nil {
 		return ctx, oteltrace.SpanFromContext(ctx)
@@ -118,13 +116,15 @@ func (p *OTelProviders) ShutdownOTel(ctx context.Context) error {
 
 	var firstErr error
 	if p.tracerProvider != nil {
-		if err := p.tracerProvider.Shutdown(shutCtx); err != nil && firstErr == nil {
+		if err := p.tracerProvider.Shutdown(shutCtx); err != nil {
 			firstErr = err
 		}
 	}
 	if p.meterProvider != nil {
-		if err := p.meterProvider.Shutdown(shutCtx); err != nil && firstErr == nil {
-			firstErr = err
+		if err := p.meterProvider.Shutdown(shutCtx); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
 		}
 	}
 	return firstErr
@@ -150,6 +150,11 @@ func (p *OTelProviders) RecordMetric(name string, value int64, attrs ...attribut
 	if err != nil {
 		return
 	}
-	counter.Add(context.Background(), value)
-	_ = attrs // attributes applied via OTel API options in real usage
+	counter.Add(context.Background(), value, metric.WithAttributes(attrs...))
+}
+
+// IsOTelEnabled reports whether the OTel SDK was actually initialized
+// (i.e. telemetry was enabled and the provider was successfully created).
+func (p *OTelProviders) IsOTelEnabled() bool {
+	return p.config.Enabled && p.tracerProvider != nil
 }

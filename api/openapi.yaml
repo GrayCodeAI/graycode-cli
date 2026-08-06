@@ -745,6 +745,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /v1/metrics:
+    get:
+      tags: [stats]
+      summary: Daemon metrics in Prometheus exposition format
+      description: |
+        Returns daemon-level metrics (request counts, concurrency usage,
+        active sessions) as Prometheus text exposition format.
+        Use `?format=json` for JSON output.
+      responses:
+        "200":
+          description: Metrics output
+          content:
+            text/plain:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: object
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /v1/review:
     post:
       tags: [review]

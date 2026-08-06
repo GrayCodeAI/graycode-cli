@@ -3,30 +3,66 @@ package retry
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
+	"net"
+	"net/url"
+	"os"
 	"testing"
 	"time"
 )
 
 func TestIsRetryable(t *testing.T) {
 	tests := []struct {
+		name     string
 		err      error
 		expected bool
 	}{
-		{errors.New("connection timeout"), true},
-		{errors.New("temporary failure"), true},
-		{errors.New("connection refused"), true},
-		{errors.New("503 service unavailable"), true},
-		{errors.New("rate limit exceeded"), true},
-		{errors.New("bad request"), false},
-		{errors.New("invalid api key"), false},
-		{nil, false},
+		// Typed errors use errors.Is / errors.As
+		{"context deadline exceeded", context.DeadlineExceeded, true},
+		{"context canceled", context.Canceled, false},
+		{"os.ErrDeadlineExceeded", os.ErrDeadlineExceeded, true},
+		{"io.EOF", io.EOF, true},
+		{"io.ErrUnexpectedEOF", io.ErrUnexpectedEOF, true},
+		{"net.OpError timeout", &net.OpError{Err: os.ErrDeadlineExceeded}, true},
+		{"net.OpError connection refused", &net.OpError{Err: errors.New("connection refused")}, true},
+		{"url.Error timeout", &url.Error{Op: "Get", URL: "http://x", Err: context.DeadlineExceeded}, true},
+		{"url.Error connection reset", &url.Error{Op: "Get", URL: "http://x", Err: errors.New("connection reset")}, true},
+
+		// Fallback string-based checks
+		{"503 via string", errors.New("503 service unavailable"), true},
+		{"rate limit via string", errors.New("rate limit exceeded"), true},
+		{"bad request", errors.New("bad request"), false},
+		{"invalid api key", errors.New("invalid api key"), false},
+		{"nil error", nil, false},
 	}
 
 	for _, tt := range tests {
-		result := IsRetryable(tt.err)
-		if result != tt.expected {
-			t.Errorf("IsRetryable(%v) = %v, want %v", tt.err, result, tt.expected)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			result := IsRetryable(tt.err)
+			if result != tt.expected {
+				t.Errorf("IsRetryable(%v) = %v, want %v", tt.err, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestIsRetryable_WrappedErrors verifies errors.As / errors.Is traversal works
+// through wrapping.
+func TestIsRetryable_WrappedErrors(t *testing.T) {
+	wrapped := fmt.Errorf("api call failed: %w", context.DeadlineExceeded)
+	if !IsRetryable(wrapped) {
+		t.Error("expected wrapped context.DeadlineExceeded to be retryable")
+	}
+
+	wrappedCanceled := fmt.Errorf("api call failed: %w", context.Canceled)
+	if IsRetryable(wrappedCanceled) {
+		t.Error("expected wrapped context.Canceled to NOT be retryable")
+	}
+
+	wrappedTimeout := fmt.Errorf("api call failed: %w", os.ErrDeadlineExceeded)
+	if !IsRetryable(wrappedTimeout) {
+		t.Error("expected wrapped os.ErrDeadlineExceeded to be retryable")
 	}
 }
 
@@ -51,7 +87,7 @@ func TestDoRetryThenSuccess(t *testing.T) {
 	err := Do(context.Background(), cfg, func() error {
 		calls++
 		if calls < 3 {
-			return errors.New("temporary error")
+			return context.DeadlineExceeded
 		}
 		return nil
 	})

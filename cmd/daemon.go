@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -22,15 +22,21 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
 	"github.com/GrayCodeAI/hawk/internal/netutil"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/hawk/internal/securitylog"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/spf13/cobra"
 )
 
 var (
-	daemonPort   int
-	daemonHost   string
-	daemonAPIKey string
-	daemonJSON   bool
+	daemonPort        int
+	daemonHost        string
+	daemonAPIKey      string
+	daemonJSON        bool
+	daemonLogLevel    string
+	daemonCORSOrigins []string
+	daemonTLSCertFile string
+	daemonTLSKeyFile  string
 )
 
 var daemonCmd = &cobra.Command{
@@ -61,6 +67,10 @@ func init() {
 	daemonStartCmd.Flags().IntVarP(&daemonPort, "port", "p", 4590, "Port to listen on")
 	daemonStartCmd.Flags().StringVar(&daemonHost, "host", netutil.LoopbackHost, "Host to bind to (default: 127.0.0.1, use 0.0.0.0 for remote access)")
 	daemonStartCmd.Flags().StringVar(&daemonAPIKey, "api-key", "", "API key for protected daemon endpoints (defaults to HAWK_DAEMON_API_KEY or a generated key)")
+	daemonStartCmd.Flags().StringVar(&daemonLogLevel, "log-level", "INFO", "Log level for daemon output (DEBUG, INFO, WARN, ERROR)")
+	daemonStartCmd.Flags().StringSliceVar(&daemonCORSOrigins, "cors", []string{}, "Comma-separated list of allowed CORS origins (empty disables CORS, '*' allows all)")
+	daemonStartCmd.Flags().StringVar(&daemonTLSCertFile, "tls-cert", "", "Path to TLS certificate file (enables HTTPS when paired with --tls-key)")
+	daemonStartCmd.Flags().StringVar(&daemonTLSKeyFile, "tls-key", "", "Path to TLS private key file (enables HTTPS when paired with --tls-cert)")
 	daemonCmd.AddCommand(daemonStartCmd)
 	daemonCmd.AddCommand(daemonStopCmd)
 	daemonCmd.AddCommand(daemonStatusCmd)
@@ -69,6 +79,40 @@ func init() {
 
 func runDaemonStart(_ *cobra.Command, _ []string) error {
 	settings := hawkconfig.LoadSettings()
+
+	// Initialize OpenTelemetry telemetry (opt-in via HAWK_CODE_ENABLE_TELEMETRY=1).
+	telemetryProviders, telemetryErr := oteltrace.InitTelemetry(oteltrace.DefaultTelemetryConfig())
+	if telemetryErr != nil {
+		fmt.Fprintln(os.Stderr, "warning: telemetry initialization failed:", telemetryErr)
+	}
+
+	// Set up file-backed logging for the daemon. Logs go to
+	// ~/.hawk/state/daemon.log with slog structured output.
+	logFile, logErr := openDaemonLogFile()
+	var daemonLogger *logger.Logger
+	if logErr != nil {
+		// Fall back to stderr if file logging fails.
+		daemonLogger = logger.New(os.Stderr, logLevelFromString(daemonLogLevel))
+		fmt.Fprintln(os.Stderr, "warning: daemon file logging failed, falling back to stderr:", logErr)
+	} else {
+		daemonLogger = logger.New(logFile, logLevelFromString(daemonLogLevel))
+	}
+	if logFile != nil {
+		slog.SetDefault(slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{
+			Level: slogLevelFromString(daemonLogLevel),
+		})))
+	}
+
+	// Replace the discarded logger with the real file-backed logger.
+	newSession := newConfiguredHawkSessionFactory(settings, daemonLogger)
+
+	// Log startup banner.
+	daemonLogger.Info("hawk daemon starting", map[string]interface{}{
+		"host":              daemonHost,
+		"port":              daemonPort,
+		"telemetry_enabled": telemetryProviders != nil && telemetryProviders.IsEnabled(),
+	})
+
 	apiKey := daemonAPIKey
 	if apiKey == "" {
 		apiKey = os.Getenv("HAWK_DAEMON_API_KEY")
@@ -81,7 +125,15 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	newSession := newConfiguredHawkSessionFactory(settings, logger.New(io.Discard, logger.Error))
+	// Initialize the security audit log early so it can be shared between
+	// the daemon server and the session factory (for tool execution auditing).
+	var secLog *securitylog.Log
+	if l, err := securitylog.New(securitylog.DefaultDir()); err != nil {
+		daemonLogger.Warn("failed to initialize security audit log", map[string]interface{}{"error": err})
+	} else {
+		secLog = l
+	}
+
 	factory := func(req daemon.ChatRequest) (*engine.Session, error) {
 		systemPrompt, err := buildSystemPrompt()
 		if err != nil {
@@ -98,11 +150,28 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		} else if agentModel != "" {
 			modelOverride = agentModel
 		}
-		return newSession(systemPrompt, modelOverride)
+		session, err := newSession(systemPrompt, modelOverride)
+		if err != nil {
+			return nil, err
+		}
+		// Wire the audit log into the session's tool service so tool
+		// executions are recorded in the tamper-evident log.
+		if secLog != nil {
+			session.Tools().WithAuditLog(secLog)
+		}
+		return session, nil
 	}
 
 	daemon.SetVersion(version)
-	srv := daemon.New(daemon.Config{Port: daemonPort, Host: daemonHost, APIKey: apiKey}, factory)
+	srv := daemon.New(daemon.Config{
+		Port:        daemonPort,
+		Host:        daemonHost,
+		APIKey:      apiKey,
+		CORSOrigins: daemonCORSOrigins,
+		TLSCertFile: daemonTLSCertFile,
+		TLSKeyFile:  daemonTLSKeyFile,
+		SecurityLog: secLog,
+	}, factory)
 	srv.SetGraphFactory(func(ctx context.Context, req daemon.GraphRequest) (executiongraph.Export, error) {
 		if err := ctx.Err(); err != nil {
 			return executiongraph.Export{}, err
@@ -134,12 +203,18 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	defer preheater.Stop()
 
 	fmt.Printf("hawk daemon running on http://%s\n", addr)
-	fmt.Println("Endpoints: GET /v1/health, POST /v1/chat, GET /v1/sessions")
+	fmt.Println("Endpoints: GET /v1/health, GET /v1/ready, POST /v1/chat, GET /v1/sessions, GET /v1/metrics")
 	fmt.Println("Protected endpoints require Authorization: Bearer <api-key> or X-API-Key.")
 	if len(apiKey) > 8 {
 		fmt.Printf("API key: %s...%s\n", apiKey[:4], apiKey[len(apiKey)-4:])
 	} else {
 		fmt.Println("API key: (set via --api-key or HAWK_DAEMON_API_KEY)")
+	}
+	fmt.Printf("Logs: %s\n", filepath.Join(storage.DaemonRunDir(), "daemon.log"))
+	if telemetryProviders != nil && telemetryProviders.IsEnabled() {
+		fmt.Println("Telemetry: enabled (OTLP export configured)")
+	} else {
+		fmt.Println("Telemetry: disabled (set HAWK_CODE_ENABLE_TELEMETRY=1 to enable)")
 	}
 	keyFile := filepath.Join(storage.DaemonRunDir(), "daemon.key")
 	_ = os.MkdirAll(filepath.Dir(keyFile), 0o700)
@@ -168,7 +243,62 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	_ = os.Remove(keyFile)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	// Flush telemetry before shutdown.
+	if telemetryProviders != nil {
+		if err := telemetryProviders.Flush(ctx); err != nil {
+			slog.Warn("telemetry flush failed", "error", err)
+		}
+		if err := telemetryProviders.Shutdown(ctx); err != nil {
+			slog.Warn("telemetry shutdown failed", "error", err)
+		}
+	}
+
 	return srv.Stop(ctx)
+}
+
+// openDaemonLogFile opens (or creates) the daemon log file at
+// ~/.hawk/state/daemon.log and returns it. The directory is created if needed.
+func openDaemonLogFile() (*os.File, error) {
+	dir := storage.DaemonRunDir()
+	if err := os.MkdirAll(dir, 0o750); err != nil { // #nosec G301 -- daemon run dir needs group traversal
+		return nil, err
+	}
+	return os.OpenFile(filepath.Join(dir, "daemon.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+}
+
+// logLevelFromLevelString maps a string log level to the logger.Level type.
+func logLevelFromString(s string) logger.Level {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
+	case "DEBUG":
+		return logger.Debug
+	case "INFO":
+		return logger.Info
+	case "WARN":
+		return logger.Warn
+	case "ERROR":
+		return logger.Error
+	case "FATAL":
+		return logger.Fatal
+	default:
+		return logger.Info
+	}
+}
+
+// slogLevelFromString maps a string log level to slog.Level.
+func slogLevelFromString(s string) slog.Level {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
+	case "DEBUG":
+		return slog.LevelDebug
+	case "INFO":
+		return slog.LevelInfo
+	case "WARN":
+		return slog.LevelWarn
+	case "ERROR":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }
 
 // daemonReadyProbe builds the readiness function installed via SetReadyFn. It

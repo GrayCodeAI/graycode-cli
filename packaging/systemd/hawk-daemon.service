@@ -1,0 +1,42 @@
+[Unit]
+Description=Hawk Daemon (code intelligence server)
+Documentation=https://docs.hawkcode.ai
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Replace with your installed binary path. When installed via the package
+# manager, the binary is typically at /usr/local/bin/hawk.
+ExecStart=/usr/local/bin/hawk daemon start \
+  --host 127.0.0.1 \
+  --port 4590 \
+  --api-key ${HAWK_DAEMON_API_KEY} \
+  --log-level INFO
+# For production, bind to 0.0.0.0 behind a TLS-terminating reverse proxy:
+#   ExecStart=/usr/local/bin/hawk daemon start --host 0.0.0.0 --port 4590 --api-key ${HAWK_DAEMON_API_KEY} --tls-cert /etc/hawk/tls.crt --tls-key /etc/hawk/tls.key
+Restart=always
+RestartSec=5
+TimeoutStopSec=10
+
+# Security hardening (mirror the sandbox ethos at the process level).
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=%h/.hawk/state /tmp
+# Read-only access to config and tool directories.
+ReadOnlyPaths=%h/.hawk
+
+# Resource limits.
+LimitNOFILE=65536
+MemoryMax=4G
+CPUQuota=200%
+
+# Environment.
+Environment=HAWK_DAEMON_API_KEY=
+Environment=HAWK_CODE_ENABLE_TELEMETRY=0
+Environment=HAWK_DAEMON_MAX_CONCURRENT=4
+
+[Install]
+WantedBy=multi-user.target

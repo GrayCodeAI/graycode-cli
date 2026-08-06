@@ -1,0 +1,62 @@
+# Dockerfile for the Hawk daemon (background HTTP server).
+# The binary is identical to the CLI image — this Dockerfile just sets the
+# daemon as the default entrypoint and exposes the daemon port.
+#
+# Build:  docker build -f Dockerfile.daemon -t hawk-daemon .
+# Run:    docker run -p 4590:4590 -e HAWK_DAEMON_API_KEY=... hawk-daemon
+FROM golang:1.26.5-alpine AS builder
+
+RUN apk upgrade --no-cache && \
+    apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /build
+
+ENV GOPRIVATE=github.com/GrayCodeAI/* \
+    GONOSUMDB=github.com/GrayCodeAI/* \
+    GONOSUMCHECK=1
+
+ARG VERSION=dev
+ARG COMMIT=none
+ARG BUILD_DATE=unknown
+
+COPY . .
+
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    rm -f go.work go.work.sum && \
+    { echo "go 1.26.5"; echo; echo "use ."; echo; echo "replace ("; \
+      for repo in hawk-core-contracts eyrie inspect sight tok trace yaad; do \
+        echo "	github.com/GrayCodeAI/${repo} => ./external/${repo}"; \
+      done; echo ")"; } > go.work && \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath \
+    -ldflags="-s -w \
+      -X main.Version=${VERSION} \
+      -X main.Commit=${COMMIT} \
+      -X main.BuildDate=${BUILD_DATE}" \
+    -o hawk ./cmd/hawk
+
+FROM alpine:3.23.5
+
+RUN apk upgrade --no-cache && \
+    apk add --no-cache ca-certificates git bash curl tini && \
+    adduser -D -u 1000 -h /home/hawk hawk
+
+# Create state directory for daemon logs, API key, and audit log.
+RUN mkdir -p /home/hawk/.hawk/state && \
+    chown -R hawk:hawk /home/hawk/.hawk
+
+COPY --from=builder /build/hawk /usr/local/bin/hawk
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY packaging/systemd/hawk-daemon.service /etc/systemd/system/hawk-daemon.service
+
+USER hawk
+WORKDIR /workspace
+
+EXPOSE 4590
+
+# Health check probes the daemon's health endpoint.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -sf http://127.0.0.1:4590/v1/health || exit 1
+
+ENTRYPOINT ["tini", "--", "hawk", "daemon", "start"]
+CMD ["--host", "0.0.0.0", "--port", "4590"]

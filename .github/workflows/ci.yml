@@ -238,10 +238,10 @@ jobs:
           coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%' | tail -1)
           echo "Coverage: ${coverage}%"
           echo "COVERAGE=${coverage}" >> "$GITHUB_ENV"
-      - name: Coverage threshold (minimum 60%)
+      - name: Coverage threshold (minimum 65%)
         run: |
-          if (( $(echo "${COVERAGE} < 60" | bc -l) )); then
-            echo "::error::Coverage ${COVERAGE}% is below minimum 60%"
+          if (( $(echo "${COVERAGE} < 65" | bc -l) )); then
+            echo "::error::Coverage ${COVERAGE}% is below minimum 65%"
             exit 1
           fi
       - name: Upload coverage
@@ -373,6 +373,30 @@ jobs:
           markdownlint-cli2 '**/*.md'
 
   # -------------------------------------------------------------------------
+  # 9. API reference generation — build HTML docs from the OpenAPI spec.
+  # -------------------------------------------------------------------------
+  api-reference:
+    name: api reference
+    runs-on: ubuntu-latest
+    needs: [vet]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Validate OpenAPI spec
+        run: |
+          npm install -g @redocly/cli
+          redocly lint api/openapi.yaml
+      - name: Generate API reference (HTML)
+        run: |
+          npm install -g redoc-cli
+          redoc-cli bundle api/openapi.yaml -o api/reference.html
+      - name: Upload API reference artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-reference
+          path: api/reference.html
+          retention-days: 30
+
+  # -------------------------------------------------------------------------
   # Dead code detection.
   # -------------------------------------------------------------------------
   deadcode:
@@ -405,6 +429,7 @@ jobs:
             head -50 "$output"
             echo '```'
           } >>"$GITHUB_STEP_SUMMARY"
+
 
   # -------------------------------------------------------------------------
   # Duplication detection — jscpd.

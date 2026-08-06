@@ -8,6 +8,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	oteltraceapi "go.opentelemetry.io/otel/trace"
 )
 
 // Span represents a trace span.
@@ -20,6 +23,9 @@ type Span struct {
 	EndTime   time.Time         `json:"end_time,omitempty"`
 	Tags      map[string]string `json:"tags,omitempty"`
 	Events    []SpanEvent       `json:"events,omitempty"`
+	// otelSpan is the underlying OTel span, set when telemetry is enabled.
+	// It is nil when OTel is not initialized (in-memory tracing only).
+	otelSpan oteltraceapi.Span `json:"-"`
 }
 
 // SpanEvent represents an event within a span.
@@ -35,7 +41,10 @@ type SpanEvent struct {
 // spans keep working) but they are not retained.
 const maxRecordedSpans = 10000
 
-// Tracer is a simple tracer.
+// Tracer is a simple tracer that also delegates to the global OpenTelemetry
+// tracer provider when one is installed (via InitTelemetry → InitOTelSDK).
+// This lets existing engine code that calls Tracer.StartSpan produce real
+// distributed traces without any callsite changes.
 type Tracer struct {
 	mu     sync.RWMutex
 	spans  []*Span
@@ -47,7 +56,11 @@ func NewTracer() *Tracer {
 	return &Tracer{enable: true}
 }
 
-// StartSpan starts a new span.
+// StartSpan starts a new span. When the global OTel tracer provider is
+// configured (telemetry enabled), the span is also created as a real OTel
+// span and ended when Finish() is called, so traces are exported to the
+// configured OTLP backend. The in-memory span is always returned for
+// backwards-compatible in-session inspection.
 func (t *Tracer) StartSpan(ctx context.Context, name string) (context.Context, *Span) {
 	span := &Span{
 		Name:      name,
@@ -56,6 +69,11 @@ func (t *Tracer) StartSpan(ctx context.Context, name string) (context.Context, *
 		StartTime: time.Now(),
 		Tags:      make(map[string]string),
 	}
+
+	// If the global OTel tracer provider is set, create a real span.
+	// otel.Tracer uses the global provider set by InitOTelSDK.
+	ctx, otelSpan := otel.Tracer("hawk-code").Start(ctx, name)
+	span.otelSpan = otelSpan
 
 	t.mu.Lock()
 	// Disable() must stop recording (M9): previously only the flag flipped
@@ -68,9 +86,13 @@ func (t *Tracer) StartSpan(ctx context.Context, name string) (context.Context, *
 	return context.WithValue(ctx, spanKey, span), span
 }
 
-// Finish finishes a span.
+// Finish finishes a span, recording the end time and ending the underlying
+// OTel span if one was created.
 func (s *Span) Finish() {
 	s.EndTime = time.Now()
+	if s.otelSpan != nil {
+		s.otelSpan.End()
+	}
 }
 
 // AddEvent adds an event to the span.

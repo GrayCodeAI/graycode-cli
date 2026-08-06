@@ -3,11 +3,18 @@ package retry
 
 import (
 	"context"
+	"errors"
+	"io"
 	"math"
 	"math/rand"
+	"net"
+	"net/url"
+	"os"
 	"strings"
 	"time"
 )
+
+// backoff jitter window for the minimum base delay.
 
 // Config configures retry behavior.
 type Config struct {
@@ -30,30 +37,87 @@ func DefaultConfig() Config {
 }
 
 // IsRetryable returns true for errors that warrant a retry.
+//
+// It uses typed error checking (errors.Is / errors.As) as the primary
+// mechanism, falling back to a small set of string-based checks only for
+// HTTP status codes or rate-limit messages that are not wrapped in typed
+// Go errors. This replaces the previous implementation that relied entirely
+// on strings.Contains, which was fragile and matched unrelated error text.
 func IsRetryable(err error) bool {
 	if err == nil {
 		return false
 	}
-	s := strings.ToLower(err.Error())
-	retryable := []string{
-		"timeout",
-		"temporary",
-		"connection refused",
-		"no such host",
-		"reset by peer",
-		"broken pipe",
-		"too many requests",
-		"rate limit",
-		"503",
-		"502",
-		"504",
-		"internal server error",
+
+	// Context cancellation is never retryable — the caller explicitly
+	// aborted the operation.
+	if errors.Is(err, context.Canceled) {
+		return false
 	}
-	for _, r := range retryable {
+
+	// Timeouts are retryable.
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	if errors.Is(err, os.ErrDeadlineExceeded) {
+		return true
+	}
+
+	// Temporary errors (e.g., EAGAIN on sockets) are retryable.
+	// In Go 1.24+, os.IsTimeout / os.IsTemporary were deprecated; we use
+	// errors.Is against os.ErrDeadlineExceeded (already checked above) and
+	// the net.Error interface for network-level temporary/timeout flags.
+
+	// net.Error covers timeouts, temporary errors, and network failures
+	// (DNS resolution, connection refused, "reset by peer", "broken pipe").
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+
+	// url.Error wraps transport-layer failures from http.Client.
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		if urlErr.Timeout() {
+			return true
+		}
+		// Retry on connection errors that the transport didn't classify as
+		// permanent (e.g., "connection reset by peer" in the wrapped error).
+		return true
+	}
+
+	// io.EOF and io.ErrUnexpectedEOF are transport-level errors that may
+	// indicate a connection was reset mid-stream.
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+
+	// Fallback: string-based check for HTTP status codes and rate-limit
+	// messages that are not wrapped in typed Go errors. This catches cases
+	// where callers create errors via fmt.Errorf("503 service unavailable")
+	// or similar. The set is intentionally minimal and targets only codes
+	// that represent transient failures.
+	s := strings.ToLower(err.Error())
+	fallbackRetryable := []string{
+		"temporary",
+		"rate limit",
+		"too many requests",
+	}
+	for _, r := range fallbackRetryable {
 		if strings.Contains(s, r) {
 			return true
 		}
 	}
+
+	// Retry on transient HTTP status codes (408, 429, 500, 502, 503, 504)
+	// surfaced as plain error strings. We check the 3-digit code rather than
+	// a full phrase so we handle "503 unavailable", "503 service unavailable",
+	// "500 internal server error", etc. uniformly.
+	for _, code := range []string{"408", "429", "500", "502", "503", "504"} {
+		if strings.Contains(s, code) {
+			return true
+		}
+	}
+
 	return false
 }
 

@@ -15,6 +15,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/securitylog"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -39,6 +40,7 @@ type ToolService struct {
 	sandbox           *diff.DiffSandbox
 	deps              toolExecutionDeps
 	metrics           *metrics.Registry
+	auditLog          *securitylog.Log
 }
 
 func (s *ToolService) SetAgentSpawnFn(fn tool.AgentSpawnFn) {
@@ -198,6 +200,13 @@ func (s *ToolService) WithTracer(t *oteltrace.Tracer) *ToolService {
 	return s
 }
 
+// WithAuditLog configures the tamper-evident security event log.
+// When set, every tool execution is recorded as a security event.
+func (s *ToolService) WithAuditLog(l *securitylog.Log) *ToolService {
+	s.auditLog = l
+	return s
+}
+
 // Tracer returns the tool/runtime tracer shared by session loop spans.
 func (s *ToolService) Tracer() *oteltrace.Tracer {
 	if s == nil {
@@ -345,6 +354,18 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 	}
 	if !granted {
 		return finishDenied("denied", denyMsg)
+	}
+	// Audit: record permitted tool execution in the security event log.
+	if s.auditLog != nil {
+		_, _ = s.auditLog.Append(
+			securitylog.SeverityInfo,
+			"tool_exec",
+			fmt.Sprintf("tool=%s session=%s", tc.Name, tc.ID),
+			tc.Name, tc.ID,
+		)
+	}
+	if s.metrics != nil {
+		s.metrics.Counter("tool_exec_total").Inc()
 	}
 	approved, approvalDeny := true, ""
 	if s.deps.checkApproval != nil {

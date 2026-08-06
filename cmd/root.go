@@ -272,6 +272,7 @@ func init() {
 	rootCmd.AddCommand(rulesCmd)
 	rootCmd.AddCommand(sandboxCmd)
 	rootCmd.AddCommand(costCmd)
+	rootCmd.AddCommand(featuresCmd)
 	rootCmd.AddCommand(execCmd)
 	rootCmd.AddCommand(daemonCmd)
 	rootCmd.AddCommand(agentCmd)
