@@ -103,20 +103,11 @@ func controlPlaneChip(m *chatModel) string {
 	if work == "" {
 		work = "act"
 	}
-	iso := m.session.Isolation().String()
-	// Short iso labels for narrow bars.
-	switch iso {
-	case "workspace":
-		iso = "ws"
-	case "container":
-		iso = "ctr"
-	case "strict":
-		iso = "ro"
-	}
+	iso := m.session.Isolation().ShortLabel()
 	tr := engine.ProjectTrust("")
-	trust := "ut" // untrusted
+	trust := icons.CloseThick() // untrusted
 	if !tr.Enforced {
-		trust = "-"
+		trust = icons.CircleOutline()
 	} else if tr.Trusted {
 		trust = icons.CheckBold()
 	}
@@ -125,6 +116,9 @@ func controlPlaneChip(m *chatModel) string {
 		statusDimStyle.Render(trust)
 	if gi := engine.InspectGitBranch(""); gi.OnDefault {
 		chip += statusDimStyle.Render(" ") + dryRunStyle.Render("main!")
+	}
+	if m.session.AutoCommit() {
+		chip += statusDimStyle.Render(" ") + statusDimStyle.Render("auto-commit")
 	}
 	return chip
 }
@@ -184,9 +178,14 @@ func renderStatusBarSecondaryLeft(m *chatModel) string {
 	if work == "" {
 		work = "act"
 	}
-	iso := m.session.Isolation().String()
+	iso := m.session.Isolation().ShortLabel()
 	tr := engine.ProjectTrust("")
-	trustLabel := tr.String()
+	trustIcon := icons.CloseThick() // untrusted
+	if !tr.Enforced {
+		trustIcon = icons.CircleOutline()
+	} else if tr.Trusted {
+		trustIcon = icons.CheckBold()
+	}
 	trustStyle := statusDimStyle
 	if tr.Blocked {
 		trustStyle = dryRunStyle
@@ -196,7 +195,7 @@ func renderStatusBarSecondaryLeft(m *chatModel) string {
 	parts := []string{
 		statusSpecStyle.Render("mode:" + work),
 		statusDimStyle.Render("iso:" + iso),
-		trustStyle.Render(trustLabel),
+		trustStyle.Render(trustIcon + " " + tr.String()),
 	}
 	if gi := engine.InspectGitBranch(""); gi.OnDefault {
 		parts = append(parts, dryRunStyle.Render(icons.Alert()+" default-branch"))

@@ -2,26 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // controlPlaneOnboardingHint is a short first-session tip (not a wall of text).
 func controlPlaneOnboardingHint(sess *engine.Session) string {
-	var lines []string
-	lines = append(lines, "Quick path:  /start   ·   /mode plan|act   ·   /isolation workspace")
-
-	if gi := engine.InspectGitBranch(""); gi.OnDefault {
-		lines = append(lines, fmt.Sprintf("%s On %s — /branch-agent before large edits", icons.Alert(), gi.Branch))
-	}
-	if sess != nil {
-		lines = append(lines, fmt.Sprintf("Now: work=%s · iso=%s · auto-commit=%v",
-			sess.WorkMode(), sess.Isolation().String(), sess.AutoCommit()))
-	}
-	lines = append(lines, "Tip: edits show a unified diff; permissions show risk + why.")
-	return strings.Join(lines, "\n")
+	return ""
 }
 
 // workModeSwitchSummary is the polished confirmation after /mode plan|act|review.

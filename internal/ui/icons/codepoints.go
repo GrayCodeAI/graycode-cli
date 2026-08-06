@@ -120,7 +120,7 @@ const (
 	puaBrain          = "\uea91" // nf-cod-lightbulb      (60001) — visual metaphor
 	puaEmail          = "\ueb1c" // nf-cod-mail           (60188)
 	puaHelpCircle     = "\ueaa4" // nf-cod-info           (60020) — closest match
-	puaBranch         = "\uec5f" // nf-cod-git-branch     (60527)
+	puaBranch         = "\uea63" // nf-cod-repo_forked — fork/branch glyph; present in JetBrains Mono NF and every Nerd Font
 	puaClockOutline   = "\uf017" // nf-fa-clock_o         (61463)
 	puaPause          = "\uead1" // nf-cod-debug-pause    (60113)
 	puaExpandAll      = "\uebc1" // nf-cod-expand-all     (60309)
