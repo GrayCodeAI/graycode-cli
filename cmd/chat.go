@@ -387,7 +387,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 		startup.MarkPhase("newChatModel:ui-cache-warm")
 		hawkconfig.RefreshConfigCredSnapshot(context.Background())
 		welcomeSnapshot := loadWelcomeStatusSnapshot()
-		model.refreshStatusBarLeft(true)
+		_, _ = model.refreshStatusBarLeft(true)
 		connStatusVal := ""
 		connStatusKey := ""
 		if model.session != nil {

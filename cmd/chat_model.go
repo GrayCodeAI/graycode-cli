@@ -86,6 +86,10 @@ type (
 	promptKeepAliveMsg  struct{}
 	eyeBlinkTickMsg     struct{}
 	eyeFrameNextMsg     struct{ frame int }
+	statusLeftPRsMsg    struct {
+		branch string
+		nums   []string
+	}
 	usageUpdateMsg      struct{ usage *engine.StreamUsage }
 	compactStartMsg     struct{}
 	compactMsg          struct {

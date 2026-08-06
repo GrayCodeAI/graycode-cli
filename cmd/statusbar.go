@@ -8,6 +8,7 @@ import (
 	"time"
 
 	lipgloss "charm.land/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 
@@ -255,16 +256,23 @@ func fetchStatusLeftPRs(branch string) []string {
 	return out
 }
 
-func (m *chatModel) refreshStatusBarLeft(force bool) bool {
+func fetchStatusLeftPRsCmd(branch string) tea.Cmd {
+	return func() tea.Msg {
+		nums := fetchStatusLeftPRs(branch)
+		return statusLeftPRsMsg{branch: branch, nums: nums}
+	}
+}
+
+func (m *chatModel) refreshStatusBarLeft(force bool) (bool, tea.Cmd) {
 	if m == nil {
-		return false
+		return false, nil
 	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		cwd = "."
 	}
 	if !force && m.statusLeftKey == cwd && m.statusLeftVal != "" && time.Since(m.statusLeftAt) < statusBranchTTL {
-		return false
+		return false, nil
 	}
 	branch := ""
 	if b, err := gitOutput("rev-parse", "--abbrev-ref", "HEAD"); err == nil && b != "" {
@@ -277,11 +285,12 @@ func (m *chatModel) refreshStatusBarLeft(force bool) bool {
 	m.statusLeftVal = shortenHomePath(cwd)
 	m.statusLeftBranch = branch
 	m.statusLeftAt = time.Now()
+	var prCmd tea.Cmd
 	if branch != "" && (force || time.Since(m.statusLeftPRAt) > statusPRTTL) {
-		m.statusLeftPRs = fetchStatusLeftPRs(branch)
 		m.statusLeftPRAt = time.Now()
+		prCmd = fetchStatusLeftPRsCmd(branch)
 	}
-	return true
+	return true, prCmd
 }
 
 func renderStatusBarLeft(m *chatModel) string {

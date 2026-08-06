@@ -36,12 +36,12 @@ func (c *branchAgentSubcommand) Handle(m *chatModel, args []string, text string)
 		m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		return m, nil
 	}
-	m.refreshStatusBarLeft(true)
+	_, prCmd := m.refreshStatusBarLeft(true)
 	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf(
 		"%s Checked out `%s` — agent edits stay off %s.\nTip: `/commit` when ready.",
 		icons.CheckBold(), name, info.Branch,
 	)})
-	return m, nil
+	return m, prCmd
 }
 
 func init() {

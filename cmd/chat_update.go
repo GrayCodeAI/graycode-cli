@@ -127,8 +127,11 @@ func (m *chatModel) quitModel() (tea.Model, tea.Cmd) {
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	if _, isMouse := msg.(tea.MouseMsg); !isMouse {
-		if m.refreshStatusBarLeft(false) {
+		if changed, prCmd := m.refreshStatusBarLeft(false); changed {
 			m.viewDirty = true
+			if prCmd != nil {
+				cmds = append(cmds, prCmd)
+			}
 		}
 	}
 
@@ -174,6 +177,15 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, promptKeepAliveCmd()
+
+	case statusLeftPRsMsg:
+		// Async PR lookup result — only apply if we're still on the same branch.
+		if m.statusLeftBranch == msg.branch {
+			m.statusLeftPRs = msg.nums
+			m.viewDirty = true
+			m.updateViewportContent()
+		}
+		return m, nil
 
 	case eyeBlinkTickMsg:
 		if m.showWelcomeBanner() {

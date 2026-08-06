@@ -73,7 +73,7 @@ func (c *startSubcommand) Handle(m *chatModel, args []string, text string) (tea.
 			b.WriteString(fmt.Sprintf("5. **Git** — could not create agent branch: %v\n", err))
 		} else {
 			b.WriteString(fmt.Sprintf("5. **Git** — created and checked out `%s`\n", name))
-			m.refreshStatusBarLeft(true)
+			_, _ = m.refreshStatusBarLeft(true)
 		}
 	} else if advice := engine.GitSafetyAdvice(gi); advice != "" {
 		b.WriteString(fmt.Sprintf("5. **Git** — %s\n", advice))
