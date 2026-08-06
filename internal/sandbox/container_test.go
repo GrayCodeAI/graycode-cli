@@ -102,7 +102,7 @@ func TestContainerSandbox_DockerRunArgs_Hardened(t *testing.T) {
 	joined := strings.Join(args, " ")
 
 	for _, want := range []string{
-		"--network none",
+		"--network bridge",
 		"--cap-drop ALL",
 		"--security-opt no-new-privileges",
 		"--pids-limit 256",

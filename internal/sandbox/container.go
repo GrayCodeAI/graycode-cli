@@ -131,10 +131,14 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 }
 
 func (c *ContainerSandbox) dockerRunArgs(name, attachDir, cacheDir string) []string {
+	netMode := strings.TrimSpace(os.Getenv("HAWK_CONTAINER_NETWORK"))
+	if netMode == "" {
+		netMode = "bridge"
+	}
 	args := []string{
 		"run", "-d", "--rm",
 		"--name", name,
-		"--network", "none",
+		"--network", netMode,
 		"--cap-drop", "ALL",
 		"--security-opt", "no-new-privileges",
 		"--pids-limit", "256",
