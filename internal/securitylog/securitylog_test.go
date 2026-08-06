@@ -154,3 +154,44 @@ func TestAppendAfterCloseFails(t *testing.T) {
 		t.Fatal("expected append after close to fail")
 	}
 }
+
+func TestEntries(t *testing.T) {
+	dir := t.TempDir()
+	l, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := l.Append(SeverityInfo, "tool_exec", "wrote file", "Write", "sess-1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := l.Append(SeverityWarning, "denied", "blocked", "Bash", "sess-1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := l.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	events, err := Entries(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(events))
+	}
+	if events[0].Type != "tool_exec" || events[1].Type != "denied" {
+		t.Fatalf("unexpected entry order: %+v", events)
+	}
+	if events[0].Seq != 1 || events[1].Seq != 2 {
+		t.Fatalf("unexpected sequence numbers: %+v", events)
+	}
+}
+
+func TestEntriesEmptyWhenMissing(t *testing.T) {
+	events, err := Entries(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 0 {
+		t.Fatalf("expected no entries for missing log, got %d", len(events))
+	}
+}

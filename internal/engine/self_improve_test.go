@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 )
@@ -22,10 +23,21 @@ func TestSelfImproverLearnAndForPrompt(t *testing.T) {
 func TestSelfImproverBounded(t *testing.T) {
 	si := &SelfImprover{Path: filepath.Join(t.TempDir(), "self-improve.json")}
 	for i := 0; i < maxSelfImproveEntries+50; i++ {
-		si.Learn("x", "y", "z", "code")
+		si.Learn(fmt.Sprintf("x%d", i), "y", "z", "code")
 	}
 	if len(si.Entries) != maxSelfImproveEntries {
 		t.Fatalf("expected %d entries, got %d", maxSelfImproveEntries, len(si.Entries))
+	}
+}
+
+func TestSelfImproverDeduplicates(t *testing.T) {
+	si := &SelfImprover{Path: filepath.Join(t.TempDir(), "self-improve.json")}
+	si.Learn("write failed", "wrong encoding", "verify encoding", "code")
+	si.Learn("write failed", "wrong encoding", "verify encoding", "code")
+	si.Learn("write failed", "other cause", "verify encoding", "code") // same what+lesson, different why — deduped
+	si.Learn("test flaked", "race", "use -race", "test")               // distinct — kept
+	if len(si.Entries) != 2 {
+		t.Fatalf("expected 2 unique lessons, got %d", len(si.Entries))
 	}
 }
 

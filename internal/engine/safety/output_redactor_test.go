@@ -219,6 +219,28 @@ func TestRedactEnvVars(t *testing.T) {
 	}
 }
 
+func TestRegisterEnvSecrets(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "ghp_registered123456789012345678901234567")
+	t.Setenv("OPENAI_API_KEY", "sk-registered-token-value-12345")
+	t.Setenv("SHORT_VAL", "x")            // not a secret-named var; ignored by design
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "") // empty values are skipped
+
+	r := NewOutputRedactor()
+	r.RegisterEnvSecrets()
+
+	input := "auth via ghp_registered123456789012345678901234567 and sk-registered-token-value-12345"
+	result := r.RedactEnvVars(input)
+	if strings.Contains(result, "ghp_registered123456789012345678901234567") {
+		t.Error("GITHUB_TOKEN value was not registered and redacted")
+	}
+	if strings.Contains(result, "sk-registered-token-value-12345") {
+		t.Error("OPENAI_API_KEY value was not registered and redacted")
+	}
+	if !strings.Contains(result, "[REDACTED:env:GITHUB_TOKEN]") || !strings.Contains(result, "[REDACTED:env:OPENAI_API_KEY]") {
+		t.Errorf("expected env redaction placeholders, got: %s", result)
+	}
+}
+
 func TestRedactPaths(t *testing.T) {
 	r := NewOutputRedactor()
 	input := "Reading /home/user/.config/secrets.json"
