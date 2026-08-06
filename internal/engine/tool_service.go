@@ -70,6 +70,7 @@ type toolExecutionDeps struct {
 	recordVerification func(types.ToolCall, string, bool)
 	lifecycle          *LifecycleService
 	appendSystem       func(string)
+	taskExec           tool.TaskExecutorFunc
 }
 
 // NewToolService constructs a ToolService with the given registry.
@@ -395,6 +396,7 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 		AvailableTools:      available,
 		Registry:            s.registry,
 		AutoCommit:          s.AutoCommit(),
+		TaskExecutor:        s.deps.taskExec,
 	})
 	// Bridge session sandbox policy onto the context so Bash/PowerShell
 	// WrapCommand actually applies. Path guards already read ToolContext.SandboxMode;

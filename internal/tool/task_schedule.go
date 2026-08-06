@@ -41,7 +41,8 @@ func (s *TaskStore) Schedule() (TaskSchedule, error) {
 			return TaskSchedule{}, fmt.Errorf("task schedule contains invalid task identity %q", id)
 		}
 		switch task.Status {
-		case TaskStatusPending, TaskStatusInProgress, TaskStatusCompleted, TaskStatusFailed:
+		case TaskStatusPending, TaskStatusInProgress, TaskStatusReviewing,
+			TaskStatusCompleted, TaskStatusFailed, TaskStatusSkipped, TaskStatusCancelled:
 		default:
 			return TaskSchedule{}, fmt.Errorf("task %q has invalid status %q", id, task.Status)
 		}
