@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -184,6 +185,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 		recordVerification: s.recordVerificationObservation,
 		lifecycle:          s.life,
 		appendSystem:       s.AppendSystemContext,
+		taskExec:           s.taskExecFromAgentSpawn(),
 	})
 	s.refreshContextWindowCache()
 	s.life.SetAgentsAccumulator(agentsAccum)
@@ -207,6 +209,49 @@ func (s *Session) ReattachTransport(chat ChatClient, provider string, deployment
 	// future path needs to toggle it post-construction, extend
 	// ChatService with a setter.
 	_ = deploymentRouting
+}
+
+// taskExecFromAgentSpawn returns the TaskRun executor: it spawns a general
+// sub-agent to perform a stored task, feeding the task's description, active
+// form, and checkpoint as the prompt. Nil agent-spawn capability disables the
+// executor (the TaskRun tool then reports that no executor is configured).
+func (s *Session) taskExecFromAgentSpawn() tool.TaskExecutorFunc {
+	return func(ctx context.Context, t *tool.Task) (string, error) {
+		if s == nil || s.tools == nil || s.tools.AgentSpawnFn() == nil {
+			return "", fmt.Errorf("task execution unavailable: no agent spawn capability")
+		}
+		prompt := "Execute the following task and report results.\n\nSubject: " + t.Subject +
+			"\n\nDescription: " + t.Description
+		if t.ActiveForm != "" {
+			prompt += "\n\n(You are working on: " + t.ActiveForm + ")"
+		}
+		if len(t.Checkpoint) > 0 {
+			b, _ := json.Marshal(t.Checkpoint)
+			prompt += "\n\nPrior progress (checkpoint): " + string(b)
+		}
+		res, err := s.tools.AgentSpawnFn()(ctx, agentcontracts.SpawnRequest{
+			Prompt:       prompt,
+			Description:  "Execute task " + t.ID,
+			SubagentType: "general",
+		})
+		if err != nil {
+			return "", err
+		}
+		if res.Status == agentcontracts.StatusFailed {
+			if res.Output != "" {
+				return "", fmt.Errorf("%s", res.Output)
+			}
+			return "", fmt.Errorf("task agent reported failure")
+		}
+		out := res.Output
+		if res.Summary != "" {
+			if out != "" {
+				out += "\n"
+			}
+			out += res.Summary
+		}
+		return out, nil
+	}
 }
 
 // SubSession clones transport and routing mode for explore/general sub-agents.

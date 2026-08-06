@@ -213,6 +213,64 @@ func (s *TaskStore) Requeue(id string) (bool, error) {
 	return true, nil
 }
 
+// Skip parks a task as skipped without executing it. The reason is recorded in
+// metadata for later inspection (skipReason).
+func (s *TaskStore) Skip(id, reason string) (bool, error) {
+	s.mu.Lock()
+	t, ok := s.tasks[id]
+	if !ok {
+		s.mu.Unlock()
+		return false, fmt.Errorf("task %q not found", id)
+	}
+	if t.Status == TaskStatusCompleted || t.Status == TaskStatusSkipped {
+		s.mu.Unlock()
+		return false, nil
+	}
+	t.Status = TaskStatusSkipped
+	if t.Metadata == nil {
+		t.Metadata = make(map[string]any)
+	}
+	if reason != "" {
+		t.Metadata["skipReason"] = reason
+	}
+	t.UpdatedAt = time.Now()
+	persist := s.persist
+	s.mu.Unlock()
+	if persist != nil {
+		_ = s.Save("")
+	}
+	return true, nil
+}
+
+// Cancel parks a task as cancelled (e.g. the run was aborted). The reason is
+// recorded in metadata for later inspection (cancelReason).
+func (s *TaskStore) Cancel(id, reason string) (bool, error) {
+	s.mu.Lock()
+	t, ok := s.tasks[id]
+	if !ok {
+		s.mu.Unlock()
+		return false, fmt.Errorf("task %q not found", id)
+	}
+	if t.Status == TaskStatusCompleted || t.Status == TaskStatusCancelled {
+		s.mu.Unlock()
+		return false, nil
+	}
+	t.Status = TaskStatusCancelled
+	if t.Metadata == nil {
+		t.Metadata = make(map[string]any)
+	}
+	if reason != "" {
+		t.Metadata["cancelReason"] = reason
+	}
+	t.UpdatedAt = time.Now()
+	persist := s.persist
+	s.mu.Unlock()
+	if persist != nil {
+		_ = s.Save("")
+	}
+	return true, nil
+}
+
 // Checkpoint merges resumable progress onto a task without changing its
 // status. A replan or resume reads the checkpoint to avoid starting from zero.
 func (s *TaskStore) Checkpoint(id string, data map[string]any) (bool, error) {
