@@ -217,6 +217,10 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 			reflection, refErr := s.LifecycleSvc().Reflector().Reflect(ctx, intentText, s.Persistence().RawMessages(), output)
 			if refErr == nil && reflection != nil {
 				output += fmt.Sprintf("\n\n## Self-Reflection\n**What failed:** %s\n**Why:** %s\n**What to do differently:** %s\nTry a different approach based on this analysis.", reflection.WhatFailed, reflection.WhyFailed, reflection.WhatToDo)
+				// Persist the lesson across sessions so future runs avoid
+				// the same mistake. Learn is nil-safe when no callback is
+				// installed (e.g. headless or background sessions).
+				s.Learn(reflection.WhatFailed, reflection.WhyFailed, reflection.WhatToDo, "tool_failure")
 			}
 		}
 	} else {

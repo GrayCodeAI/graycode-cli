@@ -72,6 +72,10 @@ type Session struct {
 	memory  *MemoryService
 	persist *PersistenceService
 	tools   *ToolService
+	// learnFn persists structured lessons produced by failure reflection to a
+	// cross-session store (e.g. the chat client's SelfImprover). It is a
+	// callback so the engine stays decoupled from storage; nil disables it.
+	learnFn func(what, why, lesson, category string)
 	// GLMThinkingEnabled toggles GLM/Z.ai extended reasoning on outgoing requests
 	// (applied only when provider is zai_payg or zai_coding). nil leaves the model default.
 
@@ -218,6 +222,11 @@ func (s *Session) SubSession(model, systemPrompt string, registry *tool.Registry
 		deploymentRouting = llm.DeploymentRouting()
 	}
 	sub := NewSessionWithClient(chat, provider, model, systemPrompt, registry, deploymentRouting)
+	// Propagate the lesson callback so sub-agent failures also persist
+	// cross-session lessons.
+	s.mu.RLock()
+	sub.learnFn = s.learnFn
+	s.mu.RUnlock()
 	return sub
 }
 
@@ -278,6 +287,32 @@ func (s *Session) PermSvc() *PermissionService { return s.perms }
 
 // LifecycleSvc returns the extracted LifecycleService (Phase 3).
 func (s *Session) LifecycleSvc() *LifecycleService { return s.life }
+
+// SetLearnFn installs the callback that persists structured lessons produced
+// by failure reflection. Set it to a SelfImprover.Learn-compatible function
+// to close the loop: reflections then survive the session.
+func (s *Session) SetLearnFn(fn func(what, why, lesson, category string)) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.learnFn = fn
+	s.mu.Unlock()
+}
+
+// Learn persists a lesson through the configured callback. Safe to call with
+// nil session or no callback installed.
+func (s *Session) Learn(what, why, lesson, category string) {
+	if s == nil {
+		return
+	}
+	s.mu.RLock()
+	fn := s.learnFn
+	s.mu.RUnlock()
+	if fn != nil {
+		fn(what, why, lesson, category)
+	}
+}
 
 // MemorySvc returns the extracted MemoryService (Phase 4).
 func (s *Session) MemorySvc() *MemoryService { return s.memory }

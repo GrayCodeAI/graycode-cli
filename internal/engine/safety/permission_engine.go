@@ -11,6 +11,7 @@ import (
 	"time"
 
 	contracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
+	"github.com/GrayCodeAI/hawk/internal/governance"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
@@ -74,6 +75,11 @@ type PermissionEngine struct {
 	Phases          int                     // total number of phases detected from tasks.md
 	convergeChecked bool                    // whether convergence has been checked this session
 	PromptFn        func(PermissionRequest) // callback to ask user
+	// Governance is the POLICY ∩ PROFILE ceiling. It is evaluated before
+	// every other gate (hooks, spec stage, rules, autonomy, bypass) so no
+	// agent state or user-granted bypass can loosen an administrator-set
+	// ceiling. Nil means fail-open (no governance policy installed).
+	Governance *governance.Engine
 }
 
 // DecisionOutcome is the result of evaluating a tool request.
@@ -104,6 +110,7 @@ const (
 	ReasonClassifiedSafe    DecisionReason = "classified_safe"
 	ReasonUserPrompt        DecisionReason = "user_prompt"
 	ReasonPromptUnavailable DecisionReason = "prompt_unavailable"
+	ReasonGovernance        DecisionReason = "governance"
 )
 
 // Decision is the structured result of a permission evaluation.
@@ -155,6 +162,7 @@ func NewPermissionEngine() *PermissionEngine {
 		AutoMode:   permissions.NewAutoModeState(),
 		Classifier: permissions.NewClassifier(),
 		BypassKill: permissions.NewBypassKillswitch(),
+		Governance: governance.New(),
 	}
 }
 
@@ -219,6 +227,17 @@ func (pe *PermissionEngine) EvaluateTool(ctx context.Context, tc ToolCallInfo) D
 func (pe *PermissionEngine) evaluateToolDecision(ctx context.Context, tc ToolCallInfo) Decision {
 	if pe.DryRun {
 		return Decision{Outcome: DecisionDeny, Reason: ReasonDryRun, Message: "dry-run: tool execution disabled"}
+	}
+
+	// Governance ceiling — evaluated first so no later gate (hooks, spec
+	// stage, remembered rules, autonomy, bypass kill-switch) can override an
+	// administrator-set POLICY ∩ PROFILE decision. This is the un-disableable
+	// org ceiling: deny in either layer denies regardless of what the agent
+	// or user grants at lower layers.
+	if pe.Governance != nil {
+		if d := pe.Governance.Evaluate(tc.Name, ToolSummary(tc.Name, tc.Args)); !d.Allowed {
+			return Decision{Outcome: DecisionDeny, Reason: ReasonGovernance, Message: d.Reason}
+		}
 	}
 
 	toolName := canonicalToolName(tc.Name)
