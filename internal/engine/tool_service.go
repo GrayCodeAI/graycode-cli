@@ -15,6 +15,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/securitylog"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -39,6 +40,7 @@ type ToolService struct {
 	sandbox           *diff.DiffSandbox
 	deps              toolExecutionDeps
 	metrics           *metrics.Registry
+	auditLog          *securitylog.Log
 }
 
 func (s *ToolService) SetAgentSpawnFn(fn tool.AgentSpawnFn) {
@@ -70,6 +72,7 @@ type toolExecutionDeps struct {
 	recordVerification func(types.ToolCall, string, bool)
 	lifecycle          *LifecycleService
 	appendSystem       func(string)
+	taskExec           tool.TaskExecutorFunc
 }
 
 // NewToolService constructs a ToolService with the given registry.
@@ -194,6 +197,13 @@ func (s *ToolService) SetContainerExecutor(ce tool.ContainerExecutor) {
 // WithTracer configures the OTel tracer.
 func (s *ToolService) WithTracer(t *oteltrace.Tracer) *ToolService {
 	s.tracer = t
+	return s
+}
+
+// WithAuditLog configures the tamper-evident security event log.
+// When set, every tool execution is recorded as a security event.
+func (s *ToolService) WithAuditLog(l *securitylog.Log) *ToolService {
+	s.auditLog = l
 	return s
 }
 
@@ -345,6 +355,18 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 	if !granted {
 		return finishDenied("denied", denyMsg)
 	}
+	// Audit: record permitted tool execution in the security event log.
+	if s.auditLog != nil {
+		_, _ = s.auditLog.Append(
+			securitylog.SeverityInfo,
+			"tool_exec",
+			fmt.Sprintf("tool=%s session=%s", tc.Name, tc.ID),
+			tc.Name, tc.ID,
+		)
+	}
+	if s.metrics != nil {
+		s.metrics.Counter("tool_exec_total").Inc()
+	}
 	approved, approvalDeny := true, ""
 	if s.deps.checkApproval != nil {
 		approved, approvalDeny = s.deps.checkApproval(ctx, tc.Name, tc.Arguments)
@@ -395,6 +417,7 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 		AvailableTools:      available,
 		Registry:            s.registry,
 		AutoCommit:          s.AutoCommit(),
+		TaskExecutor:        s.deps.taskExec,
 	})
 	// Bridge session sandbox policy onto the context so Bash/PowerShell
 	// WrapCommand actually applies. Path guards already read ToolContext.SandboxMode;

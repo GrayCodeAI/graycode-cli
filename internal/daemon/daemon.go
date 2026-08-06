@@ -23,6 +23,8 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/netutil"
+	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
+	"github.com/GrayCodeAI/hawk/internal/securitylog"
 	hawksession "github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
@@ -110,6 +112,8 @@ type Server struct {
 	// server-wide. Per-session stripe locks already serialize the *same*
 	// session; this caps total load across sessions (H9).
 	concurrencySem chan struct{}
+	// metrics registry tracks daemon-level request and resource metrics.
+	metrics *metrics.Registry
 	// cancelMu guards cancels, the sessionID -> cancel mapping used by
 	// POST /v1/cancel to abort an in-flight generation (H10).
 	cancelMu sync.Mutex
@@ -118,6 +122,13 @@ type Server struct {
 	apiLimiter *ipLimiter
 	// Per-IP token bucket for /v1/chat generations (heavier, so lower rate).
 	chatLimiter *ipLimiter
+	// corsOrigins is the list of allowed CORS origins. Empty disables CORS.
+	corsOrigins []string
+	// securityLog is the tamper-evident audit log for security events.
+	securityLog *securitylog.Log
+	// tlsCertFile and tlsKeyFile enable HTTPS when both are set.
+	tlsCertFile string
+	tlsKeyFile  string
 }
 
 // ReadyResponse is the JSON response from GET /v1/ready.
@@ -139,6 +150,16 @@ type Config struct {
 	// Gateways configures optional messaging bridges (Telegram/Discord/Slack).
 	// All are disabled by default; the daemon starts normally when none are set.
 	Gateways GatewaysConfig `json:"gateways,omitempty"`
+	// CORSOrigins configures allowed CORS origins for the daemon API.
+	// Empty (default) disables CORS. Use ["*"] to allow all origins (dev only).
+	CORSOrigins []string `json:"cors_origins,omitempty"`
+	// TLSCertFile and TLSKeyFile enable HTTPS for the daemon. When both
+	// are set, the server listens with TLS. Empty (default) uses plain HTTP.
+	TLSCertFile string `json:"tls_cert_file,omitempty"`
+	TLSKeyFile  string `json:"tls_key_file,omitempty"`
+	// SecurityLog provides the audit log instance for tool execution
+	// auditing. If nil, the server creates one from DefaultDir().
+	SecurityLog *securitylog.Log `json:"-"`
 }
 
 // DefaultConfig returns reasonable defaults.
@@ -208,6 +229,7 @@ func New(cfg Config, factory SessionFactory) *Server {
 		cancels:        make(map[string]*cancelEntry),
 		apiLimiter:     newIPLimiter(defaultAPIRatePerMin/60, defaultAPIBurst),
 		chatLimiter:    newIPLimiter(defaultChatRatePerMin/60, defaultChatBurst),
+		metrics:        metrics.NewRegistry(),
 	}
 	s.routes()
 	// Build the messaging-bridge manager. The daemon URL is finalised in Start
@@ -215,6 +237,20 @@ func New(cfg Config, factory SessionFactory) *Server {
 	// Slack can register its webhook route on the mux, and patch the forward URL
 	// for poll-based gateways at Start time.
 	s.gateways = newGatewayManager(cfg.Gateways, "http://"+s.addr, cfg.APIKey, s)
+	s.corsOrigins = cfg.CORSOrigins
+	s.tlsCertFile = cfg.TLSCertFile
+	s.tlsKeyFile = cfg.TLSKeyFile
+
+	// Initialize the tamper-evident security event log. If a log is provided
+	// in the config, use it; otherwise create one from the default directory.
+	if cfg.SecurityLog != nil {
+		s.securityLog = cfg.SecurityLog
+	} else if secLog, err := securitylog.New(securitylog.DefaultDir()); err != nil {
+		slog.Warn("failed to initialize security audit log", "error", err)
+	} else {
+		s.securityLog = secLog
+	}
+
 	s.server = &http.Server{
 		Addr:              s.addr,
 		Handler:           s.mux,
@@ -223,6 +259,8 @@ func New(cfg Config, factory SessionFactory) *Server {
 		WriteTimeout:      300 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
+	// Install middleware stack: request IDs → security headers → CORS → logging.
+	s.installMiddleware()
 	return s
 }
 
@@ -246,8 +284,14 @@ func (s *Server) Start() (string, error) {
 				slog.Error("daemon server goroutine panicked", "recover", r)
 			}
 		}()
-		if err := s.server.Serve(ln); err != nil && err != http.ErrServerClosed {
-			slog.Error("daemon server error", "error", err)
+		var serveErr error
+		if s.tlsCertFile != "" && s.tlsKeyFile != "" {
+			serveErr = s.server.ServeTLS(ln, s.tlsCertFile, s.tlsKeyFile)
+		} else {
+			serveErr = s.server.Serve(ln)
+		}
+		if serveErr != nil && serveErr != http.ErrServerClosed {
+			slog.Error("daemon server error", "error", serveErr)
 		}
 	}()
 
@@ -311,10 +355,17 @@ func isLoopbackHost(host string) bool {
 	return false
 }
 
-// Stop gracefully shuts down the daemon.
+// SecurityLog returns the daemon's security audit log, or nil if unset.
+func (s *Server) SecurityLog() *securitylog.Log {
+	return s.securityLog
+}
+
 func (s *Server) Stop(ctx context.Context) error {
 	if s.gateways != nil {
 		s.gateways.Stop()
+	}
+	if s.securityLog != nil {
+		_ = s.securityLog.Close()
 	}
 	_ = s.removePIDFile()
 	return s.server.Shutdown(ctx)
@@ -370,6 +421,7 @@ func (s *Server) routes() {
 	s.handle("GET /v1/sessions/{id}/graph", s.auth(s.rate(s.handleGetSessionGraph, s.apiLimiter)))
 	s.handle("DELETE /v1/sessions/{id}", s.auth(s.rate(s.handleDeleteSession, s.apiLimiter)))
 	s.handle("GET /v1/stats", s.auth(s.rate(s.handleStats, s.apiLimiter)))
+	s.handle("GET /v1/metrics", s.auth(s.rate(s.handleMetrics, s.apiLimiter)))
 	s.RegisterReviewRoutes()
 }
 
@@ -385,6 +437,7 @@ func (s *Server) handle(pattern string, h http.HandlerFunc) {
 func (s *Server) rate(next http.HandlerFunc, lim *ipLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if lim != nil && !lim.Allow(clientIP(r)) {
+			s.metrics.Counter("http.rate_limited_total").Inc()
 			w.Header().Set("Retry-After", "2")
 			writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "rate limit exceeded"})
 			return
@@ -468,6 +521,17 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		if !constantTimeEqual(token, s.apiKey) {
+			// Audit: log failed authentication attempt.
+			if s.securityLog != nil {
+				reqID := RequestIDFromContext(r.Context())
+				_, _ = s.securityLog.Append(
+					securitylog.SeverityWarning,
+					"auth_denied",
+					fmt.Sprintf("auth failed: wrong token (ip=%s, path=%s, request_id=%s)", clientIP(r), r.URL.Path, reqID),
+					"", reqID,
+				)
+			}
+			s.metrics.Counter("auth_denied_total").Inc()
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 			return
 		}

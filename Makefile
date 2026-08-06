@@ -35,7 +35,7 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
 .PHONY: all bench boundaries build check-replace ci clean contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard package-boundaries-guard submodule-release-parity cover cover-new fmt help install lint lint-fix \
-        release security setup smoke path sync-external test test-10x test-live test-new test-race tidy version vet
+        release security setup smoke path sync-external test test-10x test-live test-new test-race tidy version vet api-docs api-validate
 
 check-replace: ## Fail if go.mod has local replace directives (run before tagging)
 	@bash scripts/check-no-replace-directives.sh
@@ -82,6 +82,15 @@ cover: ## Generate a coverage report (coverage.out + coverage.html).
 
 cover-new: ## Coverage report for Round 2 ecosystem packages only.
 	go test -cover -timeout=30s ./internal/safewrite/... ./internal/jsonc/... ./internal/providers/... ./internal/session/... ./internal/permissions/...
+
+api-docs: ## Generate HTML API reference from OpenAPI spec.
+	@command -v redoc-cli >/dev/null 2>&1 || (echo "install: npm install -g redoc-cli" && exit 1)
+	redoc-cli bundle api/openapi.yaml -o api/reference.html
+	@echo "API reference generated: api/reference.html"
+
+api-validate: ## Validate the OpenAPI spec.
+	@command -v @redocly/cli >/dev/null 2>&1 || (echo "install: npm install -g @redocly/cli" && exit 1)
+	@redocly lint api/openapi.yaml
 
 bench: ## Run benchmarks.
 	go test ./... -bench=. -benchmem -count=3 -timeout=300s
@@ -143,7 +152,7 @@ tidy: ## Sync workspace modules and verify checksums.
 # ---------------------------------------------------------------------------
 # Composite gate used by CI and pre-push.
 # ---------------------------------------------------------------------------
-ci: tidy fmt vet boundaries lint test-race security ## Run everything CI runs.
+ci: tidy fmt vet boundaries lint test-race security api-validate ## Run everything CI runs.
 	@echo "All CI checks passed."
 
 smoke: ## Quick build + doctor + ecosystem verification.

@@ -123,6 +123,11 @@ type TimerStats struct {
 	Max   time.Duration `json:"max"`
 }
 
+// GaugeStats represents a gauge snapshot.
+type GaugeStats struct {
+	Value int64 `json:"value"`
+}
+
 // Registry manages named metrics.
 type Registry struct {
 	mu       sync.RWMutex
@@ -207,7 +212,7 @@ func (r *Registry) Snapshot() map[string]interface{} {
 		out[name] = map[string]int64{"value": c.Value()}
 	}
 	for name, g := range r.gauges {
-		out[name] = map[string]int64{"value": g.Value()}
+		out[name] = GaugeStats{Value: g.Value()}
 	}
 	for name, t := range r.timers {
 		out[name] = t.Stats()

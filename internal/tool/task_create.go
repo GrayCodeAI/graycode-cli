@@ -15,8 +15,11 @@ type TaskStatus string
 const (
 	TaskStatusPending    TaskStatus = "pending"
 	TaskStatusInProgress TaskStatus = "in_progress"
+	TaskStatusReviewing  TaskStatus = "reviewing"
 	TaskStatusCompleted  TaskStatus = "completed"
 	TaskStatusFailed     TaskStatus = "failed"
+	TaskStatusSkipped    TaskStatus = "skipped"
+	TaskStatusCancelled  TaskStatus = "cancelled"
 )
 
 // DefaultMaxAttempts is the retry budget used when a task does not declare
@@ -399,7 +402,7 @@ func (TaskUpdateTool) Parameters() map[string]interface{} {
 		"type": "object",
 		"properties": map[string]interface{}{
 			"taskId":       map[string]interface{}{"type": "string", "description": "The ID of the task to update"},
-			"status":       map[string]interface{}{"type": "string", "enum": []string{"pending", "in_progress", "completed", "failed"}, "description": "New task status"},
+			"status":       map[string]interface{}{"type": "string", "enum": []string{"pending", "in_progress", "reviewing", "completed", "failed", "skipped", "cancelled"}, "description": "New task status"},
 			"owner":        map[string]interface{}{"type": "string", "description": "Agent name to assign"},
 			"dependencies": map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "object", "properties": map[string]interface{}{"targetId": map[string]interface{}{"type": "string"}, "type": map[string]interface{}{"type": "string", "enum": []string{"blocks", "related", "parent-child"}}}}, "description": "Replace dependencies"},
 		},
@@ -422,9 +425,9 @@ func (TaskUpdateTool) Execute(_ context.Context, input json.RawMessage) (string,
 	}
 	ok := globalTaskStore.Update(p.TaskID, func(t *Task) {
 		if p.Status != "" {
-			// Moving a failed task back to pending is an explicit replan
+			// Any explicit status change out of failed is a replan or terminal
 			// signal: reset the retry budget and error so it starts fresh.
-			if TaskStatus(p.Status) == TaskStatusPending && t.Status == TaskStatusFailed {
+			if t.Status == TaskStatusFailed && TaskStatus(p.Status) != TaskStatusFailed {
 				t.Attempts = 0
 				t.LastError = ""
 			}

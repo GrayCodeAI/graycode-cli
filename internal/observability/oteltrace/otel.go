@@ -59,12 +59,14 @@ type Providers struct {
 	mu       sync.Mutex
 	config   TelemetryConfig
 	tracer   *Tracer
+	otel     *OTelProviders
 	shutdown bool
 }
 
 // InitTelemetry initializes telemetry based on configuration.
-// When OTel SDK is available (future), this will create real OTLP exporters.
-// Currently uses the built-in Tracer as a lightweight fallback.
+// When telemetry is enabled (cfg.Enabled), it initializes the real OpenTelemetry
+// SDK with OTLP exporters. When disabled, it returns a no-op provider set.
+// The in-memory Tracer is always available for lightweight in-session tracing.
 func InitTelemetry(cfg TelemetryConfig) (*Providers, error) {
 	p := &Providers{
 		config: cfg,
@@ -73,14 +75,40 @@ func InitTelemetry(cfg TelemetryConfig) (*Providers, error) {
 
 	if !cfg.Enabled {
 		p.tracer.Disable()
+		return p, nil
 	}
 
+	// Initialize the real OTel SDK — this sets the global tracer/meter
+	// providers and creates an OTLP trace exporter from the config.
+	otelProviders, err := InitOTelSDK(cfg)
+	if err != nil {
+		// Telemetry is opt-in; a configuration error should not crash the
+		// process. Log the error and fall back to the in-memory tracer only.
+		p.tracer.Disable()
+		p.config.Enabled = false
+		return p, nil
+	}
+	p.otel = otelProviders
+
+	// The in-memory Tracer delegates to the global OTel tracer provider
+	// (set by InitOTelSDK via otel.SetTracerProvider) in StartSpan,
+	// so existing engine code that calls Tracer.StartSpan gets real
+	// distributed traces exported to the configured backend. No explicit
+	// wiring is needed on the Tracer itself.
 	return p, nil
 }
 
-// Tracer returns the active tracer.
+// Tracer returns the active in-memory tracer. This is the primary tracer
+// used by the engine; when OTel is enabled, spans are also exported to
+// the configured OTLP backend.
 func (p *Providers) Tracer() *Tracer {
 	return p.tracer
+}
+
+// OTelProviders returns the underlying OTel SDK providers, or nil if
+// the SDK was not initialized (telemetry disabled or failed to init).
+func (p *Providers) OTelProviders() *OTelProviders {
+	return p.otel
 }
 
 // Shutdown flushes and shuts down all telemetry providers.
@@ -93,12 +121,22 @@ func (p *Providers) Shutdown(ctx context.Context) error {
 	}
 	p.shutdown = true
 
-	// When OTel SDK is wired in, this will call:
-	// - tracerProvider.Shutdown(ctx)
-	// - meterProvider.Shutdown(ctx)
-	// - loggerProvider.Shutdown(ctx)
+	var firstErr error
+
+	// Flush in-memory spans to OTel before shutting down the SDK.
+	if p.otel != nil {
+		if err := p.otel.FlushOTel(ctx); err != nil {
+			firstErr = err
+		}
+		if err := p.otel.ShutdownOTel(ctx); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+
 	p.tracer.Clear()
-	return nil
+	return firstErr
 }
 
 // Flush forces export of pending telemetry data.
@@ -109,8 +147,13 @@ func (p *Providers) Flush(ctx context.Context) error {
 	if p.shutdown {
 		return nil
 	}
-	// When OTel SDK is wired in, this will call ForceFlush on providers
-	return nil
+	var firstErr error
+	if p.otel != nil {
+		if err := p.otel.FlushOTel(ctx); err != nil {
+			firstErr = err
+		}
+	}
+	return firstErr
 }
 
 // IsEnabled returns whether telemetry is active.

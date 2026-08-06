@@ -96,6 +96,7 @@ func optionalTools() []tool.Tool {
 		tool.TaskGetTool{},
 		tool.TaskListTool{},
 		tool.TaskUpdateTool{},
+		tool.TaskRunTool{},
 		tool.SleepTool{},
 		tool.CronCreateTool{},
 		tool.CronDeleteTool{},

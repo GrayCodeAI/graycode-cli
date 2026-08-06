@@ -97,6 +97,9 @@ type ToolContext struct {
 	// WorkingDir, when set, is used as cmd.Dir for Bash and as the preferred
 	// workspace root for path tools (subagent worktree isolation).
 	WorkingDir string
+	// TaskExecutor, when set, arms the TaskRun tool: it runs one task from the
+	// store (e.g. by spawning a sub-agent). Nil disables TaskRun.
+	TaskExecutor TaskExecutorFunc
 	// Lint configures the optional post-write auto-lint cycle. The zero value
 	// (Enabled=false) keeps linting off so users are not surprised.
 	Lint lint.Config

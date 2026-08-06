@@ -3,6 +3,8 @@ package retry
 import (
 	"context"
 	"errors"
+	"net"
+	"os"
 	"testing"
 	"time"
 )
@@ -33,25 +35,28 @@ func TestIsRetryable_NilError(t *testing.T) {
 }
 
 func TestIsRetryable_Timeout(t *testing.T) {
-	if !IsRetryable(errors.New("request timeout")) {
+	if !IsRetryable(context.DeadlineExceeded) {
 		t.Error("IsRetryable should return true for timeout")
 	}
 }
 
 func TestIsRetryable_Temporary(t *testing.T) {
-	if !IsRetryable(errors.New("temporary failure")) {
-		t.Error("IsRetryable should return true for temporary")
+	// net.OpError with Temporary() = true should be retryable.
+	if !IsRetryable(&net.OpError{Op: "dial", Err: os.ErrDeadlineExceeded}) {
+		t.Error("IsRetryable should return true for temporary network errors")
 	}
 }
 
 func TestIsRetryable_ConnectionRefused(t *testing.T) {
-	if !IsRetryable(errors.New("connection refused")) {
+	// A net.OpError wrapping "connection refused" should be retryable.
+	if !IsRetryable(&net.OpError{Op: "dial", Err: errors.New("connection refused")}) {
 		t.Error("IsRetryable should return true for connection refused")
 	}
 }
 
 func TestIsRetryable_DNSFailure(t *testing.T) {
-	if !IsRetryable(errors.New("no such host")) {
+	// A net.OpError wrapping DNS failure should be retryable.
+	if !IsRetryable(&net.OpError{Op: "dial", Err: errors.New("no such host")}) {
 		t.Error("IsRetryable should return true for no such host")
 	}
 }
@@ -119,7 +124,7 @@ func TestDo_RetryThenSuccess(t *testing.T) {
 	err := Do(context.Background(), cfg, func() error {
 		callCount++
 		if callCount < 3 {
-			return errors.New("timeout")
+			return context.DeadlineExceeded
 		}
 		return nil
 	})
@@ -140,7 +145,7 @@ func TestDo_MaxRetriesExceeded(t *testing.T) {
 	callCount := 0
 	err := Do(context.Background(), cfg, func() error {
 		callCount++
-		return errors.New("timeout")
+		return context.DeadlineExceeded
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -177,7 +182,7 @@ func TestDo_ContextCanceled(t *testing.T) {
 	cancel()
 
 	err := Do(ctx, cfg, func() error {
-		return errors.New("timeout")
+		return context.DeadlineExceeded
 	})
 	if err != context.Canceled {
 		t.Errorf("expected context.Canceled, got %v", err)
@@ -199,7 +204,7 @@ func TestDo_ContextCanceledDuringRetry(t *testing.T) {
 
 	err := Do(ctx, cfg, func() error {
 		callCount++
-		return errors.New("timeout")
+		return context.DeadlineExceeded
 	})
 	if err != context.Canceled {
 		t.Errorf("expected context.Canceled, got %v", err)
@@ -254,7 +259,7 @@ func TestDoWithResult_RetryThenSuccess(t *testing.T) {
 	result, err := DoWithResult(context.Background(), cfg, func() (int, error) {
 		callCount++
 		if callCount < 2 {
-			return 0, errors.New("timeout")
+			return 0, context.DeadlineExceeded
 		}
 		return 42, nil
 	})
@@ -278,7 +283,7 @@ func TestDoWithResult_MaxRetriesExceeded(t *testing.T) {
 	callCount := 0
 	result, err := DoWithResult(context.Background(), cfg, func() (int, error) {
 		callCount++
-		return 0, errors.New("timeout")
+		return 0, context.DeadlineExceeded
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -318,7 +323,7 @@ func TestDoWithResult_ContextCanceled(t *testing.T) {
 	cancel()
 
 	_, err := DoWithResult(ctx, cfg, func() (int, error) {
-		return 0, errors.New("timeout")
+		return 0, context.DeadlineExceeded
 	})
 	if err != context.Canceled {
 		t.Errorf("expected context.Canceled, got %v", err)
@@ -338,7 +343,7 @@ func TestDoWithResult_ContextCanceledDuringRetry(t *testing.T) {
 	}()
 
 	_, err := DoWithResult(ctx, cfg, func() (int, error) {
-		return 0, errors.New("timeout")
+		return 0, context.DeadlineExceeded
 	})
 	if err != context.Canceled {
 		t.Errorf("expected context.Canceled, got %v", err)

@@ -1,14 +1,17 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/GrayCodeAI/hawk/cmd"
 	"github.com/GrayCodeAI/hawk/internal/crash"
 	"github.com/GrayCodeAI/hawk/internal/hawkerr"
 	"github.com/GrayCodeAI/hawk/internal/mcp"
+	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 )
 
 // Version, Commit, and BuildDate are set at build time via ldflags.
@@ -39,6 +42,20 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "--version" {
 		fmt.Println("hawk " + Version)
 		return
+	}
+
+	// Initialize OpenTelemetry telemetry (opt-in via HAWK_CODE_ENABLE_TELEMETRY=1).
+	// Telemetry failures are non-fatal: hawk continues with in-memory tracing only.
+	telemetryProviders, telemetryErr := oteltrace.InitTelemetry(oteltrace.DefaultTelemetryConfig())
+	if telemetryErr != nil {
+		fmt.Fprintln(os.Stderr, "warning: telemetry initialization failed:", telemetryErr)
+	}
+	if telemetryProviders != nil && telemetryErr == nil && telemetryProviders.IsEnabled() {
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = telemetryProviders.Shutdown(shutdownCtx)
+		}()
 	}
 
 	// Propagate the canonical version to all sub-packages that surface it
