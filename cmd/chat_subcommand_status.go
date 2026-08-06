@@ -52,10 +52,19 @@ func buildStatusInfo(m *chatModel) string {
 	if m.modeManager != nil {
 		shell = m.modeManager.Current().String()
 	}
+	containerInfo := "Host"
+	if m.containerReady {
+		containerInfo = "Docker Sandbox (bridge net, SSH agent, non-root UID)"
+	} else if m.containerErr != nil {
+		containerInfo = fmt.Sprintf("Docker Required (error: %v)", m.containerErr)
+	} else if m.containerEnabled {
+		containerInfo = "Docker Sandbox (starting)"
+	}
+
 	info := fmt.Sprintf(
-		"Session: %s\nModel: %s/%s\nShell mode: %s\nWork mode: %s\nIsolation: %s\nAuto-commit: %s\nFolder trust: %s\nSpec stage: %s\nMessages: %d\nTools: %d visible / %d registered\nGit: %s\n%s",
+		"Session: %s\nModel: %s/%s\nShell mode: %s\nWork mode: %s\nIsolation: %s\nContainer: %s\nAuto-commit: %s\nFolder trust: %s\nSpec stage: %s\nMessages: %d\nTools: %d visible / %d registered\nGit: %s\n%s",
 		m.sessionID, m.session.Provider(), m.session.Model(),
-		shell, work, iso, ac, tr.String(),
+		shell, work, iso, containerInfo, ac, tr.String(),
 		specStageLabel(m.session), m.session.MessageCount(),
 		visible, toolCount,
 		engine.GitSafetyAdvice(git),
