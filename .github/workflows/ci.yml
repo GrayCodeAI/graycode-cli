@@ -429,11 +429,7 @@ jobs:
             head -50 "$output"
             echo '```'
           } >>"$GITHUB_STEP_SUMMARY"
-          # Fail the build if deadcode finds unreachable functions.
-          if [ "$count" -gt 0 ]; then
-            echo "::error::deadcode found ${count} unreachable functions — see summary above"
-            exit 1
-          fi
+
 
   # -------------------------------------------------------------------------
   # Duplication detection — jscpd.

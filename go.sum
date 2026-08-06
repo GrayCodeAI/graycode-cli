@@ -20,8 +20,8 @@ github.com/GrayCodeAI/eyrie v0.2.2 h1:iMURJ9lJ2MqVi1uvXEY4hOAD5oL8bS32X4nVh7NoAC
 github.com/GrayCodeAI/eyrie v0.2.2/go.mod h1:AW/UPuj+EWxMibiD+/Cy0TWd6RmTvth+KeGXSxU3t6I=
 github.com/GrayCodeAI/hawk-core-contracts v0.1.12 h1:percfsd771JLmO9gMkrQtENEPBA9ZN3dG1Nc1moN3ZQ=
 github.com/GrayCodeAI/hawk-core-contracts v0.1.12/go.mod h1:BXbh68YrCf+s9HVqND5F8DAvl2MnE5NcOwZZZB56HGA=
-github.com/GrayCodeAI/hawk-mcpkit v0.1.5 h1:gskBd3miHN063aXXP4dEhzn5x0HM9mzYAnTmM+ug/nE=
-github.com/GrayCodeAI/hawk-mcpkit v0.1.5/go.mod h1:C32HPDRqiDETbVbMIbOTvguek6KImpLCffJjet7sqck=
+github.com/GrayCodeAI/hawk-mcpkit v0.1.6-0.20260729083555-85ac53f3ec84 h1:HzoXUYNNyt88IccaPBxSvOQ/5PZzJOcSHbvBjX3l2mQ=
+github.com/GrayCodeAI/hawk-mcpkit v0.1.6-0.20260729083555-85ac53f3ec84/go.mod h1:C32HPDRqiDETbVbMIbOTvguek6KImpLCffJjet7sqck=
 github.com/GrayCodeAI/inspect v0.0.0-20260726091806-08f3151d5738 h1:T9mQS75wTtTq6xqX1KGsQJyhnRFnd5YmoaGnHe9jppI=
 github.com/GrayCodeAI/inspect v0.0.0-20260726091806-08f3151d5738/go.mod h1:kSyO5gWDrBYKcYXHG4JNkJ/2yWAayAVPee8PIC24bX0=
 github.com/GrayCodeAI/sight v0.0.0-20260726091804-84c96edfc589 h1:gMXVRCqqdth6ziqFYnw8nXXbrD7LDtlgbGpryJZ0r1Q=
@@ -30,8 +30,8 @@ github.com/GrayCodeAI/tok v0.1.5-0.20260731011234-7a7c3cbae89b h1:HjAYJHkFSn3Fxi
 github.com/GrayCodeAI/tok v0.1.5-0.20260731011234-7a7c3cbae89b/go.mod h1:/KTHlWg+qg8fDV8qRsLUfp4VKtt5seTyED1byxldBtE=
 github.com/GrayCodeAI/trace v0.1.4-0.20260803003541-1cd0fc51b106 h1:hzR6j0JaKOKCMrck60Pmkqdqip8Zu2vuimUXvZG8+8U=
 github.com/GrayCodeAI/trace v0.1.4-0.20260803003541-1cd0fc51b106/go.mod h1:xPV6sC2cUG0i7QD7aX3KtjiW1rlEhN9c5w9jBSc8LBc=
-github.com/GrayCodeAI/yaad v0.2.1-0.20260727172552-f0aa1699d6b0 h1:jqNnsq2lq5CdZkyIL6jniiFuTRHiWPOPhlQZr37Zw2g=
-github.com/GrayCodeAI/yaad v0.2.1-0.20260727172552-f0aa1699d6b0/go.mod h1:XyHXWpBmjHlxMJiETb/biOkjBlJHuDJ/03TGYhWDLis=
+github.com/GrayCodeAI/yaad v0.2.1-0.20260729231812-52c8c805791f h1:4ridJ6o/eM2qLyIEwGwqTdZtYc7hwiS+cqC3Mtk6mJM=
+github.com/GrayCodeAI/yaad v0.2.1-0.20260729231812-52c8c805791f/go.mod h1:lN77OfTzQLNIWJhsQ+KUpnFwqTfaIb/tG0bhXSjCuZs=
 github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ4pzQ=
 github.com/MakeNowJust/heredoc v1.0.0/go.mod h1:mG5amYoWBHf8vpLOuehzbGGw0EHxpZZ6lCpQ4fNJ8LE=
 github.com/Masterminds/semver/v3 v3.5.0 h1:kQceYJfbupGfZOKZQg0kou0DgAKhzDg2NZPAwZ/2OOE=
@@ -420,8 +420,8 @@ google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa h1:
 google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa/go.mod h1:q4lMZS6kskjT5HvCPrnnypcDPVJqT/f4nfxmkE7gryY=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa h1:mZHHdPZl0dbGHCflZgAq/Q468DWVFcU2whhB2KAo8fk=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa/go.mod h1:4Hqkh8ycfw05ld/3BWL7rJOSfebL2Q+DVDeRgYgxUU8=
-google.golang.org/grpc v1.82.0 h1:vguDnZUPjE26w09A63VoxZPnvPjB5Riyc0mkXPFmAIU=
-google.golang.org/grpc v1.82.0/go.mod h1:yzTZ1TB1Z3SG+LIYaI+WiE8D5+PZ3ArnrSp8zF3+/ZA=
+google.golang.org/grpc v1.82.1 h1:NnAxzGRA0677vCa4BUkOAnO5+FfQqVl9iUXeD0IqcGE=
+google.golang.org/grpc v1.82.1/go.mod h1:yzTZ1TB1Z3SG+LIYaI+WiE8D5+PZ3ArnrSp8zF3+/ZA=
 google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=
 google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=

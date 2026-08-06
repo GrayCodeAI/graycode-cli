@@ -16,7 +16,7 @@ require (
 	github.com/GrayCodeAI/inspect v0.0.0-20260726091806-08f3151d5738
 	github.com/GrayCodeAI/sight v0.0.0-20260726091804-84c96edfc589
 	github.com/GrayCodeAI/tok v0.1.5-0.20260731011234-7a7c3cbae89b
-	github.com/GrayCodeAI/yaad v0.2.1-0.20260727172552-f0aa1699d6b0
+	github.com/GrayCodeAI/yaad v0.2.1-0.20260729231812-52c8c805791f
 	github.com/alecthomas/chroma/v2 v2.26.1
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/charmbracelet/x/ansi v0.11.7
@@ -42,7 +42,7 @@ require (
 )
 
 require (
-	github.com/GrayCodeAI/hawk-mcpkit v0.1.5 // indirect
+	github.com/GrayCodeAI/hawk-mcpkit v0.1.6-0.20260729083555-85ac53f3ec84 // indirect
 	github.com/chromedp/cdproto v0.0.0-20260714215040-dc233986426f // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/go-json-experiment/json v0.0.0-20260623181947-01eb4420fa68 // indirect
@@ -179,7 +179,7 @@ require (
 	golang.org/x/tools v0.47.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
-	google.golang.org/grpc v1.82.0 // indirect
+	google.golang.org/grpc v1.82.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	modernc.org/libc v1.72.5 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
