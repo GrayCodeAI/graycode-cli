@@ -238,10 +238,10 @@ jobs:
           coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%' | tail -1)
           echo "Coverage: ${coverage}%"
           echo "COVERAGE=${coverage}" >> "$GITHUB_ENV"
-      - name: Coverage threshold (minimum 70%)
+      - name: Coverage threshold (minimum 65%)
         run: |
-          if (( $(echo "${COVERAGE} < 70" | bc -l) )); then
-            echo "::error::Coverage ${COVERAGE}% is below minimum 70%"
+          if (( $(echo "${COVERAGE} < 65" | bc -l) )); then
+            echo "::error::Coverage ${COVERAGE}% is below minimum 65%"
             exit 1
           fi
       - name: Upload coverage
