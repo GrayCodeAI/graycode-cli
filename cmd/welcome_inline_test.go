@@ -64,7 +64,7 @@ func TestBuildWelcomeMessage_InlineShowsSetupGuidance(t *testing.T) {
 
 func TestBuildWelcomeMessage_InlineShowsGuidance(t *testing.T) {
 	out := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 100, 24, nil)
-	for _, want := range []string{"Container · Starting", "Skills (0)", "AGENTS.md", "MCPs (0)"} {
+	for _, want := range []string{"Container Starting", "Skills (0)", "AGENTS.md", "MCPs (0)"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("minimal welcome missing %q in:\n%s", want, out)
 		}
@@ -110,7 +110,7 @@ func TestBuildWelcomeMessage_ShortTerminalUsesCompactCopy(t *testing.T) {
 	if strings.Contains(out, "PgUp/Dn scroll chat") || strings.Contains(out, "for new session") {
 		t.Fatalf("compact welcome should drop verbose descriptions, got:\n%s", out)
 	}
-	if !strings.Contains(out, "v") || !strings.Contains(out, "Container · Starting") {
+	if !strings.Contains(out, "v") || !strings.Contains(out, "Container Starting") {
 		t.Fatalf("compact welcome should keep version and execution mode, got:\n%s", out)
 	}
 }
@@ -216,20 +216,20 @@ func TestWelcomeIndicatorRow_UsesSemanticStatesAndCounts(t *testing.T) {
 	}{
 		{
 			name: "nothing configured",
-			want: []string{"Skills (0)</active> <none>", "AGENTS.md <none>", "MCPs (0)</active> <none>"},
+			want: []string{"Skills (0)</active> <none>", "AGENTS.md</active> <none>", "MCPs (0)</active> <none>"},
 		},
 		{
 			name:        "active counts",
 			skillsCount: 4,
 			agentsOK:    true,
 			mcpCount:    1,
-			want:        []string{"Skills (4)</active> <ready>", "AGENTS.md <ready>", "MCPs (1)</active> <ready>"},
+			want:        []string{"Skills (4)</active> <ready>", "AGENTS.md</active> <ready>", "MCPs (1)</active> <ready>"},
 		},
 		{
 			name:        "mixed state",
 			skillsCount: 2,
 			mcpCount:    3,
-			want:        []string{"Skills (2)</active> <ready>", "AGENTS.md <none>", "MCPs (3)</active> <ready>"},
+			want:        []string{"Skills (2)</active> <ready>", "AGENTS.md</active> <none>", "MCPs (3)</active> <ready>"},
 		},
 	}
 

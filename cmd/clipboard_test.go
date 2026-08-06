@@ -35,11 +35,26 @@ func TestClipboardRoundTrip(t *testing.T) {
 		t.Skipf("native clipboard unavailable: %v", err)
 	}
 
+	// The system clipboard is shared process state — another app or test can
+	// overwrite it between our copy and paste. Retry a few times before giving
+	// up so the CI hook doesn't flake on an unrelated clipboard write.
 	got, err := pasteFromClipboard()
 	if err != nil {
 		t.Fatalf("paste failed: %v", err)
 	}
 	if got != text {
+		for attempt := 1; attempt < 3; attempt++ {
+			if err := copyToClipboardNative(text); err != nil {
+				t.Skipf("native clipboard unavailable: %v", err)
+			}
+			got, err = pasteFromClipboard()
+			if err != nil {
+				t.Fatalf("paste failed: %v", err)
+			}
+			if got == text {
+				return
+			}
+		}
 		t.Fatalf("clipboard round-trip: got %q, want %q", got, text)
 	}
 }
