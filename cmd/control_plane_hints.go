@@ -11,15 +11,6 @@ import (
 // controlPlaneOnboardingHint is a short first-session tip (not a wall of text).
 func controlPlaneOnboardingHint(sess *engine.Session) string {
 	var lines []string
-
-	tr := engine.ProjectTrust("")
-	if tr.Blocked {
-		lines = append(lines, fmt.Sprintf("%s Security: Folder not trusted (%s)", icons.Alert(), tr.Path))
-		lines = append(lines, "  Project-scoped hooks, MCP servers, and custom specialists are currently blocked.")
-		lines = append(lines, fmt.Sprintf("  %s Do you trust this folder? Type `/trust add` to allow, or `/trust` for details.", icons.ArrowRight()))
-		lines = append(lines, "")
-	}
-
 	lines = append(lines, "Quick path:  /start   ·   /mode plan|act   ·   /isolation workspace")
 
 	if gi := engine.InspectGitBranch(""); gi.OnDefault {
