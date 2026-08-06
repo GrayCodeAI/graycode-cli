@@ -175,6 +175,39 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, promptKeepAliveCmd()
 
+	case eyeBlinkTickMsg:
+		if m.showWelcomeBanner() {
+			m.eyeFrame = 1
+			m.rebuildWelcomeCache()
+			if len(m.messages) > 0 && m.messages[0].role == "welcome" {
+				m.messages[0].content = m.welcomeCache
+			}
+			m.viewDirty = true
+			m.updateViewportContent()
+			return m, tea.Batch(eyeBlinkTickCmd(), eyeFrameNextCmd(2, 60*time.Millisecond))
+		}
+		return m, eyeBlinkTickCmd()
+
+	case eyeFrameNextMsg:
+		if m.showWelcomeBanner() {
+			m.eyeFrame = msg.frame
+			m.rebuildWelcomeCache()
+			if len(m.messages) > 0 && m.messages[0].role == "welcome" {
+				m.messages[0].content = m.welcomeCache
+			}
+			m.viewDirty = true
+			m.updateViewportContent()
+			switch msg.frame {
+			case 2:
+				return m, eyeFrameNextCmd(3, 100*time.Millisecond)
+			case 3:
+				return m, eyeFrameNextCmd(0, 60*time.Millisecond)
+			}
+		} else {
+			m.eyeFrame = 0
+		}
+		return m, nil
+
 	case tea.MouseMsg:
 		if m.mouseEnabled() {
 			if m.configOpen {

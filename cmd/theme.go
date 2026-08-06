@@ -170,24 +170,27 @@ var bgCode = lipgloss.Color("#2A2A3A")
 // ---------------------------------------------------------------------------
 
 const (
-	ansiOrange   = internaltheme.BrandANSI // legacy name; renders Talon Gold
-	ansiGreen    = "\033[92m"
-	ansiYellow   = "\033[93m"
-	ansiBlue     = "\033[94m"
-	ansiMagenta  = "\033[95m"
-	ansiCyan     = "\033[96m"
-	ansiWhite    = "\033[97m"
-	ansiTeal     = "\033[38;2;78;205;196m"  // matches successTeal — spinner elapsed
-	ansiCoral    = "\033[38;2;255;107;107m" // matches errorCoral
-	ansiAmber    = "\033[38;2;255;179;71m"  // matches warnAmber
-	ansiGrayDim  = "\033[38;2;102;102;102m" // matches textDisabled
-	ansiDone     = "\033[38;2;76;175;80m"   // matches doneGreen — diff additions
-	ansiSky      = "\033[38;2;117;177;226m" // matches infoSky — diff hunk headers
-	ansiContBlue = "\033[38;2;59;170;218m"  // matches containerBlue — diff file headers
-	ansiDim      = "\033[2m"
-	ansiItalic   = "\033[3m"
-	ansiBold     = "\033[1m"
-	ansiReset    = "\033[0m"
+	ansiOrange     = internaltheme.BrandANSI // legacy name; renders Talon Gold
+	ansiGreen      = "\033[92m"
+	ansiYellow     = "\033[93m"
+	ansiBlue       = "\033[94m"
+	ansiMagenta    = "\033[95m"
+	ansiCyan       = "\033[96m"
+	ansiWhite      = "\033[97m"
+	ansiTeal       = "\033[38;2;78;205;196m"  // matches successTeal — spinner elapsed
+	ansiCoral      = "\033[38;2;255;107;107m" // matches errorCoral
+	ansiAmber      = "\033[38;2;255;179;71m"  // matches warnAmber
+	ansiGrayDim    = "\033[38;2;102;102;102m" // matches textDisabled
+	ansiDone       = "\033[38;2;76;175;80m"   // matches doneGreen — diff additions
+	ansiSky        = "\033[38;2;117;177;226m" // matches infoSky — diff hunk headers
+	ansiContBlue   = "\033[38;2;59;170;218m"  // matches containerBlue — diff file headers
+	ansiPink       = "\033[38;2;255;105;180m" // matches hudLabelPink (#FF69B4 Hot Pink)
+	ansiLightPink  = "\033[38;2;255;182;193m" // #FFB6C1 Light Pink
+	ansiVividGreen = "\033[38;2;0;230;118m"   // #00E676 Vivid Emerald Green
+	ansiDim        = "\033[2m"
+	ansiItalic     = "\033[3m"
+	ansiBold       = "\033[1m"
+	ansiReset      = "\033[0m"
 )
 
 // ---------------------------------------------------------------------------
@@ -300,7 +303,7 @@ func refreshThemeStyles() {
 	mdH4Style = lipgloss.NewStyle().Foreground(costViolet).Bold(true)
 	mdHeaderStyle = lipgloss.NewStyle().Foreground(textPrimary).Bold(true)
 	mdBoldStyle = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
-	mdInlineCodeStyle = lipgloss.NewStyle().Background(bgCode).Foreground(textPrimary)
+	mdInlineCodeStyle = lipgloss.NewStyle().Foreground(infoSky)
 	mdCodeBlockStyle = lipgloss.NewStyle().Background(bgCode)
 	mdCodeLabelStyle = lipgloss.NewStyle().Foreground(textDisabled).Background(bgCode)
 	mdLinkTextStyle = lipgloss.NewStyle().Foreground(successTeal)

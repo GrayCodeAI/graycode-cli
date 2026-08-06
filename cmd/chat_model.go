@@ -84,6 +84,8 @@ type (
 	streamErrMsg        struct{ err error }
 	spinnerVerbTickMsg  struct{}
 	promptKeepAliveMsg  struct{}
+	eyeBlinkTickMsg     struct{}
+	eyeFrameNextMsg     struct{ frame int }
 	usageUpdateMsg      struct{ usage *engine.StreamUsage }
 	compactStartMsg     struct{}
 	compactMsg          struct {
@@ -192,6 +194,7 @@ type chatModel struct {
 	height                     int
 	quitting                   bool
 	blinkClosed                bool
+	eyeFrame                   int
 	slashSel                   int
 	hudOpen                    bool    // Agent Status HUD overlay (Ctrl+A)
 	hudData                    HUDData // latest HUD snapshot
@@ -278,6 +281,8 @@ type chatModel struct {
 	statusLeftVal                string
 	statusLeftBranch             string
 	statusLeftAt                 time.Time // last branch lookup; refreshed on a short TTL
+	statusLeftPRs                []string  // open PR numbers ("#184") for the current branch
+	statusLeftPRAt               time.Time // last PR lookup; refreshed on a longer TTL
 
 	// Incremental viewport cache (see chat_viewport_render.go).
 	vpStableContent string
@@ -496,6 +501,14 @@ func spinnerVerbTickCmd() tea.Cmd {
 
 func promptKeepAliveCmd() tea.Cmd {
 	return tea.Tick(15*time.Second, func(time.Time) tea.Msg { return promptKeepAliveMsg{} })
+}
+
+func eyeBlinkTickCmd() tea.Cmd {
+	return tea.Tick(4*time.Second, func(time.Time) tea.Msg { return eyeBlinkTickMsg{} })
+}
+
+func eyeFrameNextCmd(frame int, d time.Duration) tea.Cmd {
+	return tea.Tick(d, func(time.Time) tea.Msg { return eyeFrameNextMsg{frame: frame} })
 }
 
 func permissionPromptTimeoutCmd(seq int) tea.Cmd {

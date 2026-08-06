@@ -121,6 +121,7 @@ const (
 	puaEmail          = "\ueb1c" // nf-cod-mail           (60188)
 	puaHelpCircle     = "\ueaa4" // nf-cod-info           (60020) — closest match
 	puaBranch         = "\uea63" // nf-cod-repo_forked — fork/branch glyph; present in JetBrains Mono NF and every Nerd Font
+	puaPullRequest    = "\uea64" // nf-cod-git_pull_request — PR glyph; present in JetBrains Mono NF and every Nerd Font
 	puaClockOutline   = "\uf017" // nf-fa-clock_o         (61463)
 	puaPause          = "\uead1" // nf-cod-debug-pause    (60113)
 	puaExpandAll      = "\uebc1" // nf-cod-expand-all     (60309)

@@ -32,7 +32,7 @@ var (
 	mdHeaderStyle     = lipgloss.NewStyle().Foreground(textPrimary).Bold(true)
 	mdBoldStyle       = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 	mdItalicStyle     = lipgloss.NewStyle().Italic(true)
-	mdInlineCodeStyle = lipgloss.NewStyle().Background(bgCode).Foreground(textPrimary)
+	mdInlineCodeStyle = lipgloss.NewStyle().Foreground(infoSky)
 	mdCodeBlockStyle  = lipgloss.NewStyle().Background(bgCode)
 	mdCodeLabelStyle  = lipgloss.NewStyle().Foreground(textDisabled).Background(bgCode)
 	mdLinkTextStyle   = lipgloss.NewStyle().Foreground(successTeal)

@@ -9,7 +9,11 @@ import (
 // versionLine is the single user-facing version format shared by
 // `hawk --version` and `hawk version`.
 func versionLine() string {
-	line := "hawk " + DisplayVersion()
+	ver := DisplayVersion()
+	if ver != "" && !strings.HasPrefix(ver, "v") && !strings.HasPrefix(ver, "V") {
+		ver = "v" + ver
+	}
+	line := "hawk " + ver
 	if d := strings.TrimSpace(buildDate); d != "" && d != "unknown" {
 		line += " (built " + d + ")"
 	}

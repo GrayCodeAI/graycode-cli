@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/home"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/trust"
 )
@@ -371,48 +370,28 @@ func ParseSmartSkillPublic(content string) SmartSkill {
 	return parseSmartSkill(content)
 }
 
-// DefaultSkillDirs returns directories to scan for SKILL.md files.
-// Includes hawk's own paths plus cross-agent standard paths for interoperability.
-// Follows the agentskills.io spec and supports gh skill install placement.
-//
-// Year 0 PACK-05: project-level harness dirs (.claude/.codex/.agents skills)
-// are included only when folder trust allows the project path.
+// DefaultSkillDirs returns Hawk's official skill directories to scan for SKILL.md files.
+// User-scoped: ~/.hawk/skills/
+// Project-scoped (trust-gated): ./.hawk/skills/, ./.zero/skills/, ./skills/
 func DefaultSkillDirs() []string {
-	homeDir := home.MustDir()
 	var dirs []string
 
-	// User-level directories (always).
+	// User-scoped skills (~/.hawk/skills).
 	dirs = append(dirs, filepath.Join(storage.StateDir(), "skills"))
-	if homeDir != "" {
-		dirs = append(
-			dirs,
-			filepath.Join(homeDir, ".agents", "skills"),
-			filepath.Join(homeDir, ".claude", "skills"),
-			filepath.Join(homeDir, ".codex", "skills"),
-			filepath.Join(homeDir, ".cursor", "skills"),
-		)
-	}
 
-	// Project-level multi-harness dirs (trust-gated).
+	// Project-scoped skills (trust-gated: ./.hawk/skills, ./.zero/skills, ./skills).
 	cwd, err := os.Getwd()
-	if err != nil {
-		if homeDir == "" {
-			return []string{".agents/skills"}
+	if err == nil {
+		projectHawkDirs := []string{
+			filepath.Join(cwd, ".hawk", "skills"),
+			filepath.Join(cwd, ".zero", "skills"),
+			filepath.Join(cwd, "skills"),
 		}
-		return dirs
-	}
-	projectHarness := []string{
-		filepath.Join(cwd, ".agents", "skills"),
-		filepath.Join(cwd, ".claude", "skills"),
-		filepath.Join(cwd, ".codex", "skills"),
-		filepath.Join(cwd, ".cursor", "skills"),
-		filepath.Join(cwd, ".hawk", "skills"),
-	}
-	for _, p := range projectHarness {
-		if err := trust.AllowLoadPath(p); err != nil {
-			continue // untrusted project harness
+		for _, p := range projectHawkDirs {
+			if err := trust.AllowLoadPath(p); err == nil {
+				dirs = append(dirs, p)
+			}
 		}
-		dirs = append(dirs, p)
 	}
 	return dirs
 }

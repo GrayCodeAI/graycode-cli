@@ -316,7 +316,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	quickSnapshot := welcomeStatusSnapshot{}
 	m.welcomeSetupState = quickSnapshot.setup
 	m.welcomeAgentsOK = quickSnapshot.agentsOK
-	m.welcomeCache = buildWelcomeMessageWithSnapshot(sess, sid, registry, saved, settings, 0, connectedMCPCount(registry), false, initWidth, initHeight, nil, quickSnapshot, false, "")
+	m.welcomeCache = buildWelcomeMessageWithSnapshot(sess, sid, registry, saved, settings, 0, connectedMCPCount(registry), 0, initWidth, initHeight, nil, quickSnapshot, false, "")
 	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
 	// First-session control-plane tip (skip when resuming history or when quiet env var is set).
 	if saved == nil && os.Getenv("HAWK_QUIET_START") == "" && os.Getenv("HAWK_SUPPRESS_HINTS") == "" && os.Getenv("HAWK_QUIET") == "" {
@@ -502,8 +502,18 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 // refreshInputPlaceholder updates the input placeholder based on the current
 // container lifecycle. Hawk never executes agent tools directly on the host.
 func (m *chatModel) refreshInputPlaceholder() {
-	base := "Ask Hawk to inspect, edit, or run something..."
-	m.input.Placeholder = base + "  ·  Docker isolated  ·  ? for help"
+	work := "act"
+	if m.session != nil {
+		work = string(m.session.WorkMode())
+	}
+	switch work {
+	case "plan":
+		m.input.Placeholder = "Design architecture or draft plan...  ·  / commands  ·  ? help"
+	case "review":
+		m.input.Placeholder = "Audit diffs, security, or PRs...  ·  / commands  ·  ? help"
+	default:
+		m.input.Placeholder = "Build, refactor, or run commands...  ·  / commands  ·  ? help"
+	}
 }
 
 // stopContainer releases the session's Docker sandbox on every CLI exit path.
@@ -520,7 +530,7 @@ func (m *chatModel) stopContainer() {
 }
 
 func (m chatModel) Init() tea.Cmd {
-	cmds := []tea.Cmd{initTerminalMouseCmd(m.mouseEnabled()), promptKeepAliveCmd()}
+	cmds := []tea.Cmd{initTerminalMouseCmd(m.mouseEnabled()), promptKeepAliveCmd(), eyeBlinkTickCmd()}
 	if gw, _ := m.sessionGatewayModel(); strings.TrimSpace(gw) != "" {
 		cmds = append(cmds, fetchModelsAsync(gw))
 		if isXiaomiMimoProvider(gw) {

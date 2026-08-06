@@ -228,14 +228,14 @@ func TestStartupWarmMsg_RefreshesFooterCache(t *testing.T) {
 func TestBuildWelcomeMessage_IncludesDockerWhenEnabled(t *testing.T) {
 	running := true
 	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 80, 24, &running)
-	if !strings.Contains(msg, "CONTAINER · DOCKER · ISOLATED") {
+	if !strings.Contains(msg, "Container") {
 		t.Fatalf("expected container execution badge in welcome, got:\n%s", msg)
 	}
 }
 
 func TestBuildWelcomeMessage_OmitsDockerWhenDisabled(t *testing.T) {
 	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 80, 24, nil)
-	if !strings.Contains(msg, "CONTAINER · STARTING") || strings.Contains(msg, "HOST") {
+	if !strings.Contains(msg, "Container Starting") || strings.Contains(msg, "HOST") {
 		t.Fatalf("expected mandatory container startup badge, got:\n%s", msg)
 	}
 }

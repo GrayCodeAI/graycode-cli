@@ -364,6 +364,14 @@ func applySlashSuggestion(input string) string {
 }
 
 func (m *chatModel) handleCommand(text string) (tea.Model, tea.Cmd) {
+	trimmed := strings.TrimSpace(text)
+	lower := strings.ToLower(trimmed)
+	if lower == "?" || lower == "? help" || lower == "?help" || lower == "help" {
+		text = "/help"
+	} else if strings.HasPrefix(lower, "? ") {
+		text = "/help " + strings.TrimPrefix(trimmed, "? ")
+	}
+
 	parts := strings.Fields(text)
 	if len(parts) == 0 {
 		return m, nil

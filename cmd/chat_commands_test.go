@@ -113,3 +113,16 @@ func TestDiagnosticSummaries(t *testing.T) {
 		t.Fatalf("unexpected tools summary: %s", tools)
 	}
 }
+
+func TestQuestionMarkAndHelpAliases(t *testing.T) {
+	sess := engine.NewSession("openai", "gpt-4o", "base", tool.NewRegistry())
+	m := &chatModel{session: sess, registry: tool.NewRegistry(), sessionID: "test"}
+	for _, input := range []string{"?", "? help", "?help", "help", "? commit"} {
+		m.messages = nil
+		model, _ := m.handleCommand(input)
+		cm := model.(*chatModel)
+		if len(cm.messages) == 0 {
+			t.Fatalf("expected message output for alias %q, got 0", input)
+		}
+	}
+}

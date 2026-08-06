@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"charm.land/bubbles/v2/textarea"
+
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
@@ -14,6 +16,32 @@ import (
 type welcomeMCPStub struct {
 	name   string
 	server string
+}
+
+// TestWelcomeScreenNerdIconsUnique renders the full welcome in Nerd mode
+// for every execution state and asserts each PUA icon glyph appears at most
+// once. Guards the "one icon per concept" rule on the welcome screen so the
+// mode/iso/trust segments and the badge never reuse a glyph.
+func TestWelcomeScreenNerdIconsUnique(t *testing.T) {
+	icons.SetMode(icons.ModeNerd)
+	defer icons.SetMode(icons.ModeASCII)
+
+	running := true
+	stopped := false
+	states := []*bool{nil, &running, &stopped}
+	for i, docker := range states {
+		out := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 100, 24, docker)
+		seen := make(map[rune]struct{})
+		for _, r := range out {
+			if r < 0xE000 || r > 0xF8FF {
+				continue
+			}
+			if _, dup := seen[r]; dup {
+				t.Fatalf("state %d: PUA glyph %U reused on welcome screen:\n%s", i, r, out)
+			}
+			seen[r] = struct{}{}
+		}
+	}
 }
 
 func (s welcomeMCPStub) Name() string                       { return s.name }
@@ -36,7 +64,7 @@ func TestBuildWelcomeMessage_InlineShowsSetupGuidance(t *testing.T) {
 
 func TestBuildWelcomeMessage_InlineShowsGuidance(t *testing.T) {
 	out := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 100, 24, nil)
-	for _, want := range []string{"CONTAINER · STARTING", "Skills (0)", "AGENTS.md", "MCPs (0)"} {
+	for _, want := range []string{"Container · Starting", "Skills (0)", "AGENTS.md", "MCPs (0)"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("minimal welcome missing %q in:\n%s", want, out)
 		}
@@ -82,7 +110,7 @@ func TestBuildWelcomeMessage_ShortTerminalUsesCompactCopy(t *testing.T) {
 	if strings.Contains(out, "PgUp/Dn scroll chat") || strings.Contains(out, "for new session") {
 		t.Fatalf("compact welcome should drop verbose descriptions, got:\n%s", out)
 	}
-	if !strings.Contains(out, "v") || !strings.Contains(out, "CONTAINER · STARTING") {
+	if !strings.Contains(out, "v") || !strings.Contains(out, "Container · Starting") {
 		t.Fatalf("compact welcome should keep version and execution mode, got:\n%s", out)
 	}
 }
@@ -107,6 +135,57 @@ func TestBuildWelcomeMessage_HawkWordmarkBlinks(t *testing.T) {
 	}
 }
 
+func TestEyeBlinkTick_CyclesEyeFrameStates(t *testing.T) {
+	m := chatModel{input: textarea.New(), width: 100, height: 40}
+	m.rebuildWelcomeCache()
+	next, cmd := m.Update(eyeBlinkTickMsg{})
+	nextModel := next.(chatModel)
+	if nextModel.eyeFrame != 1 {
+		t.Fatalf("eyeBlinkTickMsg eyeFrame = %d, want 1", nextModel.eyeFrame)
+	}
+	if cmd == nil {
+		t.Fatal("eyeBlinkTickMsg should return next commands")
+	}
+
+	next2, _ := nextModel.Update(eyeFrameNextMsg{frame: 2})
+	nextModel2 := next2.(chatModel)
+	if nextModel2.eyeFrame != 2 {
+		t.Fatalf("eyeFrameNextMsg frame 2 eyeFrame = %d, want 2", nextModel2.eyeFrame)
+	}
+
+	next3, _ := nextModel2.Update(eyeFrameNextMsg{frame: 3})
+	nextModel3 := next3.(chatModel)
+	if nextModel3.eyeFrame != 3 {
+		t.Fatalf("eyeFrameNextMsg frame 3 eyeFrame = %d, want 3", nextModel3.eyeFrame)
+	}
+
+	next4, _ := nextModel3.Update(eyeFrameNextMsg{frame: 0})
+	nextModel4 := next4.(chatModel)
+	if nextModel4.eyeFrame != 0 {
+		t.Fatalf("eyeFrameNextMsg frame 0 eyeFrame = %d, want 0", nextModel4.eyeFrame)
+	}
+}
+
+func TestWelcomeMessage_OneLineGapBeforeStatusLine(t *testing.T) {
+	out := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 120, 40, nil)
+	lines := strings.Split(out, "\n")
+	artBottomIdx := -1
+	for i, line := range lines {
+		if strings.Contains(line, "\\/") && !strings.Contains(line, "Container") {
+			artBottomIdx = i
+		}
+	}
+	if artBottomIdx == -1 {
+		t.Fatalf("could not find bottom line of ASCII art in:\n%s", out)
+	}
+	if artBottomIdx+1 >= len(lines) || strings.TrimSpace(lines[artBottomIdx+1]) != "" {
+		t.Fatalf("expected blank line (gap) immediately after ASCII art bottom line, got %q in:\n%s", lines[artBottomIdx+1], out)
+	}
+	if artBottomIdx+2 >= len(lines) || !strings.Contains(lines[artBottomIdx+2], "Container") {
+		t.Fatalf("expected status line after gap, got %q in:\n%s", lines[artBottomIdx+2], out)
+	}
+}
+
 func TestWelcomeModeBadge_IdentifiesExecutionEnvironment(t *testing.T) {
 	running := true
 	stopped := false
@@ -115,9 +194,9 @@ func TestWelcomeModeBadge_IdentifiesExecutionEnvironment(t *testing.T) {
 		docker *bool
 		want   string
 	}{
-		{name: "starting", want: "CONTAINER · STARTING"},
-		{name: "container", docker: &running, want: "CONTAINER · DOCKER · ISOLATED"},
-		{name: "required", docker: &stopped, want: "CONTAINER · DOCKER REQUIRED"},
+		{name: "starting", want: "Container Starting"},
+		{name: "container", docker: &running, want: "Container"},
+		{name: "required", docker: &stopped, want: "Container Required"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := welcomeModeBadge(tc.docker); !strings.Contains(got, tc.want) {

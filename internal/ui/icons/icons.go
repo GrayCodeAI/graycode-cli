@@ -4,6 +4,7 @@ package icons
 // are single ASCII runes or short bracketed tokens ("[ok]", "[!!]") for
 // state indicators that need more visibility than a single character.
 const (
+	ASCIIPullRequest   = "[pr]"
 	ASCIIPrompt        = ">"
 	ASCIIRobot         = "*"
 	ASCIICircleFilled  = "*"
@@ -108,6 +109,7 @@ var registry = []struct {
 	{"email", puaEmail, ASCIIEmail},
 	{"help_circle", puaHelpCircle, ASCIIHelpCircle},
 	{"branch", puaBranch, ASCIIBranch},
+	{"pull_request", puaPullRequest, ASCIIPullRequest},
 	{"clock_outline", puaClockOutline, ASCIIClockOutline},
 	{"pause", puaPause, ASCIIPause},
 	{"expand_all", puaExpandAll, ASCIIExpandAll},
@@ -229,6 +231,7 @@ func Brain() string         { return Glyph("brain") }
 func Email() string         { return Glyph("email") }
 func HelpCircle() string    { return Glyph("help_circle") }
 func Branch() string        { return Glyph("branch") }
+func PullRequest() string   { return Glyph("pull_request") }
 func ClockOutline() string  { return Glyph("clock_outline") }
 func Pause() string         { return Glyph("pause") }
 func ExpandAll() string     { return Glyph("expand_all") }

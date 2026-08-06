@@ -8,6 +8,36 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
+func TestParsePRNumbersJSON(t *testing.T) {
+	got := parsePRNumbersJSON(`[{"number":184},{"number":190},{"number":201}]`)
+	want := []int{184, 190, 201}
+	if len(got) != len(want) {
+		t.Fatalf("parsePRNumbersJSON len = %d, want %d (%v)", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("parsePRNumbersJSON[%d] = %d, want %d", i, got[i], want[i])
+		}
+	}
+	if got := parsePRNumbersJSON("[]"); len(got) != 0 {
+		t.Errorf("parsePRNumbersJSON on empty array = %v, want none", got)
+	}
+	if got := parsePRNumbersJSON(""); len(got) != 0 {
+		t.Errorf("parsePRNumbersJSON on empty string = %v, want none", got)
+	}
+}
+
+func TestOpenPRNumbersEmptyBranch(t *testing.T) {
+	gp := NewGitProvider("github", "", "octocat", "hello-world")
+	nums, err := gp.OpenPRNumbers("")
+	if err != nil {
+		t.Fatalf("OpenPRNumbers(\"\") error = %v, want nil", err)
+	}
+	if len(nums) != 0 {
+		t.Errorf("OpenPRNumbers(\"\") = %v, want empty", nums)
+	}
+}
+
 func TestNewGitProvider(t *testing.T) {
 	gp := NewGitProvider("github", "token123", "octocat", "hello-world")
 

@@ -167,6 +167,35 @@ func (gp *GitProvider) ListPRs(state string, limit int) ([]PullRequest, error) {
 	return gp.parsePRsJSON(out)
 }
 
+// OpenPRNumbers returns the numbers of open pull requests whose head
+// branch is the given branch. Returns an empty slice when there are none
+// or when gh is unavailable.
+func (gp *GitProvider) OpenPRNumbers(branch string) ([]int, error) {
+	if branch == "" {
+		return nil, nil
+	}
+	gp.mu.RLock()
+	defer gp.mu.RUnlock()
+
+	out, err := gp.runGH("pr", "list", "--head", branch, "--state", "open", "--json", "number")
+	if err != nil {
+		return nil, err
+	}
+	return parsePRNumbersJSON(out), nil
+}
+
+// parsePRNumbersJSON extracts PR numbers from the JSON array emitted by
+// `gh pr list --json number`.
+func parsePRNumbersJSON(jsonStr string) []int {
+	var nums []int
+	for _, obj := range splitJSONObjects(strings.TrimSpace(jsonStr)) {
+		if n := extractJSONInt(obj, "number"); n > 0 {
+			nums = append(nums, n)
+		}
+	}
+	return nums
+}
+
 // CreatePR creates a new pull request.
 func (gp *GitProvider) CreatePR(title, body, branch, baseBranch string) (*PullRequest, error) {
 	gp.mu.Lock()

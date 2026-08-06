@@ -70,7 +70,20 @@ func (m chatModel) welcomeStatusSnapshot() welcomeStatusSnapshot {
 	}
 }
 
-func (m *chatModel) rebuildWelcomeCache(blinkClosed bool) {
+func (m *chatModel) rebuildWelcomeCache(opts ...any) {
+	frame := m.eyeFrame
+	if len(opts) > 0 {
+		switch v := opts[0].(type) {
+		case int:
+			frame = v
+		case bool:
+			if v {
+				frame = 2
+			} else {
+				frame = 0
+			}
+		}
+	}
 	width := m.width
 	if width <= 0 {
 		width = 80
@@ -83,15 +96,19 @@ func (m *chatModel) rebuildWelcomeCache(blinkClosed bool) {
 	if m.pluginRuntime != nil {
 		skillsCount = len(m.pluginRuntime.SmartSkills)
 	}
-	m.welcomeCache = buildWelcomeMessageWithSnapshot(m.session, m.sessionID, m.registry, nil, m.settings, skillsCount, connectedMCPCount(m.registry), blinkClosed, width, height, m.welcomeDockerRunning(), m.welcomeStatusSnapshot(), m.containerEnabled, m.lastCommand)
+	m.welcomeCache = buildWelcomeMessageWithSnapshot(m.session, m.sessionID, m.registry, nil, m.settings, skillsCount, connectedMCPCount(m.registry), frame, width, height, m.welcomeDockerRunning(), m.welcomeStatusSnapshot(), m.containerEnabled, m.lastCommand)
 }
 
 // buildWelcomeMessage renders the branded inline HAWK welcome block.
 func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount int, blinkClosed bool, width, height int, dockerRunning *bool) string {
-	return buildWelcomeMessageWithSnapshot(sess, sessionID, registry, saved, settings, skillsCount, connectedMCPCount(registry), blinkClosed, width, height, dockerRunning, loadWelcomeStatusSnapshot(), false, "")
+	frame := 0
+	if blinkClosed {
+		frame = 2
+	}
+	return buildWelcomeMessageWithSnapshot(sess, sessionID, registry, saved, settings, skillsCount, connectedMCPCount(registry), frame, width, height, dockerRunning, loadWelcomeStatusSnapshot(), false, "")
 }
 
-func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount, mcpCount int, blinkClosed bool, width, height int, dockerRunning *bool, snapshot welcomeStatusSnapshot, containerMode bool, lastCommand string) string {
+func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount, mcpCount int, eyeFrame int, width, height int, dockerRunning *bool, snapshot welcomeStatusSnapshot, containerMode bool, lastCommand string) string {
 	// Talon Gold is used for the HAWK wordmark. All escapes come from the
 	// theme palette (theme.go) so a rebrand stays a one-file change.
 	logoC := ansiOrange
@@ -131,11 +148,34 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 	}
 
 	art := hawkLogoArtLines
-	if blinkClosed {
+	var eyeGlyph string
+	switch eyeFrame {
+	case 1, 3:
+		eyeGlyph = "|o\\/o|"
+	case 2:
+		eyeGlyph = "|-\\/-|"
+	}
+	if eyeGlyph != "" {
 		art = append([]string(nil), hawkLogoArtLines...)
 		for i, line := range art {
-			art[i] = strings.Replace(line, "|0\\/0|", "|-\\/-|", 1)
+			art[i] = strings.Replace(line, "|0\\/0|", eyeGlyph, 1)
 		}
+	}
+
+	// Inject the version into the hawk's body — centered in the lower gap.
+	verStr := DisplayVersion()
+	if verStr != "" && !strings.HasPrefix(verStr, "v") && !strings.HasPrefix(verStr, "V") {
+		verStr = "v" + verStr
+	}
+	const verGap = 14
+	if len(verStr) > verGap {
+		verStr = verStr[:verGap]
+	}
+	verLeft := (verGap - len(verStr)) / 2
+	verRight := verGap - len(verStr) - verLeft
+	verWing := strings.Repeat(" ", verLeft) + verStr + strings.Repeat(" ", verRight)
+	for i, line := range art {
+		art[i] = strings.Replace(line, "(\\              /)", "(\\"+verWing+"/)", 1)
 	}
 
 	var b strings.Builder
@@ -144,9 +184,14 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 	b.WriteString("\n")
 
 	if tight {
-		// Compact single-line wordmark for small terminals.
-		compactArt := logoC + "HAWK" + rst
-		b.WriteString(center(runewidth.StringWidth("HAWK"), compactArt) + "\n")
+		// Compact single-line wordmark for small terminals — version sits
+		// inline so it's always visible even when the full hawk is hidden.
+		verDisplay := DisplayVersion()
+		if verDisplay != "" && !strings.HasPrefix(verDisplay, "v") && !strings.HasPrefix(verDisplay, "V") {
+			verDisplay = "v" + verDisplay
+		}
+		compactArt := logoC + "HAWK" + rst + "  " + verDisplay
+		b.WriteString(center(runewidth.StringWidth("HAWK   "+verDisplay), compactArt) + "\n")
 	} else {
 		artW := blockLinesWidth(art)
 		for _, line := range art {
@@ -154,14 +199,21 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 		}
 	}
 
-	verLine := fmt.Sprintf("v%s", DisplayVersion())
-	b.WriteByte('\n')
-
-	// Execution mode stays beside the version: compact, but prominent enough
-	// to preserve safety awareness before the first command runs.
 	modeBadge := welcomeModeBadge(dockerRunning)
-	modeLine := dimC + verLine + rst + "   " + modeBadge
-	b.WriteString(center(runewidth.StringWidth(verLine)+3+visibleWidth(modeBadge), modeLine) + "\n")
+	cpLine := ""
+	if sess != nil {
+		cpLine = welcomeControlPlaneLine(sess, dimC, rst, modeBadge != "")
+	}
+	modeLine := modeBadge
+	if cpLine != "" {
+		if modeBadge != "" {
+			modeLine += "  ·  " + cpLine
+		} else {
+			modeLine = cpLine
+		}
+	}
+	b.WriteString("\n")
+	b.WriteString(center(visibleWidth(modeLine), modeLine) + "\n")
 
 	indicators := welcomeIndicatorRow(skillsCount, snapshot.agentsOK, mcpCount, greenC, sepC, rst, markPresent, markNone)
 	b.WriteByte('\n')
@@ -173,6 +225,69 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 	}
 
 	return b.String()
+}
+
+// welcomeControlPlaneLine renders the work-mode · isolation · folder-trust
+// indicator on the welcome screen (moved out of the footer bar). When the
+// CONTAINER badge is shown, the redundant iso segment is dropped.
+func welcomeControlPlaneLine(sess *engine.Session, dimC, rst string, badgeShown bool) string {
+	work := string(sess.WorkMode())
+	modeIcon := icons.Cog()
+	modeLabel := "Action Mode"
+	modeColor := ansiCyan
+	switch work {
+	case "plan":
+		modeIcon = icons.Brain()
+		modeLabel = "Planning Mode"
+		modeColor = ansiMagenta
+	case "review":
+		modeIcon = icons.Magnify()
+		modeLabel = "Review Mode"
+		modeColor = ansiAmber
+	}
+
+	isoIcon := icons.Container()
+	isoColor := ansiAmber
+	iso := sess.Isolation().ShortLabel()
+
+	isoSeg := "  ·  " + isoColor + isoIcon + " " + iso + rst
+	if badgeShown {
+		isoSeg = ""
+	}
+
+	tr := engine.ProjectTrust("")
+	var trustIcon string
+	trustColor := dimC
+	if !tr.Enforced {
+		trustIcon = icons.CircleOutline()
+		trustColor = dimC
+	} else if tr.Trusted {
+		trustIcon = icons.CheckDecagram()
+		trustColor = ansiVividGreen
+	} else if tr.Blocked {
+		trustIcon = icons.CloseCircle()
+		trustColor = ansiCoral
+	} else {
+		trustIcon = icons.CloseThick()
+		trustColor = ansiAmber
+	}
+	trustLabel := tr.String()
+	switch trustLabel {
+	case "trusted":
+		trustLabel = "Trusted"
+	case "blocked":
+		trustLabel = "Blocked"
+	case "":
+		trustLabel = "Untrusted"
+	default:
+		if len(trustLabel) > 0 {
+			trustLabel = strings.ToUpper(trustLabel[:1]) + trustLabel[1:]
+		}
+	}
+
+	return modeColor + modeIcon + " " + modeLabel + rst +
+		isoSeg +
+		"  ·  " + trustColor + trustIcon + " " + trustLabel + rst
 }
 
 type mcpServerNamed interface {
@@ -197,43 +312,42 @@ func connectedMCPCount(registry *tool.Registry) int {
 func welcomeIndicatorRow(skillsCount int, agentsOK bool, mcpCount int, activeC, idleC, rst, markPresent, markNone string) string {
 	skillsColor, skillsMark := idleC, markNone
 	if skillsCount > 0 {
-		skillsColor, skillsMark = activeC, markPresent
+		skillsColor, skillsMark = ansiLightPink, markPresent
 	}
 
 	agentsColor, agentsMark := idleC, markNone
 	if agentsOK {
-		agentsColor, agentsMark = activeC, markPresent
+		agentsColor, agentsMark = ansiMagenta, markPresent
 	}
 
 	mcpColor, mcpMark := idleC, markNone
 	if mcpCount > 0 {
-		mcpColor, mcpMark = activeC, markPresent
+		mcpColor, mcpMark = ansiCyan, markPresent
 	}
 	return fmt.Sprintf(
-		"%s%s%s %sSkills (%d)%s %s  ·  %s%s%s AGENTS.md %s  ·  %s%s%s %sMCPs (%d)%s %s",
-		skillsColor, icons.Bolt(), rst,
-		skillsColor, skillsCount, rst, skillsMark,
+		"%s%s Skills (%d)%s %s  ·  %s%s AGENTS.md%s %s  ·  %s%s MCPs (%d)%s %s",
+		skillsColor, icons.Bolt(), skillsCount, rst, skillsMark,
 		agentsColor, icons.Robot(), rst, agentsMark,
-		mcpColor, icons.Network(), rst,
-		mcpColor, mcpCount, rst, mcpMark,
+		mcpColor, icons.Network(), mcpCount, rst, mcpMark,
 	)
 }
 
 // welcomeModeBadge returns a prominent, colored badge indicating the
-// current execution mode. Uses inverse video (colored background, dark
-// text) so it stands out from the dim guidance text.
+// current execution mode. No background fill — bright foreground colors
+// (gold for starting, container blue for ready, coral for required) keep it readable
+// on any theme.
 func welcomeModeBadge(dockerRunning *bool) string {
 	rst := ansiReset
 	switch {
 	case dockerRunning == nil:
-		// Startup — Talon Gold background, dark text.
-		return "\033[48;2;255;215;0m\033[30m " + icons.Container() + " CONTAINER · STARTING \033[0m" + rst
+		// Startup — Talon Gold, bold, timer = waiting for the sandbox.
+		return "\033[1m" + ansiOrange + icons.Timer() + " Container Starting" + rst
 	case *dockerRunning:
-		// Ready — teal communicates healthy isolation.
-		return "\033[48;2;78;205;196m\033[30m " + icons.Shield() + " CONTAINER · DOCKER · ISOLATED \033[0m" + rst
+		// Ready — container blue communicates healthy isolation.
+		return "\033[1m" + ansiContBlue + icons.Shield() + " Container" + rst
 	default:
 		// Failure — no host fallback exists.
-		return "\033[48;2;255;107;107m\033[30m " + icons.Alert() + " CONTAINER · DOCKER REQUIRED \033[0m" + rst
+		return "\033[1m" + ansiCoral + icons.Alert() + " Container Required" + rst
 	}
 }
 
