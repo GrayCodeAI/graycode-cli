@@ -104,7 +104,8 @@ func controlPlaneChip(m *chatModel) string {
 		return ""
 	}
 	chip := ""
-	if gi := engine.InspectGitBranch(""); gi.OnDefault {
+	branch := cachedStatusBranch(m)
+	if branch == "main" || branch == "master" {
 		chip += dryRunStyle.Render("main!")
 	}
 	if m.session.AutoCommit() {
@@ -167,7 +168,8 @@ func renderStatusBarSecondaryLeft(m *chatModel) string {
 		return ""
 	}
 	parts := []string{}
-	if gi := engine.InspectGitBranch(""); gi.OnDefault {
+	branch := cachedStatusBranch(m)
+	if branch == "main" || branch == "master" {
 		parts = append(parts, dryRunStyle.Render(icons.Alert()+" default-branch"))
 	}
 	return strings.Join(parts, statusDimStyle.Render(" · "))
