@@ -118,6 +118,28 @@ func TestContainerSandbox_DockerRunArgs_Hardened(t *testing.T) {
 	}
 }
 
+func TestContainerSandbox_DockerRunArgs_SSHAgentSocket(t *testing.T) {
+	fakeSock := filepath.Join(t.TempDir(), "agent.sock")
+	if err := os.WriteFile(fakeSock, []byte(""), 0o600); err != nil {
+		t.Fatalf("failed creating fake sock: %v", err)
+	}
+	t.Setenv("SSH_AUTH_SOCK", fakeSock)
+
+	cs := NewContainerSandbox(t.TempDir())
+	cs.SetImage("hawk:test")
+
+	args := cs.dockerRunArgs("hawk-test", "/tmp/attach", "/tmp/cache")
+	joined := strings.Join(args, " ")
+
+	wantSockArg := fakeSock + ":/ssh-agent.sock:ro"
+	if !strings.Contains(joined, wantSockArg) {
+		t.Fatalf("expected docker run args to contain %q, got:\n%s", wantSockArg, joined)
+	}
+	if !strings.Contains(joined, "SSH_AUTH_SOCK=/ssh-agent.sock") {
+		t.Fatalf("expected docker run args to set SSH_AUTH_SOCK env var, got:\n%s", joined)
+	}
+}
+
 func TestResolveImage_Default(t *testing.T) {
 	img := resolveImage(t.TempDir())
 	expected := "graycodeai/hawk-sandbox:" + sandboxImageTag

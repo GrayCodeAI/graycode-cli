@@ -161,6 +161,14 @@ func (c *ContainerSandbox) dockerRunArgs(name, attachDir, cacheDir string) []str
 	} else {
 		args = append(args, "--user", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()))
 	}
+	// SSH Agent Socket Passthrough: Forward host SSH auth socket so git push/fetch works
+	// over SSH without copying or mounting raw SSH private keys into the container.
+	if sshSock := os.Getenv("SSH_AUTH_SOCK"); sshSock != "" {
+		if _, err := os.Stat(sshSock); err == nil {
+			args = append(args, "-v", sshSock+":/ssh-agent.sock:ro", "-e", "SSH_AUTH_SOCK=/ssh-agent.sock")
+		}
+	}
+
 	args = append(args, c.runtime.StartupEnvArgs()...)
 	args = append(args, c.image, "infinity")
 	return args
