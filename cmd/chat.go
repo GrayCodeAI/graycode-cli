@@ -318,8 +318,8 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	m.welcomeAgentsOK = quickSnapshot.agentsOK
 	m.welcomeCache = buildWelcomeMessageWithSnapshot(sess, sid, registry, saved, settings, 0, connectedMCPCount(registry), false, initWidth, initHeight, nil, quickSnapshot, false, "")
 	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
-	// First-session control-plane tip (skip when resuming history).
-	if saved == nil {
+	// First-session control-plane tip (skip when resuming history or when quiet env var is set).
+	if saved == nil && os.Getenv("HAWK_QUIET_START") == "" && os.Getenv("HAWK_SUPPRESS_HINTS") == "" && os.Getenv("HAWK_QUIET") == "" {
 		m.messages = append(m.messages, displayMsg{role: "system", content: controlPlaneOnboardingHint(sess)})
 	}
 	startup.EndPhase("newChatModel:welcome")
