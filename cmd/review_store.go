@@ -99,7 +99,9 @@ func (s *ReviewStore) migrate() error {
 		return err
 	}
 	var current int
-	_ = s.db.QueryRow("SELECT COALESCE(MAX(version), 0) FROM review_schema_version").Scan(&current)
+	if err := s.db.QueryRow("SELECT COALESCE(MAX(version), 0) FROM review_schema_version").Scan(&current); err != nil {
+		return fmt.Errorf("read review schema version: %w", err)
+	}
 
 	migrations := []string{reviewSchema}
 	for i := current; i < len(migrations); i++ {

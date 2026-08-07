@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -215,7 +216,7 @@ func LoadGlobalSettings() Settings {
 	path := globalSettingsPath()
 	if data, err := readSettingsFileCached(path); err == nil {
 		if err := json.Unmarshal(data, &s); err != nil {
-			fmt.Fprintf(os.Stderr, "hawk: warning: failed to parse %s: %v\n", path, err)
+			slog.Warn("failed to parse settings", "path", path, "error", err)
 		}
 	}
 	if s.PolicySchemaVersion == 0 {

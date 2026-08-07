@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -600,7 +601,7 @@ func autoIndexCodegraph() {
 
 	// Incremental sync — only processes changed files
 	if _, err := cg.Sync(); err != nil {
-		log.Printf("codegraph sync: %v", err)
+		slog.Warn("codegraph sync failed", "error", err)
 	}
 }
 
