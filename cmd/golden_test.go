@@ -30,7 +30,9 @@ func TestGoldenHelp(t *testing.T) {
 			rootCmd.SetErr(buf)
 			rootCmd.SetArgs(tt.args)
 
-			_ = rootCmd.Execute()
+			if err := rootCmd.Execute(); err != nil {
+				t.Fatalf("root command execute: %v", err)
+			}
 
 			got := buf.String()
 			golden := filepath.Join("..", "testdata", "golden", tt.file)
@@ -44,8 +46,9 @@ func TestGoldenHelp(t *testing.T) {
 
 			expected, err := os.ReadFile(golden)
 			if err != nil {
-				t.Skipf("golden file %s not found, run with -update-golden to create", golden)
-				return
+				// A missing golden is a real failure: new commands should
+				// force a deliberate golden update, not a silent skip.
+				t.Fatalf("golden file %s not found (run with -update-golden to create): %v", golden, err)
 			}
 
 			if !strings.Contains(got, "hawk") {
@@ -54,7 +57,9 @@ func TestGoldenHelp(t *testing.T) {
 			if len(got) < 100 {
 				t.Error("help output seems too short")
 			}
-			_ = expected // compare in stricter mode later
+			if got != string(expected) {
+				t.Errorf("help output does not match golden file %s\n--- got ---\n%s\n--- want (golden) ---\n%s", golden, got, expected)
+			}
 		})
 	}
 }

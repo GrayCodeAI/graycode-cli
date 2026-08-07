@@ -120,7 +120,12 @@ func cleanEnvDir(key string) string {
 func mustUserConfigDir() string {
 	dir, err := os.UserConfigDir()
 	if err != nil || dir == "" {
-		panic("hawk storage: user config directory unavailable")
+		// Never crash the CLI at init because the environment is broken
+		// (e.g. unset HOME in a cron/daemon context). Fall back to a
+		// stable, writable location under the OS temp dir so the process
+		// still functions; the effective paths are also overridable via
+		// HAWK_CONFIG_DIR / HAWK_STATE_DIR / HAWK_CACHE_DIR.
+		return filepath.Join(os.TempDir(), "hawk-config")
 	}
 	return dir
 }
@@ -128,7 +133,7 @@ func mustUserConfigDir() string {
 func mustUserCacheDir() string {
 	dir, err := os.UserCacheDir()
 	if err != nil || dir == "" {
-		panic("hawk storage: user cache directory unavailable")
+		return filepath.Join(os.TempDir(), "hawk-cache")
 	}
 	return dir
 }

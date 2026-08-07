@@ -360,8 +360,14 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 			if r.Approved && req.ContainerID != "" {
 				// Flip the symlink inside the container to grant access.
 				if desc := sandbox.FindCredential(req.Credential); desc != nil {
-					_ = tool.FlipCredentialSymlink(req.ContainerID, req.Credential,
-						sandbox.StagingPath(req.Credential), desc.ContainerPath)
+					if flipErr := tool.FlipCredentialSymlink(req.ContainerID, req.Credential,
+						sandbox.StagingPath(req.Credential), desc.ContainerPath); flipErr != nil {
+						// The user approved, so a flip failure must be visible:
+						// report it and revoke approval rather than silently
+						// leaving the container without the credential.
+						ref.Send(displayMsg{role: "system", content: fmt.Sprintf("! Credential %q approved but could not be granted to the container: %v", req.Credential, flipErr)})
+						return tool.CredentialResponse{Approved: false, Reason: "credential grant failed: " + flipErr.Error()}
+					}
 				}
 			}
 			return r
@@ -524,14 +530,14 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 // refreshInputPlaceholder updates the input placeholder based on the current
 // container lifecycle. Hawk never executes agent tools directly on the host.
 func (m *chatModel) refreshInputPlaceholder() {
-	work := "act"
+	work := engine.WorkModeAct
 	if m.session != nil {
-		work = string(m.session.WorkMode())
+		work = m.session.WorkMode()
 	}
 	switch work {
-	case "plan":
+	case engine.WorkModePlan:
 		m.input.Placeholder = "Design architecture or draft plan...  ·  / commands  ·  ? help"
-	case "review":
+	case engine.WorkModeReview:
 		m.input.Placeholder = "Audit diffs, security, or PRs...  ·  / commands  ·  ? help"
 	default:
 		m.input.Placeholder = "Build, refactor, or run commands...  ·  / commands  ·  ? help"

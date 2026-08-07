@@ -41,28 +41,38 @@ func TestValidateAuthConfig(t *testing.T) {
 		name    string
 		apiKey  string
 		addr    string
+		tls     bool
 		wantErr bool
 	}{
-		// With API key: any bind address is allowed.
-		{"apiKey set, loopback", "secret", "127.0.0.1:4590", false},
-		{"apiKey set, IPv6 loopback", "secret", "[::1]:4590", false},
-		{"apiKey set, wildcard", "secret", "0.0.0.0:4590", false},
-		{"apiKey set, public IP", "secret", "192.168.1.1:4590", false},
+		// With API key: loopback binds are allowed (plaintext is fine
+		// on loopback — the key never leaves the host).
+		{"apiKey set, loopback", "secret", "127.0.0.1:4590", false, false},
+		{"apiKey set, IPv6 loopback", "secret", "[::1]:4590", false, false},
+		// Non-loopback binds require TLS even with an API key: the key
+		// and full conversation history would otherwise travel in plaintext.
+		{"apiKey set, wildcard no TLS refused", "secret", "0.0.0.0:4590", false, true},
+		{"apiKey set, public IP no TLS refused", "secret", "192.168.1.1:4590", false, true},
+		{"apiKey set, wildcard with TLS", "secret", "0.0.0.0:4590", true, false},
+		{"apiKey set, public IP with TLS", "secret", "192.168.1.1:4590", true, false},
 		// Without API key: loopback only.
-		{"no key, IPv4 loopback", "", "127.0.0.1:4590", false},
-		{"no key, IPv6 loopback", "", "[::1]:4590", false},
-		{"no key, localhost name", "", "localhost:4590", false},
-		{"no key, wildcard refused", "", "0.0.0.0:4590", true},
-		{"no key, IPv6 wildcard refused", "", "[::]:4590", true},
-		{"no key, private IP refused", "", "192.168.1.1:4590", true},
-		{"no key, public IP refused", "", "8.8.8.8:4590", true},
-		{"no key, hostname refused", "", "example.com:4590", true},
-		{"no key, no host part refused", "", ":4590", true},
-		{"no key, invalid addr refused", "", "not-a-valid-address", true},
+		{"no key, IPv4 loopback", "", "127.0.0.1:4590", false, false},
+		{"no key, IPv6 loopback", "", "[::1]:4590", false, false},
+		{"no key, localhost name", "", "localhost:4590", false, false},
+		{"no key, wildcard refused", "", "0.0.0.0:4590", false, true},
+		{"no key, IPv6 wildcard refused", "", "[::]:4590", false, true},
+		{"no key, private IP refused", "", "192.168.1.1:4590", false, true},
+		{"no key, public IP refused", "", "8.8.8.8:4590", false, true},
+		{"no key, hostname refused", "", "example.com:4590", false, true},
+		{"no key, no host part refused", "", ":4590", false, true},
+		{"no key, invalid addr refused", "", "not-a-valid-address", false, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := &Server{apiKey: tc.apiKey, addr: tc.addr}
+			if tc.tls {
+				s.tlsCertFile = "cert.pem"
+				s.tlsKeyFile = "key.pem"
+			}
 			err := s.validateAuthConfig()
 			if tc.wantErr && err == nil {
 				t.Errorf("expected error, got nil")

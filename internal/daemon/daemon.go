@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/subtle"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -129,6 +130,10 @@ type Server struct {
 	// tlsCertFile and tlsKeyFile enable HTTPS when both are set.
 	tlsCertFile string
 	tlsKeyFile  string
+	// maxAutonomy caps the autonomy tier clients may request (server-side
+	// policy; zero means DefaultMaxAutonomy). The daemon has no human to
+	// approve permission prompts, so full/YOLO must be operator-opted-in.
+	maxAutonomy engine.AutonomyLevel
 }
 
 // ReadyResponse is the JSON response from GET /v1/ready.
@@ -160,7 +165,21 @@ type Config struct {
 	// SecurityLog provides the audit log instance for tool execution
 	// auditing. If nil, the server creates one from DefaultDir().
 	SecurityLog *securitylog.Log `json:"-"`
+	// MaxAutonomy caps the autonomy tier a client may request via
+	// POST /v1/chat. The daemon is non-interactive: it has no human to
+	// approve permission prompts, so remote callers must not be able to
+	// escalate to full/YOLO autonomy on their own. Zero means the default
+	// cap (AutonomySemi) applies; set explicitly (e.g. to AutonomyFull)
+	// only for trusted, operator-owned deployments.
+	MaxAutonomy engine.AutonomyLevel `json:"-"`
 }
+
+// DefaultMaxAutonomy is the highest autonomy tier a daemon client may
+// request when the operator has not configured a higher cap. Semi
+// auto-approves reads and writes but still gates Bash behind permission,
+// which is the most permissive setting that remains safe without a human
+// in the loop.
+const DefaultMaxAutonomy = engine.AutonomySemi
 
 // DefaultConfig returns reasonable defaults.
 func DefaultConfig() Config {
@@ -240,6 +259,7 @@ func New(cfg Config, factory SessionFactory) *Server {
 	s.corsOrigins = cfg.CORSOrigins
 	s.tlsCertFile = cfg.TLSCertFile
 	s.tlsKeyFile = cfg.TLSKeyFile
+	s.maxAutonomy = cfg.MaxAutonomy
 
 	// Initialize the tamper-evident security event log. If a log is provided
 	// in the config, use it; otherwise create one from the default directory.
@@ -258,6 +278,10 @@ func New(cfg Config, factory SessionFactory) *Server {
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      300 * time.Second,
 		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+		TLSConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		},
 	}
 	// Install middleware stack: request IDs → security headers → CORS → logging.
 	s.installMiddleware()
@@ -314,15 +338,24 @@ func (s *Server) Start() (string, error) {
 // request when apiKey == "", so a misconfigured production daemon would
 // be wide open. The only safe no-key mode is loopback bind.
 func (s *Server) validateAuthConfig() error {
-	if s.apiKey != "" {
-		return nil
+	if s.apiKey == "" {
+		host, _, err := net.SplitHostPort(s.addr)
+		if err != nil {
+			return fmt.Errorf("daemon: invalid bind address %q: %w", s.addr, err)
+		}
+		if !isLoopbackHost(host) {
+			return fmt.Errorf("daemon: apiKey is empty and bind address %q is not loopback; refusing to start. Set Config.APIKey or bind to %s", s.addr, netutil.LoopbackHost)
+		}
 	}
+	// A non-loopback bind exposes the API key and full conversation
+	// history on the wire. Refuse to serve plaintext in that case:
+	// remote callers must use TLS.
 	host, _, err := net.SplitHostPort(s.addr)
 	if err != nil {
 		return fmt.Errorf("daemon: invalid bind address %q: %w", s.addr, err)
 	}
-	if !isLoopbackHost(host) {
-		return fmt.Errorf("daemon: apiKey is empty and bind address %q is not loopback; refusing to start. Set Config.APIKey or bind to %s", s.addr, netutil.LoopbackHost)
+	if !isLoopbackHost(host) && (s.tlsCertFile == "" || s.tlsKeyFile == "") {
+		return fmt.Errorf("daemon: bind address %q is not loopback but TLS is not configured; refusing to start. Configure TLSCertFile/TLSKeyFile or bind to %s", s.addr, netutil.LoopbackHost)
 	}
 	return nil
 }
@@ -733,9 +766,24 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		sess.LoadMessages(hawksession.ToRuntimeMessages(saved.Messages))
 	}
 
-	// Set autonomy
+	// Set autonomy, capped by server-side policy. The daemon is
+	// non-interactive — no human can approve permission prompts — so a
+	// client must not be able to escalate to full/YOLO autonomy on its own.
+	// Operators opt in to higher tiers explicitly via Config.MaxAutonomy.
 	if req.Autonomy != "" {
-		sess.PermSvc().SetAutonomy(engine.ParseAutonomyLevel(req.Autonomy))
+		requested := engine.ParseAutonomyLevel(req.Autonomy)
+		max := s.maxAutonomy
+		if max == 0 {
+			max = DefaultMaxAutonomy
+		}
+		if requested > max {
+			writeJSON(w, http.StatusBadRequest, ErrorResponse{
+				Error: fmt.Sprintf("autonomy %q exceeds the daemon's configured maximum (%s); the daemon is non-interactive and cannot approve escalated permissions. Raise Config.MaxAutonomy (HAWK_DAEMON_AUTONOMY) to allow it", requested.String(), max.String()),
+				Code:  "autonomy_denied",
+			})
+			return
+		}
+		sess.PermSvc().SetAutonomy(requested)
 	}
 
 	// Auto-approve permissions based on autonomy (non-interactive)

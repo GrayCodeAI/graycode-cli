@@ -37,6 +37,7 @@ var (
 	daemonCORSOrigins []string
 	daemonTLSCertFile string
 	daemonTLSKeyFile  string
+	daemonAutonomy    string
 )
 
 var daemonCmd = &cobra.Command{
@@ -71,6 +72,7 @@ func init() {
 	daemonStartCmd.Flags().StringSliceVar(&daemonCORSOrigins, "cors", []string{}, "Comma-separated list of allowed CORS origins (empty disables CORS, '*' allows all)")
 	daemonStartCmd.Flags().StringVar(&daemonTLSCertFile, "tls-cert", "", "Path to TLS certificate file (enables HTTPS when paired with --tls-key)")
 	daemonStartCmd.Flags().StringVar(&daemonTLSKeyFile, "tls-key", "", "Path to TLS private key file (enables HTTPS when paired with --tls-cert)")
+	daemonStartCmd.Flags().StringVar(&daemonAutonomy, "autonomy", "", "Maximum autonomy tier clients may request via the API (supervised, basic, semi, full, yolo; default: semi). The daemon is non-interactive, so full/yolo require an explicit opt-in.")
 	daemonCmd.AddCommand(daemonStartCmd)
 	daemonCmd.AddCommand(daemonStopCmd)
 	daemonCmd.AddCommand(daemonStatusCmd)
@@ -171,6 +173,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		TLSCertFile: daemonTLSCertFile,
 		TLSKeyFile:  daemonTLSKeyFile,
 		SecurityLog: secLog,
+		MaxAutonomy: daemonAutonomyFromFlag(daemonAutonomy),
 	}, factory)
 	srv.SetGraphFactory(func(ctx context.Context, req daemon.GraphRequest) (executiongraph.Export, error) {
 		if err := ctx.Err(); err != nil {
@@ -370,6 +373,34 @@ func generateDaemonAPIKey() (string, error) {
 		return "", fmt.Errorf("generate daemon API key: %w", err)
 	}
 	return base64.RawURLEncoding.EncodeToString(b[:]), nil
+}
+
+// daemonAutonomyFromFlag resolves the --autonomy flag / HAWK_DAEMON_AUTONOMY
+// env var into the server-side autonomy cap. An empty value leaves the
+// default cap (AutonomySemi) in place; invalid values fail closed at
+// "supervised" rather than silently allowing full autonomy.
+func daemonAutonomyFromFlag(s string) engine.AutonomyLevel {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		s = os.Getenv("HAWK_DAEMON_AUTONOMY")
+	}
+	if s == "" {
+		return 0 // zero => DefaultMaxAutonomy in the daemon
+	}
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "0", "supervised":
+		return engine.AutonomySupervised
+	case "1", "basic":
+		return engine.AutonomyBasic
+	case "2", "semi", "accept_edits", "acceptedits":
+		return engine.AutonomySemi
+	case "3", "full":
+		return engine.AutonomyFull
+	case "4", "yolo", "dont_ask", "dontask":
+		return engine.AutonomyYOLO
+	default:
+		return engine.AutonomySupervised
+	}
 }
 
 func runDaemonStop(_ *cobra.Command, _ []string) error {

@@ -37,9 +37,9 @@ func buildStatusInfo(m *chatModel) string {
 		toolCount = len(m.registry.PrimaryTools())
 		visible = len(m.registry.EyrieTools())
 	}
-	work := string(m.session.WorkMode())
+	work := m.session.WorkMode()
 	if work == "" {
-		work = "act"
+		work = engine.WorkModeAct
 	}
 	iso := m.session.Isolation().String()
 	tr := engine.ProjectTrust("")

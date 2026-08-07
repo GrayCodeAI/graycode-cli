@@ -231,16 +231,16 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 // indicator on the welcome screen (moved out of the footer bar). When the
 // CONTAINER badge is shown, the redundant iso segment is dropped.
 func welcomeControlPlaneLine(sess *engine.Session, dimC, rst string, badgeShown bool) string {
-	work := string(sess.WorkMode())
+	work := sess.WorkMode()
 	modeIcon := icons.Cog()
 	modeLabel := "Action Mode"
 	modeColor := ansiCyan
 	switch work {
-	case "plan":
+	case engine.WorkModePlan:
 		modeIcon = icons.Brain()
 		modeLabel = "Planning Mode"
 		modeColor = ansiMagenta
-	case "review":
+	case engine.WorkModeReview:
 		modeIcon = icons.Magnify()
 		modeLabel = "Review Mode"
 		modeColor = ansiAmber

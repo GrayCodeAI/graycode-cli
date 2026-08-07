@@ -11,6 +11,21 @@ import (
 
 var validSHA = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
 
+// reviewArgMaxLen caps user-supplied values passed on the review subprocess
+// argv. reviewArgCharset restricts them to printable characters only; control
+// characters (and in particular newlines) could otherwise be interpreted by
+// downstream re-parsers as argument or flag separators.
+const reviewArgMaxLen = 4096
+
+var reviewArgCharset = regexp.MustCompile(`^[^\x00-\x1f\x7f]*$`)
+
+// reviewSem bounds the number of concurrent `hawk review run` subprocesses
+// spawned by POST /v1/review so an authenticated caller cannot exhaust CPU
+// or memory by firing unbounded review jobs.
+var reviewSem = make(chan struct{}, maxConcurrentReviews)
+
+const maxConcurrentReviews = 4
+
 // ReviewRequest is the JSON body for POST /v1/review.
 type ReviewRequest struct {
 	SHA        string `json:"sha"`
@@ -55,6 +70,26 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "model must not start with '--'"})
 		return
 	}
+	// Reject control characters (newlines, escapes) that a downstream
+	// re-parser could treat as argument separators, and cap length so a
+	// single value cannot balloon the argv.
+	validArg := func(s string) bool {
+		return len(s) <= reviewArgMaxLen && reviewArgCharset.MatchString(s)
+	}
+	if !validArg(req.Concerns) || !validArg(req.Model) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "concerns and model must be printable text (max 4096 characters)"})
+		return
+	}
+
+	// Bound concurrent review spawns: refuse (503) rather than queue when the
+	// limit is reached so a burst cannot pile up unbounded subprocesses.
+	select {
+	case reviewSem <- struct{}{}:
+		defer func() { <-reviewSem }()
+	default:
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "server busy: too many reviews in flight"})
+		return
+	}
 
 	// Trigger review asynchronously via hawk review run.
 	go func() {
@@ -65,7 +100,7 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 		if req.Concerns != "" {
 			args = append(args, "--concerns", req.Concerns)
 		}
-		_ = exec.CommandContext(context.Background(), "hawk", args...).Run() // #nosec G204 -- binary is fixed "hawk"; args are validated (SHA regex, no "--" prefix)
+		_ = exec.CommandContext(context.Background(), "hawk", args...).Run() // #nosec G204 -- binary is fixed "hawk"; args are validated (SHA regex, no "--" prefix, printable charset)
 	}()
 
 	resp := ReviewResponse{

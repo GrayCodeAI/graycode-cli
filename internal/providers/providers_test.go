@@ -56,10 +56,15 @@ func TestProbesParse_MultipleOR(t *testing.T) {
 	}
 }
 
-func TestCatalog_Has34(t *testing.T) {
+func TestCatalog_NonEmpty(t *testing.T) {
 	all := providers.All()
-	if len(all) != 34 {
-		t.Errorf("expected 34 providers in catalog, got %d", len(all))
+	if len(all) == 0 {
+		t.Fatal("catalog must not be empty")
+	}
+	// Avoid a brittle hardcoded count: catalog size changes with edits, but
+	// must never regress below a sane floor (there are 20+ shipping tools).
+	if len(all) < 20 {
+		t.Errorf("catalog unexpectedly small: %d providers", len(all))
 	}
 }
 
@@ -156,10 +161,14 @@ func TestDetect_PreservesProbesSnapshot(t *testing.T) {
 		first[i].Detected = false
 	}
 	second := providers.Detect()
+	// The second call's Detected must be re-evaluated based on the actual
+	// probes, not poisoned by the first mutation. Every entry in the second
+	// snapshot must still carry Detected=true (a detected provider cannot
+	// become undetected just because an earlier snapshot was mutated).
 	for _, p := range second {
-		// The second call's Detected should be re-evaluated based
-		// on the actual probes, not poisoned by the first mutation.
-		_ = p.Detected
+		if p.Detected != true {
+			t.Errorf("provider %q: Detected=%v after snapshot mutation, want true (snapshot isolation violated)", p.ID, p.Detected)
+		}
 	}
 }
 

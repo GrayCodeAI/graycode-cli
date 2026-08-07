@@ -97,7 +97,10 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 		}
 
 		// Check if the new review passed.
-		newReview, _ := store.GetBySHA(latestSHA)
+		newReview, getErr := store.GetBySHA(latestSHA)
+		if getErr != nil {
+			return fmt.Errorf("load review for %s: %w", latestSHA[:8], getErr)
+		}
 		if newReview != nil && newReview.Status == ReviewStatusPassed {
 			fmt.Printf("\n%s All clean after %d iteration(s)!\n", icons.CheckBold(), iter)
 			return nil
@@ -107,7 +110,11 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 		if newReview != nil && newReview.Status == ReviewStatusOpen {
 			reviews = []*ReviewRecord{newReview}
 		} else {
-			reviews, _ = store.ListOpen()
+			var listErr error
+			reviews, listErr = store.ListOpen()
+			if listErr != nil {
+				return fmt.Errorf("list open reviews: %w", listErr)
+			}
 			if len(reviews) == 0 {
 				fmt.Printf("\n%s All reviews resolved after %d iteration(s)!\n", icons.CheckBold(), iter)
 				return nil
@@ -116,7 +123,10 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 	}
 
 	// Report remaining issues.
-	remaining, _ := store.ListOpen()
+	remaining, listErr := store.ListOpen()
+	if listErr != nil {
+		return fmt.Errorf("list open reviews: %w", listErr)
+	}
 	if len(remaining) > 0 {
 		fmt.Printf("\n%s %d review(s) still open after %d iterations.\n", icons.Alert(), len(remaining), refineMaxIter)
 		fmt.Println("  Run 'hawk review show' to inspect, or increase --max-iterations.")
