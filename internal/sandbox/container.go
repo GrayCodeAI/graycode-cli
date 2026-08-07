@@ -203,11 +203,10 @@ func (c *ContainerSandbox) SetupCredentials() error {
 }
 
 func (c *ContainerSandbox) dockerRunArgs(name, attachDir, cacheDir string) []string {
+	// Called from Start which already holds c.mu; read networkMode without re-locking.
 	netMode := strings.TrimSpace(os.Getenv("HAWK_CONTAINER_NETWORK"))
 	if netMode == "" {
-		c.mu.Lock()
 		mode := c.networkMode
-		c.mu.Unlock()
 		if mode != "" {
 			netMode = mode
 		} else {
