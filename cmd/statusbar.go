@@ -4,13 +4,16 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine/git"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -23,8 +26,10 @@ var (
 	statusSpecColor   = infoSky
 	statusTokenColor  = tokenSage
 	statusCostColor   = costViolet
+	statusPRColor     = lipgloss.Color("#56D4DD") // cyan — unique hue in the footer row
 
 	statusCwdStyle          = lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true)
+	statusPRStyle           = lipgloss.NewStyle().Foreground(statusPRColor).Inline(true)
 	statusBranchStyle       = lipgloss.NewStyle().Foreground(statusBranchColor).Inline(true)
 	statusSpecStyle         = lipgloss.NewStyle().Foreground(statusSpecColor).Inline(true)
 	statusTokenStyle        = lipgloss.NewStyle().Foreground(statusTokenColor).Inline(true)
@@ -99,32 +104,13 @@ func controlPlaneChip(m *chatModel) string {
 	if m == nil || m.session == nil {
 		return ""
 	}
-	work := string(m.session.WorkMode())
-	if work == "" {
-		work = "act"
+	chip := ""
+	branch := cachedStatusBranch(m)
+	if branch == "main" || branch == "master" {
+		chip += dryRunStyle.Render("main!")
 	}
-	iso := m.session.Isolation().String()
-	// Short iso labels for narrow bars.
-	switch iso {
-	case "workspace":
-		iso = "ws"
-	case "container":
-		iso = "ctr"
-	case "strict":
-		iso = "ro"
-	}
-	tr := engine.ProjectTrust("")
-	trust := "ut" // untrusted
-	if !tr.Enforced {
-		trust = "-"
-	} else if tr.Trusted {
-		trust = icons.CheckBold()
-	}
-	chip := statusSpecStyle.Render(work) + statusDimStyle.Render("/") +
-		statusDimStyle.Render(iso) + statusDimStyle.Render("/") +
-		statusDimStyle.Render(trust)
-	if gi := engine.InspectGitBranch(""); gi.OnDefault {
-		chip += statusDimStyle.Render(" ") + dryRunStyle.Render("main!")
+	if m.session.AutoCommit() {
+		chip += statusDimStyle.Render("  auto-commit")
 	}
 	return chip
 }
@@ -138,11 +124,14 @@ func renderStatusBarPrimaryLeft(m *chatModel) string {
 	parts := []string{statusCwdStyle.Render(cwd + ":")}
 	if branch := cachedStatusBranch(m); branch != "" {
 		parts = append(parts, statusBranchStyle.Render(icons.Branch()+" "+branch))
+		if m != nil && len(m.statusLeftPRs) > 0 {
+			parts = append(parts, statusPRStyle.Render(icons.PullRequest()+" "+strings.Join(m.statusLeftPRs, " ")))
+		}
 	}
 	if stage := specStageForStatus(m); stage != "" {
 		parts = append(parts, statusSpecStyle.Render(stage))
 	}
-	return strings.Join(parts, statusDimStyle.Render(" "))
+	return strings.Join(parts, statusDimStyle.Render(" · "))
 }
 
 // renderStatusBarPrimaryRight — tokens, cost, duration.
@@ -179,26 +168,9 @@ func renderStatusBarSecondaryLeft(m *chatModel) string {
 	if m == nil || m.session == nil {
 		return ""
 	}
-	// Control-plane HUD: work mode · isolation · folder trust
-	work := string(m.session.WorkMode())
-	if work == "" {
-		work = "act"
-	}
-	iso := m.session.Isolation().String()
-	tr := engine.ProjectTrust("")
-	trustLabel := tr.String()
-	trustStyle := statusDimStyle
-	if tr.Blocked {
-		trustStyle = dryRunStyle
-	} else if tr.Trusted && tr.Enforced {
-		trustStyle = containerModeStyle
-	}
-	parts := []string{
-		statusSpecStyle.Render("mode:" + work),
-		statusDimStyle.Render("iso:" + iso),
-		trustStyle.Render(trustLabel),
-	}
-	if gi := engine.InspectGitBranch(""); gi.OnDefault {
+	parts := []string{}
+	branch := cachedStatusBranch(m)
+	if branch == "main" || branch == "master" {
 		parts = append(parts, dryRunStyle.Render(icons.Alert()+" default-branch"))
 	}
 	return strings.Join(parts, statusDimStyle.Render(" · "))
@@ -245,16 +217,62 @@ func renderStatusBarSecondaryRight(m *chatModel) string {
 // branch switch shows up in the status bar within a few seconds.
 const statusBranchTTL = 5 * time.Second
 
-func (m *chatModel) refreshStatusBarLeft(force bool) bool {
+// statusPRTTL bounds how long open-PR numbers are cached. gh is a network
+// call, so it is refreshed far less often than the branch lookup.
+const statusPRTTL = 30 * time.Second
+
+// prProvider is the lazily-detected git provider used for the status bar
+// PR lookup. Detection runs once; the provider is reused across refreshes.
+var (
+	prProviderOnce sync.Once
+	prProvider     *git.GitProvider
+)
+
+func cachedStatusPRProvider() *git.GitProvider {
+	prProviderOnce.Do(func() {
+		typ, owner, repo := git.DetectProvider("")
+		if owner != "" && repo != "" {
+			prProvider = git.NewGitProvider(typ, "", owner, repo)
+		}
+	})
+	return prProvider
+}
+
+// fetchStatusLeftPRs refreshes the open-PR numbers for branch. Never
+// blocks the TUI: failures and "gh not installed" degrade to nil.
+func fetchStatusLeftPRs(branch string) []string {
+	gp := cachedStatusPRProvider()
+	if gp == nil {
+		return nil
+	}
+	nums, err := gp.OpenPRNumbers(branch)
+	if err != nil || len(nums) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(nums))
+	for _, n := range nums {
+		out = append(out, fmt.Sprintf("#%d", n))
+	}
+	return out
+}
+
+func fetchStatusLeftPRsCmd(branch string) tea.Cmd {
+	return func() tea.Msg {
+		nums := fetchStatusLeftPRs(branch)
+		return statusLeftPRsMsg{branch: branch, nums: nums}
+	}
+}
+
+func (m *chatModel) refreshStatusBarLeft(force bool) (bool, tea.Cmd) {
 	if m == nil {
-		return false
+		return false, nil
 	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		cwd = "."
 	}
 	if !force && m.statusLeftKey == cwd && m.statusLeftVal != "" && time.Since(m.statusLeftAt) < statusBranchTTL {
-		return false
+		return false, nil
 	}
 	branch := ""
 	if b, err := gitOutput("rev-parse", "--abbrev-ref", "HEAD"); err == nil && b != "" {
@@ -267,7 +285,12 @@ func (m *chatModel) refreshStatusBarLeft(force bool) bool {
 	m.statusLeftVal = shortenHomePath(cwd)
 	m.statusLeftBranch = branch
 	m.statusLeftAt = time.Now()
-	return true
+	var prCmd tea.Cmd
+	if branch != "" && (force || time.Since(m.statusLeftPRAt) > statusPRTTL) {
+		m.statusLeftPRAt = time.Now()
+		prCmd = fetchStatusLeftPRsCmd(branch)
+	}
+	return true, prCmd
 }
 
 func renderStatusBarLeft(m *chatModel) string {
@@ -278,11 +301,14 @@ func renderStatusBarLeft(m *chatModel) string {
 	parts := []string{statusCwdStyle.Render(cwd + ":")}
 	if branch := cachedStatusBranch(m); branch != "" {
 		parts = append(parts, statusBranchStyle.Render(icons.Branch()+" "+branch))
+		if m != nil && len(m.statusLeftPRs) > 0 {
+			parts = append(parts, statusPRStyle.Render(icons.PullRequest()+" "+strings.Join(m.statusLeftPRs, " ")))
+		}
 	}
 	if stage := specStageForStatus(m); stage != "" {
 		parts = append(parts, statusSpecStyle.Render(stage))
 	}
-	return strings.Join(parts, statusDimStyle.Render(" "))
+	return strings.Join(parts, statusDimStyle.Render(" · "))
 }
 
 // specStageForStatus returns a short spec stage indicator for the status bar,

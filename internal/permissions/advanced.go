@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Pre-compiled safe/unsafe patterns for performance.
@@ -100,26 +101,182 @@ func (a *AutoModeState) ShouldAutoAllow(toolName, summary string) (bool, bool) {
 		return false, true
 	}
 
-	// Check pattern match for Bash commands
+	// Check pattern match for Bash commands.
+	// Deny is checked before allow at every level so a specific deny
+	// (e.g. "go test ./secret") beats a broad allow (e.g. "go *").
 	if toolName == "Bash" {
+		trimmed := strings.TrimSpace(summary)
+
+		// --- Deny checks (all deny mechanisms beat all allow mechanisms) ---
+		// 1. Wildcard deny patterns.
+		for pattern := range a.denyList {
+			if strings.HasPrefix(pattern, "Bash:") {
+				cmdPattern := strings.TrimPrefix(pattern, "Bash:")
+				if matchBashPattern(cmdPattern, summary) {
+					return false, true
+				}
+			}
+		}
+		// 2. Semantic deny (prefix-based command-family deny).
+		if matched, allowed := a.semanticMatch(trimmed); matched && !allowed {
+			return false, true
+		}
+		// 3. Git-specific hard-deny for destructive subcommands.
+		if strings.HasPrefix(trimmed, "git ") && !isSafeGitCommand(summary) {
+			// Only auto-deny if there's a broad "git *" allow that would
+			// otherwise match. Specific git allows (e.g. "git status") are
+			// checked in the allow pass below.
+			if a.hasBroadAllow("git") {
+				return false, true
+			}
+		}
+
+		// --- Allow checks ---
+		// 4. Wildcard allow patterns.
 		for pattern := range a.allowList {
 			if strings.HasPrefix(pattern, "Bash:") {
 				cmdPattern := strings.TrimPrefix(pattern, "Bash:")
 				if matchBashPattern(cmdPattern, summary) {
-					// Narrow the auto-allow for git patterns: a broad
-					// "Bash:git:*" must not auto-approve destructive git
-					// subcommands like push --force / reset --hard / clean -f.
-					// Only the safe read-only subcommands pass (Phase 3).
-					if strings.HasPrefix(strings.TrimSpace(summary), "git ") && !isSafeGitCommand(summary) {
-						return false, true
-					}
 					return true, true
 				}
 			}
 		}
+		// 5. Semantic allow (prefix-based command-family allow).
+		if matched, allowed := a.semanticMatch(trimmed); matched && allowed {
+			return true, true
+		}
 	}
 
 	return false, false
+}
+
+// semanticMatch performs prefix-based command-family matching. It extracts
+// the command prefix (e.g. "go test" from "go test ./foo") and checks whether
+// any learned pattern is a prefix of the command or vice versa. This enables
+// "allow once, trust the family" behavior without requiring wildcards.
+// Deny patterns are checked before allow patterns (deny beats allow).
+func (a *AutoModeState) semanticMatch(cmd string) (matched, allowed bool) {
+	// Extract the base command prefix (first 1-3 tokens).
+	prefix := commandPrefix(cmd)
+
+	// Check deny patterns first (deny beats allow).
+	for pattern := range a.denyList {
+		if !strings.HasPrefix(pattern, "Bash:") {
+			continue
+		}
+		p := strings.TrimPrefix(pattern, "Bash:")
+		p = strings.TrimSpace(p)
+		p = strings.TrimSuffix(p, "*")
+		p = strings.TrimSuffix(p, " ")
+		if p == "" {
+			continue
+		}
+		if strings.HasPrefix(cmd, p) || strings.HasPrefix(prefix, p) {
+			return true, false
+		}
+	}
+	// Then check allow patterns.
+	for pattern := range a.allowList {
+		if !strings.HasPrefix(pattern, "Bash:") {
+			continue
+		}
+		p := strings.TrimPrefix(pattern, "Bash:")
+		p = strings.TrimSpace(p)
+		p = strings.TrimSuffix(p, "*")
+		p = strings.TrimSuffix(p, " ")
+		if p == "" {
+			continue
+		}
+		if strings.HasPrefix(cmd, p) || strings.HasPrefix(prefix, p) {
+			return true, true
+		}
+	}
+	return false, false
+}
+
+// hasBroadAllow reports whether there's a wildcard allow pattern for the
+// given command prefix (e.g. "git" matches "Bash:git *").
+func (a *AutoModeState) hasBroadAllow(prefix string) bool {
+	for pattern := range a.allowList {
+		if !strings.HasPrefix(pattern, "Bash:") {
+			continue
+		}
+		p := strings.TrimPrefix(pattern, "Bash:")
+		p = strings.TrimSpace(p)
+		p = strings.TrimSuffix(p, "*")
+		p = strings.TrimSuffix(p, " ")
+		if p == prefix {
+			return true
+		}
+	}
+	return false
+}
+
+// commandPrefix extracts the meaningful prefix of a command (the base
+// subcommand without arguments). e.g. "go test ./foo" -> "go test".
+func commandPrefix(cmd string) string {
+	fields := strings.Fields(cmd)
+	// Return first 2 tokens for multi-word commands (go test, npm install),
+	// or 1 token for simple commands (ls, git).
+	if len(fields) >= 2 {
+		// Check for common multi-word prefixes.
+		twoWord := fields[0] + " " + fields[1]
+		multiWordPrefixes := []string{
+			"go test", "go build", "go run", "npm test",
+			"npm run", "npm install", "pip install", "git status", "git log",
+			"git diff", "git show", "git branch", "cargo test", "cargo build",
+			"docker build", "docker run", "make test", "bundle exec",
+		}
+		for _, mw := range multiWordPrefixes {
+			if strings.EqualFold(twoWord, mw) {
+				return twoWord
+			}
+		}
+	}
+	if len(fields) >= 1 {
+		return fields[0]
+	}
+	return cmd
+}
+
+// Grants returns the auto-learned decisions as canonical Grant slice. Learned
+// denies are included so UnifiedGrants can enforce deny > allow precedence over
+// broad learned-allow patterns.
+func (a *AutoModeState) Grants() []Grant {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	var out []Grant
+	for key := range a.allowList {
+		tool, pattern := splitGrantKey(key)
+		out = append(out, Grant{
+			Tool:    tool,
+			Pattern: pattern,
+			Allow:   true,
+			Source:  SourceAutoLearned,
+			Label:   "learned",
+		})
+	}
+	for key := range a.denyList {
+		tool, pattern := splitGrantKey(key)
+		out = append(out, Grant{
+			Tool:    tool,
+			Pattern: pattern,
+			Allow:   false,
+			Source:  SourceAutoLearned,
+			Label:   "learned",
+		})
+	}
+	return out
+}
+
+// splitGrantKey splits an AutoModeState key ("Bash:go test ./...") into tool and
+// pattern. Keys without a ":" are treated as tool-wide ("Bash" → "Bash","*").
+func splitGrantKey(key string) (tool, pattern string) {
+	if idx := strings.Index(key, ":"); idx >= 0 {
+		return key[:idx], key[idx+1:]
+	}
+	return key, "*"
 }
 
 // matchBashPattern checks if a bash command matches a pattern.
@@ -132,10 +289,28 @@ func matchBashPattern(pattern, command string) bool {
 	return pattern == command
 }
 
-// BypassKillswitch disables permission checks globally.
+// BypassKillswitch disables permission checks globally. It now supports
+// per-category scoping and automatic expiry so the break-glass path is
+// narrower and self-limiting. The bool methods (Enable/Disable/IsEnabled)
+// remain for backward compat: Enable() scopes to all categories with no
+// expiry (session-long); the new BypassGrant struct is the recommended API.
 type BypassKillswitch struct {
 	enabled bool
-	mu      sync.RWMutex
+	// grant is the structured bypass (scope + expiry + reason). When nil the
+	// bypass behaves as legacy (all categories, session-long).
+	grant *BypassGrant
+	mu    sync.RWMutex
+}
+
+// BypassGrant is a structured bypass with scope, expiry, and justification.
+// Scope is a list of tool categories ("bash", "network", "filesystem"); empty
+// means all categories. ExpiresAt is zero for session-long. Reason is a
+// required justification surfaced in audit logs.
+type BypassGrant struct {
+	Enabled   bool      `json:"enabled"`
+	Scope     []string  `json:"scope,omitempty"`
+	ExpiresAt time.Time `json:"expires_at,omitempty"`
+	Reason    string    `json:"reason,omitempty"`
 }
 
 // NewBypassKillswitch creates a new bypass killswitch.
@@ -143,7 +318,7 @@ func NewBypassKillswitch() *BypassKillswitch {
 	return &BypassKillswitch{}
 }
 
-// Enable enables the bypass killswitch.
+// Enable enables the bypass killswitch (legacy: all categories, session-long).
 func (b *BypassKillswitch) Enable() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -155,13 +330,80 @@ func (b *BypassKillswitch) Disable() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.enabled = false
+	b.grant = nil
 }
 
-// IsEnabled checks if the bypass killswitch is enabled.
+// IsEnabled checks if the bypass killswitch is enabled (legacy compat).
 func (b *BypassKillswitch) IsEnabled() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.enabled
+}
+
+// EnableScoped enables the bypass for the given scope with an optional expiry.
+// A reason is required for audit. If expiresAt is zero, the bypass lasts for
+// the session. Passing an empty scope enables all categories.
+func (b *BypassKillswitch) EnableScoped(scope []string, expiresAt time.Time, reason string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.enabled = true
+	b.grant = &BypassGrant{
+		Enabled:   true,
+		Scope:     scope,
+		ExpiresAt: expiresAt,
+		Reason:    reason,
+	}
+}
+
+// Grant returns a copy of the current bypass grant (nil if legacy/unset).
+func (b *BypassKillswitch) Grant() *BypassGrant {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.grant == nil {
+		return nil
+	}
+	g := *b.grant
+	if len(b.grant.Scope) > 0 {
+		g.Scope = append([]string(nil), b.grant.Scope...)
+	}
+	return &g
+}
+
+// IsExpired reports whether a time-bound bypass has expired. A session-long
+// bypass (zero ExpiresAt) never expires.
+func (g *BypassGrant) IsExpired(now time.Time) bool {
+	return !g.ExpiresAt.IsZero() && !now.Before(g.ExpiresAt)
+}
+
+// Covers reports whether the bypass covers a tool category. Empty scope means
+// all categories.
+func (g *BypassGrant) Covers(category string) bool {
+	if len(g.Scope) == 0 {
+		return true
+	}
+	for _, s := range g.Scope {
+		if s == category {
+			return true
+		}
+	}
+	return false
+}
+
+// toolCategory maps a tool name to a bypass scope category. Local to the
+// permissions package (does not import safety to avoid a cycle).
+// ToolCategory maps a tool name to a bypass scope category. Exported so the
+// permission engine can scope bypass grants without importing safety.
+func ToolCategory(toolName string) string {
+	switch strings.ToLower(strings.TrimSpace(toolName)) {
+	case "bash":
+		return "bash"
+	case "webfetch", "websearch", "browser", "screenshot", "download":
+		return "network"
+	case "write", "edit", "structurededit", "multiedit", "fileedit", "notebookedit", "delete":
+		return "filesystem"
+	default:
+		return "other"
+	}
 }
 
 // ShadowedRuleDetector detects when permission rules shadow each other.

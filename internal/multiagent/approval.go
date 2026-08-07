@@ -23,6 +23,8 @@ const (
 	ResponseApprove RequestResponse = iota
 	// ResponseApproveForSession auto-approves subsequent calls to the same tool.
 	ResponseApproveForSession
+	// ResponseApproveForN auto-approves the next N calls to the same tool.
+	ResponseApproveForN
 	// ResponseReject denies the tool call and causes an error event.
 	ResponseReject
 )
@@ -44,6 +46,9 @@ type ApprovalRequest struct {
 	Summary string
 	// Category is the risk category matched by the gate classifier.
 	Category string
+	// N is the number of approvals granted when the human responds
+	// ResponseApproveForN. Defaults to 5 when unset (0).
+	N int
 
 	respond chan RequestResponse
 }
@@ -91,9 +96,11 @@ type MissionApprovalGate struct {
 	// *ApprovalRequest to an operator UI and return immediately.
 	OnRequest func(req *ApprovalRequest)
 
-	// mu guards sessionApproved; Check may run from many worker goroutines.
+	// mu guards sessionApproved and nApproved; Check may run from many worker
+	// goroutines.
 	mu              sync.Mutex
 	sessionApproved map[string]bool
+	nApproved       map[string]int
 }
 
 // NewMissionApprovalGate creates a gate with the given OnRequest handler.
@@ -122,8 +129,19 @@ func (g *MissionApprovalGate) Check(ctx context.Context, toolName, summary strin
 	// Session-level auto-approval (ResponseApproveForSession was used before).
 	g.mu.Lock()
 	approved := g.sessionApproved[toolName]
+	nRemaining := g.nApproved[toolName]
 	g.mu.Unlock()
 	if approved {
+		return nil
+	}
+	// N-count auto-approval (ResponseApproveForN was used before). Decrement
+	// under lock so concurrent workers don't double-spend.
+	if nRemaining > 0 {
+		g.mu.Lock()
+		if g.nApproved[toolName] > 0 {
+			g.nApproved[toolName]--
+		}
+		g.mu.Unlock()
 		return nil
 	}
 
@@ -147,6 +165,12 @@ func (g *MissionApprovalGate) Check(ctx context.Context, toolName, summary strin
 	case ResponseApproveForSession:
 		g.mu.Lock()
 		g.sessionApproved[toolName] = true
+		g.mu.Unlock()
+		return nil
+	case ResponseApproveForN:
+		g.mu.Lock()
+		// Default N=5 when the response carries no count.
+		g.nApproved[toolName] += req.N
 		g.mu.Unlock()
 		return nil
 	case ResponseReject:

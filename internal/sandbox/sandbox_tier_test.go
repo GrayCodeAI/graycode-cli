@@ -10,23 +10,23 @@ import (
 
 func TestDefaultConfig_DefaultTierIsWorkspace(t *testing.T) {
 	c := DefaultConfig()
-	if c.Tier != TierWorkspace {
-		t.Errorf("default Tier = %q, want %q", c.Tier, TierWorkspace)
+	if c.Security != TierWorkspace {
+		t.Errorf("default Tier = %q, want %q", c.Security, TierWorkspace)
 	}
 }
 
 func TestConfig_TierJSONRoundTrip(t *testing.T) {
 	cases := []struct {
 		name string
-		tier Tier
+		tier Security
 	}{
-		{"strict", TierStrict},
-		{"workspace", TierWorkspace},
-		{"off", TierOff},
+		{"strict", SecurityStrict},
+		{"workspace", SecurityWorkspace},
+		{"off", SecurityOff},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			c := &Config{Tier: tc.tier}
+			c := &Config{Security: tc.tier}
 			data, err := json.Marshal(c)
 			if err != nil {
 				t.Fatalf("marshal: %v", err)
@@ -39,8 +39,8 @@ func TestConfig_TierJSONRoundTrip(t *testing.T) {
 			if err := json.Unmarshal(data, &decoded); err != nil {
 				t.Fatalf("unmarshal: %v", err)
 			}
-			if decoded.Tier != tc.tier {
-				t.Errorf("round-trip Tier = %q, want %q", decoded.Tier, tc.tier)
+			if decoded.Security != tc.tier {
+				t.Errorf("round-trip Tier = %q, want %q", decoded.Security, tc.tier)
 			}
 		})
 	}
@@ -53,8 +53,8 @@ func TestConfig_TierUnmarshalDefaultsToWorkspace(t *testing.T) {
 	if err := json.Unmarshal([]byte(`{"enabled":true}`), &c); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if c.Tier != "" {
-		t.Errorf("legacy config Tier = %q, want empty (treated as TierOff downstream)", c.Tier)
+	if c.Security != "" {
+		t.Errorf("legacy config Tier = %q, want empty (treated as TierOff downstream)", c.Security)
 	}
 }
 
@@ -62,8 +62,8 @@ func TestConfig_TierUnmarshalDefaultsToWorkspace(t *testing.T) {
 
 func TestDefaultHawkPolicy_TierWorkspace(t *testing.T) {
 	p := DefaultHawkPolicy("/tmp/work", TierWorkspace)
-	if p.Tier != TierWorkspace {
-		t.Errorf("Tier = %q, want %q", p.Tier, TierWorkspace)
+	if p.Security != TierWorkspace {
+		t.Errorf("Tier = %q, want %q", p.Security, TierWorkspace)
 	}
 	if !p.AllowWrite {
 		t.Error("AllowWrite = false, want true (TierWorkspace allows workspace writes)")
@@ -75,8 +75,8 @@ func TestDefaultHawkPolicy_TierWorkspace(t *testing.T) {
 
 func TestDefaultHawkPolicy_TierStrict(t *testing.T) {
 	p := DefaultHawkPolicy("/tmp/work", TierStrict)
-	if p.Tier != TierStrict {
-		t.Errorf("Tier = %q, want %q", p.Tier, TierStrict)
+	if p.Security != TierStrict {
+		t.Errorf("Tier = %q, want %q", p.Security, TierStrict)
 	}
 	if p.AllowWrite {
 		t.Error("AllowWrite = true, want false (TierStrict denies all writes)")
@@ -92,8 +92,8 @@ func TestDefaultHawkPolicy_TierStrict(t *testing.T) {
 func TestDefaultHawkPolicy_TierOff(t *testing.T) {
 	// TierOff is the legacy behavior: allow everything.
 	p := DefaultHawkPolicy("/tmp/work", TierOff)
-	if p.Tier != TierOff {
-		t.Errorf("Tier = %q, want %q", p.Tier, TierOff)
+	if p.Security != TierOff {
+		t.Errorf("Tier = %q, want %q", p.Security, TierOff)
 	}
 	if !p.AllowWrite {
 		t.Error("AllowWrite = false, want true (TierOff allows writes)")

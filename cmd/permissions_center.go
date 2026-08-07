@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
@@ -56,6 +58,18 @@ func effectivePermissionTier(sess *engine.Session) engine.AutonomyLevel {
 		return DefaultContainerAutonomy
 	}
 	return perms.Autonomy()
+}
+
+// containerNetworkFlag is the CLI override for container network mode.
+var containerNetworkFlag string
+
+func normalizeContainerNetwork(raw string) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "none", "bridge", "isolated":
+		return strings.ToLower(strings.TrimSpace(raw)), true
+	default:
+		return "", false
+	}
 }
 
 func normalizePermissionSandbox(raw string) (string, string, bool) {
@@ -126,6 +140,40 @@ func currentDryRun(sess *engine.Session) bool {
 	return sess.PermSvc().DryRun()
 }
 
+// parseBypassFlags extracts --scope, --for, --reason from /autonomy bypass args.
+func parseBypassFlags(args []string) (scope []string, expires time.Time, reason string) {
+	for _, a := range args {
+		a = strings.TrimSpace(a)
+		switch {
+		case strings.HasPrefix(a, "--scope="):
+			v := strings.TrimPrefix(a, "--scope=")
+			for _, s := range strings.Split(v, ",") {
+				s = strings.TrimSpace(s)
+				if s != "" {
+					scope = append(scope, s)
+				}
+			}
+		case strings.HasPrefix(a, "--for="):
+			v := strings.TrimPrefix(a, "--for=")
+			if d, err := time.ParseDuration(v); err == nil {
+				expires = time.Now().Add(d)
+			}
+		case strings.HasPrefix(a, "--reason="):
+			reason = strings.Trim(strings.TrimPrefix(a, "--reason="), `"`)
+		}
+	}
+	return scope, expires, reason
+}
+
+// markOverridden returns " *" if the flag was explicitly overridden by the
+// user, so the profile display can mark customized flags.
+func markOverridden(profile *engine.AutonomyProfile, flag string) string {
+	if profile != nil && profile.IsOverridden(flag) {
+		return " *"
+	}
+	return ""
+}
+
 func autonomyCommandHelp() string {
 	return "Autonomy Center\n" +
 		"  /autonomy                          Show current tier, sandbox, spec stage, and rules\n" +
@@ -133,11 +181,16 @@ func autonomyCommandHelp() string {
 		"  /autonomy sandbox <strict|workspace|off>\n" +
 		"                                      Permission policy inside the Docker sandbox\n" +
 		"                                      (strict=always ask, workspace=allow project files, off=allow all)\n" +
+		"  /autonomy bypass <on|off>          Break-glass bypass (optionally --scope --for --reason)\n" +
 		"  /autonomy dry-run <on|off>         Deny every tool call unconditionally (kill switch)\n" +
 		"  /autonomy allow <rule>\n" +
 		"  /autonomy deny <rule>\n" +
 		"  /autonomy rules                    Show current allow/deny rules\n" +
 		"  /autonomy rules clear              Clear current session rules\n" +
+		"  /autonomy profile [flag=<on|off>]  Show or override per-flag autonomy (auto_execute_bash, auto_network)\n" +
+		"  /autonomy audit                    Show recent permission decisions with reasons\n" +
+		"  /autonomy metrics                  Show permission decision counters\n" +
+		"  /autonomy grants cleanup           Rebuild active rules from settings (clear learned)\n" +
 		"  /autonomy reset                    Reset tier, sandbox, dry-run, and rules\n" +
 		"  /autonomy save [project|global]    Persist the current policy\n" +
 		"\n" +
@@ -181,10 +234,50 @@ func permissionRulesSummary(m *chatModel) string {
 	if m == nil {
 		return "No active permission state."
 	}
-	allowRules := effectiveAllowRules(m.settings)
-	denyRules := effectiveDenyRules(m.settings)
 	var b strings.Builder
 	b.WriteString("Permission Rules\n")
+
+	// Show unified grants from the engine (Memory + AutoMode + ApprovalStore)
+	// when available, with source labels. Fall back to settings-based rules.
+	if m.session != nil && m.session.PermSvc() != nil && m.session.PermSvc().Engine() != nil {
+		pe := m.session.PermSvc().Engine()
+		if pe.UnifiedGrants != nil {
+			grants := pe.UnifiedGrants.All(time.Now())
+			var allows, denies []string
+			for _, g := range grants {
+				label := g.Tool + "(" + g.Pattern + ") [" + g.Source.String() + "]"
+				if g.Label != "" {
+					label += " (" + g.Label + ")"
+				}
+				if g.Allow {
+					allows = append(allows, label)
+				} else {
+					denies = append(denies, label)
+				}
+			}
+			if len(allows) == 0 {
+				b.WriteString("  Allow: none\n")
+			} else {
+				b.WriteString("  Allow:\n")
+				for _, r := range allows {
+					b.WriteString("    - " + r + "\n")
+				}
+			}
+			if len(denies) == 0 {
+				b.WriteString("  Deny: none\n")
+			} else {
+				b.WriteString("  Deny:\n")
+				for _, r := range denies {
+					b.WriteString("    - " + r + "\n")
+				}
+			}
+			return strings.TrimRight(b.String(), "\n")
+		}
+	}
+
+	// Fallback: settings-based rules.
+	allowRules := effectiveAllowRules(m.settings)
+	denyRules := effectiveDenyRules(m.settings)
 	if len(allowRules) == 0 {
 		b.WriteString("  Allow: none\n")
 	} else {
@@ -378,17 +471,33 @@ func (m *chatModel) handleAutonomyCommand(parts []string) (chatModel, tea.Cmd) {
 		}
 	case "allow":
 		if len(parts) < 3 {
-			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /autonomy allow <rule>  e.g. /autonomy allow Bash(git:*)"})
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /autonomy allow <rule> [--for=N]  e.g. /autonomy allow Bash(git:*)"})
 			return *m, nil
 		}
-		specs := parseToolListFromCLI([]string{strings.Join(parts[2:], " ")})
+		// Extract optional --for=N before parsing the rule.
+		var ruleParts []string
+		var forN int
+		for _, p := range parts[2:] {
+			if strings.HasPrefix(p, "--for=") {
+				if n, err := strconv.Atoi(strings.TrimPrefix(p, "--for=")); err == nil && n > 0 {
+					forN = n
+				}
+			} else {
+				ruleParts = append(ruleParts, p)
+			}
+		}
+		specs := parseToolListFromCLI([]string{strings.Join(ruleParts, " ")})
 		if len(specs) == 0 {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "No valid allow rule provided."})
 			return *m, nil
 		}
 		m.settings.AllowedTools = dedupeStrings(append(m.settings.AllowedTools, specs...))
 		rebuildSessionPermissionRules(m.session, m.settings)
-		m.messages = append(m.messages, displayMsg{role: "system", content: "Allow rules updated.\n" + permissionRulesSummary(m)})
+		msg := "Allow rules updated"
+		if forN > 0 {
+			msg += fmt.Sprintf(" (this pattern auto-allowed for next %d uses)", forN)
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: msg + ".\n" + permissionRulesSummary(m)})
 	case "deny":
 		if len(parts) < 3 {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /autonomy deny <rule>  e.g. /autonomy deny Bash(rm -rf *)"})
@@ -402,12 +511,31 @@ func (m *chatModel) handleAutonomyCommand(parts []string) (chatModel, tea.Cmd) {
 		m.settings.DisallowedTools = dedupeStrings(append(m.settings.DisallowedTools, specs...))
 		rebuildSessionPermissionRules(m.session, m.settings)
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Deny rules updated.\n" + permissionRulesSummary(m)})
+	case "grants":
+		if len(parts) > 2 && strings.EqualFold(strings.TrimSpace(parts[2]), "cleanup") {
+			if m.session != nil && m.session.PermSvc() != nil {
+				mem := m.session.PermSvc().Memory()
+				if mem != nil {
+					// Reset clears all learned + user rules; rebuild from settings.
+					rebuildSessionPermissionRules(m.session, m.settings)
+					m.messages = append(m.messages, displayMsg{role: "system", content: "Grants cleaned up. Active rules rebuilt from settings.\n" + permissionRulesSummary(m)})
+					return *m, nil
+				}
+			}
+			m.messages = append(m.messages, displayMsg{role: "error", content: "No active permission state."})
+			return *m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /autonomy grants cleanup — rebuild active rules from settings (clears learned grants)"})
 	case "rules":
 		if len(parts) > 2 && strings.EqualFold(strings.TrimSpace(parts[2]), "clear") {
 			m.settings.AutoAllow = nil
 			m.settings.AllowedTools = nil
 			m.settings.DisallowedTools = nil
+			m.settings.NeverAllow = nil
 			rebuildSessionPermissionRules(m.session, m.settings)
+			if m.session != nil && m.session.PermSvc() != nil {
+				m.session.PermSvc().SetNeverAllow(nil)
+			}
 			m.messages = append(m.messages, displayMsg{role: "system", content: "Autonomy rules cleared for the current session."})
 			return *m, nil
 		}
@@ -423,6 +551,180 @@ func (m *chatModel) handleAutonomyCommand(parts []string) (chatModel, tea.Cmd) {
 			return *m, nil
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Autonomy policy saved to " + path})
+	case "bypass":
+		if m.session == nil || m.session.PermSvc() == nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "No active session."})
+			return *m, nil
+		}
+		if len(parts) < 3 {
+			bypass := m.session.PermSvc().BypassKill()
+			state := "off"
+			if bypass != nil && bypass.IsEnabled() {
+				state = "on"
+				g := bypass.Grant()
+				if g != nil && len(g.Scope) > 0 {
+					state += " (scope: " + strings.Join(g.Scope, ",") + ")"
+					if !g.ExpiresAt.IsZero() {
+						state += " (expires: " + g.ExpiresAt.Format("15:04:05") + ")"
+					}
+				}
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Bypass: " + state + "\nUsage: /autonomy bypass <on|off> [--scope=bash,network] [--for=5m] [--reason=\"debugging\"]"})
+			return *m, nil
+		}
+		switch strings.ToLower(strings.TrimSpace(parts[2])) {
+		case "on", "true", "1":
+			scope, expires, reason := parseBypassFlags(parts[3:])
+			m.session.PermSvc().BypassKill().EnableScoped(scope, expires, reason)
+			scopeLabel := "all"
+			if len(scope) > 0 {
+				scopeLabel = strings.Join(scope, ",")
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Bypass → on (scope: %s, reason: %s). Use with care.", scopeLabel, reason)})
+		case "off", "false", "0":
+			m.session.PermSvc().BypassKill().Disable()
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Bypass → off. Normal permission checks resume."})
+		default:
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /autonomy bypass <on|off> [--scope=...] [--for=...] [--reason=...]"})
+		}
+	case "profile":
+		if m.session == nil || m.session.PermSvc() == nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "No active session."})
+			return *m, nil
+		}
+		if len(parts) < 3 {
+			// Show current profile flags.
+			profile := m.session.PermSvc().AutonomyProfile()
+			if profile == nil {
+				m.messages = append(m.messages, displayMsg{role: "system", content: "No active profile."})
+				return *m, nil
+			}
+			var b strings.Builder
+			b.WriteString("Autonomy Profile\n")
+			b.WriteString(fmt.Sprintf("  Level: %s\n", profile.Level.String()))
+			b.WriteString(fmt.Sprintf("  auto_continue:    %v\n", profile.AutoContinue))
+			b.WriteString(fmt.Sprintf("  auto_apply_edits:  %v\n", profile.AutoApplyEdits))
+			b.WriteString(fmt.Sprintf("  auto_execute_bash: %v%s\n", profile.AutoExecuteBash, markOverridden(profile, "autoexecutebash")))
+			b.WriteString(fmt.Sprintf("  auto_commit:       %v\n", profile.AutoCommit))
+			b.WriteString(fmt.Sprintf("  auto_network:      %v%s\n", profile.AutoNetwork, markOverridden(profile, "autonetwork")))
+			b.WriteString("\nUsage: /autonomy profile <flag>=<on|off>\n  e.g. /autonomy profile auto_execute_bash=off")
+			m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
+			return *m, nil
+		}
+		// Parse flag=value.
+		flagSet := strings.Join(parts[2:], " ")
+		idx := strings.Index(flagSet, "=")
+		if idx < 0 {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /autonomy profile <flag>=<on|off>"})
+			return *m, nil
+		}
+		flagName := strings.TrimSpace(flagSet[:idx])
+		flagVal := strings.ToLower(strings.TrimSpace(flagSet[idx+1:]))
+		val := flagVal == "on" || flagVal == "true" || flagVal == "1"
+		before := m.session.PermSvc().AutonomyProfile()
+		if before == nil || !before.Override(flagName, val) {
+			m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unknown flag %q. Valid: auto_continue, auto_apply_edits, auto_execute_bash, auto_commit, auto_network", flagName)})
+			return *m, nil
+		}
+		m.session.PermSvc().ApplyAutonomyOverrides(before.Overrides())
+		m.settings.AutonomyOverrides = before.Overrides()
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Profile updated: %s=%v\n%s", flagName, val, func() string {
+			p := m.session.PermSvc().AutonomyProfile()
+			if p == nil {
+				return ""
+			}
+			return fmt.Sprintf("  auto_execute_bash=%v auto_network=%v", p.AutoExecuteBash, p.AutoNetwork)
+		}())})
+	case "spec-tests":
+		if len(parts) < 3 {
+			state := "off"
+			if m.settings.SpecAllowTests {
+				state = "on"
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Spec-stage test allowance: " + state + "\nUsage: /autonomy spec-tests <on|off>\n  When on, safe test commands (go test, npm test, pytest, etc.) are permitted during the spec workflow."})
+			return *m, nil
+		}
+		switch strings.ToLower(strings.TrimSpace(parts[2])) {
+		case "on", "true", "1":
+			m.settings.SpecAllowTests = true
+			m.session.PermSvc().SetSpecAllowTests(true)
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Spec-stage test allowance → on"})
+		case "off", "false", "0":
+			m.settings.SpecAllowTests = false
+			m.session.PermSvc().SetSpecAllowTests(false)
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Spec-stage test allowance → off"})
+		default:
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Usage: /autonomy spec-tests <on|off>"})
+		}
+	case "isolation":
+		if len(parts) < 3 {
+			cur := strings.TrimSpace(containerNetworkFlag)
+			if cur == "" {
+				cur = "bridge"
+			}
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Container network isolation: " + cur + "\nUsage: /autonomy isolation <none|bridge|isolated>\n  none     — no network access\n  bridge   — shared bridge (default)\n  isolated — per-container network, concurrent containers can't probe each other"})
+			return *m, nil
+		}
+		mode, ok := normalizeContainerNetwork(parts[2])
+		if !ok {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "Valid modes: none, bridge, isolated"})
+			return *m, nil
+		}
+		containerNetworkFlag = mode
+		m.settings.ContainerNetwork = mode
+		m.messages = append(m.messages, displayMsg{role: "system", content: "Container network isolation → " + mode + "\n(affects next container start)"})
+	case "never":
+		if m.session == nil || m.session.PermSvc() == nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "No active session."})
+			return *m, nil
+		}
+		if len(parts) < 3 {
+			never := m.session.PermSvc().NeverAllow()
+			var b strings.Builder
+			b.WriteString("Personal Hard Ceiling (never rules)\n")
+			if len(never) == 0 {
+				b.WriteString("  none — YOLO can do anything. Add one with /autonomy never <rule>\n")
+			} else {
+				for _, r := range never {
+					b.WriteString("  - " + r + "\n")
+				}
+			}
+			b.WriteString("\nUsage: /autonomy never <rule>   e.g. /autonomy never Write(*.env)\n")
+			b.WriteString("       /autonomy never clear")
+			m.messages = append(m.messages, displayMsg{role: "system", content: b.String()})
+			return *m, nil
+		}
+		if strings.EqualFold(strings.TrimSpace(parts[2]), "clear") {
+			m.settings.NeverAllow = nil
+			m.session.PermSvc().SetNeverAllow(nil)
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Never rules cleared."})
+			return *m, nil
+		}
+		specs := parseToolListFromCLI([]string{strings.Join(parts[2:], " ")})
+		if len(specs) == 0 {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "No valid never rule provided."})
+			return *m, nil
+		}
+		m.settings.NeverAllow = append(m.settings.NeverAllow, specs...)
+		m.session.PermSvc().SetNeverAllow(m.settings.NeverAllow)
+		var nb strings.Builder
+		nb.WriteString("Never rule added. Even YOLO will be blocked.\n")
+		for _, r := range m.settings.NeverAllow {
+			nb.WriteString("  - " + r + "\n")
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: nb.String()})
+	case "audit":
+		if m.session == nil || m.session.PermSvc() == nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "No active session."})
+			return *m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: m.session.PermSvc().AuditLog()})
+	case "metrics":
+		if m.session == nil || m.session.PermSvc() == nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "No active session."})
+			return *m, nil
+		}
+		m.messages = append(m.messages, displayMsg{role: "system", content: m.session.PermSvc().PermissionMetrics()})
 	case "reset":
 		resetPermissionCenter(m)
 		m.messages = append(m.messages, displayMsg{role: "system", content: "Autonomy Center reset to defaults.\n" + autonomyCenterSummary(m)})

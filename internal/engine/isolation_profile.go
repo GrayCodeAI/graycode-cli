@@ -101,6 +101,32 @@ func (p IsolationProfile) String() string {
 	return fmt.Sprintf("os=%s", osMode)
 }
 
+// ShortLabel returns a compact single-word label suitable for the
+// status bar control plane chip. For the four named presets it
+// returns the canonical short form; for custom profiles it falls
+// back to the first word of String().
+func (p IsolationProfile) ShortLabel() string {
+	switch {
+	case p == IsolationDev:
+		return "dev"
+	case p == IsolationWorkspace:
+		return "workspace"
+	case p == IsolationStrict:
+		return "strict"
+	case p == IsolationContainer:
+		return "container"
+	}
+	// For custom profiles, extract the first meaningful word.
+	s := p.String()
+	if idx := strings.Index(s, ","); idx != -1 {
+		s = s[:idx]
+	}
+	if s == "" {
+		return "off"
+	}
+	return s
+}
+
 // Normalize fills empty OSMode as off.
 func (p IsolationProfile) Normalize() IsolationProfile {
 	if p.OSMode == "" {

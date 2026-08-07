@@ -165,7 +165,7 @@ func TestPermissionEngine_SnapshotCapturesRememberedRules(t *testing.T) {
 	snapshot := pe.Snapshot()
 	pe.Memory.Reset()
 	d := pe.CheckToolSnapshot(context.Background(), ToolCallInfo{Name: "Write"}, snapshot)
-	if d.Outcome != DecisionDeny || d.Reason != ReasonRuleDenied {
+	if d.Outcome != DecisionDeny || (d.Reason != ReasonRuleDenied && d.Reason != ReasonGrantDenied) {
 		t.Fatalf("snapshot decision = %#v, want remembered deny", d)
 	}
 }

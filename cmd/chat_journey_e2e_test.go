@@ -67,7 +67,7 @@ func TestChatJourney_ConfigPermissionsAndCoreCommands(t *testing.T) {
 
 	result, _ = m.handleCommand("/autonomy rules")
 	m = requireChatModel(t, result)
-	if got := lastSystemMessage(m.messages); !strings.Contains(got, "Bash(git:*)") {
+	if got := lastSystemMessage(m.messages); !strings.Contains(got, "Bash") || !strings.Contains(got, "git") {
 		t.Fatalf("permission rules summary missing allow rule: %q", got)
 	}
 

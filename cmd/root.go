@@ -11,6 +11,7 @@ import (
 	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/onboarding"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
@@ -197,6 +198,11 @@ Run hawk and use /config to set up your first provider.`, registeredProviderCoun
 
 		// TUI path uses credentials — run the one-time hygiene pass here.
 		logMigrateProviderSecretsError(logger.Default(), hawkconfig.MigrateProviderSecrets())
+
+		// Folder trust check — block starting CLI in an untrusted directory
+		if tr := engine.ProjectTrust(""); tr.Blocked {
+			return fmt.Errorf("cannot start CLI: folder not trusted (%s)\nProject-scoped hooks, MCP servers, and custom specialists are blocked.\nRun 'hawk trust add' to trust this folder before starting hawk", tr.Path)
+		}
 
 		// Launch TUI — use /config to set API keys; eyrie supplies providers and models
 		return runChat()

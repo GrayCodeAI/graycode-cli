@@ -9,7 +9,8 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
-// Mode represents the sandbox isolation level.
+// Mode represents the sandbox isolation level — what the sandbox *does* to
+// the process (filesystem/network restrictions).
 type Mode string
 
 const (
@@ -18,25 +19,38 @@ const (
 	ModeOff       Mode = "off"       // no restrictions
 )
 
-// Tier controls the sandbox's security posture. The new default is
-// TierWorkspace (allow workspace writes, deny process exec) which is
-// safer than the legacy TierOff default. Existing users who rely on
-// process exec can opt back in via Tier=TierOff in their config.
-type Tier string
+// Security controls the sandbox's security posture — what the user *wants*
+// for safety. It is orthogonal to Mode: Mode governs *how* the sandbox
+// isolates, Security governs *how much* isolation the user desires.
+//
+// The new default is SecurityWorkspace (allow workspace writes, deny process
+// exec) which is safer than the legacy SecurityOff default. Existing users
+// who rely on process exec can opt back in via Security=SecurityOff.
+type Security string
 
 const (
-	// TierStrict denies everything: no writes, no process exec,
+	// SecurityStrict denies everything: no writes, no process exec,
 	// no network. The agent can only read.
-	TierStrict Tier = "strict"
-	// TierWorkspace is the new default. Allows writes to the
+	SecurityStrict Security = "strict"
+	// SecurityWorkspace is the new default. Allows writes to the
 	// workspace + scratch dir, but denies process exec. An agent
 	// that needs to run Bash must either be in container mode
-	// (ContainerExecutor) or have Tier set to TierOff.
-	TierWorkspace Tier = "workspace"
-	// TierOff is the legacy default. Allow everything: writes,
+	// (ContainerExecutor) or have Security set to SecurityOff.
+	SecurityWorkspace Security = "workspace"
+	// SecurityOff is the legacy default. Allow everything: writes,
 	// process exec, network. Used by users who need the full
-	// pre-tier behavior.
-	TierOff Tier = "off"
+	// pre-security behavior.
+	SecurityOff Security = "off"
+)
+
+// Deprecated: Tier is renamed to Security. These aliases are provided for
+// backward compatibility and will be removed in a future release.
+type Tier = Security
+
+const (
+	TierStrict    = SecurityStrict
+	TierWorkspace = SecurityWorkspace
+	TierOff       = SecurityOff
 )
 
 // SandboxConfig describes how a command should be sandboxed.
@@ -44,22 +58,22 @@ type SandboxConfig struct {
 	Mode         Mode
 	WorkspaceDir string
 	AllowNetwork bool
-	// Tier selects the security tier (strict / workspace / off).
-	// Empty defaults to TierOff for back-compat with legacy
-	// callers that don't know about tiers. New callers should
-	// set Tier explicitly (typically TierWorkspace to match
-	// the Config.Tier default in DefaultConfig).
-	Tier Tier
+	// Security selects the security posture (strict / workspace / off).
+	// Empty defaults to SecurityOff for back-compat with legacy
+	// callers that don't know about security. New callers should
+	// set Security explicitly (typically SecurityWorkspace to match
+	// the Config.Security default in DefaultConfig).
+	Security Security
 }
 
 // DefaultHawkPolicy creates a sensible default SeatbeltPolicy for hawk
-// operations in the given working directory. The tier parameter
+// operations in the given working directory. The security parameter
 // selects the security posture:
 //
-//   - TierStrict: deny everything
-//   - TierWorkspace (new default): allow workspace writes, no process
-//   - TierOff: legacy behavior (allow everything)
-func DefaultHawkPolicy(workDir string, tier Tier) *SeatbeltPolicy {
+//   - SecurityStrict: deny everything
+//   - SecurityWorkspace (new default): allow workspace writes, no process
+//   - SecurityOff: legacy behavior (allow everything)
+func DefaultHawkPolicy(workDir string, security Security) *SeatbeltPolicy {
 	home := os.Getenv("HOME")
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
@@ -100,28 +114,28 @@ func DefaultHawkPolicy(workDir string, tier Tier) *SeatbeltPolicy {
 		AllowSysctl:   true,
 		ReadablePaths: readPaths,
 		WritablePaths: writePaths,
-		Tier:          tier,
+		Security:      security,
 	}
 
-	// Apply the tier's policy on top of the defaults. Tier takes
+	// Apply the security policy on top of the defaults. Security takes
 	// precedence over the legacy AllowWrite/AllowProcess fields
 	// so the new safe default is enforced regardless of legacy
 	// config values.
-	switch tier {
-	case TierStrict:
+	switch security {
+	case SecurityStrict:
 		p.AllowWrite = false
 		p.AllowProcess = false
 		p.AllowNetwork = false
-	case TierWorkspace:
+	case SecurityWorkspace:
 		p.AllowWrite = true
 		p.AllowProcess = false
-	case TierOff, "":
+	case SecurityOff, "":
 		// Legacy behavior: allow everything.
 		p.AllowWrite = true
 		p.AllowProcess = true
 	default:
-		// Unknown tier: log via fallback to TierOff. Caller can
-		// override by setting Tier explicitly to a known value.
+		// Unknown security: log via fallback to SecurityOff. Caller can
+		// override by setting Security explicitly to a known value.
 		p.AllowWrite = true
 		p.AllowProcess = true
 	}
@@ -143,6 +157,23 @@ func ParseMode(s string) Mode {
 		return ModeStrict
 	default:
 		return ModeStrict
+	}
+}
+
+// ParseSecurity converts a string to a Security. Unrecognized values default
+// to SecurityStrict (fail-closed) to prevent accidental sandbox bypass.
+func ParseSecurity(s string) Security {
+	switch s {
+	case "strict":
+		return SecurityStrict
+	case "workspace":
+		return SecurityWorkspace
+	case "off":
+		return SecurityOff
+	case "":
+		return SecurityStrict
+	default:
+		return SecurityStrict
 	}
 }
 

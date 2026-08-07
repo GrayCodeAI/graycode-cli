@@ -5,8 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	contracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
+	"github.com/GrayCodeAI/hawk/internal/permissions"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -56,6 +58,47 @@ func NewPermissionMemoryFromSnapshot(snapshot RuleSnapshot) *PermissionMemory {
 		allowAll[name] = allowed
 	}
 	return &PermissionMemory{allowRules: append([]string(nil), snapshot.AllowRules...), denyRules: append([]string(nil), snapshot.DenyRules...), allowAll: allowAll}
+}
+
+// Grants returns the remembered allow/deny rules as canonical permissions.Grant
+// slice. allowAll entries become tool-wide allow grants; allowRules/denyRules
+// become tool:pattern grants. Source is set so UnifiedGrants can rank user
+// rules above auto-learned ones.
+func (pm *PermissionMemory) Grants() []permissions.Grant {
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+
+	var out []permissions.Grant
+	for tool := range pm.allowAll {
+		out = append(out, permissions.Grant{
+			Tool:    tool,
+			Pattern: "*",
+			Allow:   true,
+			Source:  permissions.SourceUserAllow,
+			Label:   "from settings",
+		})
+	}
+	for _, rule := range pm.allowRules {
+		tool, pattern := parseRuleSpec(rule)
+		out = append(out, permissions.Grant{
+			Tool:    tool,
+			Pattern: pattern,
+			Allow:   true,
+			Source:  permissions.SourceUserAllow,
+			Label:   "from settings",
+		})
+	}
+	for _, rule := range pm.denyRules {
+		tool, pattern := parseRuleSpec(rule)
+		out = append(out, permissions.Grant{
+			Tool:    tool,
+			Pattern: pattern,
+			Allow:   false,
+			Source:  permissions.SourceUserDeny,
+			Label:   "from settings",
+		})
+	}
+	return out
 }
 
 // Reset clears all allow/deny memory so the active rule set can be rebuilt.
@@ -358,4 +401,98 @@ func matchRulePattern(pattern, summary string) bool {
 		return strings.HasPrefix(summary, pattern[:len(pattern)-1])
 	}
 	return pattern == summary
+}
+
+// permissionAuditLog is a fixed-size ring buffer of recent permission
+// decisions, surfaced via "/autonomy audit". It is safe for concurrent use.
+type permissionAuditLog struct {
+	mu      sync.Mutex
+	entries []auditEntry
+	head    int
+	full    bool
+}
+
+// auditEntry records one permission decision for the audit trail.
+type auditEntry struct {
+	Time    time.Time
+	Tool    string
+	Summary string
+	Outcome DecisionOutcome
+	Reason  DecisionReason
+}
+
+// newPermissionAuditLog creates a ring buffer holding the most recent cap
+// decisions.
+func newPermissionAuditLog(cap int) *permissionAuditLog {
+	if cap <= 0 {
+		cap = 256
+	}
+	return &permissionAuditLog{entries: make([]auditEntry, cap)}
+}
+
+// record appends a decision to the ring buffer.
+func (l *permissionAuditLog) record(tool, summary string, outcome DecisionOutcome, reason DecisionReason) {
+	if l == nil {
+		return
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.entries[l.head] = auditEntry{
+		Time:    time.Now(),
+		Tool:    tool,
+		Summary: summary,
+		Outcome: outcome,
+		Reason:  reason,
+	}
+	l.head++
+	if l.head >= len(l.entries) {
+		l.head = 0
+		l.full = true
+	}
+}
+
+// Recent returns the most recent n entries in chronological order (oldest
+// first). If n exceeds the buffer size, the entire buffer is returned.
+func (l *permissionAuditLog) Recent(n int) []auditEntry {
+	if l == nil {
+		return nil
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	size := len(l.entries)
+	if !l.full {
+		size = l.head
+	}
+	if n <= 0 || n > size {
+		n = size
+	}
+	out := make([]auditEntry, 0, n)
+	// Oldest entry index.
+	start := l.head - n
+	if start < 0 {
+		start += len(l.entries)
+	}
+	for i := 0; i < n; i++ {
+		idx := (start + i) % len(l.entries)
+		out = append(out, l.entries[idx])
+	}
+	return out
+}
+
+// Format returns a human-readable audit trail for display.
+func (l *permissionAuditLog) Format(n int) string {
+	if l == nil {
+		return "Audit log disabled."
+	}
+	entries := l.Recent(n)
+	if len(entries) == 0 {
+		return "No permission decisions recorded yet."
+	}
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("Permission Audit (last %d):\n", len(entries)))
+	for _, e := range entries {
+		b.WriteString(fmt.Sprintf("  [%s] %s %s → %s (%s)\n",
+			e.Time.Format("15:04:05"), e.Tool, e.Summary, e.Outcome, e.Reason))
+	}
+	return b.String()
 }

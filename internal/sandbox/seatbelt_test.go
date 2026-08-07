@@ -171,13 +171,13 @@ func TestDefaultHawkPolicy_ProfileProducesValidSBPL(t *testing.T) {
 
 func TestGenerateSeatbeltProfile_MachLookupTiered(t *testing.T) {
 	// TierOff keeps the legacy broad mach-lookup rule.
-	off := GenerateSeatbeltProfile(&SeatbeltPolicy{Tier: TierOff})
+	off := GenerateSeatbeltProfile(&SeatbeltPolicy{Security: SecurityOff})
 	if !strings.Contains(off, "(allow mach-lookup)\n") {
 		t.Error("TierOff profile should allow all mach-lookup services")
 	}
 
 	// All other tiers restrict mach-lookup to the service allowlist.
-	strict := GenerateSeatbeltProfile(&SeatbeltPolicy{Tier: TierStrict})
+	strict := GenerateSeatbeltProfile(&SeatbeltPolicy{Security: SecurityStrict})
 	if strings.Contains(strict, "(allow mach-lookup)\n") {
 		t.Error("restricted profile should not contain the broad mach-lookup rule")
 	}
@@ -189,7 +189,7 @@ func TestGenerateSeatbeltProfile_MachLookupTiered(t *testing.T) {
 	}
 
 	// Network-enabled tiers additionally allow resolution services.
-	net := GenerateSeatbeltProfile(&SeatbeltPolicy{Tier: TierWorkspace, AllowNetwork: true})
+	net := GenerateSeatbeltProfile(&SeatbeltPolicy{Security: SecurityWorkspace, AllowNetwork: true})
 	if !strings.Contains(net, `(global-name "com.apple.mDNSResponder")`) {
 		t.Error("network-enabled profile should allow mDNSResponder")
 	}

@@ -40,6 +40,16 @@ type ProfileConfig struct {
 	AllowNetwork *bool `toml:"allow_network"`
 	// DenyGlobs are fail-closed globs for this profile.
 	DenyGlobs []string `toml:"deny_globs"`
+	// CodeVerifier configures the static-analysis verifier for this profile.
+	CodeVerifier *CodeVerifierConfig `toml:"code_verifier"`
+}
+
+// CodeVerifierConfig is the on-disk shape of code_verifier profile config.
+type CodeVerifierConfig struct {
+	// BlockedModules are module/function names that trigger a violation.
+	BlockedModules []string `toml:"blocked_modules"`
+	// BlockedPatterns are regex patterns that trigger a violation.
+	BlockedPatterns []string `toml:"blocked_patterns"`
 }
 
 // Effective is the resolved sandbox configuration after merge.

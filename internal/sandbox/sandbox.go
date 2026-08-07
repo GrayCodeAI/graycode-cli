@@ -23,7 +23,7 @@ type Config struct {
 	Type         string   `json:"type"` // "namespace", "docker", "chroot", "seatbelt", "none"
 	AllowNetwork bool     `json:"allow_network"`
 	AllowWrite   bool     `json:"allow_write"`
-	Tier         Tier     `json:"tier"` // security tier (strict / workspace / off)
+	Security     Security `json:"tier"` // security posture (strict / workspace / off)
 	ReadOnlyDirs []string `json:"read_only_dirs"`
 	WritableDirs []string `json:"writable_dirs"`
 	MaxMemoryMB  int      `json:"max_memory_mb"`
@@ -40,8 +40,8 @@ func DefaultConfig() *Config {
 		Enabled:      true,
 		Type:         "auto",
 		AllowNetwork: true,
-		AllowWrite:   true, // legacy field; tier takes precedence
-		Tier:         TierWorkspace,
+		AllowWrite:   true, // legacy field; security takes precedence
+		Security:     SecurityWorkspace,
 		MaxMemoryMB:  512,
 		MaxCPUPct:    50,
 	}
@@ -133,12 +133,12 @@ func (s *Sandbox) setupNamespace() error {
 func (s *Sandbox) Run(ctx context.Context, command string) (*exec.Cmd, error) {
 	if !s.config.Enabled {
 		// Fail closed: a disabled sandbox must not silently fall back to host
-		// execution. Only an explicit tier=off opt-out allows running on the
-		// host; anything else is a misconfiguration (e.g. no backend).
-		if s.config.Tier != TierOff {
-			return nil, fmt.Errorf("sandbox is disabled and not explicitly opted out; set tier=off to allow host execution")
+		// execution. Only an explicit security=off opt-out allows running on
+		// the host; anything else is a misconfiguration (e.g. no backend).
+		if s.config.Security != SecurityOff {
+			return nil, fmt.Errorf("sandbox is disabled and not explicitly opted out; set security=off to allow host execution")
 		}
-		return exec.CommandContext(ctx, "bash", "-c", command), nil // #nosec G204 -- intentional host execution behind explicit tier=off opt-out
+		return exec.CommandContext(ctx, "bash", "-c", command), nil // #nosec G204 -- intentional host execution behind explicit security=off opt-out
 	}
 
 	// Auto-select the best available sandbox backend.
@@ -220,12 +220,12 @@ func (s *Sandbox) runSeatbelt(ctx context.Context, command string) (*exec.Cmd, e
 		workDir = s.config.ReadOnlyDirs[0]
 	}
 
-	policy := DefaultHawkPolicy(workDir, s.config.Tier)
+	policy := DefaultHawkPolicy(workDir, s.config.Security)
 	policy.AllowNetwork = s.config.AllowNetwork
 	// NOTE: AllowWrite is now set by DefaultHawkPolicy based on the
-	// tier (TierWorkspace → true, TierStrict → false). The legacy
+	// security (SecurityWorkspace → true, SecurityStrict → false). The legacy
 	// Config.AllowWrite field is preserved for JSON backward compat
-	// but no longer overrides the tier.
+	// but no longer overrides the security.
 
 	// Add configured readable dirs.
 	policy.ReadablePaths = append(policy.ReadablePaths, s.config.ReadOnlyDirs...)
@@ -246,31 +246,36 @@ func Available() bool {
 // the provided SandboxConfig. It returns the executable name and argument
 // list suitable for exec.Command, or an error if no sandbox backend is available.
 func WrapCommand(command string, cfg SandboxConfig) (string, []string, error) {
-	// Resolve the tier once. Empty string (legacy callers that
-	// don't know about Tier) keeps the old TierOff behavior;
-	// new callers can pass TierWorkspace to get the safer
-	// default. This makes the new Config.Tier=TierWorkspace
+	// Resolve the security once. Empty string (legacy callers that
+	// don't know about Security) keeps the old SecurityOff behavior;
+	// new callers can pass SecurityWorkspace to get the safer
+	// default. This makes the new Config.Security=SecurityWorkspace
 	// default effective through the legacy SandboxConfig path.
-	tier := cfg.Tier
-	if tier == "" {
-		tier = TierOff
+	security := cfg.Security
+	if security == "" {
+		security = SecurityOff
 	}
 	switch runtime.GOOS {
 	case "darwin":
 		if SeatbeltAvailable() {
+			// Use a cached profile temp file per tier so repeated commands
+			// reuse the same file instead of writing one per invocation.
+			profilePath, err := getCachedProfile(security)
+			if err == nil {
+				return "sandbox-exec", []string{"-f", profilePath, "bash", "-c", command}, nil
+			}
+			// Fallback: write a fresh profile if caching fails.
 			workDir := cfg.WorkspaceDir
 			if workDir == "" {
 				workDir, _ = os.Getwd()
 			}
-			policy := DefaultHawkPolicy(workDir, tier)
+			policy := DefaultHawkPolicy(workDir, security)
 			policy.AllowNetwork = cfg.AllowNetwork
-			// Write profile to temp file
 			tmpFile, err := os.CreateTemp("", "hawk-seatbelt-*.sb")
 			if err == nil {
 				profile := GenerateSeatbeltProfile(policy)
 				_, _ = tmpFile.WriteString(profile)
 				_ = tmpFile.Close()
-				// Track temp file for cleanup after session ends.
 				seatbeltTmpFilesMu.Lock()
 				seatbeltTmpFiles = append(seatbeltTmpFiles, tmpFile.Name())
 				seatbeltTmpFilesMu.Unlock()

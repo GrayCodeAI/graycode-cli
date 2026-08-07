@@ -84,9 +84,15 @@ type (
 	streamErrMsg        struct{ err error }
 	spinnerVerbTickMsg  struct{}
 	promptKeepAliveMsg  struct{}
-	usageUpdateMsg      struct{ usage *engine.StreamUsage }
-	compactStartMsg     struct{}
-	compactMsg          struct {
+	eyeBlinkTickMsg     struct{}
+	eyeFrameNextMsg     struct{ frame int }
+	statusLeftPRsMsg    struct {
+		branch string
+		nums   []string
+	}
+	usageUpdateMsg  struct{ usage *engine.StreamUsage }
+	compactStartMsg struct{}
+	compactMsg      struct {
 		strategy                  string
 		tokensBefore, tokensAfter int
 	}
@@ -135,6 +141,11 @@ type (
 		response chan string
 	}
 	askUserPromptTimeoutMsg struct{ seq int }
+	credentialAskMsg        struct {
+		req      tool.CredentialRequest
+		response chan tool.CredentialResponse
+	}
+	credentialPromptTimeoutMsg struct{ seq int }
 )
 
 type displayMsg struct {
@@ -188,10 +199,14 @@ type chatModel struct {
 	permTimeoutAt              time.Time   // deadline for the active permission prompt (zero = none)
 	askReq                     *askUserMsg // pending ask_user prompt
 	askReqSeq                  int
+	credentialReq              *credentialAskMsg // pending credential prompt
+	credentialReqSeq           int
+	credentialTimeoutAt        time.Time
 	width                      int
 	height                     int
 	quitting                   bool
 	blinkClosed                bool
+	eyeFrame                   int
 	slashSel                   int
 	hudOpen                    bool    // Agent Status HUD overlay (Ctrl+A)
 	hudData                    HUDData // latest HUD snapshot
@@ -235,6 +250,8 @@ type chatModel struct {
 	displayInTok                 float64
 	displayOutTok                float64
 	lastCtrlC                    time.Time
+	supervisedPending            bool      // Ctrl+L guard: waiting for confirmation to land on Supervised
+	supervisedPendingAt          time.Time // when the pending confirmation was set
 	history                      []string
 	historyIdx                   int
 	historyDraft                 string // unsent text before navigating history
@@ -278,6 +295,8 @@ type chatModel struct {
 	statusLeftVal                string
 	statusLeftBranch             string
 	statusLeftAt                 time.Time // last branch lookup; refreshed on a short TTL
+	statusLeftPRs                []string  // open PR numbers ("#184") for the current branch
+	statusLeftPRAt               time.Time // last PR lookup; refreshed on a longer TTL
 
 	// Incremental viewport cache (see chat_viewport_render.go).
 	vpStableContent string
@@ -498,10 +517,22 @@ func promptKeepAliveCmd() tea.Cmd {
 	return tea.Tick(15*time.Second, func(time.Time) tea.Msg { return promptKeepAliveMsg{} })
 }
 
+func eyeBlinkTickCmd() tea.Cmd {
+	return tea.Tick(4*time.Second, func(time.Time) tea.Msg { return eyeBlinkTickMsg{} })
+}
+
+func eyeFrameNextCmd(frame int, d time.Duration) tea.Cmd {
+	return tea.Tick(d, func(time.Time) tea.Msg { return eyeFrameNextMsg{frame: frame} })
+}
+
 func permissionPromptTimeoutCmd(seq int) tea.Cmd {
 	return tea.Tick(5*time.Minute, func(time.Time) tea.Msg { return permissionPromptTimeoutMsg{seq: seq} })
 }
 
 func askUserPromptTimeoutCmd(seq int) tea.Cmd {
 	return tea.Tick(5*time.Minute, func(time.Time) tea.Msg { return askUserPromptTimeoutMsg{seq: seq} })
+}
+
+func credentialPromptTimeoutCmd(seq int) tea.Cmd {
+	return tea.Tick(5*time.Minute, func(time.Time) tea.Msg { return credentialPromptTimeoutMsg{seq: seq} })
 }

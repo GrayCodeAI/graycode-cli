@@ -16,6 +16,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/spec"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -127,8 +128,11 @@ func (m *chatModel) quitModel() (tea.Model, tea.Cmd) {
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	if _, isMouse := msg.(tea.MouseMsg); !isMouse {
-		if m.refreshStatusBarLeft(false) {
+		if changed, prCmd := m.refreshStatusBarLeft(false); changed {
 			m.viewDirty = true
+			if prCmd != nil {
+				cmds = append(cmds, prCmd)
+			}
 		}
 	}
 
@@ -174,6 +178,48 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, promptKeepAliveCmd()
+
+	case statusLeftPRsMsg:
+		// Async PR lookup result — only apply if we're still on the same branch.
+		if m.statusLeftBranch == msg.branch {
+			m.statusLeftPRs = msg.nums
+			m.viewDirty = true
+			m.updateViewportContent()
+		}
+		return m, nil
+
+	case eyeBlinkTickMsg:
+		if m.showWelcomeBanner() {
+			m.eyeFrame = 1
+			m.rebuildWelcomeCache()
+			if len(m.messages) > 0 && m.messages[0].role == "welcome" {
+				m.messages[0].content = m.welcomeCache
+			}
+			m.viewDirty = true
+			m.updateViewportContent()
+			return m, tea.Batch(eyeBlinkTickCmd(), eyeFrameNextCmd(2, 60*time.Millisecond))
+		}
+		return m, eyeBlinkTickCmd()
+
+	case eyeFrameNextMsg:
+		if m.showWelcomeBanner() {
+			m.eyeFrame = msg.frame
+			m.rebuildWelcomeCache()
+			if len(m.messages) > 0 && m.messages[0].role == "welcome" {
+				m.messages[0].content = m.welcomeCache
+			}
+			m.viewDirty = true
+			m.updateViewportContent()
+			switch msg.frame {
+			case 2:
+				return m, eyeFrameNextCmd(3, 100*time.Millisecond)
+			case 3:
+				return m, eyeFrameNextCmd(0, 60*time.Millisecond)
+			}
+		} else {
+			m.eyeFrame = 0
+		}
+		return m, nil
 
 	case tea.MouseMsg:
 		if m.mouseEnabled() {
@@ -706,6 +752,28 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.updateViewportContent()
 			return m, nil
 		}
+
+		// Credential prompt active — handle y/n
+		if m.credentialReq != nil {
+			switch msg.String() {
+			case "y", "Y":
+				req := m.credentialReq
+				req.response <- tool.CredentialResponse{Approved: true}
+				m.credentialReq = nil
+				m.credentialTimeoutAt = time.Time{}
+				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CheckBold() + " Credential access granted: " + req.req.Name})
+			case "n", "N":
+				req := m.credentialReq
+				req.response <- tool.CredentialResponse{Approved: false, Reason: "denied by user"}
+				m.credentialReq = nil
+				m.credentialTimeoutAt = time.Time{}
+				m.messages = append(m.messages, displayMsg{role: "system", content: icons.CloseThick() + " Credential access denied: " + req.req.Name})
+			}
+			m.viewDirty = true
+			m.updateViewportContent()
+			return m, nil
+		}
+
 		// Container failed and is retryable. Hawk is fail-closed: the only
 		// recovery path is to restore Docker isolation.
 		if m.containerRetryable {
@@ -900,10 +968,36 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.updateViewportContent()
 						return m, nil
 					}
-					nextTier := nextAutonomyTier(m.session.PermSvc().Autonomy())
-					if m.session.PermSvc().Autonomy() == 0 || autonomyTierIndex(m.session.PermSvc().Autonomy()) < 0 {
+					// Expire a stale Supervised-confirmation prompt.
+					if m.supervisedPending && time.Since(m.supervisedPendingAt) > 1500*time.Millisecond {
+						m.supervisedPending = false
+					}
+					current := m.session.PermSvc().Autonomy()
+					// Guard landing on Supervised: when the cycle would reach it
+					// (current is YOLO), require a second Ctrl+L within 1.5s. This
+					// prevents accidental max-friction while keeping it one deliberate
+					// gesture away.
+					if isSupervisedPending(current) && !m.supervisedPending {
+						m.supervisedPending = true
+						m.supervisedPendingAt = time.Now()
+						m.messages = append(m.messages, displayMsg{
+							role:    "warning",
+							content: "Ctrl+L again within 1.5s to confirm Always Ask (max friction), or wait to skip.",
+						})
+						m.viewDirty = true
+						m.updateViewportContent()
+						return m, nil
+					}
+					var nextTier engine.AutonomyLevel
+					if m.supervisedPending && isSupervisedPending(current) {
+						nextTier = nextAutonomyTierIncludingSupervised(current)
+					} else {
+						nextTier = nextAutonomyTier(current)
+					}
+					if current == 0 || autonomyTierIndex(current) < 0 {
 						nextTier = DefaultContainerAutonomy
 					}
+					m.supervisedPending = false
 					m.session.PermSvc().SetAutonomy(nextTier)
 					m.settings.AutonomyExplicit = true
 					m.invalidateConnStatus()
@@ -967,8 +1061,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Batch(cmds...)
 			}
 		case tea.KeyEsc:
-			// Mid-turn: Esc is a no-op to prevent accidental cancellation of
-			// long-running operations. The user must press Ctrl+C to cancel.
+			if m.inScrollbackFocus() {
+				return m.cycleUIFocus()
+			}
 			if m.waiting {
 				return m, nil
 			}
@@ -1231,6 +1326,28 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewDirty = true
 			m.updateViewportContent()
 			return m, m.input.Focus()
+		}
+		return m, nil
+
+	case credentialAskMsg:
+		m.credentialReq = &msg
+		m.credentialReqSeq++
+		m.credentialTimeoutAt = time.Now().Add(5 * time.Minute)
+		prompt := fmt.Sprintf("AI wants to access %s (%s): %s",
+			msg.req.Name, msg.req.Credential, msg.req.Reason)
+		m.messages = append(m.messages, displayMsg{role: "credential", content: prompt, timeoutAt: m.credentialTimeoutAt})
+		m.viewDirty = true
+		m.updateViewportContent()
+		return m, credentialPromptTimeoutCmd(m.credentialReqSeq)
+
+	case credentialPromptTimeoutMsg:
+		if m.credentialReq != nil && m.credentialReqSeq == msg.seq {
+			m.credentialReq.response <- tool.CredentialResponse{Approved: false, Reason: "timed out"}
+			m.credentialReq = nil
+			m.credentialTimeoutAt = time.Time{}
+			m.messages = append(m.messages, displayMsg{role: "system", content: icons.Timer() + " Credential request timed out — denied."})
+			m.viewDirty = true
+			m.updateViewportContent()
 		}
 		return m, nil
 

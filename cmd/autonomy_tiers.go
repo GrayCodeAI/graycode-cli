@@ -9,12 +9,16 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
-// Four container autonomy tiers (Scout → Builder → Operator → Autonomous).
+// Five container autonomy tiers (Scout → Builder → Operator → Autonomous → Always Ask).
+// Supervised ("Always Ask") is included in the Ctrl+L cycle but requires a
+// deliberate double-press to land on (see chat_update.go ctrl+l handling) so
+// repeated key-presses can't accidentally drop the user into max-friction mode.
 var containerAutonomyTiers = []engine.AutonomyLevel{
 	engine.AutonomyBasic,
 	engine.AutonomySemi,
 	engine.AutonomyFull,
 	engine.AutonomyYOLO,
+	engine.AutonomySupervised,
 }
 
 var containerAutonomyTierNames = []string{
@@ -22,6 +26,7 @@ var containerAutonomyTierNames = []string{
 	"Builder",
 	"Operator",
 	"Autonomous",
+	"Always Ask",
 }
 
 // DefaultContainerAutonomy is the tier applied when the Docker container becomes ready.
@@ -48,8 +53,31 @@ func autonomyTierIndex(level engine.AutonomyLevel) int {
 	return 1 // default Builder
 }
 
+// nextAutonomyTier returns the next tier in the Ctrl+L cycle. It skips
+// Supervised ("Always Ask") — repeated Ctrl+L wraps YOLO → Basic. Use
+// nextAutonomyTierIncludingSupervised when the user explicitly confirms they
+// want the cautious tier.
 func nextAutonomyTier(level engine.AutonomyLevel) engine.AutonomyLevel {
+	idx := autonomyTierIndex(level)
+	for {
+		idx = (idx + 1) % len(containerAutonomyTiers)
+		if containerAutonomyTiers[idx] != engine.AutonomySupervised {
+			return containerAutonomyTiers[idx]
+		}
+	}
+}
+
+// nextAutonomyTierIncludingSupervised returns the next tier with Supervised
+// included in the cycle (used after the user confirms via double-press).
+func nextAutonomyTierIncludingSupervised(level engine.AutonomyLevel) engine.AutonomyLevel {
 	return containerAutonomyTiers[(autonomyTierIndex(level)+1)%len(containerAutonomyTiers)]
+}
+
+// isSupervisedPending reports whether the next regular cycle step would land
+// on Supervised (i.e. the current tier is YOLO). The UI uses this to prompt
+// for confirmation.
+func isSupervisedPending(level engine.AutonomyLevel) bool {
+	return level == engine.AutonomyYOLO
 }
 
 // autonomyTierDescription is short copy shown when the user changes tier (ctrl+L).

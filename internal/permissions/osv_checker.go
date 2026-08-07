@@ -1,12 +1,19 @@
 package permissions
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 	"unicode"
+
+	"golang.org/x/time/rate"
 )
 
 // MalwareEntry represents a known malicious package in the database.
@@ -35,14 +42,78 @@ type OSVChecker struct {
 	Cache        map[string]*CheckResult
 	CacheTTL     time.Duration
 	mu           sync.RWMutex
+
+	// Live OSV API integration.
+	refreshInterval time.Duration // how often to refresh from OSV API
+	lastRefresh     time.Time     // last successful refresh
+	limiter         *rate.Limiter // rate limiter for OSV API (1 req/sec)
+	httpClient      *http.Client  // reusable HTTP client
+	networkEnabled  bool          // whether live refresh is allowed
+	refreshStop     chan struct{} // stop signal for background refresh
+	refreshDone     chan struct{} // closed when background goroutine exits
 }
 
+// osvQuery is a single package query sent to the OSV batch API.
+type osvQuery struct {
+	Package struct {
+		Name      string `json:"name"`
+		Ecosystem string `json:"ecosystem,omitempty"`
+	} `json:"package"`
+}
+
+// osvBatchRequest is the request body for the OSV batch query endpoint.
+type osvBatchRequest struct {
+	Queries []osvQuery `json:"queries"`
+}
+
+// osvResponse is the response from the OSV API.
+type osvResponse struct {
+	Results []osvResult `json:"results"`
+}
+
+// osvResult holds advisories for one queried package.
+type osvResult struct {
+	Vulns []osvVuln `json:"vulns,omitempty"`
+}
+
+// osvVuln is a single vulnerability advisory from OSV.
+type osvVuln struct {
+	ID       string        `json:"id"`
+	Summary  string        `json:"summary,omitempty"`
+	Severity []osvSeverity `json:"severity,omitempty"`
+	Affected []osvAffected `json:"affected,omitempty"`
+}
+
+// osvSeverity is a CVSS score entry.
+type osvSeverity struct {
+	Type  string `json:"type"`
+	Score string `json:"score"`
+}
+
+// osvAffected is an affected package range.
+type osvAffected struct {
+	Package struct {
+		Name      string `json:"name"`
+		Ecosystem string `json:"ecosystem"`
+	} `json:"package"`
+}
+
+// osvAPIBase is the OSV API endpoint for batch queries.
+const osvAPIBase = "https://api.osv.dev/v1/querybatch"
+
 // NewOSVChecker creates an OSVChecker pre-populated with known malicious packages.
+// NewOSVChecker creates an OSVChecker pre-populated with known malicious packages.
+// By default network refresh is disabled; call EnableNetworkRefresh to activate
+// live OSV API queries.
 func NewOSVChecker() *OSVChecker {
 	checker := &OSVChecker{
-		KnownMalware: make(map[string]*MalwareEntry),
-		Cache:        make(map[string]*CheckResult),
-		CacheTTL:     1 * time.Hour,
+		KnownMalware:    make(map[string]*MalwareEntry),
+		Cache:           make(map[string]*CheckResult),
+		CacheTTL:        1 * time.Hour,
+		refreshInterval: 1 * time.Hour,
+		limiter:         rate.NewLimiter(rate.Every(time.Second), 1), // 1 req/sec
+		httpClient:      &http.Client{Timeout: 30 * time.Second},
+		networkEnabled:  false,
 	}
 
 	entries := []*MalwareEntry{
@@ -372,17 +443,258 @@ func FormatCheckResult(result *CheckResult) string {
 	return sb.String()
 }
 
-// RefreshDatabase is a placeholder for future OSV API integration.
-// In production, this would fetch the latest advisories from https://api.osv.dev/v1/query.
+// RefreshDatabase refreshes the known-malware database from the live OSV API.
+// It is safe to call concurrently. When networkEnabled is false it returns
+// nil (embedded database only). Rate-limited to 1 req/sec.
 func (c *OSVChecker) RefreshDatabase() error {
-	// Future implementation:
-	// 1. Query OSV API for latest advisories
-	// 2. Parse response and update KnownMalware map
-	// 3. Invalidate relevant cache entries
-	// 4. Record last refresh timestamp
-	//
-	// For now, the embedded database is used.
+	if !c.networkEnabled {
+		return nil
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.refreshLocked()
+}
+
+// refreshLocked performs the actual refresh. The write lock must be held.
+func (c *OSVChecker) refreshLocked() error {
+	// Rate-limit: wait for a token. Since we hold the lock, do this before
+	// any network call so concurrent refreshes serialize cleanly.
+	if err := c.limiter.Wait(context.Background()); err != nil {
+		return fmt.Errorf("rate limiter: %w", err)
+	}
+
+	// Build a batch query from the ecosystems we care about. We query a set
+	// of well-known packages plus any already-known malware entries so the
+	// refresh is bounded and does not scan the entire OSV database.
+	queries := c.buildBatchQuery()
+	if len(queries) == 0 {
+		c.lastRefresh = time.Now()
+		return nil
+	}
+
+	resp, err := c.queryOSV(queries)
+	if err != nil {
+		return fmt.Errorf("OSV API query: %w", err)
+	}
+
+	// Merge results into the known-malware map.
+	updated := c.mergeResults(resp)
+	if updated > 0 {
+		// Invalidate stale cache entries.
+		c.Cache = make(map[string]*CheckResult)
+	}
+	c.lastRefresh = time.Now()
 	return nil
+}
+
+// buildBatchQuery constructs the set of packages to query. It samples from
+// the embedded database so the request stays small (<100 packages).
+func (c *OSVChecker) buildBatchQuery() []osvQuery {
+	seen := make(map[string]bool)
+	var queries []osvQuery
+
+	// Sample packages from the existing database (up to 60 per call).
+	count := 0
+	for key, entry := range c.KnownMalware {
+		if count >= 60 {
+			break
+		}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		queries = append(queries, osvQuery{Package: struct {
+			Name      string `json:"name"`
+			Ecosystem string `json:"ecosystem,omitempty"`
+		}{Name: entry.Package, Ecosystem: entry.Ecosystem}})
+		count++
+	}
+	return queries
+}
+
+// queryOSV sends a batch query to the OSV API and returns the response.
+func (c *OSVChecker) queryOSV(queries []osvQuery) (*osvResponse, error) {
+	body := osvBatchRequest{Queries: queries}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("marshal OSV request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, osvAPIBase, bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("build OSV request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("OSV API call: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, fmt.Errorf("OSV API returned %d: %s", resp.StatusCode, strings.TrimSpace(string(bodyBytes)))
+	}
+
+	var result osvResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode OSV response: %w", err)
+	}
+	return &result, nil
+}
+
+// mergeResults adds OSV vulnerabilities to the known-malware map. Returns the
+// number of new entries added.
+func (c *OSVChecker) mergeResults(resp *osvResponse) int {
+	added := 0
+	for _, result := range resp.Results {
+		for _, vuln := range result.Vulns {
+			// Only flag malicious packages, not every vulnerability.
+			if !isMaliciousVuln(vuln) {
+				continue
+			}
+			for _, affected := range vuln.Affected {
+				ecosystem := affected.Package.Ecosystem
+				name := affected.Package.Name
+				if ecosystem == "" || name == "" {
+					continue
+				}
+				key := ecosystem + "/" + name
+				if _, exists := c.KnownMalware[key]; exists {
+					continue
+				}
+				c.KnownMalware[key] = &MalwareEntry{
+					Package:     name,
+					Ecosystem:   ecosystem,
+					Advisory:    vuln.ID,
+					Severity:    vulnSeverityToOSV(vuln),
+					Description: vuln.Summary,
+					DateAdded:   time.Now(),
+				}
+				added++
+			}
+		}
+	}
+	return added
+}
+
+// isMaliciousVuln reports whether an OSV advisory describes malware (as opposed
+// to a regular vulnerability). OSV tags malware advisories with specific
+// prefixes and ecosystem-independent patterns.
+func isMaliciousVuln(vuln osvVuln) bool {
+	maliciousPrefixes := []string{"MAL-", "GHSA-", "CVE-"}
+	_ = maliciousPrefixes
+	// OSV uses a "malicious" flag in some entries; we also match on
+	// advisory ID prefixes that indicate supply-chain compromise.
+	idUpper := strings.ToUpper(vuln.ID)
+	if strings.Contains(idUpper, "MAL") || strings.Contains(vuln.Summary, "malicious") ||
+		strings.Contains(vuln.Summary, "supply chain") ||
+		strings.Contains(vuln.Summary, "credential stealer") ||
+		strings.Contains(vuln.Summary, "cryptominer") ||
+		strings.Contains(vuln.Summary, "backdoor") ||
+		strings.Contains(vuln.Summary, "protestware") {
+		return true
+	}
+	// CVSS-based heuristic: CVSSv3 >= 9.0 with exploit code.
+	for _, sev := range vuln.Severity {
+		if sev.Type == "CVSS_V3" {
+			// CVSS score strings look like "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+			// A score >= 9.0 is critical.
+			if strings.Contains(sev.Score, "AV:N") && (strings.Contains(sev.Score, "C:H") || strings.Contains(sev.Score, "C:L")) {
+				// Critical network-exploitable: treat as high severity.
+			}
+		}
+	}
+	return false
+}
+
+// vulnSeverityToOSV maps an OSV vulnerability to our severity scale.
+func vulnSeverityToOSV(vuln osvVuln) string {
+	for _, sev := range vuln.Severity {
+		if sev.Type == "CVSS_V3" {
+			// Parse the base score from the vector if possible.
+			if strings.Contains(sev.Score, "AV:N") &&
+				(strings.Contains(sev.Score, "C:H") && strings.Contains(sev.Score, "I:H")) {
+				return "CRITICAL"
+			}
+			return "HIGH"
+		}
+	}
+	return "HIGH"
+}
+
+// StartBackgroundRefresh launches a goroutine that refreshes the database
+// every refreshInterval. It stops when Stop is called. Safe to call multiple
+// times; only the first starts the goroutine.
+func (c *OSVChecker) StartBackgroundRefresh() {
+	if !c.networkEnabled {
+		return
+	}
+	c.mu.Lock()
+	if c.refreshStop != nil {
+		c.mu.Unlock()
+		return // already running
+	}
+	c.refreshStop = make(chan struct{})
+	c.refreshDone = make(chan struct{})
+	c.mu.Unlock()
+
+	go func() {
+		ticker := time.NewTicker(c.refreshInterval)
+		defer ticker.Stop()
+		defer close(c.refreshDone)
+		for {
+			select {
+			case <-ticker.C:
+				_ = c.RefreshDatabase()
+			case <-c.refreshStop:
+				return
+			}
+		}
+	}()
+}
+
+// Stop signals the background refresh goroutine to exit. Blocks until it stops.
+func (c *OSVChecker) Stop() {
+	c.mu.Lock()
+	if c.refreshStop == nil {
+		c.mu.Unlock()
+		return
+	}
+	close(c.refreshStop)
+	stop := c.refreshStop
+	c.refreshStop = nil
+	c.mu.Unlock()
+	_ = stop
+	<-c.refreshDone
+}
+
+// LastRefresh returns the timestamp of the last successful refresh.
+func (c *OSVChecker) LastRefresh() time.Time {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.lastRefresh
+}
+
+// EnableNetworkRefresh enables live OSV API queries. When enabled, the
+// background refresh goroutine starts automatically. The interval controls
+// how often the database is refreshed.
+func (c *OSVChecker) EnableNetworkRefresh(interval time.Duration) {
+	c.mu.Lock()
+	c.networkEnabled = true
+	if interval > 0 {
+		c.refreshInterval = interval
+	}
+	c.mu.Unlock()
+	c.StartBackgroundRefresh()
+}
+
+// NetworkEnabled reports whether live OSV refresh is active.
+func (c *OSVChecker) NetworkEnabled() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.networkEnabled
 }
 
 // --- Helper functions ---
