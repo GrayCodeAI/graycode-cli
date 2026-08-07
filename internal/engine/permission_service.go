@@ -180,13 +180,13 @@ func (s *PermissionService) CheckToolSnapshot(ctx context.Context, info ToolCall
 	return perm.CheckToolSnapshot(ctx, info, snapshot)
 }
 
-// engineCopy captures scalar policy state while holding the service lock, then
-// lets evaluation run without blocking policy updates or user prompts.
+// engineCopy returns a copy of the engine for cross-goroutine evaluation. The
+// service lock is held only for the duration of the copy, so evaluation does
+// not block policy updates or user prompts.
 func (s *PermissionService) engineCopy() *PermissionEngine {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	copy := *s.perm
-	return &copy
+	return s.perm.Copy()
 }
 
 // ApplyPolicySnapshot installs a bounded parent policy into a child service.
@@ -206,6 +206,11 @@ func (s *PermissionService) ApplyPolicySnapshot(snapshot safety.PolicySnapshot) 
 	s.perm.Revision = snapshot.Revision
 	s.perm.Memory = safety.NewPermissionMemoryFromSnapshot(snapshot.Rules)
 	s.memory = s.perm.Memory
+	// Rebuild UnifiedGrants so it wraps the snapshot's Memory (not the
+	// service's original Memory, which is now stale).
+	if s.perm.UnifiedGrants != nil {
+		s.perm.UnifiedGrants = permissions.NewUnifiedGrants(s.perm.Memory, s.perm.AutoMode)
+	}
 	s.allowedDirs = append([]string(nil), snapshot.AllowedDirs...)
 }
 
@@ -232,6 +237,10 @@ func (s *PermissionService) CheckApproval(_ context.Context, toolName string, ar
 	if g.isSessionApproved(cat) {
 		return true, ""
 	}
+	// N-count approval: allow without prompting if a remaining count exists.
+	if g.consumeNApproval(cat) {
+		return true, ""
+	}
 	req := ApprovalRequest{
 		ToolName: canonicalToolName(toolName),
 		Category: cat,
@@ -243,6 +252,10 @@ func (s *PermissionService) CheckApproval(_ context.Context, toolName string, ar
 		case ApprovalApproveForSession:
 			g.sessionApprove(cat)
 			return true, ""
+		case ApprovalApproveForN:
+			// Default N=5 when the typed response carries no count.
+			g.nApprove(cat, req.N)
+			return true, ""
 		case ApprovalApprove:
 			return true, ""
 		default:
@@ -250,15 +263,21 @@ func (s *PermissionService) CheckApproval(_ context.Context, toolName string, ar
 		}
 	}
 	if s.askUserFn != nil {
-		ans, err := s.askUserFn("Approve high-risk action [" + string(cat) + "]: " + req.Summary + "? (yes/no/session)")
+		ans, err := s.askUserFn("Approve high-risk action [" + string(cat) + "]: " + req.Summary + "? (yes/no/session/N)")
 		if err != nil {
 			return false, "Action denied by human approval gate (" + string(cat) + ")."
 		}
-		switch strings.ToLower(strings.TrimSpace(ans)) {
+		lower := strings.ToLower(strings.TrimSpace(ans))
+		switch lower {
 		case "session", "s", "approve-session", "yes-session":
 			g.sessionApprove(cat)
 			return true, ""
 		default:
+			// "10" or "5x" style: approve for N.
+			if n, ok := parseApprovalCount(lower); ok {
+				g.nApprove(cat, n)
+				return true, ""
+			}
 			if isAffirmative(ans) {
 				return true, ""
 			}
@@ -291,8 +310,9 @@ func (s *PermissionService) SetAllowedDirs(dirs []string) {
 	}
 }
 
-// SetAutonomy sets the agent's autonomy level. Writes directly to the
-// underlying PermissionEngine — the same field CheckTool reads — rather
+// SetAutonomy sets the agent's autonomy level and rebuilds the per-flag
+// profile from that level, preserving any user overrides. Writes directly to
+// the underlying PermissionEngine — the same field CheckTool reads — rather
 // than a separate shadow field, so the change actually takes effect.
 func (s *PermissionService) SetAutonomy(level AutonomyLevel) {
 	if s == nil || s.perm == nil {
@@ -303,6 +323,40 @@ func (s *PermissionService) SetAutonomy(level AutonomyLevel) {
 	s.perm.Autonomy = level
 	s.perm.AutonomyExplicit = true
 	s.perm.Revision++
+	// Rebuild profile from the new level, then re-apply overrides so the
+	// user's per-flag tweaks survive a tier change.
+	if s.perm.Profile != nil {
+		overrides := s.perm.Profile.Overrides()
+		s.perm.Profile = safety.ProfileFromLevel(level)
+		s.perm.Profile.ApplyOverrides(overrides)
+	}
+}
+
+// ApplyAutonomyOverrides merges per-flag overrides onto the active profile.
+// Unknown flag names are ignored. The profile is rebuilt from the current
+// level first so overrides are applied consistently.
+func (s *PermissionService) ApplyAutonomyOverrides(overrides map[string]bool) {
+	if s == nil || s.perm == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.perm.Profile == nil {
+		s.perm.Profile = safety.ProfileFromLevel(s.perm.Autonomy)
+	}
+	s.perm.Profile.ApplyOverrides(overrides)
+	s.perm.Revision++
+}
+
+// AutonomyProfile returns a copy of the active profile's override set (for
+// display/persistence). Returns nil if no profile is active.
+func (s *PermissionService) AutonomyProfile() *safety.AutonomyProfile {
+	if s == nil || s.perm == nil || s.perm.Profile == nil {
+		return nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.perm.Profile
 }
 
 // SetSpecStage sets the independent spec-workflow stage. Also writes
@@ -539,6 +593,54 @@ func (s *PermissionService) BypassKill() *permissions.BypassKillswitch {
 		return nil
 	}
 	return s.bypassKill
+}
+
+// SetNeverAllow replaces the personal hard-ceiling rule set on the engine.
+func (s *PermissionService) SetNeverAllow(specs []string) {
+	if s == nil || s.perm == nil {
+		return
+	}
+	s.perm.SetNeverAllow(specs)
+}
+
+// NeverAllow returns a copy of the current never-allow rules.
+func (s *PermissionService) NeverAllow() []string {
+	if s == nil || s.perm == nil {
+		return nil
+	}
+	return s.perm.NeverAllow()
+}
+
+// SetSpecAllowTests enables or disables safe test commands during spec stage.
+func (s *PermissionService) SetSpecAllowTests(allow bool) {
+	if s == nil || s.perm == nil {
+		return
+	}
+	s.perm.SetSpecAllowTests(allow)
+}
+
+// AuditLog returns a formatted audit trail of recent permission decisions,
+// or a message if the audit log is disabled.
+func (s *PermissionService) AuditLog() string {
+	if s == nil || s.perm == nil {
+		return "Audit log unavailable."
+	}
+	if s.perm.AuditLog() == nil {
+		return "Audit log disabled."
+	}
+	return s.perm.AuditLog().Format(50)
+}
+
+// PermissionMetrics returns a formatted metrics summary, or a message if
+// metrics are disabled.
+func (s *PermissionService) PermissionMetrics() string {
+	if s == nil || s.perm == nil {
+		return "Metrics unavailable."
+	}
+	if s.perm.PermissionMetrics() == nil {
+		return "Metrics disabled."
+	}
+	return s.perm.PermissionMetrics().Format()
 }
 
 // IsZero reports whether this service has been fully configured.

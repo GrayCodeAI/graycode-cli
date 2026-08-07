@@ -17,7 +17,7 @@ type SeatbeltPolicy struct {
 	WritablePaths []string
 	AllowProcess  bool
 	AllowSysctl   bool
-	Tier          Tier
+	Security      Security
 }
 
 // GenerateSeatbeltProfile is a stub on non-darwin platforms.

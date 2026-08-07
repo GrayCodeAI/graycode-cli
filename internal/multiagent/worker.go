@@ -11,6 +11,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // EngineWorker returns a WorkerFunc that runs an actual engine session
@@ -41,6 +42,14 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 				"then run tests. When done, commit your changes with a descriptive message.",
 			feature.ID, feature.Description, feature.ExpectedBehavior, wtPath,
 		)
+
+		// Transcript resume: check for an existing transcript for this feature.
+		tpath := TranscriptPath(missionDir, feature.ID)
+		existingHandoff := checkExistingTranscript(tpath)
+		if existingHandoff != nil {
+			// Already completed in a previous run — reuse the handoff.
+			return existingHandoff, nil
+		}
 
 		// Create engine session with tools
 		registry := tool.NewRegistry(baseWorkerTools()...)
@@ -76,6 +85,21 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 			}
 		})
 
+		// Transcript resume: if an incomplete transcript exists, load its
+		// messages so the session continues from where it left off.
+		if resumeMsgs, ok := incompleteTranscriptMessages(tpath); ok && len(resumeMsgs) > 0 {
+			sess.LoadMessages(resumeMsgs)
+		}
+
+		// Set up transcript persistence for this run.
+		writer, err := NewPersistWriter(tpath)
+		if err != nil {
+			return nil, fmt.Errorf("transcript writer: %w", err)
+		}
+		defer func() { _ = writer.Close() }()
+
+		// Persist the initial user prompt.
+		_ = writer.Write(types.EyrieMessage{Role: "user", Content: workerPrompt})
 		sess.AddUser(workerPrompt)
 
 		events, err := sess.Stream(ctx)
@@ -83,11 +107,18 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 			return nil, fmt.Errorf("stream: %w", err)
 		}
 
-		// Collect output
+		// Collect output and persist assistant content as it streams.
 		var response strings.Builder
 		for ev := range events {
-			if ev.Type == "content" {
+			switch ev.Type {
+			case "content":
 				response.WriteString(ev.Content)
+				_ = writer.Write(types.EyrieMessage{Role: "assistant", Content: ev.Content})
+			case "tool_use":
+				_ = writer.Write(types.EyrieMessage{
+					Role: "assistant", Content: "",
+					ToolUse: []types.ToolCall{{Name: ev.ToolName, ID: ev.ToolID}},
+				})
 			}
 		}
 
@@ -96,14 +127,43 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 		filesChanged := getChangedFiles(ctx, wtPath, cfg.BaseBranch)
 		testsPassed := runTests(ctx, wtPath)
 
-		return &Handoff{
+		handoff := &Handoff{
 			CommitID:     commitID,
 			RepoPath:     wtPath,
 			Summary:      truncate(response.String(), 500),
 			FilesChanged: filesChanged,
 			TestsPassed:  testsPassed,
-		}, nil
+		}
+
+		// Mark the transcript complete with the handoff result.
+		_ = writer.MarkComplete(handoff)
+		return handoff, nil
 	}
+}
+
+// checkExistingTranscript returns the handoff from a completed transcript, or
+// nil if the transcript does not exist or is incomplete.
+func checkExistingTranscript(path string) *Handoff {
+	_, handoff, complete, err := LoadTranscript(path)
+	if err != nil || !complete || handoff == nil {
+		return nil
+	}
+	return handoff
+}
+
+// incompleteTranscriptMessages returns the messages from an incomplete
+// transcript (one without a completion marker). Returns false if the transcript
+// is missing or complete.
+func incompleteTranscriptMessages(path string) ([]types.EyrieMessage, bool) {
+	exists, complete, err := IsTranscriptComplete(path)
+	if err != nil || !exists || complete {
+		return nil, false
+	}
+	msgs, _, _, err := LoadTranscript(path)
+	if err != nil {
+		return nil, false
+	}
+	return msgs, true
 }
 
 func baseWorkerTools() []tool.Tool {

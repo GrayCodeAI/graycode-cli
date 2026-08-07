@@ -64,6 +64,16 @@ func essentialTools() []tool.Tool {
 		tool.MultiEditTool{},
 		tool.BrowserTool{},
 		tool.ScreenshotTool{},
+		tool.RequestCredentialTool{Gateway: func() tool.CredentialGateFn {
+			// The actual gateway is wired at session start via SetCredentialGate.
+			// This returns nil until then; the tool checks for nil and errors.
+			if fn := credentialGate.Load(); fn != nil {
+				if gateFn, ok := fn.(tool.CredentialGateFn); ok {
+					return gateFn
+				}
+			}
+			return nil
+		}},
 	}
 }
 

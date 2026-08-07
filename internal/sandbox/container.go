@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -75,6 +76,15 @@ type ContainerSandbox struct {
 	// runtime carries declarative runtime_extra_deps / runtime_startup_env_vars.
 	// The empty value reproduces the prior behavior.
 	runtime RuntimeConfig
+	// networkMode is the Docker network mode: "bridge" (default), "none", or
+	// "isolated" (per-container network). HAWK_CONTAINER_NETWORK env var still
+	// overrides when set.
+	networkMode string
+	// isolatedNetName is the per-container Docker network name when networkMode
+	// == "isolated". Created on Start, removed on Stop.
+	isolatedNetName string
+	// credentialGate manages approval-gated access to host credentials.
+	credentialGate *CredentialGate
 }
 
 // NewContainerSandbox creates a container sandbox for the given project.
@@ -84,6 +94,35 @@ func NewContainerSandbox(projectDir string) *ContainerSandbox {
 		image:      resolveImage(projectDir),
 		runtime:    LoadRuntimeConfig(projectDir),
 	}
+}
+
+// CredentialGate returns the container's credential gate, creating it on
+// first use. The gate is initialized with the descriptors that have staging
+// mounts available.
+func (c *ContainerSandbox) CredentialGate() *CredentialGate {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.credentialGate == nil {
+		c.credentialGate = NewCredentialGate(c)
+	}
+	return c.credentialGate
+}
+
+// SetNetworkMode sets the container network mode: "bridge" (default), "none"
+// (no network), or "isolated" (per-container Docker network so concurrent
+// containers can't probe each other). The env var HAWK_CONTAINER_NETWORK still
+// overrides when set at Start time.
+func (c *ContainerSandbox) SetNetworkMode(mode string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.networkMode = mode
+}
+
+// NetworkMode returns the current network mode.
+func (c *ContainerSandbox) NetworkMode() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.networkMode
 }
 
 // SetRuntimeConfig overrides the declarative runtime config (extra deps and
@@ -112,6 +151,14 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	// Remove any stale container with the same name from a previous session (best-effort)
 	_, _ = exec.CommandContext(ctx, "docker", "rm", "-f", name).CombinedOutput() // #nosec G204 -- "docker" binary fixed; name is derived from a hash of the project dir
 
+	// For isolated networking, create a per-container Docker network so
+	// concurrent containers cannot reach each other.
+	if c.networkMode == "isolated" {
+		netName := "hawk-net-" + name
+		_, _ = exec.CommandContext(ctx, "docker", "network", "create", "--driver", "bridge", netName).CombinedOutput() // #nosec G204 -- fixed docker binary; netName derived from container name
+		c.isolatedNetName = netName
+	}
+
 	// Create attachments and cache dirs outside the project workspace.
 	attachDir := filepath.Join(storage.ProjectStateDir(c.projectDir), "attachments")
 	cacheDir := filepath.Join(storage.ProjectCacheDir(c.projectDir), "container")
@@ -127,14 +174,49 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	}
 	c.containerID = strings.TrimSpace(string(out))
 	c.running = true
+
+	// Set up the credential access layout inside the running container:
+	// staging mounts are already in place; create the denied placeholder
+	// and point all credential paths at it.
+	if err := c.SetupCredentials(); err != nil {
+		// Non-fatal: credentials can still be set up later, but log it.
+		slog.Warn("credential layout setup failed", "error", err)
+	}
 	return nil
+}
+
+// SetupCredentials initializes the denied-placeholder symlinks for all
+// credentials that have staging mounts available. It is idempotent.
+func (c *ContainerSandbox) SetupCredentials() error {
+	var available []CredentialDescriptor
+	for _, desc := range Registry() {
+		// Check if the staging mount is populated (the credential exists on host).
+		staging := StagingPath(desc.ID)
+		if _, err := os.Stat(staging); err == nil {
+			available = append(available, desc)
+		}
+	}
+	if len(available) == 0 {
+		return nil
+	}
+	return InitCredentialLayout(available)
 }
 
 func (c *ContainerSandbox) dockerRunArgs(name, attachDir, cacheDir string) []string {
 	netMode := strings.TrimSpace(os.Getenv("HAWK_CONTAINER_NETWORK"))
 	if netMode == "" {
-		netMode = "bridge"
+		c.mu.Lock()
+		mode := c.networkMode
+		c.mu.Unlock()
+		if mode != "" {
+			netMode = mode
+		} else {
+			netMode = "bridge"
+		}
 	}
+	// "isolated" is not a native Docker network mode — it means create a
+	// per-container bridge network. We resolve it to "none" here if the
+	// isolated network hasn't been created yet; Start wires it up first.
 	args := []string{
 		"run", "-d", "--rm",
 		"--name", name,
@@ -169,8 +251,37 @@ func (c *ContainerSandbox) dockerRunArgs(name, attachDir, cacheDir string) []str
 		}
 	}
 
+	// Credential staging mounts: mount each existing host credential path
+	// read-only into the container's staging area. Access is gated by
+	// symlinks (see credentials.go); the mounts are just the raw material.
+	args = append(args, c.credentialMountArgs()...)
+
 	args = append(args, c.runtime.StartupEnvArgs()...)
 	args = append(args, c.image, "infinity")
+	return args
+}
+
+// credentialMountArgs returns the -v flags for mounting host credentials into
+// the staging area. Only credentials whose host paths exist are mounted.
+// Each is mounted read-only (:ro) so the container cannot mutate the host copy.
+func (c *ContainerSandbox) credentialMountArgs() []string {
+	var args []string
+	home := os.Getenv("HOME")
+	if home == "" {
+		home = c.projectDir // fallback
+	}
+	for _, desc := range Registry() {
+		hostPath := desc.HostPath
+		if strings.HasPrefix(hostPath, "~") {
+			hostPath = filepath.Join(home, hostPath[1:])
+		}
+		// Only mount if the host path exists.
+		if _, err := os.Stat(hostPath); err != nil {
+			continue
+		}
+		staging := StagingPath(desc.ID)
+		args = append(args, "-v", hostPath+":"+staging+":ro")
+	}
 	return args
 }
 
@@ -214,6 +325,11 @@ func (c *ContainerSandbox) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	_ = forceRemoveContainer(ctx, c.containerID)
+	// Clean up the per-container isolated network (best-effort).
+	if c.isolatedNetName != "" {
+		_, _ = exec.CommandContext(ctx, "docker", "network", "rm", c.isolatedNetName).CombinedOutput() // #nosec G204 -- fixed docker binary; isolatedNetName is our own network name
+		c.isolatedNetName = ""
+	}
 	c.running = false
 	c.containerID = ""
 	return nil

@@ -87,9 +87,9 @@ func (PowerShellTool) Execute(ctx context.Context, input json.RawMessage) (strin
 		cfg := sandbox.SandboxConfig{Mode: sbMode, WorkspaceDir: workDir, AllowNetwork: sandbox.ModeAllowsNetwork(sbMode)}
 		switch sbMode {
 		case sandbox.ModeStrict:
-			cfg.Tier = sandbox.TierStrict
+			cfg.Security = sandbox.SecurityStrict
 		case sandbox.ModeWorkspace:
-			cfg.Tier = sandbox.TierWorkspace
+			cfg.Security = sandbox.SecurityWorkspace
 		}
 		// WrapCommand wraps the command as "bash -c <full command>", so we
 		// pass the full pwsh invocation as the command string. The sandbox

@@ -33,6 +33,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/startup"
 	hawkstorage "github.com/GrayCodeAI/hawk/internal/storage"
@@ -345,6 +346,27 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 			return answer, nil
 		case <-time.After(5 * time.Minute):
 			return "", fmt.Errorf("question timed out")
+		}
+	})
+
+	// Wire credential gate: the tool calls this to prompt the user for access
+	// to a host credential. On approval, the symlink inside the container is
+	// flipped to the staging copy.
+	SetCredentialGate(func(req tool.CredentialRequest) tool.CredentialResponse {
+		resp := make(chan tool.CredentialResponse, 1)
+		ref.Send(credentialAskMsg{req: req, response: resp})
+		select {
+		case r := <-resp:
+			if r.Approved && req.ContainerID != "" {
+				// Flip the symlink inside the container to grant access.
+				if desc := sandbox.FindCredential(req.Credential); desc != nil {
+					_ = tool.FlipCredentialSymlink(req.ContainerID, req.Credential,
+						sandbox.StagingPath(req.Credential), desc.ContainerPath)
+				}
+			}
+			return r
+		case <-time.After(5 * time.Minute):
+			return tool.CredentialResponse{Approved: false, Reason: "timed out"}
 		}
 	})
 

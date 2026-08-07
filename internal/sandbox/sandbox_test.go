@@ -41,9 +41,9 @@ func TestRunDisabled(t *testing.T) {
 
 func TestRunDisabledExplicitOptOut(t *testing.T) {
 	s, err := New(&Config{
-		Enabled: false,
-		Type:    "none",
-		Tier:    TierOff,
+		Enabled:  false,
+		Type:     "none",
+		Security: SecurityOff,
 	})
 	if err != nil {
 		t.Fatal(err)

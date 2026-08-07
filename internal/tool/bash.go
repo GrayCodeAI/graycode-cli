@@ -613,9 +613,9 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 			cfg := sandbox.SandboxConfig{Mode: sbMode, WorkspaceDir: workDir, AllowNetwork: sandbox.ModeAllowsNetwork(sbMode)}
 			switch sbMode {
 			case sandbox.ModeStrict:
-				cfg.Tier = sandbox.TierStrict
+				cfg.Security = sandbox.SecurityStrict
 			case sandbox.ModeWorkspace:
-				cfg.Tier = sandbox.TierWorkspace
+				cfg.Security = sandbox.SecurityWorkspace
 			}
 			var wrapErr error
 			bgExecName, bgExecArgs, wrapErr = sandbox.WrapCommand(p.Command, cfg)
@@ -656,15 +656,15 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 		// of being unconditionally on, so a sandboxed command can no longer
 		// exfiltrate data in strict mode. See sandbox.ModeAllowsNetwork.
 		cfg := sandbox.SandboxConfig{Mode: sbMode, WorkspaceDir: workDir, AllowNetwork: sandbox.ModeAllowsNetwork(sbMode)}
-		// Map the legacy Mode to the corresponding Tier. ModeStrict
-		// → TierStrict (deny all), ModeWorkspace → TierWorkspace
+		// Map the legacy Mode to the corresponding Security. ModeStrict
+		// → SecurityStrict (deny all), ModeWorkspace → SecurityWorkspace
 		// (allow workspace writes, deny process exec — the new safe
 		// default), ModeOff is handled above so we never get here.
 		switch sbMode {
 		case sandbox.ModeStrict:
-			cfg.Tier = sandbox.TierStrict
+			cfg.Security = sandbox.SecurityStrict
 		case sandbox.ModeWorkspace:
-			cfg.Tier = sandbox.TierWorkspace
+			cfg.Security = sandbox.SecurityWorkspace
 		}
 		var wrapErr error
 		execName, execArgs, wrapErr = sandbox.WrapCommand(p.Command, cfg)

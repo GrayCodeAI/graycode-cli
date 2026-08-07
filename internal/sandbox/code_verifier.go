@@ -41,7 +41,7 @@ type Violation struct {
 }
 
 // NewCodeVerifier returns a CodeVerifier pre-configured with sensible defaults
-// for Python, Go, and Bash analysis.
+// for Python, Go, JavaScript/TypeScript, Ruby, and Bash analysis.
 func NewCodeVerifier() *CodeVerifier {
 	cv := &CodeVerifier{
 		BlockedModules: []string{
@@ -54,6 +54,15 @@ func NewCodeVerifier() *CodeVerifier {
 			// Go dangerous packages
 			"unsafe",
 			"syscall",
+			// JavaScript/TypeScript dangerous modules/calls
+			"child_process",
+			"vm.runInNewContext",
+			"fs.unlinkSync",
+			"fs.rmSync",
+			// Ruby dangerous calls
+			"Kernel#system",
+			"Kernel#exec",
+			"FileUtils.rm_rf",
 		},
 		BlockedFunctions: []string{
 			"rm",
@@ -65,17 +74,46 @@ func NewCodeVerifier() *CodeVerifier {
 	}
 
 	patterns := []string{
+		// Python
 		`os\.system\(`,
 		`exec\(`,
 		`eval\(`,
 		`__import__\(`,
 		`subprocess\.call.*shell=True`,
+		// JavaScript/TypeScript
+		`require\s*\(\s*["']child_process["']\s*\)`,
+		`child_process`,
+		`vm\.runInNewContext`,
+		`new\s+Function\s*\(`,
+		`fs\.unlinkSync`,
+		`fs\.rmSync`,
+		// Ruby
+		`Kernel#(?:system|exec)`,
+		`FileUtils\.rm_rf`,
+		`eval\s*[(\x60]`,
 	}
 	for _, p := range patterns {
 		cv.BlockedPatterns = append(cv.BlockedPatterns, regexp.MustCompile(p))
 	}
 
 	return cv
+}
+
+// ApplyConfig merges user-configured blocked modules and patterns on top of
+// the defaults. Empty config is a no-op.
+func (cv *CodeVerifier) ApplyConfig(cfg *CodeVerifierConfig) {
+	if cfg == nil {
+		return
+	}
+	cv.BlockedModules = append(cv.BlockedModules, cfg.BlockedModules...)
+	for _, p := range cfg.BlockedPatterns {
+		if p == "" {
+			continue
+		}
+		if re, err := regexp.Compile(p); err == nil {
+			cv.BlockedPatterns = append(cv.BlockedPatterns, re)
+		}
+	}
 }
 
 // Verify analyses code in the given language and returns a structured result.

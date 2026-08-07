@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/permissions"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
@@ -147,13 +148,60 @@ func (s *ApprovalStore) RemoveGrant(class GrantClass, target string) error {
 	return s.save()
 }
 
-// Grants returns a snapshot of all grants.
+// Grants returns a snapshot of all grants (typed form).
 func (s *ApprovalStore) Grants() []TypedGrant {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	result := make([]TypedGrant, len(s.grants))
 	copy(result, s.grants)
 	return result
+}
+
+// PermissionGrants adapts the approval store to the permissions.GrantStore
+// interface so it can participate in UnifiedGrants. Class (bash/read/write/edit)
+// is mapped to a canonical tool name; the grant's target becomes the pattern.
+func (s *ApprovalStore) PermissionGrants() []permissions.Grant {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	out := make([]permissions.Grant, 0, len(s.grants))
+	for _, g := range s.grants {
+		if g.Expires != nil && g.Expires.Before(time.Now()) {
+			continue
+		}
+		tool := classToTool(g.Class)
+		allow := g.Action == GrantAllow
+		src := permissions.SourceUserAllow
+		if !allow {
+			src = permissions.SourceUserDeny
+		}
+		out = append(out, permissions.Grant{
+			Tool:    tool,
+			Pattern: g.Target,
+			Allow:   allow,
+			Source:  src,
+			Scope:   g.Scope,
+			Expires: g.Expires,
+			Label:   "sandbox grant",
+		})
+	}
+	return out
+}
+
+// classToTool maps a GrantClass to the canonical tool name used by the engine.
+func classToTool(c GrantClass) string {
+	switch c {
+	case ClassBash:
+		return "Bash"
+	case ClassRead:
+		return "Read"
+	case ClassWrite:
+		return "Write"
+	case ClassEdit:
+		return "Edit"
+	default:
+		return string(c)
+	}
 }
 
 // CleanupExpired removes expired grants and persists the change.

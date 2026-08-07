@@ -8,11 +8,20 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/GrayCodeAI/hawk/internal/env"
 )
+
+// writeFileWithPerm writes content to a path with the given permissions.
+// It is a helper for seatbelt profile temp files.
+func writeFileWithPerm(path, content string, perm uint32) error {
+	// #nosec G304 -- path is either mktemp output or our own managed temp file
+	return os.WriteFile(path, []byte(content), os.FileMode(perm))
+}
 
 // SeatbeltPolicy describes the permissions for a macOS seatbelt sandbox profile.
 type SeatbeltPolicy struct {
@@ -22,7 +31,7 @@ type SeatbeltPolicy struct {
 	WritablePaths []string // paths allowed for file-write*
 	AllowProcess  bool     // allow spawning child processes (process-exec*)
 	AllowSysctl   bool     // allow sysctl-read
-	Tier          Tier     // security tier (strict / workspace / off)
+	Security      Security // security posture (strict / workspace / off)
 }
 
 // GenerateSeatbeltProfile generates a valid Apple sandbox-exec SBPL
@@ -33,11 +42,11 @@ func GenerateSeatbeltProfile(policy *SeatbeltPolicy) string {
 	b.WriteString("(version 1)\n")
 	b.WriteString("(deny default)\n")
 
-	// mach-lookup grants access to macOS XPC services. The legacy TierOff
-	// behavior allows every service; all other tiers are restricted to the
-	// minimal set of services required for normal tooling to work. Network
-	// resolution services are only reachable when network is allowed.
-	switch policy.Tier {
+	// mach-lookup grants access to macOS XPC services. The legacy SecurityOff
+	// behavior allows every service; all other security levels are restricted
+	// to the minimal set of services required for normal tooling to work.
+	// Network resolution services are only reachable when network is allowed.
+	switch policy.Security {
 	case TierOff:
 		b.WriteString("(allow mach-lookup)\n")
 	default:
@@ -122,6 +131,21 @@ func RunSeatbelted(ctx context.Context, command string, policy *SeatbeltPolicy) 
 	return cmd, nil
 }
 
+// seatbeltTempFilePrefix is the glob prefix used to find orphaned seatbelt
+// temp files left behind by a previous session that did not shut down cleanly.
+const seatbeltTempFilePrefix = "hawk-seatbelt-"
+
+// init removes orphaned seatbelt temp files from previous sessions. A crash
+// (SIGKILL, panic, OOM) can bypass Sandbox.Close(), which is the only cleanup
+// path for these files; this best-effort sweep runs at process start so the
+// temp dir never accumulates stale profiles.
+func init() {
+	matches, _ := filepath.Glob(filepath.Join(os.TempDir(), seatbeltTempFilePrefix+"*.sb"))
+	for _, f := range matches {
+		_ = os.Remove(f)
+	}
+}
+
 // SeatbeltAvailable returns true on macOS when sandbox-exec is present.
 func SeatbeltAvailable() bool {
 	if runtime.GOOS != "darwin" {
@@ -129,4 +153,49 @@ func SeatbeltAvailable() bool {
 	}
 	_, err := exec.LookPath("sandbox-exec")
 	return err == nil
+}
+
+// profileCache caches generated Seatbelt profiles per security level so
+// repeated commands at the same security reuse a single temp file instead of
+// writing one per invocation. This eliminates per-command temp file I/O.
+var profileCache = struct {
+	mu       sync.Mutex
+	profiles map[Security]string // security -> temp file path
+}{profiles: make(map[Security]string)}
+
+// getCachedProfile returns a cached profile temp-file path for the security
+// level, generating and caching it on first use.
+func getCachedProfile(security Security) (string, error) {
+	profileCache.mu.Lock()
+	defer profileCache.mu.Unlock()
+
+	if path, ok := profileCache.profiles[security]; ok {
+		return path, nil
+	}
+
+	policy := &SeatbeltPolicy{
+		Security:      security,
+		AllowNetwork:  security != SecurityStrict,
+		AllowWrite:    security != SecurityStrict,
+		AllowProcess:  security == SecurityOff,
+		AllowSysctl:   true,
+		ReadablePaths: []string{"/usr", "/bin", "/Library", "/System", "/dev", "/tmp"},
+		WritablePaths: []string{"/tmp", "/dev/null"},
+	}
+	profile := GenerateSeatbeltProfile(policy)
+
+	tmpFile, err := exec.Command("mktemp", "-t", "hawk-seatbelt").Output() // #nosec G204 -- fixed mktemp invocation
+	if err != nil {
+		return "", fmt.Errorf("mktemp: %w", err)
+	}
+	path := strings.TrimSpace(string(tmpFile))
+	if err := writeFileWithPerm(path, profile, 0o400); err != nil {
+		return "", err
+	}
+	seatbeltTmpFilesMu.Lock()
+	seatbeltTmpFiles = append(seatbeltTmpFiles, path)
+	seatbeltTmpFilesMu.Unlock()
+
+	profileCache.profiles[security] = path
+	return path, nil
 }

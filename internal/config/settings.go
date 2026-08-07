@@ -51,6 +51,10 @@ type Settings struct {
 	AutoCommit              *bool                  `json:"auto_commit,omitempty"`                // auto-commit file changes
 	Autonomy                int                    `json:"autonomy,omitempty"`                   // autonomy level 0-4
 	AutonomyExplicit        bool                   `json:"autonomy_explicit,omitempty"`          // distinguishes persisted Supervised (0) from unset
+	AutonomyOverrides       map[string]bool        `json:"autonomy_overrides,omitempty"`         // per-flag overrides (e.g. "auto_execute_bash": false)
+	NeverAllow              []string               `json:"never_allow,omitempty"`                // personal hard ceiling: deny rules even YOLO can't override
+	ContainerNetwork        string                 `json:"container_network,omitempty"`          // container network mode: none, bridge, isolated
+	SpecAllowTests          bool                   `json:"spec_allow_tests,omitempty"`           // allow safe test commands during spec stage
 	ModelRoles              *routing.ModelRoles    `json:"model_roles,omitempty"`                // per-role model overrides
 	AutoCompactThresholdPct int                    `json:"auto_compact_threshold_pct,omitempty"` // token % to trigger auto-compact (default 85)
 	Frugal                  bool                   `json:"frugal,omitempty"`                     // aggressive cost optimization: cascade to cheap models, lower max_tokens, earlier compaction

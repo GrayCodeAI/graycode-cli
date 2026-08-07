@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -41,6 +42,9 @@ const (
 	// ApprovalApproveForSession allows all future actions of the same category
 	// within this session without prompting again.
 	ApprovalApproveForSession
+	// ApprovalApproveForN allows the next N actions of the same category
+	// without prompting. A middle ground between once and the full session.
+	ApprovalApproveForN
 )
 
 // ApprovalGate is a config-driven human-in-the-loop gate. It is consulted after
@@ -71,6 +75,9 @@ type ApprovalGate struct {
 	// sessionApprovals caches categories the human approved for the full session.
 	sessionMu       sync.Mutex
 	sessionApproved map[ApprovalCategory]bool
+	// nApprovals caches categories approved for the next N calls (ApprovalApproveForN).
+	nMu        sync.Mutex
+	nApprovals map[ApprovalCategory]int
 }
 
 // ApprovalRequest describes a gated action presented to the human.
@@ -79,6 +86,21 @@ type ApprovalRequest struct {
 	Category ApprovalCategory
 	Summary  string
 	Args     map[string]interface{}
+	// N is the number of approvals granted when the human responds
+	// ApprovalApproveForN. Defaults to 5 when unset (0).
+	N int
+}
+
+// parseApprovalCount extracts an N from strings like "10", "5x", "n3".
+// Returns (n, true) when parsed, (0, false) otherwise.
+func parseApprovalCount(s string) (int, bool) {
+	s = strings.TrimSpace(strings.ToLower(s))
+	s = strings.TrimSuffix(s, "x")
+	s = strings.TrimPrefix(s, "n")
+	if n, err := strconv.Atoi(s); err == nil && n > 0 {
+		return n, true
+	}
+	return 0, false
 }
 
 // categoryEnabled reports whether the gate covers a given category.
@@ -155,6 +177,28 @@ func (g *ApprovalGate) isSessionApproved(cat ApprovalCategory) bool {
 	g.sessionMu.Lock()
 	defer g.sessionMu.Unlock()
 	return g.sessionApproved[cat]
+}
+
+// nApprove records an approval for the next N calls of a category.
+func (g *ApprovalGate) nApprove(cat ApprovalCategory, n int) {
+	g.nMu.Lock()
+	defer g.nMu.Unlock()
+	if g.nApprovals == nil {
+		g.nApprovals = make(map[ApprovalCategory]int)
+	}
+	g.nApprovals[cat] += n
+}
+
+// consumeNApproval decrements the N-count for a category and returns true if a
+// remaining approval was consumed. Returns false when the count is exhausted.
+func (g *ApprovalGate) consumeNApproval(cat ApprovalCategory) bool {
+	g.nMu.Lock()
+	defer g.nMu.Unlock()
+	if g.nApprovals[cat] <= 0 {
+		return false
+	}
+	g.nApprovals[cat]--
+	return true
 }
 
 // CheckApproval consults the approval gate for a tool call. It returns

@@ -20,6 +20,7 @@ type (
 	RiskAssessor       = safety.RiskAssessor
 	AutonomyLevel      = safety.AutonomyLevel
 	AutonomyConfig     = safety.AutonomyConfig
+	AutonomyProfile    = safety.AutonomyProfile
 	ToolCallInfo       = safety.ToolCallInfo
 )
 
