@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -597,4 +598,49 @@ func mustParseURL(rawURL string) *url.URL {
 		panic(err)
 	}
 	return u
+}
+
+// TestHandleHTTP_AbsoluteURITargetEnforced verifies the SSRF edge where a
+// client sends an absolute-form request URI whose URL host differs from the
+// Host header. The policy must be enforced on the actual dial target
+// (r.URL.Host), not the possibly-benign Host header.
+func TestHandleHTTP_AbsoluteURITargetEnforced(t *testing.T) {
+	proxy := NewNetworkProxy(ProxyConfig{
+		AllowedDomains: []string{"allowed.example.com"},
+		Mode:           "allowlist",
+		LogRequests:    true,
+	})
+
+	t.Run("mismatched target blocked", func(t *testing.T) {
+		// Host header names an allowed domain, but the absolute URI targets
+		// a blocked domain. The request must be refused.
+		req := httptest.NewRequest(http.MethodGet, "http://blocked.example.com/secret", nil)
+		req.Host = "allowed.example.com"
+		rec := httptest.NewRecorder()
+
+		proxy.handleHTTP(rec, req)
+
+		if rec.Code != http.StatusForbidden {
+			t.Errorf("status = %d, want 403 (absolute URI target must be enforced)", rec.Code)
+		}
+		stats := proxy.GetStats()
+		if stats.BlockedRequests < 1 {
+			t.Error("expected a blocked request in stats")
+		}
+	})
+
+	t.Run("benign absolute URI allowed", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "http://allowed.example.com/path", nil)
+		req.Host = ""
+		rec := httptest.NewRecorder()
+
+		proxy.handleHTTP(rec, req)
+
+		// The dial would fail (allowed.example.com is not a real host), but
+		// the policy check must pass — a 502 Bad Gateway (dial error) rather
+		// than 403 proves the target passed the allowlist.
+		if rec.Code == http.StatusForbidden {
+			t.Error("allowed absolute URI was blocked by policy")
+		}
+	})
 }

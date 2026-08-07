@@ -220,7 +220,12 @@ func (mc *MarketplaceClient) Install(entry MarketplaceEntry) (string, error) {
 	}
 
 	url := entry.Repo
-	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") && !strings.HasPrefix(url, "git@") {
+	if strings.HasPrefix(url, "git@") {
+		// scp-style URLs (git@host:user/repo.git) bypass the HTTPS transport
+		// and cannot be pinned or verified; refuse them.
+		return "", fmt.Errorf("marketplace entry %q uses an unsupported scp-style repo URL %q; use an https URL", entry.Name, entry.Repo)
+	}
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
 		url = "https://github.com/" + strings.TrimSuffix(entry.Repo, ".git") + ".git"
 	}
 
@@ -231,12 +236,15 @@ func (mc *MarketplaceClient) Install(entry MarketplaceEntry) (string, error) {
 		return "", fmt.Errorf("git clone: %w\n%s", err, string(out))
 	}
 
-	// Security scan when plugin.json present
-	if _, err := os.Stat(filepath.Join(pluginDir, "plugin.json")); err == nil {
-		if issues := criticalPluginIssues(ScanPlugin(pluginDir)); len(issues) > 0 {
-			_ = os.RemoveAll(pluginDir)
-			return "", fmt.Errorf("plugin security scan failed: %s", strings.Join(issues, "; "))
-		}
+	// Security scan: a plugin without a plugin.json manifest cannot be
+	// verified, so fail closed rather than install unverifiable code.
+	if _, err := os.Stat(filepath.Join(pluginDir, "plugin.json")); err != nil {
+		_ = os.RemoveAll(pluginDir)
+		return "", fmt.Errorf("plugin %q has no plugin.json manifest; refusing to install unverifiable plugin", entry.Name)
+	}
+	if issues := criticalPluginIssues(ScanPlugin(pluginDir)); len(issues) > 0 {
+		_ = os.RemoveAll(pluginDir)
+		return "", fmt.Errorf("plugin security scan failed: %s", strings.Join(issues, "; "))
 	}
 	return pluginDir, nil
 }

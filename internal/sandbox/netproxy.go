@@ -289,13 +289,23 @@ func (np *NetworkProxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 		host = r.URL.Host
 	}
 
-	allowed := np.IsAllowed(host)
-	np.recordRequest(host, r.Method, allowed)
+	// A client can send an absolute-form request URI (GET http://target/ …)
+	// whose URL host differs from the Host header. The dial uses r.URL.Host,
+	// so that is the authoritative target for policy enforcement — checking
+	// only r.Host would let a benign Host header mask a forbidden destination.
+	target := r.URL.Host
+	if target == "" {
+		target = host
+	}
 
+	allowed := np.IsAllowed(target)
 	if !allowed {
+		np.recordRequest(target, r.Method, false)
 		http.Error(w, "Forbidden: domain not allowed", http.StatusForbidden)
 		return
 	}
+	// Record with the same host used for policy so stats/logs are truthful.
+	np.recordRequest(target, r.Method, true)
 
 	// Forward the request.
 	outReq, err := http.NewRequestWithContext(r.Context(), r.Method, r.URL.String(), r.Body) // #nosec G704 -- IsAllowed validates the host and dialTarget revalidates resolved addresses

@@ -3,6 +3,7 @@ package plugin
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/internal/flags"
@@ -50,5 +51,20 @@ func TestMarketplaceInstallDisabled(t *testing.T) {
 	_, err := mc.Install(MarketplaceEntry{Name: "x", Repo: "a/b"})
 	if err == nil {
 		t.Fatal("expected disabled error")
+	}
+}
+
+func TestMarketplaceInstallRejectsSCPStyleURL(t *testing.T) {
+	flags.ResetForTest()
+	t.Cleanup(flags.ResetForTest)
+	flags.SetForTest(flags.EnvMarketplace, true)
+
+	mc := NewMarketplaceClient()
+	_, err := mc.Install(MarketplaceEntry{Name: "x", Repo: "git@github.com:user/repo.git"})
+	if err == nil {
+		t.Fatal("expected scp-style URL rejection")
+	}
+	if !strings.Contains(err.Error(), "scp-style") {
+		t.Errorf("error should mention scp-style, got: %v", err)
 	}
 }
