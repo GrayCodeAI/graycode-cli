@@ -90,6 +90,7 @@ type TaskRunner struct {
 	finished bool
 	cancel   context.CancelFunc
 	doneCh   chan struct{}
+	runErr   error
 
 	replansByTask map[string]int
 
@@ -421,8 +422,21 @@ func (r *TaskRunner) Start(ctx context.Context) {
 			r.mu.Unlock()
 			close(r.doneCh)
 		}()
-		_ = r.Run(runCtx)
+		err := r.Run(runCtx)
+		if err != nil {
+			r.mu.Lock()
+			r.runErr = err
+			r.mu.Unlock()
+		}
 	}()
+}
+
+// RunErr returns the error from the background Run invocation, or nil if the
+// runner has not finished or Run completed successfully.
+func (r *TaskRunner) RunErr() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.runErr
 }
 
 // Stop cancels a background run. Idempotent; safe when never started.

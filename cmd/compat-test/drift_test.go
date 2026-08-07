@@ -1,0 +1,165 @@
+package main
+
+import (
+	"bytes"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// writeMod writes a minimal go.mod file for testing readRequires/checkDrift.
+func writeMod(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestReadRequires(t *testing.T) {
+	dir := t.TempDir()
+	modPath := filepath.Join(dir, "go.mod")
+	writeMod(t, modPath, `module example.com/test
+
+go 1.26
+
+require (
+	github.com/GrayCodeAI/hawk-core-contracts v1.0.0
+	github.com/spf13/cobra v1.8.0
+)
+
+require github.com/GrayCodeAI/tok v1.9.0 // indirect
+`)
+
+	reqs, err := readRequires(modPath)
+	if err != nil {
+		t.Fatalf("readRequires: %v", err)
+	}
+	tests := map[string]string{
+		"github.com/GrayCodeAI/hawk-core-contracts": "v1.0.0",
+		"github.com/spf13/cobra":                    "v1.8.0",
+		"github.com/GrayCodeAI/tok":                 "v1.9.0",
+	}
+	for mod, want := range tests {
+		if got := reqs[mod]; got != want {
+			t.Errorf("reqs[%q] = %q, want %q", mod, got, want)
+		}
+	}
+}
+
+func TestReadRequires_MissingFile(t *testing.T) {
+	if _, err := readRequires(filepath.Join(t.TempDir(), "nope.mod")); err == nil {
+		t.Error("readRequires on missing file should error")
+	}
+}
+
+func TestReadRequires_InvalidMod(t *testing.T) {
+	dir := t.TempDir()
+	bad := filepath.Join(dir, "go.mod")
+	if err := os.WriteFile(bad, []byte("not a go.mod {{{"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readRequires(bad); err == nil {
+		t.Error("readRequires on invalid go.mod should error")
+	}
+}
+
+// TestCheckDrift reports drift when a consumer pins an older version than hawk.
+func TestCheckDrift_DetectsDrift(t *testing.T) {
+	root := t.TempDir()
+	writeMod(t, filepath.Join(root, "go.mod"), `module github.com/GrayCodeAI/hawk
+
+go 1.26
+
+require github.com/GrayCodeAI/hawk-core-contracts v1.5.0
+`)
+	// Consumer pins an older version of the shared contract.
+	writeMod(t, filepath.Join(root, "external", "inspect", "go.mod"), `module github.com/GrayCodeAI/inspect
+
+go 1.26
+
+require github.com/GrayCodeAI/hawk-core-contracts v1.2.0
+`)
+
+	var buf bytes.Buffer
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	err := checkDrift(root)
+	_ = w.Close()
+	os.Stdout = old
+	_, _ = buf.ReadFrom(r)
+
+	if err != nil {
+		t.Fatalf("checkDrift: %v", err)
+	}
+	if !strings.Contains(buf.String(), "inspect") {
+		t.Errorf("expected drift report to mention inspect consumer, got:\n%s", buf.String())
+	}
+}
+
+// TestCheckDrift_NoDriftWhenVersionsMatch verifies the happy path: matching
+// pins produce the "OK" line and no per-consumer drift lines.
+func TestCheckDrift_NoDriftWhenVersionsMatch(t *testing.T) {
+	root := t.TempDir()
+	writeMod(t, filepath.Join(root, "go.mod"), `module github.com/GrayCodeAI/hawk
+
+go 1.26
+
+require github.com/GrayCodeAI/hawk-core-contracts v1.5.0
+`)
+	writeMod(t, filepath.Join(root, "external", "sight", "go.mod"), `module github.com/GrayCodeAI/sight
+
+go 1.26
+
+require github.com/GrayCodeAI/hawk-core-contracts v1.5.0
+`)
+
+	var buf bytes.Buffer
+	r, w, _ := os.Pipe()
+	old := os.Stdout
+	os.Stdout = w
+	err := checkDrift(root)
+	_ = w.Close()
+	os.Stdout = old
+	_, _ = buf.ReadFrom(r)
+
+	if err != nil {
+		t.Fatalf("checkDrift: %v", err)
+	}
+	if !strings.Contains(buf.String(), "OK — no drift") {
+		t.Errorf("expected OK line for matching pins, got:\n%s", buf.String())
+	}
+}
+
+// TestCheckDrift_SkipsMissingSubmodules verifies that a consumer directory
+// without a go.mod (e.g. not checked out) is skipped without failing.
+func TestCheckDrift_SkipsMissingSubmodules(t *testing.T) {
+	root := t.TempDir()
+	writeMod(t, filepath.Join(root, "go.mod"), `module github.com/GrayCodeAI/hawk
+
+go 1.26
+
+require github.com/GrayCodeAI/hawk-core-contracts v1.5.0
+`)
+	// Directory present but no go.mod — must be skipped silently.
+	if err := os.MkdirAll(filepath.Join(root, "external", "not-checked-out"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	r, w, _ := os.Pipe()
+	old := os.Stdout
+	os.Stdout = w
+	err := checkDrift(root)
+	_ = w.Close()
+	os.Stdout = old
+	_, _ = io.Copy(io.Discard, r)
+
+	if err != nil {
+		t.Fatalf("checkDrift with missing submodule go.mod: %v", err)
+	}
+}

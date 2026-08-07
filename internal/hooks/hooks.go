@@ -3,6 +3,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -137,7 +138,9 @@ func (r *Registry) ExecuteAsync(ctx context.Context, event EventType, data map[s
 	r.asyncWG.Add(1)
 	go func() {
 		defer r.asyncWG.Done()
-		_ = r.Execute(ctx, event, data)
+		if err := r.Execute(ctx, event, data); err != nil {
+			slog.Warn("async hook execution failed", "event", event, "error", err)
+		}
 	}()
 }
 
@@ -150,7 +153,9 @@ func (r *Registry) ExecuteAsyncEnvelope(ctx context.Context, env EventEnvelope) 
 	r.asyncWG.Add(1)
 	go func() {
 		defer r.asyncWG.Done()
-		_ = r.ExecuteEnvelope(ctx, env)
+		if err := r.ExecuteEnvelope(ctx, env); err != nil {
+			slog.Warn("async hook execution failed", "event", env.EventType, "error", err)
+		}
 	}()
 }
 

@@ -157,6 +157,12 @@ func (m *chatModel) startStream() {
 	}
 	m.streamCancelled = false
 	m.syncSessionSelection()
+	// Cancel any prior in-flight stream first: overwriting m.cancel would
+	// leak the previous stream's goroutine and leave it running against an
+	// orphaned context.
+	if m.cancel != nil {
+		m.cancel()
+	}
 	sess := m.session
 	ref := m.ref
 	ctx, cancel := context.WithCancel(context.Background())

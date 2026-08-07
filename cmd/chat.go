@@ -698,11 +698,14 @@ func runChat() error {
 	// Forward SIGHUP (terminal close, ssh drop, window manager exit) into the
 	// TUI as a tea.QuitMsg so the session is saved and cleaned up instead of
 	// dying silently mid-run. Bubble Tea only handles SIGINT and SIGTERM.
+	// The forwarder deregisters itself after the first SIGHUP so repeated
+	// runChat() invocations do not leak signal handlers or goroutines.
 	{
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGHUP)
 		go func() {
 			<-sigCh
+			signal.Stop(sigCh)
 			ref.Send(tea.QuitMsg{})
 		}()
 	}
