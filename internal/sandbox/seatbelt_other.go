@@ -34,3 +34,8 @@ func RunSeatbelted(ctx context.Context, command string, policy *SeatbeltPolicy) 
 func SeatbeltAvailable() bool {
 	return false
 }
+
+// getCachedProfile is a stub on non-darwin platforms.
+func getCachedProfile(security Security) (string, error) {
+	return "", fmt.Errorf("seatbelt sandboxing is only available on macOS")
+}
