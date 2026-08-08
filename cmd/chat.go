@@ -275,10 +275,12 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	}
 	startup.EndPhase("newChatModel:taste-staleness")
 
-	// Initialize write-ahead log for crash recovery
+	// Initialize write-ahead log for crash recovery. BatchedWAL batches
+	// appends + fsync on a timer so per-message writes don't stall the UI
+	// thread (the plain WAL syncs on every append).
 	startup.MarkPhase("newChatModel:wal")
 	if wal, err := session.NewWAL(sid); err == nil {
-		m.wal = wal
+		m.wal = session.NewBatchedWAL(wal)
 		_ = wal.AppendMeta(effectiveModel, effectiveProvider, "")
 	}
 	startup.EndPhase("newChatModel:wal")
@@ -609,6 +611,22 @@ func runChat() error {
 	startup.Reset()
 	startBackgroundCatalogRefresh(context.Background())
 
+	// On an unexpected panic, persist the active session and stop the
+	// container so a crash loses at most the in-flight message and never
+	// leaves a zombie Docker sandbox. The closure captures the model once it
+	// exists; before that, saveFn is a no-op (nothing to save).
+	var active *chatModel
+	panicSaveFn = func() {
+		if active == nil {
+			return
+		}
+		if active.session != nil && active.sessionID != "" {
+			active.saveSession()
+		}
+		active.stopContainer()
+	}
+	defer func() { panicSaveFn = nil }()
+
 	// Auto-index codegraph in background if .codegraph exists
 	go autoIndexCodegraph()
 
@@ -673,6 +691,7 @@ func runChat() error {
 	if err != nil {
 		return err
 	}
+	active = &m
 
 	if promptFlag != "" {
 		if e := (&m).ensureSessionReadyForChat(); e != nil {

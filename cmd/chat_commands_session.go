@@ -43,34 +43,15 @@ func formatQuitResumeMessage(sessionID string) string {
 func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string) (tea.Model, tea.Cmd) {
 	switch cmd {
 	case "/quit", "/exit":
-		m.saveSession()
-		// Cancel any running /loop goroutine.
-		if m.loopCancel != nil {
-			m.loopCancel()
-			m.loopCancel = nil
-		}
-		// Cancel any running /parallel agents.
-		if m.parallelCancel != nil {
-			m.parallelCancel()
-			m.parallelCancel = nil
-		}
-		// Re-enable system sleep if it was prevented.
+		// Re-enable system sleep if it was prevented, then use the canonical
+		// quit sequence (cancel stream → save → stop watcher/parallel/bg →
+		// stop container) rather than a hand-rolled duplicate that previously
+		// missed cancelling the in-flight stream.
 		if m.sleepCancel != nil {
 			m.sleepCancel()
 			m.sleepCancel = nil
 		}
-		// Stop file watcher if active.
-		if m.watcherStop != nil {
-			m.watcherStop()
-		}
-		// Cancel background goroutines.
-		if m.bgCancel != nil {
-			m.bgCancel()
-		}
-		m.stopContainer()
-		ClearTabProgress()
-		m.quitting = true
-		return m, tea.Quit
+		return m.quitModel()
 
 	case "/clear":
 		if m.manualCompacting {

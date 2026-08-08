@@ -6,16 +6,15 @@
 //
 // The handler is optional and safe to call on all platforms. Everything is
 // guarded so this package never panics itself. The POSIX signal wiring
-// (SIGQUIT/SIGTERM dumps) is gated behind build tags so it does not compile on
-// Windows.
+// (SIGQUIT goroutine dumps) is gated behind build tags so it does not compile
+// on Windows. SIGTERM is deliberately left to the app's own graceful-shutdown
+// handling (Bubble Tea) so a normal `kill` does not produce a spurious crash
+// report.
 //
 // On Go 1.23+ runtime.SetCrashOutput is used as a complementary sink for fatal
 // runtime errors. The call is split into per-Go-version files
 // (crash_runtime.go / crash_runtime_stub.go) so this package still builds on
 // older Go.
-//
-// Do NOT call this from cmd/hawk yet — wiring into the binary entry point is a
-// future wave. This leaf only provides the handler.
 //
 // Modeled on grok `xai-crash-handler` (SIGBUS/SIGSEGV + goroutine dump + report
 // archive), translated to a Go recover()-based panic path + signal path.

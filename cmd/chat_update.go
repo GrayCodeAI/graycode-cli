@@ -1281,6 +1281,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// already renders the tool's name as this block's header.
 		m.messages = append(m.messages, displayMsg{role: "tool_result", content: msg.content})
 		m.viewDirty = true
+		// Durability: persist completed tool results incrementally so a
+		// crash mid-turn doesn't lose them (they were previously only
+		// written at turn end via saveSession).
+		if m.wal != nil {
+			m.recordWALError(m.wal.Append(session.Message{Role: "tool_result", Content: msg.content}))
+		}
 
 	case blastRadiusMsg:
 		m.messages = append(m.messages, displayMsg{role: "warning", content: msg.message})
@@ -1424,7 +1430,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			content := sanitizeIdentity(m.partial.String())
 			m.messages = append(m.messages, displayMsg{role: "assistant", content: content})
 			if m.wal != nil {
-				_ = m.wal.Append(session.Message{Role: "assistant", Content: content})
+				m.recordWALError(m.wal.Append(session.Message{Role: "assistant", Content: content}))
 			}
 			// Generate ghost text suggestion from AI response
 			m.ghostText.Suggest(content)

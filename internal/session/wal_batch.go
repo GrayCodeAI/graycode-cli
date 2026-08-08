@@ -106,3 +106,10 @@ func (b *BatchedWAL) Close() error {
 	_ = b.Flush()
 	return b.wal.Close()
 }
+
+// Remove flushes buffered entries, closes the underlying WAL, and deletes the
+// WAL file. Mirrors WAL.Remove so callers can use BatchedWAL interchangeably.
+func (b *BatchedWAL) Remove() error {
+	_ = b.Flush()
+	return b.wal.Remove()
+}
