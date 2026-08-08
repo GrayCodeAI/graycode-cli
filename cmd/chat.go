@@ -104,14 +104,6 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 	return saved.ID, saved, nil
 }
 
-func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Settings) (chatModel, error) {
-	registry, err := defaultRegistry(settings)
-	if err != nil {
-		return chatModel{}, err
-	}
-	return newChatModelWithRegistry(ref, systemPrompt, settings, registry)
-}
-
 func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkconfig.Settings, registry *tool.Registry) (chatModel, error) {
 	startup.MarkPhase("newChatModel:total")
 
@@ -417,6 +409,11 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	go func(model chatModel) {
 		startup.MarkPhase("newChatModel:ui-cache-warm")
 		hawkconfig.RefreshConfigCredSnapshot(context.Background())
+		// Network reachability runs off the startup critical path: an offline
+		// machine stalls here (background) instead of before first paint.
+		if msg := checkNetworkReachability(model.settings); msg != "" {
+			model.ref.Send(displayMsg{role: "warning", content: "Startup check:\n  ! " + msg})
+		}
 		welcomeSnapshot := loadWelcomeStatusSnapshot()
 		_, _ = model.refreshStatusBarLeft(true)
 		connStatusVal := ""
@@ -687,7 +684,9 @@ func runChat() error {
 	}
 	systemPrompt := promptRes.text
 	settings := settingsRes.settings
-	m, err := newChatModel(ref, systemPrompt, settings)
+	// Pass the registry already built by the runChat goroutine — rebuilding it
+	// here would re-run MCP server startup (up to 1.5s each) a second time.
+	m, err := newChatModelWithRegistry(ref, systemPrompt, settings, registryRes.registry)
 	if err != nil {
 		return err
 	}

@@ -206,20 +206,7 @@ func validateStartup(settings hawkconfig.Settings) []StartupWarning {
 		}
 	}
 
-	// 2. Quick network reachability check (DNS lookup, no full HTTP request)
-	if providerName != "" && providerName != "ollama" {
-		host := providerDNSHost(providerName)
-		if host != "" {
-			if _, err := net.LookupHost(host); err != nil {
-				warnings = append(warnings, StartupWarning{
-					Check:   "network",
-					Message: fmt.Sprintf("Cannot resolve %s. Check your internet connection.", host),
-				})
-			}
-		}
-	}
-
-	// 3. Check sessions directory is writable
+	// 2. Check sessions directory is writable
 	sessDir := storage.SessionsDir()
 	if err := os.MkdirAll(sessDir, 0o750); err != nil {
 		warnings = append(warnings, StartupWarning{
@@ -240,6 +227,29 @@ func validateStartup(settings hawkconfig.Settings) []StartupWarning {
 	}
 
 	return warnings
+}
+
+// checkNetworkReachability runs a quick DNS lookup for the active provider. It
+// is intentionally separate from validateStartup so the blocking lookup runs
+// post-first-paint (background), not on the TUI startup critical path where an
+// offline machine would stall the UI for seconds. Returns a warning message, or
+// "" when reachable/not applicable.
+func checkNetworkReachability(settings hawkconfig.Settings) string {
+	providerName := strings.TrimSpace(settings.Provider)
+	if providerName == "" {
+		providerName = strings.TrimSpace(hawkconfig.ActiveProvider(context.Background()))
+	}
+	if providerName == "" || providerName == "ollama" {
+		return ""
+	}
+	host := providerDNSHost(providerName)
+	if host == "" {
+		return ""
+	}
+	if _, err := net.LookupHost(host); err != nil {
+		return fmt.Sprintf("Cannot resolve %s. Check your internet connection.", host)
+	}
+	return ""
 }
 
 // providerDNSHost returns a hostname to check DNS resolution for a provider.

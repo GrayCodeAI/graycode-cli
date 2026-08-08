@@ -194,6 +194,13 @@ func mergedMCPHeaders(cfg hawkconfig.MCPServerConfig) map[string]string {
 }
 
 func loadStartupMCPToolSets(servers []startupMCPServerSpec) [][]tool.Tool {
+	return loadStartupMCPToolSetsWith(defaultRegistryLoadMCPTools, defaultRegistryLoadRemoteMCPTools, servers)
+}
+
+// loadStartupMCPToolSetsWith loads MCP tool sets for the given servers using
+// explicit loader functions (injected so callers can capture them by value and
+// avoid racing tests that swap the package-level loader vars).
+func loadStartupMCPToolSetsWith(loadMCP func(context.Context, string, string, ...string) ([]tool.Tool, error), loadRemoteMCP func(context.Context, string, string, string, map[string]string) ([]tool.Tool, error), servers []startupMCPServerSpec) [][]tool.Tool {
 	results := make([][]tool.Tool, len(servers))
 	var wg sync.WaitGroup
 	wg.Add(len(servers))
@@ -208,9 +215,9 @@ func loadStartupMCPToolSets(servers []startupMCPServerSpec) [][]tool.Tool {
 				err      error
 			)
 			if spec.isRemote() {
-				mcpTools, err = defaultRegistryLoadRemoteMCPTools(ctx, spec.name, spec.serverType, spec.url, spec.headers)
+				mcpTools, err = loadRemoteMCP(ctx, spec.name, spec.serverType, spec.url, spec.headers)
 			} else {
-				mcpTools, err = defaultRegistryLoadMCPTools(ctx, spec.name, spec.command, spec.args...)
+				mcpTools, err = loadMCP(ctx, spec.name, spec.command, spec.args...)
 			}
 			if err != nil {
 				return
@@ -227,9 +234,6 @@ func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
 	tools := essentialTools()
 	if tool.IsPowerShellAvailable() {
 		tools = append(tools, tool.PowerShellTool{})
-	}
-	for _, mcpTools := range loadStartupMCPToolSets(configuredStartupMCPServers(settings)) {
-		tools = append(tools, mcpTools...)
 	}
 
 	filtered, err := filterAvailableTools(
@@ -253,6 +257,33 @@ func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
 	// Lazy-load optional tools in background (executable, not model-visible).
 	go func() {
 		for _, t := range optionalTools() {
+			_ = registry.Register(t)
+		}
+	}()
+
+	// Load MCP tools in the background so a hung/absent stdio server delays
+	// tool availability — not first paint. loadStartupMCPToolSets can block up
+	// to 1.5s per configured server. The CLI tool filters still apply.
+	// The loader functions are captured by value so tests that override the
+	// package vars cannot race with the async goroutine.
+	loadMCP := defaultRegistryLoadMCPTools
+	loadRemoteMCP := defaultRegistryLoadRemoteMCPTools
+	go func() {
+		mcpTools := loadStartupMCPToolSetsWith(loadMCP, loadRemoteMCP, configuredStartupMCPServers(settings))
+		var all []tool.Tool
+		for _, set := range mcpTools {
+			all = append(all, set...)
+		}
+		filteredMCP, err := filterAvailableTools(
+			all,
+			toolsFlagSet,
+			parseToolListFromCLI(toolsFlag),
+			parseToolListFromCLI(disallowedToolsFlag),
+		)
+		if err != nil {
+			return
+		}
+		for _, t := range filteredMCP {
 			_ = registry.Register(t)
 		}
 	}()

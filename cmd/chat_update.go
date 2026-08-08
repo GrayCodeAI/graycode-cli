@@ -1467,7 +1467,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.toolStartTime = time.Time{}
 		m.viewDirty = true
 		m.input.Focus()
-		m.saveSession()
+		// Persist off the UI thread: a large session JSONL write would
+		// otherwise hitch the completion frame. The WAL is removed only after
+		// the save succeeds (see saveSessionCmd).
+		if saveCmd := m.saveSessionCmd(); saveCmd != nil {
+			cmds = append(cmds, saveCmd)
+		}
 
 		// Trim old messages to prevent unbounded memory growth in long sessions.
 		m.trimOldMessages()
