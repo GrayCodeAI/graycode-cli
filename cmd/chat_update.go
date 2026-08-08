@@ -541,6 +541,16 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			chosen, handled := m.autonomyPicker.Update(msg)
 			if handled {
 				if chosen != nil && m.session != nil {
+					// YOLO ("Autonomous") is unattended mode: require a typed
+					// confirmation instead of a single Enter, so a stray key
+					// cannot silently drop the session into never-ask.
+					if chosen.Level == engine.AutonomyYOLO {
+						m.pendingYOLOConfirm = true
+						m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy tier → %s — this enables unattended mode (never prompts for permission). Type %s then Enter to confirm, or type anything else to cancel.", chosen.Name, yoloConfirmToken)})
+						m.viewDirty = true
+						m.updateViewportContent()
+						return m, nil
+					}
 					m.session.PermSvc().SetAutonomy(chosen.Level)
 					m.settings.Autonomy = permissionTierSettingValue(chosen.Level)
 					m.settings.AutonomyExplicit = true

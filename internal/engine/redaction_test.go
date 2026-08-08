@@ -4,6 +4,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestRedactToolResultRedactsKnownSecrets(t *testing.T) {
@@ -51,4 +53,41 @@ func TestRedactToolResultNilSafe(t *testing.T) {
 	if got := zero.redactToolResult("anything"); got != "anything" {
 		t.Fatalf("zero session should pass through, got %q", got)
 	}
+}
+
+// TestCompleteResultRedactsDisplayEvent verifies the display-path wiring: the
+// tool_result stream event carries redacted output when a redactor is wired,
+// and unchanged output when it is not.
+func TestCompleteResultRedactsDisplayEvent(t *testing.T) {
+	secret := "sk-test12345678901234567890"
+	output := "the key is " + secret
+
+	t.Run("redactor wired", func(t *testing.T) {
+		s := &Session{life: NewLifecycleService(nil)}
+		svc := NewToolService(nil)
+		svc.WithExecutionDeps(toolExecutionDeps{
+			redactOutput: s.redactToolResult,
+		})
+
+		ch := make(chan StreamEvent, 1)
+		_ = svc.CompleteResult(t.Context(), toolExecResult{tc: types.ToolCall{Name: "Read", ID: "t1"}, output: output}, ch)
+
+		ev := <-ch
+		if strings.Contains(ev.Content, secret) {
+			t.Fatalf("display event carried raw secret: %q", ev.Content)
+		}
+		if !strings.Contains(ev.Content, "[REDACTED") {
+			t.Fatalf("expected redaction placeholder in display event, got: %q", ev.Content)
+		}
+	})
+
+	t.Run("no redactor wired", func(t *testing.T) {
+		svc := NewToolService(nil)
+		ch := make(chan StreamEvent, 1)
+		_ = svc.CompleteResult(t.Context(), toolExecResult{tc: types.ToolCall{Name: "Read", ID: "t2"}, output: output}, ch)
+		ev := <-ch
+		if ev.Content != output {
+			t.Fatalf("expected unchanged output without redactor, got: %q", ev.Content)
+		}
+	})
 }

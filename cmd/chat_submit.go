@@ -40,6 +40,23 @@ func (m chatModel) submitUserMessage() (chatModel, tea.Cmd) {
 	if text == "" {
 		return m, nil
 	}
+	// A pending YOLO confirmation consumes the next submitted input: exact
+	// (case-insensitive) match of the token confirms, anything else cancels.
+	if m.pendingYOLOConfirm {
+		m.pendingYOLOConfirm = false
+		m.input.Reset()
+		m.viewDirty = true
+		if strings.EqualFold(text, yoloConfirmToken) && m.session != nil {
+			m.session.PermSvc().SetAutonomy(engine.AutonomyYOLO)
+			m.settings.Autonomy = permissionTierSettingValue(engine.AutonomyYOLO)
+			m.settings.AutonomyExplicit = true
+			m.messages = append(m.messages, displayMsg{role: "system", content: formatAutonomyTierMessage(engine.AutonomyYOLO) + " — enabled. " + icons.CloseThick() + " You will not be prompted for permission."})
+		} else {
+			m.messages = append(m.messages, displayMsg{role: "system", content: "Autonomy change cancelled — stayed on the previous tier."})
+		}
+		m.updateViewportContent()
+		return m, nil
+	}
 	if sugs := m.slashSuggestionsFor(text); len(sugs) > 0 {
 		if m.slashSel < 0 || m.slashSel >= len(sugs) {
 			m.slashSel = 0

@@ -202,6 +202,7 @@ type chatModel struct {
 	credentialReq              *credentialAskMsg // pending credential prompt
 	credentialReqSeq           int
 	credentialTimeoutAt        time.Time
+	pendingYOLOConfirm         bool // user selected YOLO in the picker; awaiting typed confirmation
 	width                      int
 	height                     int
 	quitting                   bool
