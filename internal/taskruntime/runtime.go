@@ -176,11 +176,29 @@ func (r *Registry) Wait(timeout time.Duration) []*Task {
 	deadline := time.Now().Add(timeout)
 
 	// cond.Wait() cannot be combined with a timeout directly, so a timer
-	// goroutine broadcasts on the cond when the deadline elapses. This wakes
-	// the wait loop to re-check the deadline. The timer is stopped when Wait
-	// returns early (all tasks done) so it cannot fire after exit.
-	timer := time.AfterFunc(timeout, func() { r.cond.Broadcast() })
-	defer timer.Stop()
+	// goroutine broadcasts on the cond once the deadline elapses. A single
+	// broadcast could be lost if it lands in the microsecond window between
+	// loop iterations while the waiter is outside cond.Wait(), so the timer
+	// repeats the broadcast every millisecond until Wait returns. The stop
+	// channel terminates the goroutine when Wait returns (all tasks done or
+	// deadline passed) so it cannot leak or fire after exit.
+	stop := make(chan struct{})
+	defer close(stop)
+	go func() {
+		select {
+		case <-time.After(timeout):
+		case <-stop:
+			return
+		}
+		for {
+			r.cond.Broadcast()
+			select {
+			case <-stop:
+				return
+			case <-time.After(time.Millisecond):
+			}
+		}
+	}()
 
 	for {
 		r.mu.Lock()
@@ -193,8 +211,7 @@ func (r *Registry) Wait(timeout time.Duration) []*Task {
 			r.mu.Unlock()
 			return out
 		}
-		remaining := time.Until(deadline)
-		if remaining <= 0 {
+		if time.Now().After(deadline) {
 			out := make([]*Task, 0, len(r.done))
 			for _, t := range r.done {
 				cp := *t
@@ -308,11 +325,29 @@ func (r *Registry) WaitIDs(ids []string, timeout time.Duration) []*Task {
 	deadline := time.Now().Add(timeout)
 
 	// cond.Wait() cannot be combined with a timeout directly, so a timer
-	// goroutine broadcasts on the cond when the deadline elapses. This wakes
-	// the wait loop to re-check the deadline. The timer is stopped when
-	// WaitIDs returns early so it cannot fire after exit.
-	timer := time.AfterFunc(timeout, func() { r.cond.Broadcast() })
-	defer timer.Stop()
+	// goroutine broadcasts on the cond once the deadline elapses. A single
+	// broadcast could be lost if it lands in the microsecond window between
+	// loop iterations while the waiter is outside cond.Wait(), so the timer
+	// repeats the broadcast every millisecond until WaitIDs returns. The stop
+	// channel terminates the goroutine when WaitIDs returns so it cannot leak
+	// or fire after exit.
+	stop := make(chan struct{})
+	defer close(stop)
+	go func() {
+		select {
+		case <-time.After(timeout):
+		case <-stop:
+			return
+		}
+		for {
+			r.cond.Broadcast()
+			select {
+			case <-stop:
+				return
+			case <-time.After(time.Millisecond):
+			}
+		}
+	}()
 
 	for {
 		r.mu.Lock()

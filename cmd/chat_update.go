@@ -110,6 +110,7 @@ func (m *chatModel) quitModel() (tea.Model, tea.Cmd) {
 		m.cancel()
 		m.cancel = nil
 	}
+	saveInputHistory(m.history)
 	m.saveSession()
 	if m.watcherStop != nil {
 		m.watcherStop()
@@ -1014,7 +1015,6 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				case "ctrl+c":
 					if time.Since(m.lastCtrlC) < 1*time.Second {
-						saveInputHistory(m.history)
 						return m.quitModel()
 					}
 					m.lastCtrlC = time.Now()
