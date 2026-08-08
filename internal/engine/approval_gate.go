@@ -73,11 +73,14 @@ type ApprovalGate struct {
 	ConfirmFn func(req ApprovalRequest) ApprovalResponse
 
 	// sessionApprovals caches categories the human approved for the full session.
-	sessionMu       sync.Mutex
-	sessionApproved map[ApprovalCategory]bool
 	// nApprovals caches categories approved for the next N calls (ApprovalApproveForN).
-	nMu        sync.Mutex
-	nApprovals map[ApprovalCategory]int
+	// Both maps and their checks are guarded by a single approvalMu so that
+	// isSessionApproved + consumeNApproval check-and-consume is atomic — two
+	// concurrent high-risk tool calls cannot double-spend a session or N-count
+	// approval (TOCTOU).
+	approvalMu      sync.Mutex
+	sessionApproved map[ApprovalCategory]bool
+	nApprovals      map[ApprovalCategory]int
 }
 
 // ApprovalRequest describes a gated action presented to the human.
@@ -163,42 +166,39 @@ func isNetworkCommand(cmd string) bool {
 
 // sessionApprove records a session-wide approval for a category.
 func (g *ApprovalGate) sessionApprove(cat ApprovalCategory) {
-	g.sessionMu.Lock()
-	defer g.sessionMu.Unlock()
+	g.approvalMu.Lock()
+	defer g.approvalMu.Unlock()
 	if g.sessionApproved == nil {
 		g.sessionApproved = make(map[ApprovalCategory]bool)
 	}
 	g.sessionApproved[cat] = true
 }
 
-// isSessionApproved returns true if the category was previously approved for
-// the full session.
-func (g *ApprovalGate) isSessionApproved(cat ApprovalCategory) bool {
-	g.sessionMu.Lock()
-	defer g.sessionMu.Unlock()
-	return g.sessionApproved[cat]
-}
-
 // nApprove records an approval for the next N calls of a category.
 func (g *ApprovalGate) nApprove(cat ApprovalCategory, n int) {
-	g.nMu.Lock()
-	defer g.nMu.Unlock()
+	g.approvalMu.Lock()
+	defer g.approvalMu.Unlock()
 	if g.nApprovals == nil {
 		g.nApprovals = make(map[ApprovalCategory]int)
 	}
 	g.nApprovals[cat] += n
 }
 
-// consumeNApproval decrements the N-count for a category and returns true if a
-// remaining approval was consumed. Returns false when the count is exhausted.
-func (g *ApprovalGate) consumeNApproval(cat ApprovalCategory) bool {
-	g.nMu.Lock()
-	defer g.nMu.Unlock()
-	if g.nApprovals[cat] <= 0 {
-		return false
+// tryConsumeApproval is the atomic check-and-consume that prevents the TOCTOU
+// race between isSessionApproved and consumeNApproval. It checks session-wide
+// approval first, then N-count, consuming the N-count only when this call
+// actually observes a remaining approval. Returns true if the action is approved.
+func (g *ApprovalGate) tryConsumeApproval(cat ApprovalCategory) bool {
+	g.approvalMu.Lock()
+	defer g.approvalMu.Unlock()
+	if g.sessionApproved[cat] {
+		return true
 	}
-	g.nApprovals[cat]--
-	return true
+	if g.nApprovals[cat] > 0 {
+		g.nApprovals[cat]--
+		return true
+	}
+	return false
 }
 
 // CheckApproval consults the approval gate for a tool call. It returns

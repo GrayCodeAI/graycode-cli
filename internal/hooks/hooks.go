@@ -161,6 +161,10 @@ func (r *Registry) ExecuteAsyncEnvelope(ctx context.Context, env EventEnvelope) 
 
 // WaitAsync waits for currently queued asynchronous hooks to finish or for
 // ctx to expire. Callers must stop scheduling new async hooks before waiting.
+//
+// The internal goroutine may outlive WaitAsync if the context expires first;
+// it will terminate once all tracked hooks complete (the goroutine is not
+// leaked indefinitely — it drains when the last hook's Done() is called).
 func (r *Registry) WaitAsync(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -317,7 +321,12 @@ func registerCommandHook(ch *CommandHook) {
 					}
 				}
 			}
-			go func() { _ = executeHookCommand(ch, data) }()
+			// Track the async goroutine on asyncWG so WaitAsync can drain it.
+			global.asyncWG.Add(1)
+			go func() {
+				defer global.asyncWG.Done()
+				_ = executeHookCommand(ch, data)
+			}()
 			return nil
 		}
 	}

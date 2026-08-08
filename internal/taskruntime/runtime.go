@@ -170,29 +170,44 @@ func (r *Registry) Kill(id string) error {
 }
 
 // Wait blocks until no tasks are running or timeout elapses.
+// It does NOT hold the lock across the blocking wait, so other operations
+// (SpawnAgent, Kill, Get, etc.) can proceed while waiting.
 func (r *Registry) Wait(timeout time.Duration) []*Task {
 	deadline := time.Now().Add(timeout)
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	for len(r.running) > 0 {
+
+	// cond.Wait() cannot be combined with a timeout directly, so a timer
+	// goroutine broadcasts on the cond when the deadline elapses. This wakes
+	// the wait loop to re-check the deadline. The timer is stopped when Wait
+	// returns early (all tasks done) so it cannot fire after exit.
+	timer := time.AfterFunc(timeout, func() { r.cond.Broadcast() })
+	defer timer.Stop()
+
+	for {
+		r.mu.Lock()
+		if len(r.running) == 0 {
+			out := make([]*Task, 0, len(r.done))
+			for _, t := range r.done {
+				cp := *t
+				out = append(out, &cp)
+			}
+			r.mu.Unlock()
+			return out
+		}
 		remaining := time.Until(deadline)
 		if remaining <= 0 {
-			break
-		}
-		timer := time.AfterFunc(remaining, func() {
-			r.mu.Lock()
-			r.cond.Broadcast()
+			out := make([]*Task, 0, len(r.done))
+			for _, t := range r.done {
+				cp := *t
+				out = append(out, &cp)
+			}
 			r.mu.Unlock()
-		})
+			return out
+		}
+		// cond.Wait() atomically unlocks r.mu while blocking and re-locks on
+		// wakeup, so other goroutines can acquire r.mu during the wait.
 		r.cond.Wait()
-		timer.Stop()
+		r.mu.Unlock()
 	}
-	out := make([]*Task, 0, len(r.done))
-	for _, t := range r.done {
-		cp := *t
-		out = append(out, &cp)
-	}
-	return out
 }
 
 // CollectCompleted returns and clears completed tasks.
@@ -281,6 +296,7 @@ func (r *Registry) AppendOutput(id, chunk string) {
 }
 
 // WaitIDs blocks until all listed task ids are not running, or timeout.
+// Like Wait, it does not hold the lock across the blocking wait.
 func (r *Registry) WaitIDs(ids []string, timeout time.Duration) []*Task {
 	if len(ids) == 0 {
 		return r.Wait(timeout)
@@ -290,9 +306,16 @@ func (r *Registry) WaitIDs(ids []string, timeout time.Duration) []*Task {
 		want[id] = true
 	}
 	deadline := time.Now().Add(timeout)
-	r.mu.Lock()
-	defer r.mu.Unlock()
+
+	// cond.Wait() cannot be combined with a timeout directly, so a timer
+	// goroutine broadcasts on the cond when the deadline elapses. This wakes
+	// the wait loop to re-check the deadline. The timer is stopped when
+	// WaitIDs returns early so it cannot fire after exit.
+	timer := time.AfterFunc(timeout, func() { r.cond.Broadcast() })
+	defer timer.Stop()
+
 	for {
+		r.mu.Lock()
 		still := false
 		for id := range want {
 			if _, ok := r.running[id]; ok {
@@ -300,32 +323,24 @@ func (r *Registry) WaitIDs(ids []string, timeout time.Duration) []*Task {
 				break
 			}
 		}
-		if !still {
-			break
-		}
-		remaining := time.Until(deadline)
-		if remaining <= 0 {
-			break
-		}
-		timer := time.AfterFunc(remaining, func() {
-			r.mu.Lock()
-			r.cond.Broadcast()
+		if !still || time.Now().After(deadline) {
+			out := make([]*Task, 0, len(ids))
+			for _, id := range ids {
+				if t, ok := r.done[id]; ok {
+					cp := *t
+					out = append(out, &cp)
+				} else if t, ok := r.running[id]; ok {
+					cp := *t
+					out = append(out, &cp)
+				}
+			}
 			r.mu.Unlock()
-		})
-		r.cond.Wait()
-		timer.Stop()
-	}
-	out := make([]*Task, 0, len(ids))
-	for _, id := range ids {
-		if t, ok := r.done[id]; ok {
-			cp := *t
-			out = append(out, &cp)
-		} else if t, ok := r.running[id]; ok {
-			cp := *t
-			out = append(out, &cp)
+			return out
 		}
+		// cond.Wait() atomically unlocks r.mu while blocking.
+		r.cond.Wait()
+		r.mu.Unlock()
 	}
-	return out
 }
 
 // List returns snapshots of all running and recently completed tasks.

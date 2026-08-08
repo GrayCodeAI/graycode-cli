@@ -879,13 +879,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "ctrl+c":
 				if time.Since(m.lastCtrlC) < 1*time.Second {
-					m.saveSession()
-					if m.watcherStop != nil {
-						m.watcherStop()
-					}
-					m.stopContainer()
-					m.quitting = true
-					return m, tea.Quit
+					return m.quitModel()
 				}
 				m.lastCtrlC = time.Now()
 				m.messages = append(m.messages, displayMsg{role: "system", content: quitAgainMsg})
@@ -1020,14 +1014,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				case "ctrl+c":
 					if time.Since(m.lastCtrlC) < 1*time.Second {
-						m.saveSession()
 						saveInputHistory(m.history)
-						if m.watcherStop != nil {
-							m.watcherStop()
-						}
-						m.stopContainer()
-						m.quitting = true
-						return m, tea.Quit
+						return m.quitModel()
 					}
 					m.lastCtrlC = time.Now()
 					m.messages = append(m.messages, displayMsg{role: "system", content: quitAgainMsg})

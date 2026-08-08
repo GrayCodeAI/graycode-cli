@@ -234,11 +234,10 @@ func (s *PermissionService) CheckApproval(_ context.Context, toolName string, ar
 	if s.perm.Autonomy <= g.MaxAutoApprove {
 		return true, ""
 	}
-	if g.isSessionApproved(cat) {
-		return true, ""
-	}
-	// N-count approval: allow without prompting if a remaining count exists.
-	if g.consumeNApproval(cat) {
+	// Atomic check-and-consume: session-wide approval or remaining N-count.
+	// tryConsumeApproval holds the lock across both checks so concurrent
+	// high-risk tool calls cannot double-spend a session or N-count approval.
+	if g.tryConsumeApproval(cat) {
 		return true, ""
 	}
 	req := ApprovalRequest{

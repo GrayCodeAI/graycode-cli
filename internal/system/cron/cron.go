@@ -72,6 +72,8 @@ type Engine struct {
 	maxConcurrent int
 	inFlight      int
 	runs          []RunRecord
+	// inFlightWG tracks in-flight job goroutines so Stop() can drain them.
+	inFlightWG sync.WaitGroup
 }
 
 func NewEngine(handler JobHandler, maxConcurrent int) *Engine {
@@ -142,11 +144,14 @@ func (e *Engine) Start() {
 
 func (e *Engine) Stop() {
 	e.mu.Lock()
-	defer e.mu.Unlock()
 	if e.running {
 		close(e.stopCh)
 		e.running = false
 	}
+	e.mu.Unlock()
+	// Wait for in-flight jobs to finish so handlers are not killed mid-
+	// execution (which would leave state mutations incomplete).
+	e.inFlightWG.Wait()
 }
 
 func (e *Engine) Status() map[string]interface{} {
@@ -202,11 +207,13 @@ func (e *Engine) tick(now time.Time) {
 		}
 
 		e.inFlight++
+		e.inFlightWG.Add(1)
 		go e.executeJob(job)
 	}
 }
 
 func (e *Engine) executeJob(job *Job) {
+	defer e.inFlightWG.Done()
 	start := time.Now()
 	err := e.handler(job)
 	duration := time.Since(start)

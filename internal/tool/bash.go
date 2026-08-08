@@ -62,10 +62,12 @@ func normalizeCommand(cmd string) string {
 		}
 		return m
 	})
-	// Collapse repeated /* sequences: rm -rf /* -> rm -rf /
-	for strings.Contains(cmd, "/*") {
-		cmd = strings.ReplaceAll(cmd, "/*", "/")
-	}
+	// NOTE: we deliberately do NOT collapse "/*" to "/" here. The dangerous
+	// patterns list already includes both "rm -rf /" and "rm -rf /*" as
+	// literals, so collapsing is redundant for detection. Worse, it destroys
+	// legitimate globs (e.g. "ls src/*") and creates false negatives
+	// (e.g. "rm -rf /home/user/*" -> "rm -rf /home/user/", matching neither
+	// pattern). Detection operates on the raw command; leave it intact.
 	return cmd
 }
 

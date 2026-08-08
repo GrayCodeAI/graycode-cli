@@ -74,15 +74,21 @@ func IsRetryable(err error) bool {
 		return true
 	}
 
-	// url.Error wraps transport-layer failures from http.Client.
+	// url.Error wraps failures from http.Client. Timeouts are retryable.
+	// Other url.Error values wrap either transport-level failures (already
+	// caught by the net.Error check above, since errors.As unwraps
+	// recursively) or permanent client errors like "unsupported protocol
+	// scheme", "invalid port", and "missing protocol scheme" — those must
+	// NOT be retried. Only retry when the wrapped error is itself retryable.
 	var urlErr *url.Error
 	if errors.As(err, &urlErr) {
 		if urlErr.Timeout() {
 			return true
 		}
-		// Retry on connection errors that the transport didn't classify as
-		// permanent (e.g., "connection reset by peer" in the wrapped error).
-		return true
+		if inner := urlErr.Unwrap(); inner != nil {
+			return IsRetryable(inner)
+		}
+		return false
 	}
 
 	// io.EOF and io.ErrUnexpectedEOF are transport-level errors that may

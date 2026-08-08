@@ -329,9 +329,11 @@ func confirmDangerousSkipPermissions() error {
 }
 
 // dangerSkipConfirmToken is the exact string a user must type to confirm
-// --dangerously-skip-permissions. The token is long and explicit so it cannot
-// be triggered accidentally or forged by a single injected keystroke.
-const dangerSkipConfirmToken = "dangerous-skip-permissions"
+// --dangerously-skip-permissions. It is deliberately longer and distinct from
+// the flag name so it cannot be triggered by a stray keystroke, shell
+// autocomplete, or a single injected line — the user must understand and
+// intentionally type the confirmation.
+const dangerSkipConfirmToken = "i-understand-the-risks-skip-permissions"
 
 // isStdinTerminal reports whether stdin is connected to a terminal.
 // Delegates to the shared stdinIsTerminal so tests can override uniformly.
