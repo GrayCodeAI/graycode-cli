@@ -33,7 +33,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.44.0
 	go.opentelemetry.io/otel/sdk/metric v1.44.0
 	go.opentelemetry.io/otel/trace v1.44.0
-	golang.org/x/mod v0.37.0
+	golang.org/x/mod v0.38.0
 	golang.org/x/sys v0.47.0
 	golang.org/x/term v0.45.0
 	golang.org/x/text v0.40.0
@@ -80,16 +80,16 @@ require (
 	github.com/dlclark/regexp2 v1.12.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
-	github.com/entireio/auth-go v0.4.0 // indirect
+	github.com/entireio/auth-go v0.5.2 // indirect
 	github.com/fatih/semgroup v1.3.0 // indirect
 	github.com/gitleaks/go-gitdiff v0.9.1 // indirect
 	github.com/go-git/gcfg/v2 v2.0.2 // indirect
-	github.com/go-git/go-billy/v6 v6.0.0-alpha.1.0.20260519112248-0095b064a6c6 // indirect
-	github.com/go-git/go-git/v6 v6.0.0-alpha.4 // indirect; indirect — TODO: alpha, API-unstable; upgrade when v6 reaches stable or pin back to go-git/v5
-	github.com/go-git/x/plugin/objectsigner/auto v0.1.0 // indirect
-	github.com/go-git/x/plugin/objectsigner/gpg v0.1.0 // indirect
-	github.com/go-git/x/plugin/objectsigner/program v0.0.0-20260509055934-990a63433b45 // indirect
-	github.com/go-git/x/plugin/objectsigner/ssh v0.1.0 // indirect
+	github.com/go-git/go-billy/v6 v6.0.0-alpha.2 // indirect
+	github.com/go-git/go-git/v6 v6.0.0-alpha.5 // indirect; indirect — TODO: alpha, API-unstable; upgrade when v6 reaches stable or pin back to go-git/v5
+	github.com/go-git/x/plugin/objectsigner/auto v0.1.1-0.20260624122410-382b2905c041 // indirect
+	github.com/go-git/x/plugin/objectsigner/gpg v0.2.1-0.20260624122410-382b2905c041 // indirect
+	github.com/go-git/x/plugin/objectsigner/program v0.0.0-20260624122410-382b2905c041 // indirect
+	github.com/go-git/x/plugin/objectsigner/ssh v0.2.1-0.20260624122410-382b2905c041 // indirect
 	github.com/go-sprout/sprout v1.0.3 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
@@ -138,7 +138,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0
-	github.com/GrayCodeAI/trace v0.1.4-0.20260803003541-1cd0fc51b106
+	github.com/GrayCodeAI/trace v0.1.4-0.20260808011723-d8429e473c86
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
