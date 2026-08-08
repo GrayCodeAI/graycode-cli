@@ -1,5 +1,3 @@
-//go:build sqlite
-
 package session
 
 import (
@@ -500,7 +498,7 @@ func TestGetSessionStats(t *testing.T) {
 	}
 }
 
-func TestConcurrentAccess(t *testing.T) {
+func TestSQLiteStore_ConcurrentAccess(t *testing.T) {
 	store := testStore(t)
 
 	sess := &SessionRecord{

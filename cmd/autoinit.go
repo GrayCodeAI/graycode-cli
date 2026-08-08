@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -37,10 +38,12 @@ func maybeAutoInit(ctx context.Context) {
 	}
 	go func() {
 		// MaybeRun handles all gating (disable env, marker, existing context).
-		_, _ = autoinit.MaybeRun(ctx, autoinit.Options{
+		if _, err := autoinit.MaybeRun(ctx, autoinit.Options{
 			Root: root,
 			Run:  autoInitRunner,
-		})
+		}); err != nil {
+			slog.Warn("auto-init failed", "root", root, "error", err)
+		}
 	}()
 }
 

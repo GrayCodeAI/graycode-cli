@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -79,7 +80,7 @@ type RenameCapabilities struct {
 type LSPClient struct {
 	cmd      *exec.Cmd
 	stdin    io.WriteCloser
-	stdout   *bufio.Scanner
+	stdout   *bufio.Reader
 	mu       sync.Mutex
 	nextID   atomic.Int64
 	pending  map[interface{}]chan json.RawMessage
@@ -106,11 +107,10 @@ func NewLSPClient(ctx context.Context, lang string, cfg ServerConfig) (*LSPClien
 	c := &LSPClient{
 		cmd:      cmd,
 		stdin:    stdin,
-		stdout:   bufio.NewScanner(stdout),
+		stdout:   bufio.NewReader(stdout),
 		pending:  make(map[interface{}]chan json.RawMessage),
 		language: lang,
 	}
-	c.stdout.Buffer(make([]byte, 0, 1024*1024), 1024*1024)
 
 	// Start read loop
 	go c.readLoop()
@@ -143,15 +143,42 @@ func NewLSPClient(ctx context.Context, lang string, cfg ServerConfig) (*LSPClien
 }
 
 func (c *LSPClient) readLoop() {
-	for c.stdout.Scan() {
-		line := c.stdout.Bytes()
-		if len(line) == 0 {
+	// LSP uses Content-Length framed messages: "Content-Length: N\r\n\r\n<N bytes>".
+	// We read line-by-line for headers, then read exactly N bytes for the body.
+	// This correctly handles pretty-printed JSON (embedded newlines) that a
+	// naive line-by-line parser would fragment.
+	for {
+		// Read the header block line by line.
+		var contentLength int
+		for {
+			line, err := c.stdout.ReadString('\n')
+			if err != nil {
+				return
+			}
+			// Headers are terminated by an empty line.
+			if line == "\r\n" || line == "\n" {
+				break
+			}
+			header := strings.TrimSpace(line)
+			if strings.HasPrefix(header, "Content-Length:") {
+				n, err := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(header, "Content-Length:")))
+				if err == nil && n > 0 {
+					contentLength = n
+				}
+				continue
+			}
+			// Any other header (e.g. Content-Type) — keep reading headers.
+		}
+
+		if contentLength == 0 {
+			// No Content-Length header found — skip this frame and keep reading.
 			continue
 		}
 
-		// Skip Content-Length header lines
-		if strings.HasPrefix(string(line), "Content-Length:") {
-			continue
+		// Read exactly contentLength bytes for the JSON-RPC body.
+		body := make([]byte, contentLength)
+		if _, err := io.ReadFull(c.stdout, body); err != nil {
+			return
 		}
 
 		var msg struct {
@@ -161,7 +188,7 @@ func (c *LSPClient) readLoop() {
 			Error  json.RawMessage `json:"error,omitempty"`
 			Params json.RawMessage `json:"params,omitempty"`
 		}
-		if err := json.Unmarshal(line, &msg); err != nil {
+		if err := json.Unmarshal(body, &msg); err != nil {
 			continue
 		}
 

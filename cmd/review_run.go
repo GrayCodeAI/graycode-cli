@@ -58,7 +58,11 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 	defer func() { _ = store.Close() }()
 
 	// Check if already reviewed.
-	if existing, _ := store.GetBySHA(sha); existing != nil && existing.Status != ReviewStatusFailed {
+	existing, getErr := store.GetBySHA(sha)
+	if getErr != nil {
+		return silentErr(getErr, "load existing review")
+	}
+	if existing != nil && existing.Status != ReviewStatusFailed {
 		if !reviewRunBackground {
 			fmt.Printf("Commit %s already reviewed (status: %s)\n", sha[:8], existing.Status)
 		}
@@ -70,16 +74,22 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 	if err != nil {
 		return silentErr(err, "create review record")
 	}
-	_ = store.SetStatus(id, ReviewStatusRunning)
+	if err := store.SetStatus(id, ReviewStatusRunning); err != nil {
+		return silentErr(err, "mark review running")
+	}
 
 	// Get commit diff.
 	diff, err := getCommitDiff(sha)
 	if err != nil {
-		_ = store.SetStatus(id, ReviewStatusFailed)
+		if statusErr := store.SetStatus(id, ReviewStatusFailed); statusErr != nil {
+			return silentErr(statusErr, "mark review failed")
+		}
 		return silentErr(err, "get commit diff")
 	}
 	if strings.TrimSpace(diff) == "" {
-		_ = store.SetStatus(id, ReviewStatusPassed)
+		if statusErr := store.SetStatus(id, ReviewStatusPassed); statusErr != nil {
+			return silentErr(statusErr, "mark review passed")
+		}
 		if !reviewRunBackground {
 			fmt.Println("Empty diff — nothing to review.")
 		}
@@ -94,7 +104,9 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 	})
 	chatProvider, providerID, err := engine.BuildChatProvider(ctx, selection, strings.TrimSpace(provider))
 	if err != nil {
-		_ = store.SetStatus(id, ReviewStatusFailed)
+		if statusErr := store.SetStatus(id, ReviewStatusFailed); statusErr != nil {
+			return silentErr(statusErr, "mark review failed")
+		}
 		return silentErr(fmt.Errorf("resolve engine transport: %w", err), "init bridge")
 	}
 
@@ -112,7 +124,9 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 
 	bridge := hawkSight.NewBridge(chatProvider, providerID, opts...)
 	if !bridge.Ready() {
-		_ = store.SetStatus(id, ReviewStatusFailed)
+		if statusErr := store.SetStatus(id, ReviewStatusFailed); statusErr != nil {
+			return silentErr(statusErr, "mark review failed")
+		}
 		return silentErr(fmt.Errorf("sight bridge not ready"), "init bridge")
 	}
 
@@ -125,7 +139,9 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 	// Run review.
 	result, err := bridge.ReviewContracts(ctx, diff)
 	if err != nil {
-		_ = store.SetStatus(id, ReviewStatusFailed)
+		if statusErr := store.SetStatus(id, ReviewStatusFailed); statusErr != nil {
+			return silentErr(statusErr, "mark review failed")
+		}
 		return silentErr(err, "sight review")
 	}
 

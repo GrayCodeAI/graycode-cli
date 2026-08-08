@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
@@ -65,7 +66,9 @@ func TestParseReviewFindings_Fallback(t *testing.T) {
 func TestFormatReviewReport_Empty(t *testing.T) {
 	t.Parallel()
 	report := FormatReviewReport(nil)
-	_ = report
+	if report != "No issues found." {
+		t.Errorf("expected 'No issues found.', got %q", report)
+	}
 }
 
 func TestFormatReviewReport_WithFindings(t *testing.T) {
@@ -76,6 +79,11 @@ func TestFormatReviewReport_WithFindings(t *testing.T) {
 	}
 	report := FormatReviewReport(findings)
 	if report == "" {
-		t.Error("should produce report")
+		t.Fatal("should produce report")
+	}
+	for _, want := range []string{"=== Review Report ===", "main.go:10", "config.go:5", "2 issue(s) total", "HIGH", "LOW"} {
+		if !strings.Contains(report, want) {
+			t.Errorf("report missing %q:\n%s", want, report)
+		}
 	}
 }

@@ -32,6 +32,35 @@ func (m *chatModel) saveSession() {
 	}
 }
 
+// saveSessionCmd returns a background tea.Cmd that persists the session. It
+// captures the messages and metadata up front so the write happens off the UI
+// thread (large sessions would otherwise hitch the completion frame).
+// Atomic tmp+rename in session.Save makes backgrounding safe. The WAL is
+// removed only after a successful save, preserving the durability ordering.
+func (m *chatModel) saveSessionCmd() tea.Cmd {
+	if m == nil || m.session == nil || m.sessionID == "" {
+		return nil
+	}
+	raw := m.session.RawMessages()
+	if len(raw) == 0 {
+		return nil
+	}
+	id, modelName, provider := m.sessionID, m.session.Model(), m.session.Provider()
+	msgs := session.FromRuntimeMessages(raw)
+	createdAt := time.Now()
+	wal := m.wal
+	return func() tea.Msg {
+		err := session.Save(&session.Session{
+			ID: id, Model: modelName, Provider: provider,
+			Messages: msgs, CreatedAt: createdAt,
+		})
+		if err == nil && wal != nil {
+			_ = wal.Remove()
+		}
+		return nil
+	}
+}
+
 func formatQuitResumeMessage(sessionID string) string {
 	if strings.TrimSpace(sessionID) == "" {
 		return "Thank you for using Hawk!\n"
@@ -43,34 +72,15 @@ func formatQuitResumeMessage(sessionID string) string {
 func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string) (tea.Model, tea.Cmd) {
 	switch cmd {
 	case "/quit", "/exit":
-		m.saveSession()
-		// Cancel any running /loop goroutine.
-		if m.loopCancel != nil {
-			m.loopCancel()
-			m.loopCancel = nil
-		}
-		// Cancel any running /parallel agents.
-		if m.parallelCancel != nil {
-			m.parallelCancel()
-			m.parallelCancel = nil
-		}
-		// Re-enable system sleep if it was prevented.
+		// Re-enable system sleep if it was prevented, then use the canonical
+		// quit sequence (cancel stream → save → stop watcher/parallel/bg →
+		// stop container) rather than a hand-rolled duplicate that previously
+		// missed cancelling the in-flight stream.
 		if m.sleepCancel != nil {
 			m.sleepCancel()
 			m.sleepCancel = nil
 		}
-		// Stop file watcher if active.
-		if m.watcherStop != nil {
-			m.watcherStop()
-		}
-		// Cancel background goroutines.
-		if m.bgCancel != nil {
-			m.bgCancel()
-		}
-		m.stopContainer()
-		ClearTabProgress()
-		m.quitting = true
-		return m, tea.Quit
+		return m.quitModel()
 
 	case "/clear":
 		if m.manualCompacting {

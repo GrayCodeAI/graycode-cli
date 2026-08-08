@@ -110,6 +110,7 @@ func (m *chatModel) quitModel() (tea.Model, tea.Cmd) {
 		m.cancel()
 		m.cancel = nil
 	}
+	saveInputHistory(m.history)
 	m.saveSession()
 	if m.watcherStop != nil {
 		m.watcherStop()
@@ -541,6 +542,16 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			chosen, handled := m.autonomyPicker.Update(msg)
 			if handled {
 				if chosen != nil && m.session != nil {
+					// YOLO ("Autonomous") is unattended mode: require a typed
+					// confirmation instead of a single Enter, so a stray key
+					// cannot silently drop the session into never-ask.
+					if chosen.Level == engine.AutonomyYOLO {
+						m.pendingYOLOConfirm = true
+						m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Autonomy tier → %s — this enables unattended mode (never prompts for permission). Type %s then Enter to confirm, or type anything else to cancel.", chosen.Name, yoloConfirmToken)})
+						m.viewDirty = true
+						m.updateViewportContent()
+						return m, nil
+					}
 					m.session.PermSvc().SetAutonomy(chosen.Level)
 					m.settings.Autonomy = permissionTierSettingValue(chosen.Level)
 					m.settings.AutonomyExplicit = true
@@ -869,13 +880,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "ctrl+c":
 				if time.Since(m.lastCtrlC) < 1*time.Second {
-					m.saveSession()
-					if m.watcherStop != nil {
-						m.watcherStop()
-					}
-					m.stopContainer()
-					m.quitting = true
-					return m, tea.Quit
+					return m.quitModel()
 				}
 				m.lastCtrlC = time.Now()
 				m.messages = append(m.messages, displayMsg{role: "system", content: quitAgainMsg})
@@ -1010,14 +1015,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				case "ctrl+c":
 					if time.Since(m.lastCtrlC) < 1*time.Second {
-						m.saveSession()
-						saveInputHistory(m.history)
-						if m.watcherStop != nil {
-							m.watcherStop()
-						}
-						m.stopContainer()
-						m.quitting = true
-						return m, tea.Quit
+						return m.quitModel()
 					}
 					m.lastCtrlC = time.Now()
 					m.messages = append(m.messages, displayMsg{role: "system", content: quitAgainMsg})
@@ -1271,6 +1269,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// already renders the tool's name as this block's header.
 		m.messages = append(m.messages, displayMsg{role: "tool_result", content: msg.content})
 		m.viewDirty = true
+		// Durability: persist completed tool results incrementally so a
+		// crash mid-turn doesn't lose them (they were previously only
+		// written at turn end via saveSession).
+		if m.wal != nil {
+			m.recordWALError(m.wal.Append(session.Message{Role: "tool_result", Content: msg.content}))
+		}
 
 	case blastRadiusMsg:
 		m.messages = append(m.messages, displayMsg{role: "warning", content: msg.message})
@@ -1414,7 +1418,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			content := sanitizeIdentity(m.partial.String())
 			m.messages = append(m.messages, displayMsg{role: "assistant", content: content})
 			if m.wal != nil {
-				_ = m.wal.Append(session.Message{Role: "assistant", Content: content})
+				m.recordWALError(m.wal.Append(session.Message{Role: "assistant", Content: content}))
 			}
 			// Generate ghost text suggestion from AI response
 			m.ghostText.Suggest(content)
@@ -1451,7 +1455,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.toolStartTime = time.Time{}
 		m.viewDirty = true
 		m.input.Focus()
-		m.saveSession()
+		// Persist off the UI thread: a large session JSONL write would
+		// otherwise hitch the completion frame. The WAL is removed only after
+		// the save succeeds (see saveSessionCmd).
+		if saveCmd := m.saveSessionCmd(); saveCmd != nil {
+			cmds = append(cmds, saveCmd)
+		}
 
 		// Trim old messages to prevent unbounded memory growth in long sessions.
 		m.trimOldMessages()

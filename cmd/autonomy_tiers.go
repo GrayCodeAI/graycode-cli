@@ -32,6 +32,10 @@ var containerAutonomyTierNames = []string{
 // DefaultContainerAutonomy is the tier applied when the Docker container becomes ready.
 const DefaultContainerAutonomy = engine.AutonomySemi
 
+// yoloConfirmToken is the exact string a user must type (case-insensitive) to
+// confirm entry into YOLO ("Autonomous") unattended mode via the picker.
+const yoloConfirmToken = "continue"
+
 func autonomyTierName(level engine.AutonomyLevel) string {
 	if level == engine.AutonomySupervised {
 		return "Always Ask"

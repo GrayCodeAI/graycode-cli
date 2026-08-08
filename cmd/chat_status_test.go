@@ -102,7 +102,9 @@ func TestChatConnectionStatus_WithModel(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	_ = store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	if err := store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
+		t.Fatalf("store.Set: %v", err)
+	}
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
 	_ = hawkconfig.SetActiveModel(ctx, "moonshotai/kimi-k2.6")
@@ -134,7 +136,9 @@ func TestChatConnectionStatus_KeyNoModel(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	_ = store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	if err := store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
+		t.Fatalf("store.Set: %v", err)
+	}
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.ClearActiveSelection(ctx)
 	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
@@ -158,7 +162,9 @@ func TestChatConnectionStatus_NoGatewayNoModel(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	_ = store.Set(ctx, gateway.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test-key-long-enough")
+	if err := store.Set(ctx, gateway.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test-key-long-enough"); err != nil {
+		t.Fatalf("store.Set: %v", err)
+	}
 	hawkconfig.InvalidateConfigUICache()
 	_ = hawkconfig.ClearActiveSelection(ctx)
 	hawkconfig.RefreshConfigCredSnapshot(ctx)

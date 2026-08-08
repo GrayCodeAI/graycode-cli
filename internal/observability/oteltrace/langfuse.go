@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"sync"
@@ -68,7 +69,11 @@ func (c *LangfuseClient) Trace(ctx context.Context, ev TraceEvent) {
 	c.mu.Unlock()
 
 	if shouldFlush {
-		go func() { _ = c.Flush(ctx) }()
+		go func() {
+			if err := c.Flush(ctx); err != nil {
+				slog.Warn("langfuse flush failed", "error", err)
+			}
+		}()
 	}
 }
 
@@ -86,11 +91,13 @@ func (c *LangfuseClient) Flush(ctx context.Context) error {
 	payload := map[string]interface{}{"batch": events}
 	data, err := json.Marshal(payload)
 	if err != nil {
+		c.requeue(events)
 		return err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/public/ingestion", bytes.NewReader(data))
 	if err != nil {
+		c.requeue(events)
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -98,11 +105,28 @@ func (c *LangfuseClient) Flush(ctx context.Context) error {
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		c.requeue(events)
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
+		c.requeue(events)
 		return fmt.Errorf("langfuse: HTTP %d", resp.StatusCode)
 	}
 	return nil
+}
+
+// requeue puts events that failed to send back at the front of the batch so a
+// transient failure does not silently drop telemetry. The batch is capped at
+// flushSize*2 to avoid unbounded growth under a persistent outage.
+func (c *LangfuseClient) requeue(events []event) {
+	if len(events) == 0 {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.batch)+len(events) > c.flushSize*2 {
+		return // drop rather than grow without bound; the failure was already logged
+	}
+	c.batch = append(events, c.batch...)
 }

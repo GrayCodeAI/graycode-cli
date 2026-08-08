@@ -3,6 +3,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -137,7 +138,9 @@ func (r *Registry) ExecuteAsync(ctx context.Context, event EventType, data map[s
 	r.asyncWG.Add(1)
 	go func() {
 		defer r.asyncWG.Done()
-		_ = r.Execute(ctx, event, data)
+		if err := r.Execute(ctx, event, data); err != nil {
+			slog.Warn("async hook execution failed", "event", event, "error", err)
+		}
 	}()
 }
 
@@ -150,12 +153,18 @@ func (r *Registry) ExecuteAsyncEnvelope(ctx context.Context, env EventEnvelope) 
 	r.asyncWG.Add(1)
 	go func() {
 		defer r.asyncWG.Done()
-		_ = r.ExecuteEnvelope(ctx, env)
+		if err := r.ExecuteEnvelope(ctx, env); err != nil {
+			slog.Warn("async hook execution failed", "event", env.EventType, "error", err)
+		}
 	}()
 }
 
 // WaitAsync waits for currently queued asynchronous hooks to finish or for
 // ctx to expire. Callers must stop scheduling new async hooks before waiting.
+//
+// The internal goroutine may outlive WaitAsync if the context expires first;
+// it will terminate once all tracked hooks complete (the goroutine is not
+// leaked indefinitely — it drains when the last hook's Done() is called).
 func (r *Registry) WaitAsync(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -312,7 +321,12 @@ func registerCommandHook(ch *CommandHook) {
 					}
 				}
 			}
-			go func() { _ = executeHookCommand(ch, data) }()
+			// Track the async goroutine on asyncWG so WaitAsync can drain it.
+			global.asyncWG.Add(1)
+			go func() {
+				defer global.asyncWG.Done()
+				_ = executeHookCommand(ch, data)
+			}()
 			return nil
 		}
 	}

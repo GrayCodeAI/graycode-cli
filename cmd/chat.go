@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -101,14 +102,6 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 		return id, saved, nil
 	}
 	return saved.ID, saved, nil
-}
-
-func newChatModel(ref *progRef, systemPrompt string, settings hawkconfig.Settings) (chatModel, error) {
-	registry, err := defaultRegistry(settings)
-	if err != nil {
-		return chatModel{}, err
-	}
-	return newChatModelWithRegistry(ref, systemPrompt, settings, registry)
 }
 
 func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkconfig.Settings, registry *tool.Registry) (chatModel, error) {
@@ -274,10 +267,12 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	}
 	startup.EndPhase("newChatModel:taste-staleness")
 
-	// Initialize write-ahead log for crash recovery
+	// Initialize write-ahead log for crash recovery. BatchedWAL batches
+	// appends + fsync on a timer so per-message writes don't stall the UI
+	// thread (the plain WAL syncs on every append).
 	startup.MarkPhase("newChatModel:wal")
 	if wal, err := session.NewWAL(sid); err == nil {
-		m.wal = wal
+		m.wal = session.NewBatchedWAL(wal)
 		_ = wal.AppendMeta(effectiveModel, effectiveProvider, "")
 	}
 	startup.EndPhase("newChatModel:wal")
@@ -360,8 +355,14 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 			if r.Approved && req.ContainerID != "" {
 				// Flip the symlink inside the container to grant access.
 				if desc := sandbox.FindCredential(req.Credential); desc != nil {
-					_ = tool.FlipCredentialSymlink(req.ContainerID, req.Credential,
-						sandbox.StagingPath(req.Credential), desc.ContainerPath)
+					if flipErr := tool.FlipCredentialSymlink(req.ContainerID, req.Credential,
+						sandbox.StagingPath(req.Credential), desc.ContainerPath); flipErr != nil {
+						// The user approved, so a flip failure must be visible:
+						// report it and revoke approval rather than silently
+						// leaving the container without the credential.
+						ref.Send(displayMsg{role: "system", content: fmt.Sprintf("! Credential %q approved but could not be granted to the container: %v", req.Credential, flipErr)})
+						return tool.CredentialResponse{Approved: false, Reason: "credential grant failed: " + flipErr.Error()}
+					}
 				}
 			}
 			return r
@@ -408,6 +409,11 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	go func(model chatModel) {
 		startup.MarkPhase("newChatModel:ui-cache-warm")
 		hawkconfig.RefreshConfigCredSnapshot(context.Background())
+		// Network reachability runs off the startup critical path: an offline
+		// machine stalls here (background) instead of before first paint.
+		if msg := checkNetworkReachability(model.settings); msg != "" {
+			model.ref.Send(displayMsg{role: "warning", content: "Startup check:\n  ! " + msg})
+		}
 		welcomeSnapshot := loadWelcomeStatusSnapshot()
 		_, _ = model.refreshStatusBarLeft(true)
 		connStatusVal := ""
@@ -524,14 +530,14 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 // refreshInputPlaceholder updates the input placeholder based on the current
 // container lifecycle. Hawk never executes agent tools directly on the host.
 func (m *chatModel) refreshInputPlaceholder() {
-	work := "act"
+	work := engine.WorkModeAct
 	if m.session != nil {
-		work = string(m.session.WorkMode())
+		work = m.session.WorkMode()
 	}
 	switch work {
-	case "plan":
+	case engine.WorkModePlan:
 		m.input.Placeholder = "Design architecture or draft plan...  ·  / commands  ·  ? help"
-	case "review":
+	case engine.WorkModeReview:
 		m.input.Placeholder = "Audit diffs, security, or PRs...  ·  / commands  ·  ? help"
 	default:
 		m.input.Placeholder = "Build, refactor, or run commands...  ·  / commands  ·  ? help"
@@ -594,13 +600,29 @@ func autoIndexCodegraph() {
 
 	// Incremental sync — only processes changed files
 	if _, err := cg.Sync(); err != nil {
-		log.Printf("codegraph sync: %v", err)
+		slog.Warn("codegraph sync failed", "error", err)
 	}
 }
 
 func runChat() error {
 	startup.Reset()
 	startBackgroundCatalogRefresh(context.Background())
+
+	// On an unexpected panic, persist the active session and stop the
+	// container so a crash loses at most the in-flight message and never
+	// leaves a zombie Docker sandbox. The closure captures the model once it
+	// exists; before that, saveFn is a no-op (nothing to save).
+	var active *chatModel
+	panicSaveFn = func() {
+		if active == nil {
+			return
+		}
+		if active.session != nil && active.sessionID != "" {
+			active.saveSession()
+		}
+		active.stopContainer()
+	}
+	defer func() { panicSaveFn = nil }()
 
 	// Auto-index codegraph in background if .codegraph exists
 	go autoIndexCodegraph()
@@ -662,10 +684,13 @@ func runChat() error {
 	}
 	systemPrompt := promptRes.text
 	settings := settingsRes.settings
-	m, err := newChatModel(ref, systemPrompt, settings)
+	// Pass the registry already built by the runChat goroutine — rebuilding it
+	// here would re-run MCP server startup (up to 1.5s each) a second time.
+	m, err := newChatModelWithRegistry(ref, systemPrompt, settings, registryRes.registry)
 	if err != nil {
 		return err
 	}
+	active = &m
 
 	if promptFlag != "" {
 		if e := (&m).ensureSessionReadyForChat(); e != nil {
@@ -692,11 +717,14 @@ func runChat() error {
 	// Forward SIGHUP (terminal close, ssh drop, window manager exit) into the
 	// TUI as a tea.QuitMsg so the session is saved and cleaned up instead of
 	// dying silently mid-run. Bubble Tea only handles SIGINT and SIGTERM.
+	// The forwarder deregisters itself after the first SIGHUP so repeated
+	// runChat() invocations do not leak signal handlers or goroutines.
 	{
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGHUP)
 		go func() {
 			<-sigCh
+			signal.Stop(sigCh)
 			ref.Send(tea.QuitMsg{})
 		}()
 	}

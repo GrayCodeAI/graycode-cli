@@ -694,10 +694,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						break
 					}
 				}
-				go s.LifecycleSvc().Pipeline().EndSession(ctx, ctx.Err() == nil, taskGoal)
+				// Use context.WithoutCancel: this goroutine outlives the caller,
+				// and ctx would be cancelled on return, killing the end-session
+				// pipeline before it can assess, learn, and persist experience.
+				go s.LifecycleSvc().Pipeline().EndSession(context.WithoutCancel(ctx), ctx.Err() == nil, taskGoal)
 			}
 			// Session end hook
-			hooks.ExecuteAsync(ctx, hooks.EventSessionEnd, map[string]interface{}{
+			hooks.ExecuteAsync(context.WithoutCancel(ctx), hooks.EventSessionEnd, map[string]interface{}{
 				"provider": s.ChatLLM().Provider(),
 				"model":    s.ChatLLM().Model(),
 				"messages": len(s.Persistence().RawMessages()),

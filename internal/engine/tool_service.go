@@ -70,6 +70,7 @@ type toolExecutionDeps struct {
 	checkApproval      func(context.Context, string, map[string]interface{}) (bool, string)
 	recordPolicy       func(types.ToolCall, string, bool, string)
 	recordVerification func(types.ToolCall, string, bool)
+	redactOutput       func(string) string
 	lifecycle          *LifecycleService
 	appendSystem       func(string)
 	taskExec           tool.TaskExecutorFunc
@@ -660,6 +661,12 @@ func (s *ToolService) CompleteResult(ctx context.Context, result toolExecResult,
 	if s.deps.recordVerification != nil {
 		s.deps.recordVerification(result.tc, output, isErr)
 	}
+	// Redact tool output before it reaches the user-facing stream event so
+	// secrets never appear on screen (the model copy is redacted separately
+	// in Session). Falls back to unchanged output when no redactor is wired.
+	if s.deps.redactOutput != nil {
+		output = s.deps.redactOutput(output)
+	}
 	ch <- StreamEvent{Type: "tool_result", ToolName: result.tc.Name, Content: output}
 	if result.span != nil {
 		if isErr {
@@ -714,6 +721,10 @@ func (s *ToolService) ExecuteRegistered(ctx context.Context, tc types.ToolCall, 
 	isErr := execErr != nil
 	if isErr {
 		output = fmt.Sprintf("Error: %s", execErr.Error())
+	}
+	// Redact user-facing tool output (the model copy is redacted separately).
+	if s.deps.redactOutput != nil {
+		output = s.deps.redactOutput(output)
 	}
 	ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: output}
 	return output, isErr

@@ -130,14 +130,22 @@ func (p *OTelProviders) ShutdownOTel(ctx context.Context) error {
 	return firstErr
 }
 
-// FlushOTel forces export of pending data.
+// FlushOTel forces export of pending data from both the tracer and meter
+// providers. Flushing only the tracer provider would drop pending counter
+// and gauge metrics.
 func (p *OTelProviders) FlushOTel(ctx context.Context) error {
+	var firstErr error
 	if p.tracerProvider != nil {
 		if err := p.tracerProvider.ForceFlush(ctx); err != nil {
-			return err
+			firstErr = err
 		}
 	}
-	return nil
+	if p.meterProvider != nil {
+		if err := p.meterProvider.ForceFlush(ctx); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
 }
 
 // RecordMetric records a counter metric.

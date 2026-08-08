@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"sync/atomic"
@@ -35,6 +36,10 @@ type ManagedClient struct {
 	lastUsed     time.Time
 	initStart    time.Time
 	initializing bool
+	// initDone is closed when the in-progress NewLSPClient call finishes,
+	// waking concurrent acquirers so they reuse the result instead of spawning
+	// a duplicate server.
+	initDone chan struct{}
 }
 
 // LSPManager manages a pool of language server connections.
@@ -133,10 +138,12 @@ func (m *LSPManager) acquire(ctx context.Context, lang string) (*ManagedClient, 
 	mc.mu.Lock()
 	atomic.AddInt32(&mc.waiters, 1)
 
-	// Spawn client if needed
-	if mc.client == nil {
+	// Spawn client if needed. Only one acquirer spawns; concurrent acquirers
+	// wait on mc.initDone for the result instead of spawning a duplicate.
+	if mc.client == nil && !mc.initializing {
 		mc.initializing = true
 		mc.initStart = time.Now()
+		mc.initDone = make(chan struct{})
 		mc.mu.Unlock()
 
 		client, err := NewLSPClient(ctx, lang, mc.config)
@@ -145,10 +152,24 @@ func (m *LSPManager) acquire(ctx context.Context, lang string) (*ManagedClient, 
 		mc.initializing = false
 		if err != nil {
 			atomic.AddInt32(&mc.waiters, -1)
+			close(mc.initDone)
 			mc.mu.Unlock()
 			return nil, err
 		}
 		mc.client = client
+		close(mc.initDone)
+	} else if mc.initializing {
+		// Another goroutine is already spawning the client for this language.
+		// Wait for it to finish, then reuse the result.
+		initDone := mc.initDone
+		mc.mu.Unlock()
+		<-initDone
+		mc.mu.Lock()
+		if mc.client == nil {
+			atomic.AddInt32(&mc.waiters, -1)
+			mc.mu.Unlock()
+			return nil, fmt.Errorf("lsp: %s server failed to start", lang)
+		}
 	}
 
 	mc.lastUsed = time.Now()

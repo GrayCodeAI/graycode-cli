@@ -189,6 +189,131 @@ func TestReviewStore_SetStatus(t *testing.T) {
 	}
 }
 
+func TestReviewStore_ListAll(t *testing.T) {
+	dir := setReviewTestDirs(t)
+	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+
+	store, err := OpenReviewStore(dir)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	store.Create("sha1")
+	store.Create("sha2")
+	store.Create("sha3")
+
+	all, err := store.ListAll(10)
+	if err != nil {
+		t.Fatalf("list all: %v", err)
+	}
+	if len(all) != 3 {
+		t.Errorf("expected 3 reviews, got %d", len(all))
+	}
+
+	limited, err := store.ListAll(2)
+	if err != nil {
+		t.Fatalf("list all limited: %v", err)
+	}
+	if len(limited) != 2 {
+		t.Errorf("expected 2 reviews with limit=2, got %d", len(limited))
+	}
+}
+
+func TestReviewStore_GetMissing(t *testing.T) {
+	dir := setReviewTestDirs(t)
+	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+
+	store, err := OpenReviewStore(dir)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	// A nonexistent ID must surface as a DB error, not a nil record.
+	if r, err := store.Get(99999); err == nil || r != nil {
+		t.Errorf("Get(99999) = (%v, %v), want (nil, error)", r, err)
+	}
+}
+
+func TestReviewStore_EmptyDiffToPassedLifecycle(t *testing.T) {
+	// Mirrors runReviewRun's empty-diff path: create → set running → set passed.
+	dir := setReviewTestDirs(t)
+	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+
+	store, err := OpenReviewStore(dir)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	id, err := store.Create("sha-empty")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := store.SetStatus(id, ReviewStatusRunning); err != nil {
+		t.Fatalf("set running: %v", err)
+	}
+	if err := store.SetStatus(id, ReviewStatusPassed); err != nil {
+		t.Fatalf("set passed: %v", err)
+	}
+
+	r, err := store.Get(id)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if r.Status != ReviewStatusPassed {
+		t.Errorf("status = %s, want passed", r.Status)
+	}
+
+	// A passed review is no longer listed as open.
+	open, err := store.ListOpen()
+	if err != nil {
+		t.Fatalf("list open: %v", err)
+	}
+	if len(open) != 0 {
+		t.Errorf("expected no open reviews, got %d", len(open))
+	}
+}
+
+func TestReviewStore_CloseCheckpointsWAL(t *testing.T) {
+	dir := setReviewTestDirs(t)
+	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+
+	store, err := OpenReviewStore(dir)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	if _, err := store.Create("sha-wal"); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+
+	// After close with WAL checkpoint(TRUNCATE), no .db-wal/.db-shm linger.
+	dbDir := storage.ProjectStateDir(dir)
+	entries, err := os.ReadDir(dbDir)
+	if err != nil {
+		t.Fatalf("read db dir: %v", err)
+	}
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".db-wal") || strings.HasSuffix(e.Name(), ".db-shm") {
+			t.Errorf("WAL/shm file left behind after Close: %s", e.Name())
+		}
+	}
+}
+
+func TestSplitReviewStatements(t *testing.T) {
+	got := splitReviewStatements("CREATE TABLE a (x INT);\nCREATE TABLE b (y INT);")
+	if len(got) != 3 { // two statements + trailing empty
+		t.Errorf("expected 3 pieces, got %d: %q", len(got), got)
+	}
+	if strings.TrimSpace(got[0]) != "CREATE TABLE a (x INT)" {
+		t.Errorf("first statement = %q", got[0])
+	}
+}
+
 func TestBuildFixPrompt(t *testing.T) {
 	r := &ReviewRecord{
 		SHA: "abc12345deadbeef0000000000000000000000ff",

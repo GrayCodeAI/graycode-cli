@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -27,6 +28,10 @@ type HTTPHook struct {
 	FailOpen bool // when true, hook errors allow the operation instead of denying it
 }
 
+// maxHookResponseBytes caps the response body read from a decision hook so a
+// misbehaving or malicious endpoint cannot exhaust daemon memory.
+const maxHookResponseBytes = 64 << 10 // 64 KiB
+
 // RegisterHTTPDecisionHook registers an HTTP-backed decision hook.
 func RegisterHTTPDecisionHook(h HTTPHook) {
 	if h.Timeout <= 0 {
@@ -34,6 +39,12 @@ func RegisterHTTPDecisionHook(h HTTPHook) {
 	}
 	if h.Name == "" {
 		h.Name = "http:" + h.URL
+	}
+	if h.FailOpen {
+		slog.Warn("http decision hook configured fail-open",
+			"name", h.Name,
+			"url", h.URL,
+			"note", "an unreachable guardrail hook will allow operations; ensure this is intentional")
 	}
 	client := &http.Client{Timeout: h.Timeout}
 	url := h.URL
@@ -95,7 +106,7 @@ func invokeHTTPHook(client *http.Client, url, event string, data map[string]inte
 		Reason  string `json:"reason"`
 		Message string `json:"message"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxHookResponseBytes+1)).Decode(&out); err != nil {
 		return hookError(failOpen, event, "decode response: %v", err)
 	}
 	switch out.Action {

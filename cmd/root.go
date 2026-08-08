@@ -163,6 +163,13 @@ Run hawk and use /config to set up your first provider.`, registeredProviderCoun
 			if err := ensureCatalogBeforeAgent(context.Background(), true); err != nil {
 				return err
 			}
+			// Folder trust check — non-interactive paths (print/repl/watch)
+			// load the same project-scoped hooks, MCP servers, and plugins as
+			// the TUI, so gate them identically: untrusted folders block
+			// project automation.
+			if tr := engine.ProjectTrust(""); tr.Blocked {
+				return fmt.Errorf("cannot start: folder not trusted (%s)\nProject-scoped hooks, MCP servers, and custom specialists are blocked.\nRun 'hawk trust add' to trust this folder before running hawk", tr.Path)
+			}
 			if replFlag {
 				return runRepl()
 			}
@@ -297,18 +304,19 @@ func init() {
 // confirmDangerousSkipPermissions enforces a safety guard when
 // --dangerously-skip-permissions is set. It skips normal permission prompts,
 // but does not disable hooks, spec gates, sandbox enforcement, or dry-run.
-// In a terminal, it prompts for interactive confirmation. In non-interactive
-// mode (CI, scripts), it requires the HAWK_DANGEROUSLY_SKIP_PERMISSIONS=1
-// environment variable.
+// In a terminal, it requires typing the full confirmation token (not a single
+// key) so a stray keystroke or terminal-escape trickery cannot confirm it. In
+// non-interactive mode (CI, scripts), it requires the
+// HAWK_DANGEROUSLY_SKIP_PERMISSIONS=1 environment variable.
 func confirmDangerousSkipPermissions() error {
 	if isStdinTerminal() {
-		fmt.Fprint(os.Stderr, "Are you sure? This skips normal permission prompts [y/N]: ")
+		fmt.Fprintf(os.Stderr, "Type %s to confirm skipping permission prompts: ", dangerSkipConfirmToken)
 		scanner := bufio.NewScanner(os.Stdin)
 		if !scanner.Scan() {
 			return fmt.Errorf("--dangerously-skip-permissions requires confirmation")
 		}
 		answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
-		if answer != "y" && answer != "yes" {
+		if !strings.EqualFold(answer, dangerSkipConfirmToken) {
 			return fmt.Errorf("--dangerously-skip-permissions declined; aborting")
 		}
 		return nil
@@ -319,6 +327,13 @@ func confirmDangerousSkipPermissions() error {
 	}
 	return nil
 }
+
+// dangerSkipConfirmToken is the exact string a user must type to confirm
+// --dangerously-skip-permissions. It is deliberately longer and distinct from
+// the flag name so it cannot be triggered by a stray keystroke, shell
+// autocomplete, or a single injected line — the user must understand and
+// intentionally type the confirmation.
+const dangerSkipConfirmToken = "i-understand-the-risks-skip-permissions"
 
 // isStdinTerminal reports whether stdin is connected to a terminal.
 // Delegates to the shared stdinIsTerminal so tests can override uniformly.

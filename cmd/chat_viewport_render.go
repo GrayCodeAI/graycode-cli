@@ -34,6 +34,11 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 	rst := ansiReset
 	bgDark := "\033[48;2;30;30;40m"
 
+	// Sanitize untrusted content once, before any branch renders it. This is
+	// the single choke point for the whole scrollback: tool results, model
+	// output, thinking, and system messages all flow through here.
+	msg.content = sanitizeDisplay(msg.content)
+
 	var b strings.Builder
 
 	switch msg.role {
@@ -218,14 +223,14 @@ func (m *chatModel) renderStreamTail(viewWidth int) string {
 	// stream. The scan resumes from the last boundary, always outside a fence.
 	if boundary := streamStableBoundary(raw, len(m.streamMDPrefixRaw)); boundary > len(m.streamMDPrefixRaw) {
 		newBlocks := raw[len(m.streamMDPrefixRaw):boundary]
-		rendered := renderMarkdown(sanitizeIdentity(newBlocks), viewWidth-3)
+		rendered := renderMarkdown(sanitizeDisplay(sanitizeIdentity(newBlocks)), viewWidth-3)
 		m.streamMDPrefixOut = appendRendered(m.streamMDPrefixOut, rendered, m.streamMDPrefixRaw)
 		m.streamMDPrefixRaw = raw[:boundary]
 	}
 
 	out := m.streamMDPrefixOut
 	if tail := raw[len(m.streamMDPrefixRaw):]; tail != "" {
-		rendered := renderMarkdown(sanitizeIdentity(tail), viewWidth-3)
+		rendered := renderMarkdown(sanitizeDisplay(sanitizeIdentity(tail)), viewWidth-3)
 		out = appendRendered(out, rendered, m.streamMDPrefixRaw)
 	}
 	return ansiOrange + icons.Robot() + " " + ansiReset + out + "\n\n"

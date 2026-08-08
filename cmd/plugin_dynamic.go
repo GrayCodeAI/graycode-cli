@@ -81,18 +81,27 @@ var pluginStatusCmd = &cobra.Command{
 
 		jsonOut, _ := cmd.Flags().GetBool("json")
 		if jsonOut {
-			data, _ := json.MarshalIndent(statuses, "", "  ")
+			data, err := json.MarshalIndent(statuses, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshaling plugin statuses: %w", err)
+			}
 			cmd.Println(string(data))
 			return nil
 		}
 
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		_, _ = fmt.Fprintf(w, "NAME\tVERSION\tSTATE\tTOOLS\tHOOKS\n")
-		for _, s := range statuses {
-			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d\n",
-				s.Name, s.Version, s.State, s.ToolCount, s.HookCount)
+		if _, err := fmt.Fprintf(w, "NAME\tVERSION\tSTATE\tTOOLS\tHOOKS\n"); err != nil {
+			return err
 		}
-		_ = w.Flush()
+		for _, s := range statuses {
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d\n",
+				s.Name, s.Version, s.State, s.ToolCount, s.HookCount); err != nil {
+				return err
+			}
+		}
+		if err := w.Flush(); err != nil {
+			return err
+		}
 
 		return nil
 	},

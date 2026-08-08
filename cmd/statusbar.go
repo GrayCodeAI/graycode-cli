@@ -267,6 +267,12 @@ func (m *chatModel) refreshStatusBarLeft(force bool) (bool, tea.Cmd) {
 	if m == nil {
 		return false, nil
 	}
+	// Fast path: within TTL with a cached value — avoid the os.Getwd syscall
+	// on every keystroke. cwd is only re-resolved when a refresh is actually
+	// due or forced.
+	if !force && m.statusLeftKey != "" && m.statusLeftVal != "" && time.Since(m.statusLeftAt) < statusBranchTTL {
+		return false, nil
+	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		cwd = "."

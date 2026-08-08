@@ -26,6 +26,26 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
+// sessionWAL is the durability surface the chat model needs from its
+// write-ahead log. Both *session.WAL (per-append fsync) and
+// *session.BatchedWAL (timer-batched fsync) satisfy it; the model uses the
+// batched form so UI-thread appends don't stall on disk.
+type sessionWAL interface {
+	Append(msg session.Message) error
+	Remove() error
+	Close() error
+}
+
+// recordWALError captures the first persistence failure so the user can be
+// told their message may not survive a crash. Subsequent failures are dropped
+// (the first is surfaced once, in the status area).
+func (m *chatModel) recordWALError(err error) {
+	if err == nil || m.durabilityWarning != "" {
+		return
+	}
+	m.durabilityWarning = "Warning: session persistence is failing — recent messages may be lost if hawk crashes. Check disk space and permissions."
+}
+
 // All hawk color/icon/glyph constants live in theme.go. This file holds
 // the pre-built lipgloss styles that combine a color with attributes
 // (bold, italic, border, etc.) for the most common patterns.
@@ -202,6 +222,8 @@ type chatModel struct {
 	credentialReq              *credentialAskMsg // pending credential prompt
 	credentialReqSeq           int
 	credentialTimeoutAt        time.Time
+	pendingYOLOConfirm         bool   // user selected YOLO in the picker; awaiting typed confirmation
+	durabilityWarning          string // first WAL persistence failure, surfaced once to the user
 	width                      int
 	height                     int
 	quitting                   bool
@@ -266,7 +288,7 @@ type chatModel struct {
 	lastMouseY                   int   // last pointer row (0-based); -1 = unknown; used when Cursor reports stale wheel Y
 	mouseOverride                *bool // runtime /mouse toggle; persisted via settings
 	vim                          *VimState
-	wal                          *session.WAL
+	wal                          sessionWAL
 	startedAt                    time.Time // per-turn timer (spinner + turn elapsed)
 	sessionStartedAt             time.Time // whole chat session (footer duration)
 	sessionBootstrapDone         bool

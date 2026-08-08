@@ -27,14 +27,22 @@ func friendlyError(err error) string {
 // Catches panics, saves the current session state, logs the stack trace to
 // Hawk's user state crash log, and exits with a user-friendly message.
 
+// panicSaveFn is set by runChat to a closure that persists the active session
+// and stops the container sandbox. panicRecovery invokes it on an unexpected
+// panic so a crash saves as much work as possible and never leaves a zombie
+// Docker container running. It is nil outside the chat/TUI path (print mode
+// persists via its own defer).
+var panicSaveFn func()
+
 // RunWithPanicRecovery executes fn with the process-level panic recovery
 // installed. An unexpected panic in the main execution path is caught, the
-// optional saveFn is invoked to persist session state, the stack is written to
-// the crash log, and the process exits with a user-friendly message instead of
-// a raw stack trace. saveFn may be nil (sessions are persisted incrementally,
-// so a nil saveFn loses at most the in-flight message).
+// panicSaveFn (when set by runChat) is invoked to persist session state and
+// stop the container, the stack is written to the crash log, and the process
+// exits with a user-friendly message instead of a raw stack trace. Outside the
+// TUI, sessions are persisted incrementally, so no saveFn loses at most the
+// in-flight message.
 func RunWithPanicRecovery(fn func() error) (err error) {
-	defer panicRecovery(nil)
+	defer panicRecovery(panicSaveFn)
 	return fn()
 }
 
@@ -198,20 +206,7 @@ func validateStartup(settings hawkconfig.Settings) []StartupWarning {
 		}
 	}
 
-	// 2. Quick network reachability check (DNS lookup, no full HTTP request)
-	if providerName != "" && providerName != "ollama" {
-		host := providerDNSHost(providerName)
-		if host != "" {
-			if _, err := net.LookupHost(host); err != nil {
-				warnings = append(warnings, StartupWarning{
-					Check:   "network",
-					Message: fmt.Sprintf("Cannot resolve %s. Check your internet connection.", host),
-				})
-			}
-		}
-	}
-
-	// 3. Check sessions directory is writable
+	// 2. Check sessions directory is writable
 	sessDir := storage.SessionsDir()
 	if err := os.MkdirAll(sessDir, 0o750); err != nil {
 		warnings = append(warnings, StartupWarning{
@@ -232,6 +227,29 @@ func validateStartup(settings hawkconfig.Settings) []StartupWarning {
 	}
 
 	return warnings
+}
+
+// checkNetworkReachability runs a quick DNS lookup for the active provider. It
+// is intentionally separate from validateStartup so the blocking lookup runs
+// post-first-paint (background), not on the TUI startup critical path where an
+// offline machine would stall the UI for seconds. Returns a warning message, or
+// "" when reachable/not applicable.
+func checkNetworkReachability(settings hawkconfig.Settings) string {
+	providerName := strings.TrimSpace(settings.Provider)
+	if providerName == "" {
+		providerName = strings.TrimSpace(hawkconfig.ActiveProvider(context.Background()))
+	}
+	if providerName == "" || providerName == "ollama" {
+		return ""
+	}
+	host := providerDNSHost(providerName)
+	if host == "" {
+		return ""
+	}
+	if _, err := net.LookupHost(host); err != nil {
+		return fmt.Sprintf("Cannot resolve %s. Check your internet connection.", host)
+	}
+	return ""
 }
 
 // providerDNSHost returns a hostname to check DNS resolution for a provider.

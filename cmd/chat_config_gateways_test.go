@@ -116,7 +116,9 @@ func TestConfigGatewayRefreshTargetIndex_UsesSelectedRow(t *testing.T) {
 		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
-	_ = store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	if err := store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
+		t.Fatalf("store.Set: %v", err)
+	}
 	hawkconfig.InvalidateConfigUICache()
 
 	sess := engine.NewSession("", "", "", nil)
@@ -143,7 +145,9 @@ func TestConfigGatewayRefreshTargetIndex_UsesFocusOnRefreshRow(t *testing.T) {
 		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
-	_ = store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	if err := store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
+		t.Fatalf("store.Set: %v", err)
+	}
 	hawkconfig.InvalidateConfigUICache()
 
 	rows := []configGatewayRow{
@@ -165,7 +169,9 @@ func TestFocusConfigActiveGateway_SelectsActiveRow(t *testing.T) {
 		gateway.SetDefaultStore(nil)
 		hawkconfig.InvalidateConfigUICache()
 	})
-	_ = store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
+	if err := store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
+		t.Fatalf("store.Set: %v", err)
+	}
 	hawkconfig.InvalidateConfigUICache()
 
 	sess := engine.NewSession("", "", "", nil)

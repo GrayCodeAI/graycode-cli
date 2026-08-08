@@ -95,7 +95,25 @@ func (q *AlertQueue) drain() {
 	q.pending = make([]*Alert, 0)
 	q.mu.Unlock()
 
-	for _, alert := range batch {
+	// requeueRemaining puts the not-yet-delivered tail of the batch back so
+	// a Stop() mid-drain never drops alerts that were never sent.
+	requeueRemaining := func(from int) {
+		if from >= len(batch) {
+			return
+		}
+		remainder := batch[from:]
+		q.mu.Lock()
+		q.pending = append(remainder, q.pending...)
+		q.mu.Unlock()
+	}
+
+	for i, alert := range batch {
+		select {
+		case <-q.stopCh:
+			requeueRemaining(i)
+			return
+		default:
+		}
 		if q.handler != nil {
 			if err := q.handler(alert); err == nil {
 				alert.Delivered = true
@@ -104,7 +122,12 @@ func (q *AlertQueue) drain() {
 				q.mu.Unlock()
 			}
 		}
-		time.Sleep(q.config.SendDelay)
+		select {
+		case <-q.stopCh:
+			requeueRemaining(i + 1)
+			return
+		case <-time.After(q.config.SendDelay):
+		}
 	}
 }
 

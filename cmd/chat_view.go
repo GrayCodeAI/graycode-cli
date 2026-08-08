@@ -388,6 +388,12 @@ func (m chatModel) View() tea.View {
 		}())
 		inputBox = clipRenderedBlock(inputBox, footerW)
 		bottomBar.WriteString(inputBox + "\n")
+		// Persistence failure banner — surfaced once, persistently, so the
+		// user knows recent messages may not survive a crash.
+		if m.durabilityWarning != "" {
+			warnLine := errorStyle.Render(clipFooterLine(m.durabilityWarning, footerW))
+			bottomBar.WriteString(m.finishFooterLine(warnLine, totalW) + "\n")
+		}
 		// Multiline indicator — shows line count when input has newlines.
 		if val := m.input.Value(); strings.Count(val, "\n") > 0 {
 			lines := strings.Count(val, "\n") + 1

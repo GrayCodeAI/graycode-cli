@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -95,7 +95,7 @@ func (b *YaadBridge) ConfigureGraphObservation(sessionID string, scope graphcont
 // notReadyError logs a warning once and returns a structured BridgeError.
 func (b *YaadBridge) notReadyError(op string) error {
 	b.warnOnce.Do(func() {
-		log.Println("[hawk/memory] WARNING: yaad bridge is not initialized; memory operations will be skipped. Ensure ~/.yaad/data/ is accessible.")
+		slog.Warn("[hawk/memory] yaad bridge is not initialized; memory operations will be skipped", "hint", "ensure ~/.yaad/data/ is accessible")
 	})
 	return &hawkerr.BridgeError{
 		Bridge: "yaad",
@@ -365,7 +365,7 @@ func (b *YaadBridge) recordContextGraph(query string, result *yaadEngine.RecallR
 		ProducerVersion: yaad.Version,
 	})
 	if err != nil {
-		log.Printf("[hawk/memory] yaad context graph projection failed: %v", err)
+		slog.Warn("[hawk/memory] yaad context graph projection failed", "error", err)
 		return
 	}
 	if err := graphjournal.AppendContextGraph(
@@ -377,7 +377,7 @@ func (b *YaadBridge) recordContextGraph(query string, result *yaadEngine.RecallR
 		projection.Events,
 		projection.GeneratedAt,
 	); err != nil {
-		log.Printf("[hawk/memory] yaad context graph observation failed: %v", err)
+		slog.Warn("[hawk/memory] yaad context graph observation failed", "error", err)
 	}
 }
 
@@ -396,7 +396,7 @@ func (b *YaadBridge) recordSelectedContext(label string, nodes []*storage.Node) 
 	}
 	edges, err := b.store.GetEdgesBetween(context.Background(), ids)
 	if err != nil {
-		log.Printf("[hawk/memory] yaad selected context edge lookup failed: %v", err)
+		slog.Warn("[hawk/memory] yaad selected context edge lookup failed", "error", err)
 		edges = nil
 	}
 	b.recordContextGraph(label, &yaadEngine.RecallResult{Nodes: nodes, Edges: edges})
@@ -531,7 +531,7 @@ func (b *YaadBridge) recordCodeContext(query string, records []*storage.CodeChun
 		events,
 		occurredAt,
 	); err != nil {
-		log.Printf("[hawk/memory] code context graph observation failed: %v", err)
+		slog.Warn("[hawk/memory] code context graph observation failed", "error", err)
 	}
 }
 

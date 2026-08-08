@@ -21,21 +21,18 @@ import (
 // dump to the crash dir, then re-raise with the default handler so a core
 // dump can still be produced.
 //
-// SIGTERM — a graceful-termination signal in the normal case, but also the
-// signal many monitors use to request a stack dump. We capture the dump only;
-// we do NOT re-raise, because SIGTERM is expected to terminate the process
-// via the default (or an existing) handler. We keep this additive and
-// tolerant: registration failure is logged, never fatal.
+// SIGTERM is intentionally NOT handled here: it is the graceful-termination
+// signal that Bubble Tea handles for a clean quit (session save, container
+// stop). Registering a dump handler would write a spurious "crash-signal-
+// SIGTERM" report on every normal `kill <pid>`.
 func installSignalHandlers() {
-	installDumpHandler(syscall.SIGQUIT, true)
-	installDumpHandler(syscall.SIGTERM, false)
+	installDumpHandler(syscall.SIGQUIT)
 }
 
 // installDumpHandler captures a goroutine dump to the crash dir when sig
-// arrives. If reRaise is true, the original default disposition is restored
-// before re-raising so the OS produces the normal termination behavior
-// (core dump for SIGQUIT).
-func installDumpHandler(sig syscall.Signal, reRaise bool) {
+// arrives, restores the original default disposition, and re-raises so the OS
+// produces the normal termination behavior (core dump for SIGQUIT).
+func installDumpHandler(sig syscall.Signal) {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, sig)
 	go func() {
@@ -43,11 +40,9 @@ func installDumpHandler(sig syscall.Signal, reRaise bool) {
 		dumpSignal(sig, "received")
 		writeSignalReport(sig)
 		signal.Reset(sig)
-		if reRaise {
-			// Restore default disposition and re-raise.
-			if err := raiseSignal(sig); err != nil {
-				fmt.Fprintf(os.Stderr, "crash: failed to re-raise %s: %v\n", sig, err)
-			}
+		// Restore default disposition and re-raise.
+		if err := raiseSignal(sig); err != nil {
+			fmt.Fprintf(os.Stderr, "crash: failed to re-raise %s: %v\n", sig, err)
 		}
 	}()
 }

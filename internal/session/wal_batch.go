@@ -2,8 +2,7 @@ package session
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -97,7 +96,7 @@ func (b *BatchedWAL) ensureTimerLocked() {
 		b.mu.Lock()
 		defer b.mu.Unlock()
 		if err := b.flushLocked(); err != nil {
-			fmt.Fprintf(os.Stderr, "WARNING: WAL batch flush failed: %v\n", err)
+			slog.Warn("WAL batch flush failed", "error", err)
 		}
 	})
 }
@@ -106,4 +105,11 @@ func (b *BatchedWAL) ensureTimerLocked() {
 func (b *BatchedWAL) Close() error {
 	_ = b.Flush()
 	return b.wal.Close()
+}
+
+// Remove flushes buffered entries, closes the underlying WAL, and deletes the
+// WAL file. Mirrors WAL.Remove so callers can use BatchedWAL interchangeably.
+func (b *BatchedWAL) Remove() error {
+	_ = b.Flush()
+	return b.wal.Remove()
 }
