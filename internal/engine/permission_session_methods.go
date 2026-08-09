@@ -162,6 +162,8 @@ func canonicalToolName(name string) string {
 		return "WebFetch"
 	case "web_search", "websearch":
 		return "WebSearch"
+	case "sql", "sql_query":
+		return "SQL"
 	case "agent", "task":
 		return "Agent"
 	case "ask_user", "askuserquestion":

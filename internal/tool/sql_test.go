@@ -134,7 +134,7 @@ func TestIsReadOnlyQuery(t *testing.T) {
 	}{
 		{"SELECT * FROM t", true},
 		{"  select 1", true},
-		{"WITH cte AS (SELECT 1) SELECT * FROM cte", false},
+		{"WITH cte AS (SELECT 1) SELECT * FROM cte", true},
 		{"-- a comment\nSELECT 1", true},
 		{"/* block */ SELECT 1", true},
 		{"INSERT INTO t VALUES (1)", false},

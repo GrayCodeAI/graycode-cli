@@ -198,19 +198,23 @@ func TestApprovalGate_ApproveForNDefaultsToFive(t *testing.T) {
 }
 
 func TestApprovalGate_SQLWriteCategory(t *testing.T) {
-	s := NewSession("test", "m", "", nil)
-	s.PermSvc().SetAutonomy(AutonomyFull)
-	s.SetApproval(&ApprovalGate{
-		Enabled: true,
-		ConfirmFn: func(req ApprovalRequest) ApprovalResponse {
-			if req.Category != ApprovalDatabaseWrite {
-				t.Fatalf("expected database_write category, got %s", req.Category)
+	for _, toolName := range []string{"SQL", "sql", "sql_query"} {
+		t.Run(toolName, func(t *testing.T) {
+			s := NewSession("test", "m", "", nil)
+			s.PermSvc().SetAutonomy(AutonomyFull)
+			s.SetApproval(&ApprovalGate{
+				Enabled: true,
+				ConfirmFn: func(req ApprovalRequest) ApprovalResponse {
+					if req.Category != ApprovalDatabaseWrite {
+						t.Fatalf("expected database_write category, got %s", req.Category)
+					}
+					return ApprovalReject
+				},
+			})
+			ok, _ := s.CheckApproval(context.Background(), toolName, map[string]interface{}{"allow_write": true})
+			if ok {
+				t.Fatalf("%s writes should require approval", toolName)
 			}
-			return ApprovalReject
-		},
-	})
-	ok, _ := s.CheckApproval(context.Background(), "SQL", map[string]interface{}{"allow_write": true})
-	if ok {
-		t.Fatal("SQL writes should require approval")
+		})
 	}
 }

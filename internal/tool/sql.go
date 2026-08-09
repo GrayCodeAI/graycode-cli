@@ -120,11 +120,11 @@ func isReadOnlyQuery(query string) bool {
 	if first == "" {
 		return false
 	}
-	// WITH can introduce a data-modifying CTE whose first token is otherwise
-	// indistinguishable from a read. Be conservative until a full SQL parser is
-	// used; callers can explicitly approve such statements with allow_write.
+	// Allow read-only CTEs. SQLite's connection-level query_only guard still
+	// blocks mutations when allow_write is false, and splitSQLStatements keeps
+	// stacked statements out.
 	if first == "with" {
-		return false
+		return true
 	}
 	return !writeVerbs[first]
 }
