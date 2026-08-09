@@ -315,6 +315,16 @@ func canonicalToolName(name string) string {
 		return "WebFetch"
 	case "web_search", "websearch":
 		return "WebSearch"
+	case "tool_health", "toolhealth", "tools_health":
+		return "ToolHealth"
+	case "project_verify", "projectverify", "verify_project":
+		return "ProjectVerify"
+	case "dependency_audit", "dependencyaudit", "deps":
+		return "DependencyAudit"
+	case "git_history", "githistory", "git-history":
+		return "GitHistory"
+	case "github", "gh":
+		return "GitHub"
 	case "sql", "sql_query":
 		return "SQL"
 	case "agent", "task":

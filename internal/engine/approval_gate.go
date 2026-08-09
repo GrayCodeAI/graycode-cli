@@ -128,8 +128,15 @@ func (g *ApprovalGate) classifyAction(toolName string, args map[string]interface
 	}
 
 	switch canon {
-	case "WebFetch", "WebSearch":
+	case "WebFetch", "WebSearch", "DependencyAudit", "GitHub":
 		return ApprovalNetwork, true
+	case "Git":
+		if subcommand, ok := args["subcommand"].(string); ok {
+			switch subcommand {
+			case "fetch", "pull", "push", "clone", "remote":
+				return ApprovalNetwork, true
+			}
+		}
 	case "SQL":
 		if allow, ok := args["allow_write"].(bool); ok && allow {
 			return ApprovalDatabaseWrite, true
