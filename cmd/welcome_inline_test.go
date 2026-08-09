@@ -18,11 +18,11 @@ type welcomeMCPStub struct {
 	server string
 }
 
-// TestWelcomeScreenReadableIcons renders the full welcome in Nerd mode and
-// verifies that operational status uses font-independent, visible chips.
-// PUA glyph metrics vary by terminal font, so welcome status must not depend
-// on a tiny fallback glyph being legible.
-func TestWelcomeScreenReadableIcons(t *testing.T) {
+// TestWelcomeScreenNerdIconsUnique renders the full welcome in Nerd mode
+// for every execution state and asserts each PUA icon glyph appears at most
+// once. Guards the "one icon per concept" rule on the welcome screen so the
+// mode/iso/trust segments and the badge never reuse a glyph.
+func TestWelcomeScreenNerdIconsUnique(t *testing.T) {
 	icons.SetMode(icons.ModeNerd)
 	defer icons.SetMode(icons.ModeASCII)
 
@@ -31,20 +31,15 @@ func TestWelcomeScreenReadableIcons(t *testing.T) {
 	states := []*bool{nil, &running, &stopped}
 	for i, docker := range states {
 		out := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 100, 24, docker)
-		for _, chip := range []string{"[!]", "[*]", "[net]", "[ok]", "[.]"} {
-			if !strings.Contains(out, chip) {
-				t.Fatalf("state %d: welcome output missing visible status chip %q:\n%s", i, chip, out)
-			}
-		}
 		seen := make(map[rune]struct{})
 		for _, r := range out {
 			if r < 0xE000 || r > 0xF8FF {
 				continue
 			}
+			if _, dup := seen[r]; dup {
+				t.Fatalf("state %d: PUA glyph %U reused on welcome screen:\n%s", i, r, out)
+			}
 			seen[r] = struct{}{}
-		}
-		if len(seen) != 0 {
-			t.Fatalf("state %d: welcome screen should not depend on PUA glyphs:\n%s", i, out)
 		}
 	}
 }
@@ -74,15 +69,15 @@ func TestBuildWelcomeMessage_InlineShowsGuidance(t *testing.T) {
 			t.Fatalf("minimal welcome missing %q in:\n%s", want, out)
 		}
 	}
-	for _, wantIcon := range []string{welcomeDisplayIcon("robot"), welcomeDisplayIcon("network")} {
+	for _, wantIcon := range []string{icons.Robot(), icons.Network()} {
 		if !strings.Contains(out, wantIcon) {
 			t.Fatalf("minimal welcome missing semantic icon %q in:\n%s", wantIcon, out)
 		}
 	}
 	for mode, rowIcons := range map[string][]string{
-		"active": {welcomeDisplayIcon("bolt"), welcomeDisplayIcon("robot"), welcomeDisplayIcon("network")},
-		"nerd":   {welcomeDisplayIcon("bolt"), welcomeDisplayIcon("robot"), welcomeDisplayIcon("network")},
-		"ascii":  {welcomeDisplayIcon("bolt"), welcomeDisplayIcon("robot"), welcomeDisplayIcon("network")},
+		"active": {icons.Bolt(), icons.Robot(), icons.Network()},
+		"nerd":   {icons.Nerd("bolt"), icons.Nerd("robot"), icons.Nerd("network")},
+		"ascii":  {icons.ASCII("bolt"), icons.ASCII("robot"), icons.ASCII("network")},
 	} {
 		seenIcons := make(map[string]struct{}, len(rowIcons))
 		for _, icon := range rowIcons {
@@ -251,7 +246,7 @@ func TestWelcomeIndicatorRow_UsesSemanticStatesAndCounts(t *testing.T) {
 
 	active := welcomeIndicatorRow(1, true, 1, "<active>", "<idle>", "</active>", "<ready>", "<none>")
 	if strings.Count(active, ansiBold) != 3 {
-		t.Fatalf("welcomeIndicatorRow() should bold all three semantic chips, got %q", active)
+		t.Fatalf("welcomeIndicatorRow() should bold all three semantic icons, got %q", active)
 	}
 }
 
