@@ -36,6 +36,26 @@ func TestGlyph_ModeASCII(t *testing.T) {
 	}
 }
 
+func TestEstablishedStatusGlyphsKeepDenseLegacyMappings(t *testing.T) {
+	SetMode(ModeNerd)
+	t.Cleanup(func() { SetMode(ModeAuto) })
+	want := map[string]string{
+		"robot":          "\ue244",
+		"circle_filled":  "\uf444",
+		"circle_outline": "\uf4a7",
+		"alert":          "\ue002",
+		"check_bold":     "\ue5ca",
+		"close_thick":    "\ue5cd",
+		"timer":          "\uf51f",
+		"check_decagram": "\uf079",
+	}
+	for name, expected := range want {
+		if got := Nerd(name); got != expected {
+			t.Errorf("Nerd(%q) = %q, want legacy dense glyph %q", name, got, expected)
+		}
+	}
+}
+
 func TestASCII_IgnoresMode(t *testing.T) {
 	SetMode(ModeNerd)
 	if got := ASCII("chevron_right"); got != ">" {

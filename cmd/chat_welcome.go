@@ -123,7 +123,7 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 	// Status marks — green ✓ = present, dim ○ = none (not an error),
 	// red × = actual problem (e.g. Docker enabled but not running). Using a
 	// neutral mark for "none" avoids the alarming all-red look on a fresh repo.
-	markPresent := greenC + icons.CheckBold() + rst
+	markPresent := greenC + ansiBold + icons.CheckBold() + rst
 	markNone := sepC + "○" + rst
 
 	totalW := width

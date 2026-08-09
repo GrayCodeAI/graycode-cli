@@ -17,6 +17,7 @@
 // internal/testaudit.
 //
 // Codepoints are derived from:
+//   - Nerd Fonts Material Design Icons (legacy status vocabulary)
 //   - Nerd Fonts v3 Codicons    (EA60..EC1E) — https://github.com/microsoft/vscode-codicons
 //   - Nerd Fonts v3 FontAwesome (ED00..F2FF) — https://fontawesome.com
 //   - Nerd Fonts v3 Octicons    (F400..F533) — https://primer.style/octicons
@@ -87,59 +88,62 @@ const (
 	//   person 60007 → EA97       archive 60056 → EAD8
 	//   browser 60078 → EAFE      vm 60026 → EAEA (collision — see below)
 	//   device-mobile 60123 → EB2B
-	puaChevronRight   = "\ueb06" // nf-cod-chevron_right (60086)
-	puaRobot          = "\ueb48" // nf-cod-hubot (60168)   — same shape as robot
-	puaCircleFilled   = "\uea71" // nf-cod-circle-filled  (60017)
-	puaCircleOutline  = "\ueac0" // nf-cod-circle-outline (60092)
-	puaAlert          = "\uea9c" // nf-cod-alert          (60012)
-	puaCheckBold      = "\ueac2" // nf-cod-check          (60082)
-	puaCloseThick     = "\ueaa6" // nf-cod-close          (60022)
-	puaArrowRight     = "\ueaec" // nf-cod-arrow_right    (60060)
-	puaArrowLeft      = "\ueaeb" // nf-cod-arrow_left     (60059)
-	puaArrowUp        = "\ueaf1" // nf-cod-arrow_up       (60065)
-	puaArrowDown      = "\ueaea" // nf-cod-arrow_down     (60058)
-	puaSwapHorizontal = "\uea7c" // nf-cod-arrow-swap     (60363)
-	puaTimerSand      = "\uebbc" // nf-cod-watch          (60284) — clock-like
-	puaReload         = "\uea7c" // nf-cod-sync           (60023)
-	puaStop           = "\ueab7" // nf-cod-error          (60039) — stop-circle
-	puaBell           = "\ueace" // nf-cod-bell           (60066)
-	puaCancel         = "\ueaa6" // nf-cod-close          (60022) — alias of close
-	puaCheckDecagram  = "\uebd7" // nf-cod-pass-filled    (60339) — filled check
-	puaAlertOctagram  = "\uebd0" // nf-cod-stop-circle    (60325)
-	puaArrowUpBold    = "\ueb07" // nf-cod-chevron-up     (60087) — return-ish
-	puaRefresh        = "\ueb77" // nf-cod-refresh        (60215)
-	puaHourglass      = "\uebbc" // nf-cod-watch          (60284)
-	puaCheckCircle    = "\uebcc" // nf-cod-pass           (60324) — checked circle
-	puaCloseCircle    = "\uebd0" // nf-cod-stop-circle    (60325) — close circle
-	puaImage          = "\ueb22" // nf-cod-file-media     (60138)
-	puaFileDocument   = "\uec4e" // nf-cod-file-text      (60510)
-	puaKey            = "\ueb51" // nf-cod-key            (60177)
-	puaCog            = "\ueb38" // nf-cod-gear           (60152)
-	puaMagnify        = "\uea9d" // nf-cod-search         (60013)
-	puaBolt           = "\ueab6" // nf-cod-zap            (60038)
-	puaBrain          = "\uea91" // nf-cod-lightbulb      (60001) — visual metaphor
-	puaEmail          = "\ueb1c" // nf-cod-mail           (60188)
-	puaHelpCircle     = "\ueaa4" // nf-cod-info           (60020) — closest match
-	puaBranch         = "\uea63" // nf-cod-repo_forked — fork/branch glyph; present in JetBrains Mono NF and every Nerd Font
-	puaPullRequest    = "\uea64" // nf-cod-git_pull_request — PR glyph; present in JetBrains Mono NF and every Nerd Font
-	puaClockOutline   = "\uf017" // nf-fa-clock_o         (61463)
-	puaPause          = "\uead1" // nf-cod-debug-pause    (60113)
-	puaExpandAll      = "\uebc1" // nf-cod-expand-all     (60309)
-	puaContainer      = "\ueb90" // nf-cod-server         (60240)
-	puaShield         = "\ueb93" // nf-cod-shield         (60243)
-	puaTerminal       = "\ueab5" // nf-cod-terminal       (60037)
-	puaCaretRight     = "\ueb06" // nf-cod-chevron_right  (60086)
-	puaCaretDown      = "\ueb04" // nf-cod-chevron_down   (60084)
-	puaTriangleSmall  = "\uebb1" // nf-cod-triangle-up    (60273) — collapsed
-	puaCircleHalf     = "\uea71" // nf-cod-circle-filled  (60017) — visual fallback
-	puaCircleQuarter  = "\uea71" // nf-cod-circle-filled  (60017) — visual fallback
-	puaCircleSlice5   = "\uea71" // nf-cod-circle-filled  (60017) — visual fallback
-	puaCircleSlice6   = "\uea71" // nf-cod-circle-filled  (60017) — visual fallback
-	puaReturn         = "\uea4c" // nf-cod-keyboard-tab   (60476) — closest match
-	puaRotateVariant  = "\uea7c" // nf-cod-sync           (60023)
-	puaQuestion       = "\ueb12" // nf-cod-question       (60210)
-	puaFile           = "\uea7b" // nf-cod-file           (60027)
-	puaMail           = "\ueb1c" // nf-cod-mail           (60188)
+	// Keep the original Material Design PUA glyphs for the established
+	// status vocabulary. They have the larger, denser silhouettes used by
+	// the original CLI; newer concepts below continue to use Codicons.
+	puaChevronRight   = "\ue5cc"         // nf-md-chevron_right
+	puaRobot          = "\ue244"         // nf-md-robot
+	puaCircleFilled   = "\uf444"         // nf-md-circle_medium (filled)
+	puaCircleOutline  = "\uf4a7"         // nf-md-circle (outline)
+	puaAlert          = "\ue002"         // nf-md-alert
+	puaCheckBold      = "\ue5ca"         // nf-md-check_bold
+	puaCloseThick     = "\ue5cd"         // nf-md-close_thick
+	puaArrowRight     = "\ue5c8"         // nf-md-arrow_right
+	puaArrowLeft      = "\ue5c4"         // nf-md-arrow_left
+	puaArrowUp        = "\ue5d8"         // nf-md-arrow_up
+	puaArrowDown      = "\ue5db"         // nf-md-arrow_down
+	puaSwapHorizontal = "\ue5d5"         // nf-md-swap_horizontal
+	puaTimerSand      = "\uf51f"         // nf-md-timer_sand
+	puaReload         = "\uf045"         // nf-md-reload
+	puaStop           = "\uf04a"         // nf-md-stop
+	puaBell           = "\uf009"         // nf-md-bell
+	puaCancel         = "\uf015"         // nf-md-cancel
+	puaCheckDecagram  = "\uf079"         // nf-md-check_decagram
+	puaAlertOctagram  = "\ueb27"         // nf-md-alert_octagram
+	puaArrowUpBold    = "\ue5d9"         // nf-md-arrow_up_bold (return/enter key)
+	puaRefresh        = "\ueb77"         // nf-cod-refresh        (60215)
+	puaHourglass      = "\uebbc"         // nf-cod-watch          (60284)
+	puaCheckCircle    = "\uebcc"         // nf-cod-pass           (60324) — checked circle
+	puaCloseCircle    = puaAlertOctagram // nf-md-alert_octagram — close circle
+	puaImage          = "\ueb22"         // nf-cod-file-media     (60138)
+	puaFileDocument   = "\uec4e"         // nf-cod-file-text      (60510)
+	puaKey            = "\ueb51"         // nf-cod-key            (60177)
+	puaCog            = "\ueb38"         // nf-cod-gear           (60152)
+	puaMagnify        = "\uea9d"         // nf-cod-search         (60013)
+	puaBolt           = "\ueab6"         // nf-cod-zap            (60038)
+	puaBrain          = "\uea91"         // nf-cod-lightbulb      (60001) — visual metaphor
+	puaEmail          = "\ueb1c"         // nf-cod-mail           (60188)
+	puaHelpCircle     = "\ueaa4"         // nf-cod-info           (60020) — closest match
+	puaBranch         = "\uea63"         // nf-cod-repo_forked — fork/branch glyph; present in JetBrains Mono NF and every Nerd Font
+	puaPullRequest    = "\uea64"         // nf-cod-git_pull_request — PR glyph; present in JetBrains Mono NF and every Nerd Font
+	puaClockOutline   = "\uf017"         // nf-fa-clock_o         (61463)
+	puaPause          = "\uead1"         // nf-cod-debug-pause    (60113)
+	puaExpandAll      = "\uebc1"         // nf-cod-expand-all     (60309)
+	puaContainer      = "\ueb90"         // nf-cod-server         (60240)
+	puaShield         = "\ueb93"         // nf-cod-shield         (60243)
+	puaTerminal       = "\ueab5"         // nf-cod-terminal       (60037)
+	puaCaretRight     = "\ueb06"         // nf-cod-chevron_right  (60086)
+	puaCaretDown      = "\ueb04"         // nf-cod-chevron_down   (60084)
+	puaTriangleSmall  = "\uebb1"         // nf-cod-triangle-up    (60273) — collapsed
+	puaCircleHalf     = "\uea71"         // nf-cod-circle-filled  (60017) — visual fallback
+	puaCircleQuarter  = "\uea71"         // nf-cod-circle-filled  (60017) — visual fallback
+	puaCircleSlice5   = "\uea71"         // nf-cod-circle-filled  (60017) — visual fallback
+	puaCircleSlice6   = "\uea71"         // nf-cod-circle-filled  (60017) — visual fallback
+	puaReturn         = "\uea4c"         // nf-cod-keyboard-tab   (60476) — closest match
+	puaRotateVariant  = "\uea7c"         // nf-cod-sync           (60023)
+	puaQuestion       = "\ueb12"         // nf-cod-question       (60210)
+	puaFile           = "\uea7b"         // nf-cod-file           (60027)
+	puaMail           = "\ueb1c"         // nf-cod-mail           (60188)
 
 	// Llama is not in Nerd Fonts. We pick a reserved-looking PUA slot
 	// outside any Nerd Font set so a patched font never renders an

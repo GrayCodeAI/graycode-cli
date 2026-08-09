@@ -66,3 +66,14 @@ func TestSpinnerWave_GlyphUsesWaveColor(t *testing.T) {
 		t.Fatal("expected wave color on spinner glyph")
 	}
 }
+
+func TestSpinnerWaveIconIsNotItalicized(t *testing.T) {
+	out := renderSpinnerWaveLine("◐", "Go", 0, 0)
+	firstReset := strings.Index(out, ansiReset)
+	if firstReset < 0 {
+		t.Fatalf("spinner frame has no reset escape: %q", out)
+	}
+	if strings.Contains(out[:firstReset], ansiItalic) {
+		t.Fatalf("spinner icon should not be italicized: %q", out[:firstReset])
+	}
+}

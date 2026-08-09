@@ -53,7 +53,7 @@ func renderSpinnerWaveLine(glyph, verb string, wavePhase, dotPhase int) string {
 	head := wavePhase % total
 
 	var b strings.Builder
-	b.WriteString(renderSpinnerWaveSlotGlyph(glyph, wavePhase, head == 0, true))
+	b.WriteString(renderSpinnerWaveSlotGlyph(glyph, wavePhase, head == 0, true, false))
 	if verb == "" {
 		return b.String()
 	}
@@ -73,24 +73,26 @@ func renderSpinnerWaveLine(glyph, verb string, wavePhase, dotPhase int) string {
 			g = icons.CircleFilled()
 			bold = true
 		}
-		b.WriteString(renderSpinnerWaveSlotGlyph(g, wavePhase+pos, head == pos, bold))
+		b.WriteString(renderSpinnerWaveSlotGlyph(g, wavePhase+pos, head == pos, bold, false))
 		pos++
 	}
 	return b.String()
 }
 
 func renderSpinnerWaveSlot(r rune, colorIdx int, isHead, bold bool) string {
-	return renderSpinnerWaveSlotGlyph(string(r), colorIdx, isHead, bold)
+	return renderSpinnerWaveSlotGlyph(string(r), colorIdx, isHead, bold, true)
 }
 
-func renderSpinnerWaveSlotGlyph(glyph string, colorIdx int, isHead, bold bool) string {
+func renderSpinnerWaveSlotGlyph(glyph string, colorIdx int, isHead, bold, italic bool) string {
 	color := ansiSpinnerWaveColor(colorIdx)
 	if isHead || bold {
 		color += ansiBold
 	}
 	var b strings.Builder
 	b.WriteString(color)
-	b.WriteString(ansiItalic)
+	if italic {
+		b.WriteString(ansiItalic)
+	}
 	b.WriteString(glyph)
 	b.WriteString(ansiReset)
 	return b.String()
