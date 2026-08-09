@@ -31,6 +31,7 @@ func shouldUseContainer() bool {
 // closed with an actionable error; there is deliberately no host fallback.
 func startRequiredContainer(projectDir string) (*sandbox.ContainerSandbox, error) {
 	cs := sandbox.NewContainerSandbox(projectDir)
+	sandbox.ResetDockerAvailabilityCache()
 	if !dockerAvailable() {
 		return nil, fmt.Errorf("docker is required but is not running — start Docker and retry")
 	}
