@@ -56,7 +56,7 @@ EXPOSE 4590
 
 # Health check probes the daemon's health endpoint.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -sf http://127.0.0.1:4590/v1/health || exit 1
+    CMD curl -ksf https://127.0.0.1:4590/v1/health || curl -sf http://127.0.0.1:4590/v1/health || exit 1
 
 ENTRYPOINT ["tini", "--", "hawk", "daemon", "start"]
 CMD ["--host", "0.0.0.0", "--port", "4590"]

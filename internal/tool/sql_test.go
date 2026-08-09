@@ -134,7 +134,7 @@ func TestIsReadOnlyQuery(t *testing.T) {
 	}{
 		{"SELECT * FROM t", true},
 		{"  select 1", true},
-		{"WITH cte AS (SELECT 1) SELECT * FROM cte", true},
+		{"WITH cte AS (SELECT 1) SELECT * FROM cte", false},
 		{"-- a comment\nSELECT 1", true},
 		{"/* block */ SELECT 1", true},
 		{"INSERT INTO t VALUES (1)", false},
@@ -148,6 +148,33 @@ func TestIsReadOnlyQuery(t *testing.T) {
 		if got := isReadOnlyQuery(tc.query); got != tc.want {
 			t.Errorf("isReadOnlyQuery(%q) = %v, want %v", tc.query, got, tc.want)
 		}
+	}
+}
+
+func TestSQLToolRejectsStackedStatements(t *testing.T) {
+	tool := SQLTool{}
+	in, _ := json.Marshal(map[string]any{
+		"driver":      "sqlite",
+		"dsn":         ":memory:",
+		"query":       "SELECT 1; DROP TABLE users",
+		"allow_write": true,
+	})
+	_, err := tool.Execute(context.Background(), in)
+	if err == nil || !strings.Contains(err.Error(), "exactly one") {
+		t.Fatalf("expected stacked statements to be rejected, got %v", err)
+	}
+}
+
+func TestSQLToolRejectsUnterminatedSQL(t *testing.T) {
+	tool := SQLTool{}
+	in, _ := json.Marshal(map[string]any{
+		"driver": "sqlite",
+		"dsn":    ":memory:",
+		"query":  "SELECT 'unterminated",
+	})
+	_, err := tool.Execute(context.Background(), in)
+	if err == nil || !strings.Contains(err.Error(), "unterminated") {
+		t.Fatalf("expected unterminated query error, got %v", err)
 	}
 }
 

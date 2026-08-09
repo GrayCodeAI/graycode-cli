@@ -148,7 +148,9 @@ func (m chatModel) submitUserMessage() (chatModel, tea.Cmd) {
 	} else {
 		m.session.AddUser(text)
 	}
+	m.ensureWAL()
 	if m.wal != nil {
+		m.walSeq++
 		m.recordWALError(m.wal.Append(session.Message{Role: "user", Content: text}))
 	}
 	m.turnSawThinking = false

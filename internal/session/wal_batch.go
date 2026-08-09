@@ -103,13 +103,19 @@ func (b *BatchedWAL) ensureTimerLocked() {
 
 // Close flushes remaining entries and closes the underlying WAL.
 func (b *BatchedWAL) Close() error {
-	_ = b.Flush()
-	return b.wal.Close()
+	flushErr := b.Flush()
+	closeErr := b.wal.Close()
+	if flushErr != nil {
+		return flushErr
+	}
+	return closeErr
 }
 
 // Remove flushes buffered entries, closes the underlying WAL, and deletes the
 // WAL file. Mirrors WAL.Remove so callers can use BatchedWAL interchangeably.
 func (b *BatchedWAL) Remove() error {
-	_ = b.Flush()
+	if err := b.Flush(); err != nil {
+		return err
+	}
 	return b.wal.Remove()
 }

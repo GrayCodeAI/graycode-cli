@@ -1,7 +1,6 @@
 package snapshot
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -14,17 +13,12 @@ import (
 // like ".hawk/snapshots" and ".hawk/experience" which leaked into
 // <cwd>/cmd/.hawk/ when hawk was run from its own source tree.
 func TestL2DefaultPathsAreHomeRelative(t *testing.T) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("os.UserHomeDir: %v", err)
-	}
-	if home == "" {
-		t.Fatal("os.UserHomeDir returned empty string")
-	}
-
-	// Sanitize HOME so we can compare reliably (filepath.Clean strips
-	// trailing separators).
-	wantPrefix := filepath.Clean(home) + string(filepath.Separator)
+	// Make the regression deterministic under CI and sandboxed runners. The
+	// production default is the configured state root, which may intentionally
+	// differ from HOME via HAWK_STATE_DIR.
+	stateRoot := t.TempDir()
+	t.Setenv("HAWK_STATE_DIR", stateRoot)
+	wantPrefix := filepath.Clean(stateRoot) + string(filepath.Separator)
 
 	check := func(name, got string) {
 		t.Helper()
@@ -32,10 +26,8 @@ func TestL2DefaultPathsAreHomeRelative(t *testing.T) {
 			t.Errorf("%s: default path %q is not absolute", name, got)
 			return
 		}
-		// On macOS temp dirs may live under /private/var/... while HOME
-		// resolves to /var/...; compare both forms.
-		if !strings.HasPrefix(got, wantPrefix) && !strings.HasPrefix(got, filepath.Clean(home)) {
-			t.Errorf("%s: default path %q does not start with home dir %q", name, got, home)
+		if !strings.HasPrefix(got, wantPrefix) {
+			t.Errorf("%s: default path %q does not start with state root %q", name, got, stateRoot)
 		}
 	}
 

@@ -77,6 +77,7 @@ Supports piping from stdin, JSON output format, and autonomy levels.
 
 Use --ephemeral to skip session persistence (ideal for CI runs).
 Use --json for JSON output (alias for --output-format json).
+Use --output-format stream-json for newline-delimited progress events.
 
 Autonomy Levels:
   supervised (default)  Ask for permission on every tool call
@@ -98,7 +99,7 @@ Examples:
 }
 
 func init() {
-	execCmd.Flags().StringVarP(&execOutputFormat, "output-format", "o", "text", "Output format: text or json")
+	execCmd.Flags().StringVarP(&execOutputFormat, "output-format", "o", "text", "Output format: text, json, or stream-json")
 	execCmd.Flags().StringVar(&execAutoLevel, "auto", "", "Autonomy level: supervised|basic|semi|full|yolo")
 	execCmd.Flags().StringVarP(&execModel, "model", "m", "", "Model ID to use")
 	execCmd.Flags().IntVar(&execMaxTurns, "max-turns", 0, "Maximum agentic turns (0 = unlimited)")
@@ -117,6 +118,9 @@ func runExec(_ *cobra.Command, args []string) error {
 
 	if execJSON {
 		execOutputFormat = "json"
+	}
+	if execOutputFormat != "text" && execOutputFormat != "json" && execOutputFormat != "stream-json" {
+		return fmt.Errorf("--output-format must be one of: text, json, stream-json")
 	}
 
 	prompt, err := resolveExecPrompt(args)
@@ -291,7 +295,7 @@ func runExec(_ *cobra.Command, args []string) error {
 			if execOutputFormat == "text" {
 				fmt.Print(ev.Content)
 			}
-			if execOutputFormat == "json" {
+			if execOutputFormat == "stream-json" {
 				_ = jsonEnc.Encode(map[string]interface{}{
 					"type":    "content",
 					"content": ev.Content,
@@ -308,21 +312,21 @@ func runExec(_ *cobra.Command, args []string) error {
 			if execOutputFormat == "text" {
 				_, _ = fmt.Fprintf(os.Stderr, "\nerror: %s\n", ev.Content)
 			}
-			if execOutputFormat == "json" {
+			if execOutputFormat == "stream-json" {
 				_ = jsonEnc.Encode(map[string]interface{}{
 					"type":    "error",
 					"content": ev.Content,
 				})
 			}
 		case "tool_use":
-			if execOutputFormat == "json" {
+			if execOutputFormat == "stream-json" {
 				_ = jsonEnc.Encode(map[string]interface{}{
 					"type": "tool_use",
 					"tool": ev.ToolName,
 				})
 			}
 		case "tool_result":
-			if execOutputFormat == "json" {
+			if execOutputFormat == "stream-json" {
 				_ = jsonEnc.Encode(map[string]interface{}{
 					"type":   "tool_result",
 					"tool":   ev.ToolName,
@@ -330,7 +334,7 @@ func runExec(_ *cobra.Command, args []string) error {
 				})
 			}
 		case "done":
-			if execOutputFormat == "json" {
+			if execOutputFormat == "stream-json" {
 				_ = jsonEnc.Encode(map[string]interface{}{
 					"type": "done",
 				})
@@ -377,7 +381,7 @@ func runExec(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
-	if execOutputFormat == "json" {
+	if execOutputFormat == "json" || execOutputFormat == "stream-json" {
 		result := ExecResult{
 			SessionID:  sessionID,
 			Response:   response.String(),
@@ -390,13 +394,13 @@ func runExec(_ *cobra.Command, args []string) error {
 			Worktree:   wtPath,
 			Branch:     wtBranch,
 		}
-		if execOutputFormat == "json" && execEphemeral {
+		if execOutputFormat == "stream-json" {
 			_ = jsonEnc.Encode(map[string]interface{}{
 				"type":   "result",
 				"result": result,
 			})
 		}
-		if !execEphemeral {
+		if execOutputFormat == "json" {
 			enc := json.NewEncoder(os.Stdout)
 			enc.SetIndent("", "  ")
 			return enc.Encode(result)

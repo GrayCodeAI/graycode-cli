@@ -695,39 +695,14 @@ func (s *ToolService) EstimateBlastRadius(planned []PlannedCall) *BlastRadiusRep
 	return EstimateBlastRadius(planned)
 }
 
-// ExecuteRegistered runs a single registered tool call with the configured isolation +
-// retry policy. Returns the (output, isErr) pair. The tool_result
-// StreamEvent is emitted on ch.
+// ExecuteRegistered is the compatibility entry point for callers that still
+// use the legacy API. Delegate to the canonical ExecuteOne/CompleteResult
+// pipeline so permission, approval, context, timeout, hooks, and redaction
+// cannot be bypassed.
 func (s *ToolService) ExecuteRegistered(ctx context.Context, tc types.ToolCall, ch chan<- StreamEvent) (string, bool) {
-	containerExecutor, containerRequired := s.containerState()
-	if containerRequired {
-		if containerExecutor == nil || !containerExecutor.Running() {
-			msg := "Container not ready — tools are disabled until the sandbox is running."
-			ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg}
-			return msg, true
-		}
-	}
-	if s.tracer != nil {
-		_, _ = oteltrace.StartToolSpan(ctx, s.tracer, tc.Name, tc.ID)
-	}
-	t, _ := s.registry.Get(tc.Name)
-	var output string
-	var execErr error
-	if rpp, ok := t.(tool.RetryPolicyProvider); ok {
-		output, execErr = tool.RetryExecutor(ctx, t, marshalInput(tc), rpp.RetryPolicy())
-	} else {
-		output, execErr = tool.RetryExecutor(ctx, t, marshalInput(tc), tool.DefaultRetryPolicy())
-	}
-	isErr := execErr != nil
-	if isErr {
-		output = fmt.Sprintf("Error: %s", execErr.Error())
-	}
-	// Redact user-facing tool output (the model copy is redacted separately).
-	if s.deps.redactOutput != nil {
-		output = s.deps.redactOutput(output)
-	}
-	ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: output}
-	return output, isErr
+	result := s.ExecuteOne(ctx, tc, nil, ch, 0, "")
+	result = s.CompleteResult(ctx, result, ch)
+	return result.output, result.isErr
 }
 
 // BackgroundManager returns the background sub-agent manager, or nil
@@ -774,9 +749,3 @@ func (s *ToolService) Sandbox() *diff.DiffSandbox { return s.sandbox }
 
 // SetSandbox attaches the diff sandbox.
 func (s *ToolService) SetSandbox(sb *diff.DiffSandbox) { s.sandbox = sb }
-
-// marshalInput serializes a tool call's args to JSON.
-func marshalInput(tc types.ToolCall) json.RawMessage {
-	b, _ := json.Marshal(tc.Arguments)
-	return b
-}

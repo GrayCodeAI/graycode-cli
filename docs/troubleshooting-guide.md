@@ -350,14 +350,17 @@ large contexts can consume significant memory. Consider:
 ### Daemon exits immediately
 
 The default entrypoint runs `hawk daemon start --host 0.0.0.0 --port 4590`.
-If no API key is set, the daemon will refuse to start on a non-loopback bind.
+Non-loopback binds require both an API key and native TLS; an API key alone
+does not protect credentials or conversation data from plaintext interception.
 
 **Fix:**
 
 ```bash
 docker run -p 4590:4590 \
   -e HAWK_DAEMON_API_KEY=$(openssl rand -base64 32) \
-  ghcr.io/graycodeai/hawk-daemon:latest
+  -v "$PWD/certs:/certs:ro" \
+  ghcr.io/graycodeai/hawk-daemon:latest \
+  --tls-cert /certs/server.crt --tls-key /certs/server.key
 ```
 
 ### Health check fails in container

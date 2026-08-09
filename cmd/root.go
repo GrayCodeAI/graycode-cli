@@ -815,7 +815,20 @@ func init() {
 
 // Execute runs the root command.
 func Execute() error {
+	// Cobra defaults command output to stderr when no writer is configured.
+	// The process entrypoint must make stdout/stderr semantics explicit so
+	// scripts can safely pipe data and diagnostics never corrupt structured
+	// output.
+	setCommandWriters(rootCmd)
 	return rootCmd.Execute()
+}
+
+func setCommandWriters(cmd *cobra.Command) {
+	cmd.SetOut(os.Stdout)
+	cmd.SetErr(os.Stderr)
+	for _, child := range cmd.Commands() {
+		setCommandWriters(child)
+	}
 }
 
 var recoverCmd = &cobra.Command{

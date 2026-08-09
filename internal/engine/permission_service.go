@@ -253,7 +253,11 @@ func (s *PermissionService) CheckApproval(_ context.Context, toolName string, ar
 			return true, ""
 		case ApprovalApproveForN:
 			// Default N=5 when the typed response carries no count.
-			g.nApprove(cat, req.N)
+			n := req.N
+			if n <= 0 {
+				n = 5
+			}
+			g.nApprove(cat, n)
 			return true, ""
 		case ApprovalApprove:
 			return true, ""

@@ -138,6 +138,22 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
+	case sessionSaveResultMsg:
+		if msg.err != nil {
+			m.recordWALError(msg.err)
+			return m, nil
+		}
+		// Remove the WAL only when no append happened after the snapshot.
+		// Doing this in the background save closure could race with a new
+		// submission and lose messages that were not in the saved session.
+		if msg.id == m.sessionID && msg.seq == m.walSeq && m.wal != nil {
+			if err := m.wal.Remove(); err != nil {
+				m.recordWALError(err)
+			} else {
+				m.wal = nil
+			}
+		}
+		return m, nil
 	case tea.FocusMsg:
 		m.viewDirty = true
 		m.updateViewportContent()
@@ -1272,7 +1288,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Durability: persist completed tool results incrementally so a
 		// crash mid-turn doesn't lose them (they were previously only
 		// written at turn end via saveSession).
+		m.ensureWAL()
 		if m.wal != nil {
+			m.walSeq++
 			m.recordWALError(m.wal.Append(session.Message{Role: "tool_result", Content: msg.content}))
 		}
 
@@ -1417,7 +1435,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.partial.Len() > 0 {
 			content := sanitizeIdentity(m.partial.String())
 			m.messages = append(m.messages, displayMsg{role: "assistant", content: content})
+			m.ensureWAL()
 			if m.wal != nil {
+				m.walSeq++
 				m.recordWALError(m.wal.Append(session.Message{Role: "assistant", Content: content}))
 			}
 			// Generate ghost text suggestion from AI response

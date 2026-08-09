@@ -31,26 +31,26 @@ hawk -p "Summarize this codebase"
 Single JSON object after completion:
 
 ```bash
-hawk -p "Summarize this codebase" --output-format json | jq -r '.text'
+hawk -p "Summarize this codebase" --output-format json | jq -r '.response'
 ```
 
 Output includes:
-- `text` — Response content
-- `stopReason` — Why the response ended
-- `sessionId` — Session ID for resuming
+- `response` — Response content
+- `exit_code` — 0 for success, non-zero for a failed run
+- `session_id` — Session ID for resuming
 
-### streaming-json
+### stream-json
 
 NDJSON events in real time:
 
 ```bash
-hawk -p "Summarize" --output-format streaming-json | jq -r 'select(.type=="text") | .data'
+hawk -p "Summarize" --output-format stream-json | jq -r 'select(.type=="content") | .content'
 ```
 
 Event types:
-- `text` — Response chunk
-- `thought` — Reasoning (thinking tokens)
-- `end` — Final event with metadata
+- `content` — Response chunk
+- `tool_use` / `tool_result` — Tool lifecycle events
+- `done` — Final event with metadata
 - `error` — Error occurred
 
 ---
@@ -96,11 +96,11 @@ hawk -p "Review" --disallowed-tools "Bash,WebSearch"
 Control tool permissions:
 
 ```bash
-# Allow shell commands
-hawk -p "Build" --allow "Bash(git*)" --allow "Bash(npm*)"
+# Allow shell commands through the explicit tool policy flag
+hawk -p "Build" --allowed-tools "Bash(git:*) Bash(npm:*)"
 
 # Deny dangerous commands
-hawk -p "Clean" --deny "Bash(rm*)" --deny "Bash(sudo*)"
+hawk -p "Clean" --disallowed-tools "Bash(rm:*) Bash(sudo:*)"
 ```
 
 ---
@@ -110,7 +110,7 @@ hawk -p "Clean" --deny "Bash(rm*)" --deny "Bash(sudo*)"
 Use `--auto` for fully automated runs:
 
 ```bash
-hawk -p "Format all files" --auto
+hawk -p "Format all files" --dangerously-skip-permissions
 hawk exec --auto full "Add error handling"
 ```
 
@@ -125,14 +125,14 @@ hawk exec --auto full "Add error handling"
 ```bash
 #!/bin/bash
 hawk -p "Review staged changes for bugs. Reply OK if fine." \
-  --auto --output-format json | jq -r '.text' | grep -q "^OK" || exit 1
+  --dangerously-skip-permissions --output-format json | jq -r '.response' | grep -q "^OK" || exit 1
 ```
 
 ### Code Review
 
 ```bash
 hawk -p "Review PR for security issues" \
-  --output-format json --auto | jq -r '.text' > review.md
+  --output-format json --dangerously-skip-permissions | jq -r '.response' > review.md
 ```
 
 ### Batch Processing

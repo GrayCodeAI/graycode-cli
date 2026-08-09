@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -111,11 +112,106 @@ var writeVerbs = map[string]bool{
 // mode. It inspects the first meaningful keyword after stripping leading
 // comments and whitespace.
 func isReadOnlyQuery(query string) bool {
-	first := firstSQLKeyword(query)
+	statements, err := splitSQLStatements(query)
+	if err != nil || len(statements) != 1 {
+		return false
+	}
+	first := firstSQLKeyword(statements[0])
 	if first == "" {
 		return false
 	}
+	// WITH can introduce a data-modifying CTE whose first token is otherwise
+	// indistinguishable from a read. Be conservative until a full SQL parser is
+	// used; callers can explicitly approve such statements with allow_write.
+	if first == "with" {
+		return false
+	}
 	return !writeVerbs[first]
+}
+
+// splitSQLStatements accepts one SQL statement and ignores semicolons inside
+// quoted strings and comments. SQLite permits stacked statements, so callers
+// must reject more than one statement even when writes are explicitly allowed.
+func splitSQLStatements(query string) ([]string, error) {
+	var statements []string
+	start := 0
+	var quote byte
+	lineComment, blockComment := false, false
+	for i := 0; i < len(query); i++ {
+		c := query[i]
+		if lineComment {
+			if c == '\n' {
+				lineComment = false
+			}
+			continue
+		}
+		if blockComment {
+			if c == '*' && i+1 < len(query) && query[i+1] == '/' {
+				blockComment = false
+				i++
+			}
+			continue
+		}
+		if quote != 0 {
+			if c == quote {
+				if i+1 < len(query) && query[i+1] == quote {
+					i++ // SQL escapes a quote by doubling it.
+				} else {
+					quote = 0
+				}
+			}
+			continue
+		}
+		switch c {
+		case '-', '/':
+			if c == '-' && i+1 < len(query) && query[i+1] == '-' {
+				lineComment = true
+				i++
+			} else if c == '/' && i+1 < len(query) && query[i+1] == '*' {
+				blockComment = true
+				i++
+			}
+		case '\'', '"', '`':
+			quote = c
+		case ';':
+			if statement := strings.TrimSpace(query[start:i]); statement != "" {
+				statements = append(statements, statement)
+			}
+			start = i + 1
+		}
+	}
+	if blockComment || quote != 0 {
+		return nil, fmt.Errorf("query contains an unterminated SQL comment or quoted string")
+	}
+	if statement := strings.TrimSpace(query[start:]); statement != "" {
+		statements = append(statements, statement)
+	}
+	return statements, nil
+}
+
+func validateSQLiteDSN(ctx context.Context, dsn string) error {
+	trimmed := strings.TrimSpace(dsn)
+	if trimmed == ":memory:" || strings.HasPrefix(trimmed, "file::memory:") {
+		return nil
+	}
+	path := trimmed
+	if strings.HasPrefix(trimmed, "file:") {
+		u, err := url.Parse(trimmed)
+		if err != nil || u.Host != "" {
+			return fmt.Errorf("sqlite dsn must reference a local file")
+		}
+		path = u.Path
+		if path == "" {
+			return fmt.Errorf("sqlite file dsn is missing a path")
+		}
+		if decoded, err := url.PathUnescape(path); err == nil {
+			path = decoded
+		}
+	}
+	if err := validatePathAllowed(ctx, path); err != nil {
+		return fmt.Errorf("sqlite dsn: %w", err)
+	}
+	return nil
 }
 
 // firstSQLKeyword returns the lowercased first keyword of a statement, skipping
@@ -182,8 +278,20 @@ func (t SQLTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 		return "", fmt.Errorf("the %s driver is not compiled into this build of hawk; only sqlite is available", driver)
 	}
 
-	if !p.AllowWrite && !isReadOnlyQuery(p.Query) {
+	statements, err := splitSQLStatements(p.Query)
+	if err != nil {
+		return "", fmt.Errorf("invalid query: %w", err)
+	}
+	if len(statements) != 1 {
+		return "", fmt.Errorf("exactly one SQL statement is required")
+	}
+	if !p.AllowWrite && !isReadOnlyQuery(statements[0]) {
 		return "", fmt.Errorf("refusing to run a destructive statement in read-only mode; set allow_write=true to override")
+	}
+	if driver == "sqlite" {
+		if err := validateSQLiteDSN(ctx, p.DSN); err != nil {
+			return "", err
+		}
 	}
 
 	db, err := sql.Open(driver, p.DSN)
@@ -194,8 +302,16 @@ func (t SQLTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 
 	queryCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	if !p.AllowWrite {
+		// PRAGMA query_only is connection-local. Restrict the pool to one
+		// connection so the guard applies to the subsequent query as well.
+		db.SetMaxOpenConns(1)
+		if _, err := db.ExecContext(queryCtx, "PRAGMA query_only=ON"); err != nil {
+			return "", fmt.Errorf("enable sqlite read-only mode: %w", err)
+		}
+	}
 
-	return runSQLQuery(queryCtx, db, p.Query, p.MaxRows)
+	return runSQLQuery(queryCtx, db, statements[0], p.MaxRows)
 }
 
 // querier is the subset of *sql.DB used by runSQLQuery, extracted so tests can
