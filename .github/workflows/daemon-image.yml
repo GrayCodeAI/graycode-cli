@@ -87,7 +87,11 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix=sha-,format=long
 
+      # The PR already exercised the daemon Dockerfile in the scan build above.
+      # Skip the redundant multi-arch publish build on pull requests so CI can
+      # finish as soon as the security gate passes.
       - name: Build and publish daemon image
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
