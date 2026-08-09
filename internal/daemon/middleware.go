@@ -136,16 +136,36 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 // responseWriter wraps http.ResponseWriter to capture the status code.
 type responseWriter struct {
 	http.ResponseWriter
-	status int
+	status      int
+	wroteHeader bool
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
+	if rw.wroteHeader {
+		return
+	}
 	rw.status = code
+	rw.wroteHeader = true
 	rw.ResponseWriter.WriteHeader(code)
 }
 
 func (rw *responseWriter) Write(b []byte) (int, error) {
+	if !rw.wroteHeader {
+		rw.WriteHeader(http.StatusOK)
+	}
 	return rw.ResponseWriter.Write(b)
+}
+
+// Unwrap preserves optional net/http capabilities (notably
+// ResponseController's deadline methods) through the logging middleware.
+func (rw *responseWriter) Unwrap() http.ResponseWriter { return rw.ResponseWriter }
+
+// Flush keeps SSE and other streaming handlers working when the response
+// writer is wrapped for logging.
+func (rw *responseWriter) Flush() {
+	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
 }
 
 // isCORSSettingAllowed reports whether the given origin is permitted

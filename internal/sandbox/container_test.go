@@ -279,9 +279,8 @@ func containsStr(s, sub string) bool {
 	return false
 }
 
-// TestContainerSandbox_DockerRunArgs_UserFallback verifies that without
-// userns remapping the container runs as the host uid:gid instead of root
-// (M12), and that userns remapping suppresses the --user fallback.
+// TestContainerSandbox_DockerRunArgs_User verifies that the container always
+// runs as the host uid:gid and never emits the invalid --userns-remap run flag.
 func TestContainerSandbox_DockerRunArgs_UserFallback(t *testing.T) {
 	original := usernsProbe
 	t.Cleanup(func() { usernsProbe = original; resetUsernsCache() })
@@ -290,7 +289,7 @@ func TestContainerSandbox_DockerRunArgs_UserFallback(t *testing.T) {
 	cs := NewContainerSandbox(projectDir)
 	cs.SetImage("hawk:test")
 
-	// userns unavailable -> --user fallback with host uid:gid.
+	// userns unavailable -> --user with host uid:gid.
 	resetUsernsCache()
 	usernsProbe = func() (bool, error) { return false, nil }
 	args := strings.Join(cs.dockerRunArgs("hawk-test", "/tmp/attach", "/tmp/cache"), " ")
@@ -302,15 +301,15 @@ func TestContainerSandbox_DockerRunArgs_UserFallback(t *testing.T) {
 		t.Fatalf("userns-remap must not be added when unavailable:\n%s", args)
 	}
 
-	// userns available -> --userns-remap, no --user fallback.
+	// userns available still uses the valid --user flag; remapping is daemon-side.
 	resetUsernsCache()
 	usernsProbe = func() (bool, error) { return true, nil }
 	args = strings.Join(cs.dockerRunArgs("hawk-test", "/tmp/attach", "/tmp/cache"), " ")
-	if !strings.Contains(args, "--userns-remap default") {
-		t.Fatalf("expected --userns-remap default in run args, got:\n%s", args)
+	if !strings.Contains(args, wantUser) {
+		t.Fatalf("expected %q in run args with daemon userns, got:\n%s", wantUser, args)
 	}
-	if strings.Contains(args, "--user ") {
-		t.Fatalf("--user fallback must not be added when userns is available:\n%s", args)
+	if strings.Contains(args, "--userns-remap") {
+		t.Fatalf("docker run must not receive daemon-only --userns-remap:\n%s", args)
 	}
 }
 

@@ -231,17 +231,12 @@ func (c *ContainerSandbox) dockerRunArgs(name, attachDir, cacheDir string) []str
 		"-w", c.projectDir,
 		"--entrypoint", "sleep",
 	}
-	// User-namespace remapping further isolates the container from the host
-	// kernel (H16); only added when the daemon supports it. Without userns
-	// the container would run as root against the rw project mount, so fall
-	// back to --user with the host uid:gid (M12). exec.CommandContext runs
-	// the container process as that uid inside the container regardless of
-	// whether /etc/passwd knows it.
-	if usernsRemapAvailable() {
-		args = append(args, "--userns-remap", "default")
-	} else {
-		args = append(args, "--user", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()))
-	}
+	// User namespace remapping is a Docker-daemon setting, not a valid
+	// `docker run` option. Always set the container process identity explicitly
+	// so a daemon without remapping cannot fall back to root on the project
+	// mount. A daemon configured with userns remapping still applies its UID
+	// mapping to this non-root container user.
+	args = append(args, "--user", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()))
 	// SSH Agent Socket Passthrough: Forward host SSH auth socket so git push/fetch works
 	// over SSH without copying or mounting raw SSH private keys into the container.
 	if sshSock := os.Getenv("SSH_AUTH_SOCK"); sshSock != "" {

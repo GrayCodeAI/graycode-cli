@@ -694,10 +694,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						break
 					}
 				}
-				// Use context.WithoutCancel: this goroutine outlives the caller,
-				// and ctx would be cancelled on return, killing the end-session
-				// pipeline before it can assess, learn, and persist experience.
-				go s.LifecycleSvc().Pipeline().EndSession(context.WithoutCancel(ctx), ctx.Err() == nil, taskGoal)
+				// End-session persistence must complete before the stream closes. A
+				// detached goroutine can write after callers tear down their state
+				// directory, losing feedback and racing test/process cleanup.
+				s.LifecycleSvc().Pipeline().EndSession(context.WithoutCancel(ctx), ctx.Err() == nil, taskGoal)
 			}
 			// Session end hook
 			hooks.ExecuteAsync(context.WithoutCancel(ctx), hooks.EventSessionEnd, map[string]interface{}{

@@ -36,6 +36,18 @@ type sessionWAL interface {
 	Close() error
 }
 
+func (m *chatModel) ensureWAL() {
+	if m == nil || m.wal != nil || m.sessionID == "" {
+		return
+	}
+	wal, err := session.NewWAL(m.sessionID)
+	if err != nil {
+		m.recordWALError(err)
+		return
+	}
+	m.wal = wal
+}
+
 // recordWALError captures the first persistence failure so the user can be
 // told their message may not survive a crash. Subsequent failures are dropped
 // (the first is surfaced once, in the status area).
@@ -224,6 +236,7 @@ type chatModel struct {
 	credentialTimeoutAt        time.Time
 	pendingYOLOConfirm         bool   // user selected YOLO in the picker; awaiting typed confirmation
 	durabilityWarning          string // first WAL persistence failure, surfaced once to the user
+	walSeq                     uint64 // increments for each append; guards async WAL rotation
 	width                      int
 	height                     int
 	quitting                   bool

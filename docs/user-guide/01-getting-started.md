@@ -196,7 +196,7 @@ Output formats:
 |--------|------|-------------|
 | `plain` | (default) | Human-readable text |
 | `json` | `--output-format json` | Single JSON object with response |
-| `streaming-json` | `--output-format streaming-json` | NDJSON event stream |
+| `stream-json` | `--output-format stream-json` | NDJSON event stream |
 
 ---
 

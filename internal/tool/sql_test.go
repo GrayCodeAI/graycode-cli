@@ -151,6 +151,33 @@ func TestIsReadOnlyQuery(t *testing.T) {
 	}
 }
 
+func TestSQLToolRejectsStackedStatements(t *testing.T) {
+	tool := SQLTool{}
+	in, _ := json.Marshal(map[string]any{
+		"driver":      "sqlite",
+		"dsn":         ":memory:",
+		"query":       "SELECT 1; DROP TABLE users",
+		"allow_write": true,
+	})
+	_, err := tool.Execute(context.Background(), in)
+	if err == nil || !strings.Contains(err.Error(), "exactly one") {
+		t.Fatalf("expected stacked statements to be rejected, got %v", err)
+	}
+}
+
+func TestSQLToolRejectsUnterminatedSQL(t *testing.T) {
+	tool := SQLTool{}
+	in, _ := json.Marshal(map[string]any{
+		"driver": "sqlite",
+		"dsn":    ":memory:",
+		"query":  "SELECT 'unterminated",
+	})
+	_, err := tool.Execute(context.Background(), in)
+	if err == nil || !strings.Contains(err.Error(), "unterminated") {
+		t.Fatalf("expected unterminated query error, got %v", err)
+	}
+}
+
 func TestSQLDriverName(t *testing.T) {
 	tests := []struct {
 		in          string

@@ -23,9 +23,10 @@ import (
 type ApprovalCategory string
 
 const (
-	ApprovalFileDeletion ApprovalCategory = "file_deletion"
-	ApprovalNetwork      ApprovalCategory = "network"
-	ApprovalExternalAPI  ApprovalCategory = "external_api"
+	ApprovalFileDeletion  ApprovalCategory = "file_deletion"
+	ApprovalNetwork       ApprovalCategory = "network"
+	ApprovalExternalAPI   ApprovalCategory = "external_api"
+	ApprovalDatabaseWrite ApprovalCategory = "database_write"
 )
 
 // ApprovalResponse is the typed result of a human approval gate decision.
@@ -129,6 +130,10 @@ func (g *ApprovalGate) classifyAction(toolName string, args map[string]interface
 	switch canon {
 	case "WebFetch", "WebSearch":
 		return ApprovalNetwork, true
+	case "SQL":
+		if allow, ok := args["allow_write"].(bool); ok && allow {
+			return ApprovalDatabaseWrite, true
+		}
 	case "Bash":
 		if cmd, ok := args["command"].(string); ok {
 			if isDestructiveDelete(cmd) {

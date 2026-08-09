@@ -167,3 +167,54 @@ func TestApprovalGate_FallbackAskUserFn(t *testing.T) {
 		t.Fatal("AskUserFn returning yes should approve")
 	}
 }
+
+func TestApprovalGate_ApproveForNDefaultsToFive(t *testing.T) {
+	s := NewSession("test", "m", "", nil)
+	s.PermSvc().SetAutonomy(AutonomyFull)
+	confirmations := 0
+	s.SetApproval(&ApprovalGate{
+		Enabled: true,
+		ConfirmFn: func(req ApprovalRequest) ApprovalResponse {
+			if req.Category != ApprovalNetwork {
+				t.Fatalf("unexpected category: %s", req.Category)
+			}
+			confirmations++
+			if confirmations == 1 {
+				return ApprovalApproveForN
+			}
+			return ApprovalReject
+		},
+	})
+	for i := 0; i < 6; i++ {
+		ok, _ := s.CheckApproval(context.Background(), "WebFetch", map[string]interface{}{"url": "https://example.com"})
+		if !ok {
+			t.Fatalf("approval %d should pass", i+1)
+		}
+	}
+	ok, _ := s.CheckApproval(context.Background(), "WebFetch", map[string]interface{}{"url": "https://example.com"})
+	if ok {
+		t.Fatal("sixth action should require a new approval")
+	}
+}
+
+func TestApprovalGate_SQLWriteCategory(t *testing.T) {
+	for _, toolName := range []string{"SQL", "sql", "sql_query"} {
+		t.Run(toolName, func(t *testing.T) {
+			s := NewSession("test", "m", "", nil)
+			s.PermSvc().SetAutonomy(AutonomyFull)
+			s.SetApproval(&ApprovalGate{
+				Enabled: true,
+				ConfirmFn: func(req ApprovalRequest) ApprovalResponse {
+					if req.Category != ApprovalDatabaseWrite {
+						t.Fatalf("expected database_write category, got %s", req.Category)
+					}
+					return ApprovalReject
+				},
+			})
+			ok, _ := s.CheckApproval(context.Background(), toolName, map[string]interface{}{"allow_write": true})
+			if ok {
+				t.Fatalf("%s writes should require approval", toolName)
+			}
+		})
+	}
+}

@@ -183,9 +183,9 @@ func (s *Sandbox) runDocker(ctx context.Context, command string) (*exec.Cmd, err
 		"--memory", fmt.Sprintf("%dm", s.config.MaxMemoryMB),
 		"--cpus", fmt.Sprintf("%.2f", float64(s.config.MaxCPUPct)/100.0),
 	}
-	if usernsRemapAvailable() {
-		args = append(args, "--userns-remap", "default")
-	}
+	// `--userns-remap` is a daemon configuration flag, not accepted by
+	// `docker run`. Run as the invoking host UID/GID in either daemon mode.
+	args = append(args, "--user", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()))
 	if !s.config.AllowNetwork {
 		args = append(args, "--network", "none")
 	}

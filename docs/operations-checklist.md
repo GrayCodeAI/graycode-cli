@@ -12,13 +12,13 @@ documentation section.
   ```bash
   export HAWK_DAEMON_API_KEY=$(openssl rand -base64 32)
   ```
-- [ ] **Bind address** — Daemon binds to `0.0.0.0` (not just loopback) if
-  remote access is needed. If bound to non-loopback without TLS, the daemon
-  prints a warning and refuses to start without an API key.
-- [ ] **TLS configured** — For production, either:
-  - Terminate TLS at a reverse proxy (nginx, Caddy, ALB) and set
-    `X-Forwarded-Proto: https`, **or**
-  - Enable native TLS with `--tls-cert` / `--tls-key` flags.
+- [ ] **Bind address** — Daemon binds to `0.0.0.0` (not just loopback) only
+  when remote access is needed. A non-loopback bind requires an API key and
+  native TLS; otherwise startup fails closed.
+- [ ] **TLS configured** — Enable native TLS with `--tls-cert` / `--tls-key`
+  flags. If a reverse proxy terminates TLS, keep Hawk bound to loopback or
+  an internal-only interface and restrict that network path at the firewall;
+  the daemon does not treat `X-Forwarded-Proto` as transport encryption.
 - [ ] **CORS configured** — If serving browser-based clients, set
   `--cors https://app.example.com` to allow cross-origin requests from
   trusted origins only. Use `--cors '*'` only for development.

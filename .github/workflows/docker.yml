@@ -76,9 +76,13 @@ jobs:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scan
           format: sarif
           output: trivy-image.sarif
-          severity: CRITICAL
+          severity: CRITICAL,HIGH
+          # Go reachability is enforced separately by govulncheck in CI. The
+          # binary also carries the full workspace module graph, including
+          # non-reachable packages that Trivy reports as binary findings.
+          vuln-type: os
           ignore-unfixed: true
-          exit-code: '0'  # Don't fail the build; results are uploaded for review
+          exit-code: '1'  # Block publishing images with actionable vulnerabilities
 
       # Second build is a cache hit (layers exported by the scan build), so it
       # only re-links and pushes the platform image.
@@ -96,8 +100,10 @@ jobs:
             COMMIT=${{ github.sha }}
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
 
+      # Publish the scan results to GitHub code scanning. The scan itself runs
+      # on PRs; only the release-side publish path stays off PRs.
       - name: Upload Trivy image scan results
-        if: github.event_name != 'pull_request' && always()
+        if: always()
         uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
         with:
           sarif_file: trivy-image.sarif
@@ -148,9 +154,13 @@ jobs:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scan
           format: sarif
           output: trivy-image.sarif
-          severity: CRITICAL
+          severity: CRITICAL,HIGH
+          # Go reachability is enforced separately by govulncheck in CI. The
+          # binary also carries the full workspace module graph, including
+          # non-reachable packages that Trivy reports as binary findings.
+          vuln-type: os
           ignore-unfixed: true
-          exit-code: '0'  # Don't fail the build; results are uploaded for review
+          exit-code: '1'  # Block publishing images with actionable vulnerabilities
 
       # Second build is a cache hit (layers exported by the scan build), so it
       # only re-links and pushes the platform image.
@@ -168,14 +178,16 @@ jobs:
             COMMIT=${{ github.sha }}
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
 
+      # Publish the scan results to GitHub code scanning. The scan itself runs
+      # on PRs; only the release-side publish path stays off PRs.
       - name: Upload Trivy image scan results
-        if: github.event_name != 'pull_request' && always()
+        if: always()
         uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
         with:
           sarif_file: trivy-image.sarif
 
   merge-manifest:
-    name: merge multi-arch manifest
+    name: merge multi-arch manifest (release only)
     if: github.event_name != 'pull_request'
     needs: [build-amd64, build-arm64]
     runs-on: ubuntu-latest
@@ -255,9 +267,13 @@ jobs:
           image-ref: ${{ env.REGISTRY }}/graycodeai/hawk-sandbox:scan
           format: sarif
           output: trivy-sandbox-image.sarif
-          severity: CRITICAL
+          severity: CRITICAL,HIGH
+          # This image gate covers the Debian OS package surface. npm's
+          # bundled CLI dependency tree is pinned by the Node base image and
+          # reviewed separately from the runtime OS scan.
+          vuln-type: os
           ignore-unfixed: true
-          exit-code: '0'
+          exit-code: '1'
 
       - name: Build and publish public sandbox image
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
@@ -272,8 +288,10 @@ jobs:
           cache-from: type=gha,scope=hawk-sandbox
           cache-to: type=gha,mode=max,scope=hawk-sandbox
 
+      # Publish the sandbox scan to GitHub code scanning. PRs still run the
+      # scan; they just do not publish the release image artifacts.
       - name: Upload sandbox image scan results
-        if: github.event_name != 'pull_request' && always()
+        if: always()
         uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
         with:
           sarif_file: trivy-sandbox-image.sarif

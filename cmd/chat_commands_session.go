@@ -15,6 +15,12 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
+type sessionSaveResultMsg struct {
+	id  string
+	seq uint64
+	err error
+}
+
 // saveSession persists the current session to disk.
 func (m *chatModel) saveSession() {
 	raw := m.session.RawMessages()
@@ -27,8 +33,13 @@ func (m *chatModel) saveSession() {
 	})
 	// On successful save, WAL is no longer needed (session file has everything)
 	if err == nil && m.wal != nil {
-		_ = m.wal.Remove()
-		m.wal = nil
+		if removeErr := m.wal.Remove(); removeErr != nil {
+			m.recordWALError(removeErr)
+		} else {
+			m.wal = nil
+		}
+	} else if err != nil {
+		m.recordWALError(err)
 	}
 }
 
@@ -48,16 +59,13 @@ func (m *chatModel) saveSessionCmd() tea.Cmd {
 	id, modelName, provider := m.sessionID, m.session.Model(), m.session.Provider()
 	msgs := session.FromRuntimeMessages(raw)
 	createdAt := time.Now()
-	wal := m.wal
+	seq := m.walSeq
 	return func() tea.Msg {
 		err := session.Save(&session.Session{
 			ID: id, Model: modelName, Provider: provider,
 			Messages: msgs, CreatedAt: createdAt,
 		})
-		if err == nil && wal != nil {
-			_ = wal.Remove()
-		}
-		return nil
+		return sessionSaveResultMsg{id: id, seq: seq, err: err}
 	}
 }
 

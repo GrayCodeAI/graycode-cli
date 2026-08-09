@@ -1,8 +1,7 @@
 # Build stage
-# TODO(supply-chain): pin base images by digest (tag@sha256:…) — tags are
-# mutable and an upstream re-push silently changes the build. Applies to the
-# alpine runtime stage below as well.
-FROM golang:1.26.5-alpine AS builder
+# Supply-chain hardening: both stages are pinned by digest so a mutable tag
+# cannot silently change the build.
+FROM golang:1.26.5-alpine@sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2 AS builder
 
 RUN apk upgrade --no-cache && \
     apk add --no-cache git ca-certificates tzdata
@@ -56,7 +55,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     -o hawk ./cmd/hawk
 
 # Runtime stage — Alpine (hawk requires git + bash for workspace operations; distroless excluded)
-FROM alpine:3.23.5
+FROM alpine:3.23.5@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40
 
 RUN apk upgrade --no-cache && \
     apk add --no-cache ca-certificates git bash tini && \
