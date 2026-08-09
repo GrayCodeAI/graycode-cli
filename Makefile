@@ -89,7 +89,7 @@ api-docs: ## Generate HTML API reference from OpenAPI spec.
 	@echo "API reference generated: api/reference.html"
 
 api-validate: ## Validate the OpenAPI spec.
-	@command -v redocly >/dev/null 2>&1 || (echo "install: npm install -g @redocly/cli" && exit 1)
+	@command -v redocly >/dev/null 2>&1 || npm install -g @redocly/cli
 	redocly lint api/openapi.yaml
 
 bench: ## Run benchmarks.
@@ -101,8 +101,8 @@ bench: ## Run benchmarks.
 fmt: ## Format source files (gofumpt + goimports).
 	@command -v $(GOFUMPT)   >/dev/null 2>&1 || (echo "install: go install mvdan.cc/gofumpt@latest"   && exit 1)
 	@command -v $(GOIMPORTS) >/dev/null 2>&1 || (echo "install: go install golang.org/x/tools/cmd/goimports@latest" && exit 1)
-	$(GOFUMPT) -w .
-	$(GOIMPORTS) -w .
+	@git ls-files -- '*.go' ':!external/**' | xargs $(GOFUMPT) -w
+	@git ls-files -- '*.go' ':!external/**' | xargs $(GOIMPORTS) -w
 
 vet: ## Run go vet.
 	go vet ./...

@@ -45,7 +45,7 @@ jobs:
       - name: gofumpt
         run: |
           go install mvdan.cc/gofumpt@v0.10.0
-          out=$(gofumpt -l .)
+          out=$(git ls-files -- '*.go' ':!external/**' | xargs gofumpt -l)
           if [ -n "$out" ]; then
             echo "::error::gofumpt would reformat:"
             echo "$out" | head -20
@@ -54,7 +54,7 @@ jobs:
       - name: goimports
         run: |
           go install golang.org/x/tools/cmd/goimports@v0.30.0
-          out=$(goimports -l .)
+          out=$(git ls-files -- '*.go' ':!external/**' | xargs goimports -l)
           if [ -n "$out" ]; then
             echo "::error::goimports would reformat:"
             echo "$out" | head -20

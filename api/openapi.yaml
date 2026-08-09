@@ -16,7 +16,7 @@ info:
     url: https://github.com/GrayCodeAI/hawk
 
 servers:
-  - url: http://localhost:4590
+  - url: http://127.0.0.1:4590
     description: Local daemon (default port)
 
 security:
@@ -417,6 +417,7 @@ tags:
 paths:
   /v1/health:
     get:
+      operationId: healthCheck
       tags: [system]
       summary: Health check
       security: []
@@ -427,9 +428,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /v1/ready:
     get:
+      operationId: readinessProbe
       tags: [system]
       summary: Readiness probe
       description: |
@@ -444,6 +452,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReadyResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "503":
           description: Daemon is not ready
           content:
@@ -453,6 +467,7 @@ paths:
 
   /v1/chat:
     post:
+      operationId: sendChat
       tags: [agent]
       summary: Send a prompt to the agent
       description: |
@@ -510,6 +525,7 @@ paths:
 
   /v1/cancel:
     post:
+      operationId: cancelGeneration
       tags: [agent]
       summary: Cancel an in-flight generation
       description: |
@@ -563,6 +579,7 @@ paths:
 
   /v1/sessions:
     get:
+      operationId: listSessions
       tags: [sessions]
       summary: List active daemon sessions
       responses:
@@ -583,6 +600,7 @@ paths:
 
   /v1/sessions/{id}:
     get:
+      operationId: getSession
       tags: [sessions]
       summary: Get a persisted session
       parameters:
@@ -605,6 +623,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     delete:
+      operationId: deleteSession
       tags: [sessions]
       summary: Delete a session
       parameters:
@@ -631,6 +650,7 @@ paths:
 
   /v1/sessions/{id}/messages:
     get:
+      operationId: listSessionMessages
       tags: [messages]
       summary: Get session messages with pagination
       parameters:
@@ -663,6 +683,7 @@ paths:
 
   /v1/sessions/{id}/graph:
     get:
+      operationId: getSessionGraph
       tags: [graphs]
       summary: Project a persisted session as a portable execution graph
       description: |
@@ -729,6 +750,7 @@ paths:
 
   /v1/stats:
     get:
+      operationId: getStats
       tags: [stats]
       summary: Aggregated usage statistics
       responses:
@@ -747,6 +769,7 @@ paths:
 
   /v1/metrics:
     get:
+      operationId: getMetrics
       tags: [stats]
       summary: Daemon metrics in Prometheus exposition format
       description: |
@@ -772,6 +795,7 @@ paths:
 
   /v1/review:
     post:
+      operationId: createReview
       tags: [review]
       summary: Trigger an asynchronous code review of a commit
       requestBody:
@@ -796,6 +820,7 @@ paths:
 
   /v1/review/status:
     get:
+      operationId: getReviewStatus
       tags: [review]
       summary: Get current review status
       responses:
@@ -805,6 +830,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReviewStatusResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500":
           description: Status command failed
           content:
