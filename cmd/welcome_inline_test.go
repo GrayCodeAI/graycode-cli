@@ -69,15 +69,15 @@ func TestBuildWelcomeMessage_InlineShowsGuidance(t *testing.T) {
 			t.Fatalf("minimal welcome missing %q in:\n%s", want, out)
 		}
 	}
-	for _, wantIcon := range []string{icons.FileDocument(), icons.Network()} {
+	for _, wantIcon := range []string{icons.Robot(), icons.Network()} {
 		if !strings.Contains(out, wantIcon) {
 			t.Fatalf("minimal welcome missing semantic icon %q in:\n%s", wantIcon, out)
 		}
 	}
 	for mode, rowIcons := range map[string][]string{
-		"active": {icons.Bolt(), icons.FileDocument(), icons.Network()},
-		"nerd":   {icons.Nerd("bolt"), icons.Nerd("file_document"), icons.Nerd("network")},
-		"ascii":  {icons.ASCII("bolt"), icons.ASCII("file_document"), icons.ASCII("network")},
+		"active": {icons.Bolt(), icons.Robot(), icons.Network()},
+		"nerd":   {icons.Nerd("bolt"), icons.Nerd("robot"), icons.Nerd("network")},
+		"ascii":  {icons.ASCII("bolt"), icons.ASCII("robot"), icons.ASCII("network")},
 	} {
 		seenIcons := make(map[string]struct{}, len(rowIcons))
 		for _, icon := range rowIcons {

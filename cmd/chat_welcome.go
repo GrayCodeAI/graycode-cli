@@ -329,7 +329,7 @@ func welcomeIndicatorRow(skillsCount int, agentsOK bool, mcpCount int, activeC, 
 	return fmt.Sprintf(
 		"%s%s Skills (%d)%s %s  ·  %s%s AGENTS.md%s %s  ·  %s%s MCPs (%d)%s %s",
 		skillsColor, icons.Bolt(), skillsCount, rst, skillsMark,
-		agentsColor, icons.FileDocument(), rst, agentsMark,
+		agentsColor, icons.Robot(), rst, agentsMark,
 		mcpColor, icons.Network(), mcpCount, rst, mcpMark,
 	)
 }
