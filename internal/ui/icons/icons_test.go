@@ -36,22 +36,22 @@ func TestGlyph_ModeASCII(t *testing.T) {
 	}
 }
 
-func TestEstablishedStatusGlyphsKeepDenseLegacyMappings(t *testing.T) {
+func TestStatusGlyphsUseCodiconMappings(t *testing.T) {
 	SetMode(ModeNerd)
 	t.Cleanup(func() { SetMode(ModeAuto) })
 	want := map[string]string{
-		"robot":          "\ue244",
-		"circle_filled":  "\uf444",
-		"circle_outline": "\uf4a7",
-		"alert":          "\ue002",
-		"check_bold":     "\ue5ca",
-		"close_thick":    "\ue5cd",
-		"timer":          "\uf51f",
-		"check_decagram": "\uf079",
+		"robot":          "\ueb48",
+		"circle_filled":  "\uea71",
+		"circle_outline": "\ueac0",
+		"alert":          "\uea9c",
+		"check_bold":     "\ueac2",
+		"close_thick":    "\ueaa6",
+		"timer":          "\uebbc",
+		"check_decagram": "\uebd7",
 	}
 	for name, expected := range want {
 		if got := Nerd(name); got != expected {
-			t.Errorf("Nerd(%q) = %q, want legacy dense glyph %q", name, got, expected)
+			t.Errorf("Nerd(%q) = %q, want Codicon glyph %q", name, got, expected)
 		}
 	}
 }
