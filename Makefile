@@ -89,8 +89,8 @@ api-docs: ## Generate HTML API reference from OpenAPI spec.
 	@echo "API reference generated: api/reference.html"
 
 api-validate: ## Validate the OpenAPI spec.
-	@command -v @redocly/cli >/dev/null 2>&1 || (echo "install: npm install -g @redocly/cli" && exit 1)
-	@redocly lint api/openapi.yaml
+	@command -v redocly >/dev/null 2>&1 || (echo "install: npm install -g @redocly/cli" && exit 1)
+	redocly lint api/openapi.yaml
 
 bench: ## Run benchmarks.
 	go test ./... -bench=. -benchmem -count=3 -timeout=300s
