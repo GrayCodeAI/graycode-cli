@@ -100,6 +100,8 @@ jobs:
             COMMIT=${{ github.sha }}
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
 
+      # Publish the scan results to GitHub code scanning. The scan itself runs
+      # on PRs; only the release-side publish path stays off PRs.
       - name: Upload Trivy image scan results
         if: always()
         uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
@@ -176,6 +178,8 @@ jobs:
             COMMIT=${{ github.sha }}
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
 
+      # Publish the scan results to GitHub code scanning. The scan itself runs
+      # on PRs; only the release-side publish path stays off PRs.
       - name: Upload Trivy image scan results
         if: always()
         uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
@@ -284,6 +288,8 @@ jobs:
           cache-from: type=gha,scope=hawk-sandbox
           cache-to: type=gha,mode=max,scope=hawk-sandbox
 
+      # Publish the sandbox scan to GitHub code scanning. PRs still run the
+      # scan; they just do not publish the release image artifacts.
       - name: Upload sandbox image scan results
         if: always()
         uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
