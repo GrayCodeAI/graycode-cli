@@ -232,7 +232,9 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 // CONTAINER badge is shown, the redundant iso segment is dropped.
 func welcomeControlPlaneLine(sess *engine.Session, dimC, rst string, badgeShown bool) string {
 	work := sess.WorkMode()
-	modeIcon := icons.Cog()
+	// Use the denser terminal glyphs here. The UI already has the semantic
+	// text; these icons should add contrast, not vanish into the line height.
+	modeIcon := icons.Terminal()
 	modeLabel := "Action Mode"
 	modeColor := ansiCyan
 	switch work {
@@ -262,7 +264,7 @@ func welcomeControlPlaneLine(sess *engine.Session, dimC, rst string, badgeShown 
 		trustIcon = icons.CircleOutline()
 		trustColor = dimC
 	} else if tr.Trusted {
-		trustIcon = icons.CheckDecagram()
+		trustIcon = icons.CheckBold()
 		trustColor = ansiVividGreen
 	} else if tr.Blocked {
 		trustIcon = icons.CloseCircle()
