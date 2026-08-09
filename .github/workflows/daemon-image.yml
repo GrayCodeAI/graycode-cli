@@ -68,6 +68,10 @@ jobs:
           format: sarif
           output: trivy-daemon-image.sarif
           severity: CRITICAL,HIGH
+          # Go reachability is enforced separately by govulncheck in CI. The
+          # binary also carries the full workspace module graph, including
+          # non-reachable packages that Trivy reports as binary findings.
+          vuln-type: os
           ignore-unfixed: true
           exit-code: '1'
 

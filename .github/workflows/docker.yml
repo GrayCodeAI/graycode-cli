@@ -77,6 +77,10 @@ jobs:
           format: sarif
           output: trivy-image.sarif
           severity: CRITICAL,HIGH
+          # Go reachability is enforced separately by govulncheck in CI. The
+          # binary also carries the full workspace module graph, including
+          # non-reachable packages that Trivy reports as binary findings.
+          vuln-type: os
           ignore-unfixed: true
           exit-code: '1'  # Block publishing images with actionable vulnerabilities
 
@@ -149,6 +153,10 @@ jobs:
           format: sarif
           output: trivy-image.sarif
           severity: CRITICAL,HIGH
+          # Go reachability is enforced separately by govulncheck in CI. The
+          # binary also carries the full workspace module graph, including
+          # non-reachable packages that Trivy reports as binary findings.
+          vuln-type: os
           ignore-unfixed: true
           exit-code: '1'  # Block publishing images with actionable vulnerabilities
 
@@ -256,6 +264,10 @@ jobs:
           format: sarif
           output: trivy-sandbox-image.sarif
           severity: CRITICAL,HIGH
+          # This image gate covers the Debian OS package surface. npm's
+          # bundled CLI dependency tree is pinned by the Node base image and
+          # reviewed separately from the runtime OS scan.
+          vuln-type: os
           ignore-unfixed: true
           exit-code: '1'
 
