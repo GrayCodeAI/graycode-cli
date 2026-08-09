@@ -264,7 +264,7 @@ func welcomeControlPlaneLine(sess *engine.Session, dimC, rst string, badgeShown 
 		trustIcon = icons.CircleOutline()
 		trustColor = dimC
 	} else if tr.Trusted {
-		trustIcon = icons.CheckBold()
+		trustIcon = icons.CheckDecagram()
 		trustColor = ansiVividGreen
 	} else if tr.Blocked {
 		trustIcon = icons.CloseCircle()
