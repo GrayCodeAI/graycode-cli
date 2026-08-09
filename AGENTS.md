@@ -199,7 +199,7 @@ with its native Responses API (`/v1/responses`) under the
 `concentrate-payg` deployment.
 
 <!-- gitnexus:start -->
-# GitNexus — Code Intelligence
+## GitNexus — Code Intelligence
 
 This project is indexed by GitNexus as **hawk** (97743 symbols, 322940 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
