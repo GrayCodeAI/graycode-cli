@@ -269,6 +269,21 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			opts.System += "\n\n" + addon
 		}
 		if s.Tools() != nil && s.Tools().Registry() != nil {
+			// Promote only the small set of registered tools that match the
+			// current request. This keeps the default schema compact while
+			// making URL, verification, git, and code-intelligence requests
+			// discoverable without requiring the model to guess ToolSearch.
+			lastUserMsg := ""
+			for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
+				msg := s.Persistence().RawMessages()[i]
+				if msg.Role == "user" && len(msg.ToolResults) == 0 {
+					lastUserMsg = msg.Content
+					break
+				}
+			}
+			if lastUserMsg != "" {
+				s.Tools().Registry().PromoteForIntent(lastUserMsg)
+			}
 			opts.Tools = s.Tools().Registry().EyrieTools()
 		}
 

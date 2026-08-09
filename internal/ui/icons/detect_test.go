@@ -52,7 +52,7 @@ func TestMode_NonTTYForcesAscii(t *testing.T) {
 	}
 }
 
-func TestMode_KnownTerminalEnablesNerd(t *testing.T) {
+func TestMode_TTYDefaultsToNerd(t *testing.T) {
 	for _, term := range []string{"xterm-256color", "tmux-256color", "screen-256color", "alacritty", "wezterm", "kitty", "ghostty"} {
 		t.Run(term, func(t *testing.T) {
 			t.Setenv("HAWK_ICONS", "")
@@ -63,13 +63,13 @@ func TestMode_KnownTerminalEnablesNerd(t *testing.T) {
 			withInjectedTTY(t, true)
 			SetMode(ModeAuto)
 			if Mode() != ModeNerd {
-				t.Errorf("TERM=%s should enable Nerd, got %s", term, Mode())
+				t.Errorf("interactive TERM=%s should default to Nerd, got %s", term, Mode())
 			}
 		})
 	}
 }
 
-func TestMode_TERMProgramEnablesNerd(t *testing.T) {
+func TestMode_TERMProgramDoesNotAffectMode(t *testing.T) {
 	for _, program := range []string{"iTerm.app", "WezTerm", "Ghostty", "vscode", "hyper"} {
 		t.Run(program, func(t *testing.T) {
 			t.Setenv("HAWK_ICONS", "")
@@ -80,13 +80,13 @@ func TestMode_TERMProgramEnablesNerd(t *testing.T) {
 			withInjectedTTY(t, true)
 			SetMode(ModeAuto)
 			if Mode() != ModeNerd {
-				t.Errorf("TERM_PROGRAM=%s should enable Nerd, got %s", program, Mode())
+				t.Errorf("TERM_PROGRAM=%s should not change interactive Nerd default, got %s", program, Mode())
 			}
 		})
 	}
 }
 
-func TestMode_UTF8LocaleEnablesNerd(t *testing.T) {
+func TestMode_UTF8LocaleDoesNotAffectMode(t *testing.T) {
 	t.Setenv("HAWK_ICONS", "")
 	t.Setenv("NO_COLOR", "")
 	t.Setenv("TERM", "xterm")
@@ -97,11 +97,11 @@ func TestMode_UTF8LocaleEnablesNerd(t *testing.T) {
 	withInjectedTTY(t, true)
 	SetMode(ModeAuto)
 	if Mode() != ModeNerd {
-		t.Errorf("UTF-8 locale should enable Nerd, got %s", Mode())
+		t.Errorf("UTF-8 locale should not change interactive Nerd default, got %s", Mode())
 	}
 }
 
-func TestMode_DumbTerminalDefaultsAscii(t *testing.T) {
+func TestMode_InteractiveTTYDefaultsToNerd(t *testing.T) {
 	t.Setenv("HAWK_ICONS", "")
 	t.Setenv("NO_COLOR", "")
 	t.Setenv("TERM", "dumb")
@@ -112,8 +112,8 @@ func TestMode_DumbTerminalDefaultsAscii(t *testing.T) {
 	t.Setenv("LANG", "")
 	withInjectedTTY(t, true)
 	SetMode(ModeAuto)
-	if Mode() != ModeASCII {
-		t.Errorf("dumb TERM with no UTF-8 locale should default ASCII, got %s", Mode())
+	if Mode() != ModeNerd {
+		t.Errorf("interactive dumb TERM should still default to Nerd, got %s", Mode())
 	}
 }
 

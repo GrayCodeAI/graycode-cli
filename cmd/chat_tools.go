@@ -64,6 +64,7 @@ func essentialTools() []tool.Tool {
 		tool.MultiEditTool{},
 		tool.BrowserTool{},
 		tool.ScreenshotTool{},
+		tool.ToolHealthTool{},
 		tool.RequestCredentialTool{Gateway: func() tool.CredentialGateFn {
 			// The actual gateway is wired at session start via SetCredentialGate.
 			// This returns nil until then; the tool checks for nil and errors.
@@ -80,6 +81,23 @@ func essentialTools() []tool.Tool {
 func optionalTools() []tool.Tool {
 	// Specialized tools that can be lazy-loaded on demand
 	return []tool.Tool{
+		// Structured developer workflows. These stay lazy until the intent
+		// router or ToolSearch promotes them, keeping the startup schema small.
+		tool.GitTool{},
+		tool.OutlineTool{},
+		&tool.SmartReaderTool{},
+		tool.PatchTool{},
+		tool.TransactionTool{},
+		tool.NewAutoImportTool(),
+		tool.ImportOrganizerTool{},
+		tool.NewRefactorTool(),
+		tool.ConflictResolverTool{},
+		tool.DebuggerTool{},
+		tool.DevEnvTool{},
+		tool.ProjectVerifyTool{},
+		tool.DependencyAuditTool{},
+		tool.GitHubTool{},
+		&tool.PRGeneratorTool{},
 		tool.SpecifyTool{},
 		tool.PlanTool{},
 		tool.TasksTool{},
@@ -277,12 +295,12 @@ func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
 	}
 	registry.EnableLazyModelSurface(essentialNames)
 
-	// Lazy-load optional tools in background (executable, not model-visible).
-	go func() {
-		for _, t := range optionalTools() {
-			_ = registry.Register(t)
-		}
-	}()
+	// Register optional tools synchronously. Registration only adds in-memory
+	// schemas; keeping it deterministic ensures intent promotion cannot race
+	// the first user turn. They remain hidden from the model until promoted.
+	for _, t := range optionalTools() {
+		_ = registry.Register(t)
+	}
 
 	// Load MCP tools in the background so a hung/absent stdio server delays
 	// tool availability — not first paint. loadStartupMCPToolSets can block up

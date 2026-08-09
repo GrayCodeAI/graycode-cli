@@ -16,6 +16,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/resilience/health"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
@@ -266,6 +267,10 @@ func builtInToolsSummary() string {
 	b.WriteString("  Optional (lazy-loaded):\n")
 	for _, t := range optional {
 		b.WriteString(fmt.Sprintf("    %s - %s\n", t.Name(), t.Description()))
+	}
+	b.WriteString("\nIntent bundles:\n")
+	for _, summary := range tool.IntentBundleSummary() {
+		b.WriteString("  " + summary + "\n")
 	}
 	return strings.TrimRight(b.String(), "\n")
 }

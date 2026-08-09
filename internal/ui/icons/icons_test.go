@@ -36,6 +36,26 @@ func TestGlyph_ModeASCII(t *testing.T) {
 	}
 }
 
+func TestStatusGlyphsUseCodiconMappings(t *testing.T) {
+	SetMode(ModeNerd)
+	t.Cleanup(func() { SetMode(ModeAuto) })
+	want := map[string]string{
+		"robot":          "\ueb48",
+		"circle_filled":  "\uea71",
+		"circle_outline": "\ueac0",
+		"alert":          "\uea9c",
+		"check_bold":     "\ueac2",
+		"close_thick":    "\ueaa6",
+		"timer":          "\uebbc",
+		"check_decagram": "\uebd7",
+	}
+	for name, expected := range want {
+		if got := Nerd(name); got != expected {
+			t.Errorf("Nerd(%q) = %q, want Codicon glyph %q", name, got, expected)
+		}
+	}
+}
+
 func TestASCII_IgnoresMode(t *testing.T) {
 	SetMode(ModeNerd)
 	if got := ASCII("chevron_right"); got != ">" {

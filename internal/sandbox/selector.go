@@ -119,6 +119,15 @@ func dockerAvailable() bool {
 	return dockerAvailabilityCached
 }
 
+// ResetDockerAvailabilityCache clears the cached daemon probe result so the
+// next availability check performs a fresh docker info probe.
+func ResetDockerAvailabilityCache() {
+	dockerAvailabilityMu.Lock()
+	defer dockerAvailabilityMu.Unlock()
+	dockerAvailabilityChecked = time.Time{}
+	dockerAvailabilityCached = false
+}
+
 func probeDockerAvailable() bool {
 	if _, err := exec.LookPath("docker"); err != nil {
 		return false
@@ -132,9 +141,5 @@ func probeDockerAvailable() bool {
 }
 
 func resetDockerAvailabilityCache() {
-	dockerAvailabilityMu.Lock()
-	defer dockerAvailabilityMu.Unlock()
-	dockerAvailabilityChecked = time.Time{}
-	dockerAvailabilityCached = false
-	dockerAvailabilityProbe = probeDockerAvailable
+	ResetDockerAvailabilityCache()
 }

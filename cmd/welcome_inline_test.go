@@ -243,6 +243,11 @@ func TestWelcomeIndicatorRow_UsesSemanticStatesAndCounts(t *testing.T) {
 			}
 		})
 	}
+
+	active := welcomeIndicatorRow(1, true, 1, "<active>", "<idle>", "</active>", "<ready>", "<none>")
+	if strings.Count(active, ansiBold) != 3 {
+		t.Fatalf("welcomeIndicatorRow() should bold all three semantic icons, got %q", active)
+	}
 }
 
 func TestConnectedMCPCount_CountsDistinctUsableServers(t *testing.T) {

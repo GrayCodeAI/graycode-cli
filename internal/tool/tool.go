@@ -135,6 +135,14 @@ var ReadOnlyTools = map[string]bool{
 	"WebSearch":  true,
 	"WebFetch":   true,
 	"ToolSearch": true,
+	"ToolHealth": true,
+	"Outline":    true,
+	"SmartRead":  true,
+	"CodeSearch": true,
+	"CodeGraph":  true,
+	"Impact":     true,
+	"GitHistory": true,
+	"GitHub":     true,
 }
 
 // IsReadOnly reports whether the given (possibly-aliased) tool name is in
@@ -164,6 +172,22 @@ func canonicalForReadOnly(name string) string {
 		return "WebFetch"
 	case "toolsearch", "tool_search":
 		return "ToolSearch"
+	case "toolhealth", "tool_health", "tools_health":
+		return "ToolHealth"
+	case "outline":
+		return "Outline"
+	case "smartread", "smart_reader", "smart-reader":
+		return "SmartRead"
+	case "codesearch", "code_search":
+		return "CodeSearch"
+	case "codegraph", "code_graph":
+		return "CodeGraph"
+	case "impact":
+		return "Impact"
+	case "githistory", "git_history", "git-history":
+		return "GitHistory"
+	case "github", "gh":
+		return "GitHub"
 	}
 	return name
 }

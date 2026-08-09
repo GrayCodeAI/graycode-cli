@@ -123,7 +123,7 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 	// Status marks — green ✓ = present, dim ○ = none (not an error),
 	// red × = actual problem (e.g. Docker enabled but not running). Using a
 	// neutral mark for "none" avoids the alarming all-red look on a fresh repo.
-	markPresent := greenC + icons.CheckBold() + rst
+	markPresent := greenC + ansiBold + icons.CheckBold() + rst
 	markNone := sepC + "○" + rst
 
 	totalW := width
@@ -231,8 +231,13 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 // indicator on the welcome screen (moved out of the footer bar). When the
 // CONTAINER badge is shown, the redundant iso segment is dropped.
 func welcomeControlPlaneLine(sess *engine.Session, dimC, rst string, badgeShown bool) string {
+	boldIcon := func(color, glyph string) string {
+		return color + ansiBold + glyph + ansiReset + color
+	}
 	work := sess.WorkMode()
-	modeIcon := icons.Cog()
+	// Use the denser terminal glyphs here. The UI already has the semantic
+	// text; these icons should add contrast, not vanish into the line height.
+	modeIcon := icons.Terminal()
 	modeLabel := "Action Mode"
 	modeColor := ansiCyan
 	switch work {
@@ -250,7 +255,7 @@ func welcomeControlPlaneLine(sess *engine.Session, dimC, rst string, badgeShown 
 	isoColor := ansiAmber
 	iso := sess.Isolation().ShortLabel()
 
-	isoSeg := "  ·  " + isoColor + isoIcon + " " + iso + rst
+	isoSeg := "  ·  " + boldIcon(isoColor, isoIcon) + " " + iso + rst
 	if badgeShown {
 		isoSeg = ""
 	}
@@ -285,9 +290,9 @@ func welcomeControlPlaneLine(sess *engine.Session, dimC, rst string, badgeShown 
 		}
 	}
 
-	return modeColor + modeIcon + " " + modeLabel + rst +
+	return boldIcon(modeColor, modeIcon) + " " + modeLabel + rst +
 		isoSeg +
-		"  ·  " + trustColor + trustIcon + " " + trustLabel + rst
+		"  ·  " + boldIcon(trustColor, trustIcon) + " " + trustLabel + rst
 }
 
 type mcpServerNamed interface {
@@ -310,6 +315,11 @@ func connectedMCPCount(registry *tool.Registry) int {
 }
 
 func welcomeIndicatorRow(skillsCount int, agentsOK bool, mcpCount int, activeC, idleC, rst, markPresent, markNone string) string {
+	boldIcon := func(color, glyph string) string {
+		// Keep the label's color after making only the glyph bold. This gives
+		// narrow Nerd Font icons more visual weight without bolding the copy.
+		return color + ansiBold + glyph + ansiReset + color
+	}
 	skillsColor, skillsMark := idleC, markNone
 	if skillsCount > 0 {
 		skillsColor, skillsMark = ansiLightPink, markPresent
@@ -325,10 +335,10 @@ func welcomeIndicatorRow(skillsCount int, agentsOK bool, mcpCount int, activeC, 
 		mcpColor, mcpMark = ansiCyan, markPresent
 	}
 	return fmt.Sprintf(
-		"%s%s Skills (%d)%s %s  ·  %s%s AGENTS.md%s %s  ·  %s%s MCPs (%d)%s %s",
-		skillsColor, icons.Bolt(), skillsCount, rst, skillsMark,
-		agentsColor, icons.Robot(), rst, agentsMark,
-		mcpColor, icons.Network(), mcpCount, rst, mcpMark,
+		"%s Skills (%d)%s %s  ·  %s AGENTS.md%s %s  ·  %s MCPs (%d)%s %s",
+		boldIcon(skillsColor, icons.Bolt()), skillsCount, rst, skillsMark,
+		boldIcon(agentsColor, icons.Robot()), rst, agentsMark,
+		boldIcon(mcpColor, icons.Network()), mcpCount, rst, mcpMark,
 	)
 }
 

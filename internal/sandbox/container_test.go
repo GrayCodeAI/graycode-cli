@@ -39,6 +39,33 @@ func TestDockerAvailable_UsesShortLivedCache(t *testing.T) {
 	}
 }
 
+func TestResetDockerAvailabilityCacheForcesFreshProbe(t *testing.T) {
+	resetDockerAvailabilityCache()
+	t.Cleanup(resetDockerAvailabilityCache)
+
+	var calls atomic.Int32
+	dockerAvailabilityProbe = func() bool {
+		n := calls.Add(1)
+		return n >= 2
+	}
+
+	if DockerAvailable() {
+		t.Fatal("first probe should observe Docker as unavailable")
+	}
+	if DockerAvailable() {
+		t.Fatal("cached false should still be false before reset")
+	}
+
+	ResetDockerAvailabilityCache()
+
+	if !DockerAvailable() {
+		t.Fatal("reset cache should force a fresh probe that sees Docker as available")
+	}
+	if got := calls.Load(); got != 2 {
+		t.Fatalf("docker availability probe calls = %d, want 2", got)
+	}
+}
+
 func TestContainerSandbox_New(t *testing.T) {
 	cs := NewContainerSandbox("/tmp/test-project")
 	if cs == nil {
