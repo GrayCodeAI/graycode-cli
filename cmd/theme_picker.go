@@ -192,7 +192,7 @@ func renderThemePreview(themeName string) string {
 
 	// Handle auto theme specially
 	if themeName == "auto" {
-		preview.WriteString(fmt.Sprintf("  Panel:   %s dark\n", lipgloss.NewStyle().Background(lipgloss.Color("#0e0e10")).Render("    ")))
+		preview.WriteString(fmt.Sprintf("  Panel:   %s dark\n", lipgloss.NewStyle().Background(lipgloss.Color("#1b1e26")).Render("    ")))
 		preview.WriteString(fmt.Sprintf("  Brand:   %s Talon Gold\n", lipgloss.NewStyle().Background(lipgloss.Color(internaltheme.BrandPrimary)).Render("    ")))
 		return preview.String()
 	}

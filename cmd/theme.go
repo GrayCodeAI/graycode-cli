@@ -148,8 +148,9 @@ var textWhite = lipgloss.Color("#FFFFFF")
 // borderDim — input/panel/divider border.
 var borderDim = compat.AdaptiveColor{Light: lipgloss.Color("#C6C6C6"), Dark: lipgloss.Color("#555555")}
 
-// bgCode — code block background.
-var bgCode = lipgloss.Color("#2A2A3A")
+// bgCode — code block background. The default is a dark slate surface rather
+// than pure black so code blocks remain distinct without looking detached.
+var bgCode = lipgloss.Color("#1B1E26")
 
 // ---------------------------------------------------------------------------
 // 9. Spinner-line ANSI escapes (raw, not lipgloss)
