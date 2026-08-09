@@ -231,6 +231,9 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 // indicator on the welcome screen (moved out of the footer bar). When the
 // CONTAINER badge is shown, the redundant iso segment is dropped.
 func welcomeControlPlaneLine(sess *engine.Session, dimC, rst string, badgeShown bool) string {
+	boldIcon := func(color, glyph string) string {
+		return color + ansiBold + glyph + ansiReset + color
+	}
 	work := sess.WorkMode()
 	// Use the denser terminal glyphs here. The UI already has the semantic
 	// text; these icons should add contrast, not vanish into the line height.
@@ -252,7 +255,7 @@ func welcomeControlPlaneLine(sess *engine.Session, dimC, rst string, badgeShown 
 	isoColor := ansiAmber
 	iso := sess.Isolation().ShortLabel()
 
-	isoSeg := "  ·  " + isoColor + isoIcon + " " + iso + rst
+	isoSeg := "  ·  " + boldIcon(isoColor, isoIcon) + " " + iso + rst
 	if badgeShown {
 		isoSeg = ""
 	}
@@ -287,9 +290,9 @@ func welcomeControlPlaneLine(sess *engine.Session, dimC, rst string, badgeShown 
 		}
 	}
 
-	return modeColor + modeIcon + " " + modeLabel + rst +
+	return boldIcon(modeColor, modeIcon) + " " + modeLabel + rst +
 		isoSeg +
-		"  ·  " + trustColor + trustIcon + " " + trustLabel + rst
+		"  ·  " + boldIcon(trustColor, trustIcon) + " " + trustLabel + rst
 }
 
 type mcpServerNamed interface {
