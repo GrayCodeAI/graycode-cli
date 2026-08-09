@@ -120,11 +120,11 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 	sepC := ansiGrayDim
 	rst := ansiReset
 
-	// Status marks — green ✓ = present, dim ○ = none (not an error),
-	// red × = actual problem (e.g. Docker enabled but not running). Using a
-	// neutral mark for "none" avoids the alarming all-red look on a fresh repo.
-	markPresent := greenC + icons.CheckBold() + rst
-	markNone := sepC + "○" + rst
+	// Status marks — green [ok] = present, dim [.] = none (not an error).
+	// Using a neutral mark for "none" avoids an alarming all-red look on a
+	// fresh repo.
+	markPresent := welcomeStandaloneIcon(greenC, "check_decagram", rst)
+	markNone := welcomeStandaloneIcon(sepC, "circle_outline", rst)
 
 	totalW := width
 	if totalW < 40 {
@@ -232,45 +232,41 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 // CONTAINER badge is shown, the redundant iso segment is dropped.
 func welcomeControlPlaneLine(sess *engine.Session, dimC, rst string, badgeShown bool) string {
 	work := sess.WorkMode()
-	// Use the denser terminal glyphs here. The UI already has the semantic
-	// text; these icons should add contrast, not vanish into the line height.
-	modeIcon := icons.Terminal()
+	modeIcon := "terminal"
 	modeLabel := "Action Mode"
 	modeColor := ansiCyan
 	switch work {
 	case engine.WorkModePlan:
-		modeIcon = icons.Brain()
+		modeIcon = "brain"
 		modeLabel = "Planning Mode"
 		modeColor = ansiMagenta
 	case engine.WorkModeReview:
-		modeIcon = icons.Magnify()
+		modeIcon = "magnify"
 		modeLabel = "Review Mode"
 		modeColor = ansiAmber
 	}
 
-	isoIcon := icons.Container()
 	isoColor := ansiAmber
 	iso := sess.Isolation().ShortLabel()
 
-	isoSeg := "  ·  " + isoColor + isoIcon + " " + iso + rst
+	isoSeg := "  ·  " + welcomeLabelIcon(isoColor, "container", rst) + " " + iso + rst
 	if badgeShown {
 		isoSeg = ""
 	}
 
 	tr := engine.ProjectTrust("")
-	var trustIcon string
+	trustIcon := "circle_outline"
 	trustColor := dimC
 	if !tr.Enforced {
-		trustIcon = icons.CircleOutline()
 		trustColor = dimC
 	} else if tr.Trusted {
-		trustIcon = icons.CheckDecagram()
+		trustIcon = "check_decagram"
 		trustColor = ansiVividGreen
 	} else if tr.Blocked {
-		trustIcon = icons.CloseCircle()
+		trustIcon = "close_circle"
 		trustColor = ansiCoral
 	} else {
-		trustIcon = icons.CloseThick()
+		trustIcon = "close_thick"
 		trustColor = ansiAmber
 	}
 	trustLabel := tr.String()
@@ -287,9 +283,31 @@ func welcomeControlPlaneLine(sess *engine.Session, dimC, rst string, badgeShown 
 		}
 	}
 
-	return modeColor + modeIcon + " " + modeLabel + rst +
+	return welcomeLabelIcon(modeColor, modeIcon, rst) + " " + modeLabel + rst +
 		isoSeg +
-		"  ·  " + trustColor + trustIcon + " " + trustLabel + rst
+		"  ·  " + welcomeLabelIcon(trustColor, trustIcon, rst) + " " + trustLabel + rst
+}
+
+// welcomeDisplayIcon returns a font-independent, high-contrast status chip.
+// Nerd Font PUA glyphs are one terminal cell and can have tiny cap heights
+// depending on the user's font fallback; ASCII fallbacks stay readable.
+func welcomeDisplayIcon(name string) string {
+	ascii := strings.TrimSpace(icons.ASCII(name))
+	if ascii == "" {
+		return "[?]"
+	}
+	if strings.HasPrefix(ascii, "[") && strings.HasSuffix(ascii, "]") {
+		return ascii
+	}
+	return "[" + ascii + "]"
+}
+
+func welcomeLabelIcon(color, name, rst string) string {
+	return color + ansiBold + welcomeDisplayIcon(name) + rst + color
+}
+
+func welcomeStandaloneIcon(color, name, rst string) string {
+	return color + ansiBold + welcomeDisplayIcon(name) + rst
 }
 
 type mcpServerNamed interface {
@@ -312,11 +330,6 @@ func connectedMCPCount(registry *tool.Registry) int {
 }
 
 func welcomeIndicatorRow(skillsCount int, agentsOK bool, mcpCount int, activeC, idleC, rst, markPresent, markNone string) string {
-	boldIcon := func(color, glyph string) string {
-		// Keep the label's color after making only the glyph bold. This gives
-		// narrow Nerd Font icons more visual weight without bolding the copy.
-		return color + ansiBold + glyph + ansiReset + color
-	}
 	skillsColor, skillsMark := idleC, markNone
 	if skillsCount > 0 {
 		skillsColor, skillsMark = ansiLightPink, markPresent
@@ -333,9 +346,9 @@ func welcomeIndicatorRow(skillsCount int, agentsOK bool, mcpCount int, activeC, 
 	}
 	return fmt.Sprintf(
 		"%s Skills (%d)%s %s  ·  %s AGENTS.md%s %s  ·  %s MCPs (%d)%s %s",
-		boldIcon(skillsColor, icons.Bolt()), skillsCount, rst, skillsMark,
-		boldIcon(agentsColor, icons.Robot()), rst, agentsMark,
-		boldIcon(mcpColor, icons.Network()), mcpCount, rst, mcpMark,
+		welcomeLabelIcon(skillsColor, "bolt", rst), skillsCount, rst, skillsMark,
+		welcomeLabelIcon(agentsColor, "robot", rst), rst, agentsMark,
+		welcomeLabelIcon(mcpColor, "network", rst), mcpCount, rst, mcpMark,
 	)
 }
 
@@ -348,13 +361,13 @@ func welcomeModeBadge(dockerRunning *bool) string {
 	switch {
 	case dockerRunning == nil:
 		// Startup — Talon Gold, bold, timer = waiting for the sandbox.
-		return "\033[1m" + ansiOrange + icons.Timer() + " Container Starting" + rst
+		return "\033[1m" + ansiOrange + welcomeDisplayIcon("timer") + " Container Starting" + rst
 	case *dockerRunning:
 		// Ready — container blue communicates healthy isolation.
-		return "\033[1m" + ansiContBlue + icons.Shield() + " Container" + rst
+		return "\033[1m" + ansiContBlue + welcomeDisplayIcon("shield") + " Container" + rst
 	default:
 		// Failure — no host fallback exists.
-		return "\033[1m" + ansiCoral + icons.Alert() + " Container Required" + rst
+		return "\033[1m" + ansiCoral + welcomeDisplayIcon("alert") + " Container Required" + rst
 	}
 }
 
