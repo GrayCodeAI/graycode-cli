@@ -312,6 +312,11 @@ func connectedMCPCount(registry *tool.Registry) int {
 }
 
 func welcomeIndicatorRow(skillsCount int, agentsOK bool, mcpCount int, activeC, idleC, rst, markPresent, markNone string) string {
+	boldIcon := func(color, glyph string) string {
+		// Keep the label's color after making only the glyph bold. This gives
+		// narrow Nerd Font icons more visual weight without bolding the copy.
+		return color + ansiBold + glyph + ansiReset + color
+	}
 	skillsColor, skillsMark := idleC, markNone
 	if skillsCount > 0 {
 		skillsColor, skillsMark = ansiLightPink, markPresent
@@ -327,10 +332,10 @@ func welcomeIndicatorRow(skillsCount int, agentsOK bool, mcpCount int, activeC, 
 		mcpColor, mcpMark = ansiCyan, markPresent
 	}
 	return fmt.Sprintf(
-		"%s%s Skills (%d)%s %s  ·  %s%s AGENTS.md%s %s  ·  %s%s MCPs (%d)%s %s",
-		skillsColor, icons.Bolt(), skillsCount, rst, skillsMark,
-		agentsColor, icons.Robot(), rst, agentsMark,
-		mcpColor, icons.Network(), mcpCount, rst, mcpMark,
+		"%s Skills (%d)%s %s  ·  %s AGENTS.md%s %s  ·  %s MCPs (%d)%s %s",
+		boldIcon(skillsColor, icons.Bolt()), skillsCount, rst, skillsMark,
+		boldIcon(agentsColor, icons.Robot()), rst, agentsMark,
+		boldIcon(mcpColor, icons.Network()), mcpCount, rst, mcpMark,
 	)
 }
 
