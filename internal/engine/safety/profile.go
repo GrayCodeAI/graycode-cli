@@ -168,7 +168,7 @@ func (p *AutonomyProfile) NeedsPermission(toolName string, isSafe bool) bool {
 // isNetworkTool reports whether a tool performs outbound network access.
 func isNetworkTool(toolName string) bool {
 	switch canonicalToolName(toolName) {
-	case "WebFetch", "WebSearch", "Browser", "Screenshot", "Download":
+	case "WebFetch", "WebSearch", "Browser", "Screenshot", "Download", "DependencyAudit", "GitHub":
 		return true
 	}
 	return false
@@ -186,7 +186,7 @@ func isWriteTool(toolName string) bool {
 // isReadOnlyTool reports whether a tool only reads state.
 func isReadOnlyTool(toolName string) bool {
 	switch canonicalToolName(toolName) {
-	case "Read", "LS", "Glob", "Grep", "SmartReader", "CodeSearch", "CodeGraph", "Impact":
+	case "Read", "LS", "Glob", "Grep", "SmartReader", "SmartRead", "Outline", "ToolHealth", "CodeSearch", "CodeGraph", "Impact", "GitHistory":
 		return true
 	}
 	return false

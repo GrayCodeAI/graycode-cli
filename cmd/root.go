@@ -16,6 +16,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/onboarding"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/update"
 	"github.com/spf13/cobra"
 )
@@ -719,12 +720,27 @@ var toolsCmd = &cobra.Command{
 		if toolsJSON {
 			tools := allTools()
 			type toolEntry struct {
-				Name        string `json:"name"`
-				Description string `json:"description"`
+				Name        string   `json:"name"`
+				Description string   `json:"description"`
+				Risk        string   `json:"risk"`
+				ReadOnly    bool     `json:"read_only"`
+				Categories  []string `json:"categories,omitempty"`
+				Aliases     []string `json:"aliases,omitempty"`
 			}
 			entries := make([]toolEntry, len(tools))
 			for i, t := range tools {
-				entries[i] = toolEntry{Name: t.Name(), Description: t.Description()}
+				risk := "medium"
+				if rp, ok := t.(tool.RiskLevelProvider); ok && rp.RiskLevel() != "" {
+					risk = rp.RiskLevel()
+				}
+				var aliases []string
+				if aliased, ok := t.(tool.AliasedTool); ok {
+					aliases = aliased.Aliases()
+				}
+				entries[i] = toolEntry{
+					Name: t.Name(), Description: t.Description(), Risk: risk,
+					ReadOnly: tool.IsReadOnly(t.Name()), Categories: tool.IntentCategoriesForTool(t.Name()), Aliases: aliases,
+				}
 			}
 			data, _ := json.MarshalIndent(entries, "", "  ")
 			cmd.Println(string(data))

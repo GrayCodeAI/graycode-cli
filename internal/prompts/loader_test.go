@@ -28,12 +28,14 @@ func TestBuildSystemPromptContainsSections(t *testing.T) {
 
 	// Verify it contains content from each section
 	for _, want := range []string{
-		"Hawk",                    // from role.md
-		"Tool Usage",              // from tools.md
-		"Coding Practices",        // from practices.md
-		"Think Before Coding",     // from practices.md
-		"Would a senior engineer", // from practices.md
-		"Communication",           // from communication.md
+		"Hawk",                                 // from role.md
+		"Tool Usage",                           // from tools.md
+		"URLs are a supported Hawk capability", // URL requests must use web tools
+		"report the concrete error",            // failures must be actionable
+		"Coding Practices",                     // from practices.md
+		"Think Before Coding",                  // from practices.md
+		"Would a senior engineer",              // from practices.md
+		"Communication",                        // from communication.md
 	} {
 		if !strings.Contains(result, want) {
 			t.Errorf("system prompt missing expected section text: %q", want)
