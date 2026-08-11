@@ -16,8 +16,6 @@ github.com/BobuSumisu/aho-corasick v1.0.3 h1:uuf+JHwU9CHP2Vx+wAy6jcksJThhJS9ehR8
 github.com/BobuSumisu/aho-corasick v1.0.3/go.mod h1:hm4jLcvZKI2vRF2WDU1N4p/jpWtpOzp3nLmi9AzX/XE=
 github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk=
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/GrayCodeAI/eyrie v0.2.3-0.20260811021922-2de6e53e8461 h1:eERy9jYNIGUxx+QB9ksJA9Vz7HcQMjYZG87IvWNEcbU=
-github.com/GrayCodeAI/eyrie v0.2.3-0.20260811021922-2de6e53e8461/go.mod h1:AW/UPuj+EWxMibiD+/Cy0TWd6RmTvth+KeGXSxU3t6I=
 github.com/GrayCodeAI/eyrie v0.2.3-0.20260811030832-68fb12244673 h1:Ox90gGE+fNzsH0S9AxCa7w6W/GqyuSnGAYIfJZ8vOE4=
 github.com/GrayCodeAI/eyrie v0.2.3-0.20260811030832-68fb12244673/go.mod h1:AW/UPuj+EWxMibiD+/Cy0TWd6RmTvth+KeGXSxU3t6I=
 github.com/GrayCodeAI/hawk-core-contracts v0.1.12 h1:percfsd771JLmO9gMkrQtENEPBA9ZN3dG1Nc1moN3ZQ=
