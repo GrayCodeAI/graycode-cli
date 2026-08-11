@@ -16,6 +16,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/prompt"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
@@ -217,11 +218,33 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
+		// Payload tiering: classify the latest user request once per turn.
+		// Early conversational turns get a minimal system prompt and no tool
+		// schemas; anything resembling work keeps the full prompt and the
+		// promoted tool surface. This keeps simple turns cheap on slow
+		// (local/remote) models without starving real requests of tools.
+		lastUserMsg := ""
+		for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
+			m := s.Persistence().RawMessages()[i]
+			if m.Role == "user" && len(m.ToolResults) == 0 {
+				lastUserMsg = m.Content
+				break
+			}
+		}
+		smallTalk := lastUserMsg != "" && isSmallTalkPrompt(lastUserMsg) && !sessionHasToolUse(s.Persistence().RawMessages())
+
 		// Build the LLM ChatOptions via the ChatService. The service owns
 		// the GLMThinking toggle, output schema, anthropic caching flag,
 		// and the active provider/model — building opts manually here
 		// would duplicate that logic.
-		baseOpts := s.ChatLLM().BuildOptions(s.Persistence().System(), activeModel, maxTok, nil)
+		baseSystem := s.Persistence().System()
+		if smallTalk {
+			// The identity preamble already coaches the model to answer
+			// greetings without tools — the role/tool/practice sections
+			// below it only add prefill cost on this turn.
+			baseSystem = prompt.System()
+		}
+		baseOpts := s.ChatLLM().BuildOptions(baseSystem, activeModel, maxTok, nil)
 		opts := baseOpts
 		// Inject beliefs as ephemeral context (not persisted to s.Persistence().System())
 		if s.LifecycleSvc().Beliefs() != nil && s.LifecycleSvc().Beliefs().Size() > 0 {
@@ -273,18 +296,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			// current request. This keeps the default schema compact while
 			// making URL, verification, git, and code-intelligence requests
 			// discoverable without requiring the model to guess ToolSearch.
-			lastUserMsg := ""
-			for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
-				msg := s.Persistence().RawMessages()[i]
-				if msg.Role == "user" && len(msg.ToolResults) == 0 {
-					lastUserMsg = msg.Content
-					break
-				}
-			}
 			if lastUserMsg != "" {
 				s.Tools().Registry().PromoteForIntent(lastUserMsg)
 			}
-			opts.Tools = s.Tools().Registry().EyrieTools()
+			if !smallTalk {
+				opts.Tools = s.Tools().Registry().EyrieTools()
+			}
 		}
 
 		// Inject memory metadata from yaad
@@ -872,6 +889,37 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 	}
+}
+
+// isSmallTalkPrompt reports whether prompt is a pure conversational
+// exchange (greeting, pleasantry, identity question) that needs neither the
+// full system prompt nor any tool schemas. The system prompt instructs the
+// model to answer these directly, so sending the tool surface would only
+// add prompt-prefill cost.
+func isSmallTalkPrompt(prompt string) bool {
+	text := strings.ToLower(strings.TrimSpace(prompt))
+	text = strings.Trim(text, " \t\r\n.,!?;:")
+	switch text {
+	case "hi", "hello", "hey", "how are you", "how are you doing", "how's it going", "what's up",
+		"who are you", "what can you do", "thanks", "thank you", "good morning", "good afternoon",
+		"good evening", "nice to meet you", "goodbye", "bye":
+		return true
+	default:
+		return false
+	}
+}
+
+// sessionHasToolUse reports whether any message in the conversation already
+// executed a tool. Once tools are in play, later turns keep the full prompt
+// and tool surface even if they read like small talk ("thanks"), so the
+// follow-up context is not lost.
+func sessionHasToolUse(msgs []types.EyrieMessage) bool {
+	for _, m := range msgs {
+		if len(m.ToolResults) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // extractDataURI extracts the first base64 data URI from a string.
