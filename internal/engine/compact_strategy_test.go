@@ -67,6 +67,54 @@ func TestTruncateStrategy(t *testing.T) {
 	}
 }
 
+func TestTruncateRunes(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		max  int
+		want string
+	}{
+		{"short string passes through", "hello", 10, "hello"},
+		{"ascii truncation", "hello world", 5, "hello..."},
+		{"exact length passes through", "hello", 5, "hello"},
+		{"empty string", "", 5, ""},
+		{"non-positive max returns input", "hello", 0, "hello"},
+		{"multi-byte runes not split", "héllo wörld", 6, "héllo ..."},
+		{"emoji not split", "🚀🚀🚀", 2, "🚀🚀..."},
+		{"ascii bytes shorter than max but more runes", "éééé", 4, "éééé"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := truncateRunes(tt.in, tt.max); got != tt.want {
+				t.Errorf("truncateRunes(%q, %d) = %q, want %q", tt.in, tt.max, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTurnTokenBudget(t *testing.T) {
+	if got := turnTokenBudget(nil); got != 0 {
+		t.Errorf("turnTokenBudget(nil) = %d, want 0", got)
+	}
+
+	small := []types.EyrieMessage{{Role: "user", Content: "short"}}
+	if got := turnTokenBudget(small); got != 2000 {
+		t.Errorf("turnTokenBudget(small) = %d, want minimum floor 2000", got)
+	}
+
+	big := make([]types.EyrieMessage, 10)
+	for i := range big {
+		big[i] = types.EyrieMessage{Role: "user", Content: strings.Repeat("x", 10000)}
+	}
+	avg := EstimateMessageTokens(big[0])
+	if avg*3 <= 2000 {
+		t.Fatalf("test messages too small to exceed the 2000 floor: avg=%d", avg)
+	}
+	if got, want := turnTokenBudget(big), avg*3; got != want {
+		t.Errorf("turnTokenBudget(big) = %d, want %d (3x average)", got, want)
+	}
+}
+
 func makeMessages(n int) []types.EyrieMessage {
 	msgs := make([]types.EyrieMessage, n)
 	for i := range msgs {

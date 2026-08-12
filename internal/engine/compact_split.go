@@ -17,6 +17,25 @@ import (
 // This prevents information loss when one tool result (e.g., reading a large file)
 // or one assistant response exceeds the normal compaction budget.
 
+// turnTokenBudget returns the split-turn budget for a message tail: 3x the
+// average token count of the tail, with a 2000-token floor to avoid false
+// positives. A single message exceeding this budget is treated as an
+// oversized turn.
+func turnTokenBudget(tail []types.EyrieMessage) int {
+	if len(tail) == 0 {
+		return 0
+	}
+	totalTokens := 0
+	for _, msg := range tail {
+		totalTokens += EstimateMessageTokens(msg)
+	}
+	budget := totalTokens / len(tail) * 3
+	if budget < 2000 {
+		budget = 2000 // minimum budget to avoid false positives
+	}
+	return budget
+}
+
 // SplitTurnNeeded checks if any single turn in the recent messages exceeds
 // the given token budget. The budget is defined as the average token count
 // of the keepCount messages multiplied by 3 (a single message uses more than
@@ -28,18 +47,7 @@ func (s *Session) SplitTurnNeeded(keepCount int) bool {
 
 	// Calculate token budget: average of last keepCount messages * 3
 	tail := s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-keepCount:]
-	totalTokens := 0
-	for _, msg := range tail {
-		totalTokens += EstimateMessageTokens(msg)
-	}
-	if len(tail) == 0 {
-		return false
-	}
-	avgTokens := totalTokens / len(tail)
-	budget := avgTokens * 3
-	if budget < 2000 {
-		budget = 2000 // minimum budget to avoid false positives
-	}
+	budget := turnTokenBudget(tail)
 
 	// Check if any single message in the tail exceeds the budget
 	for _, msg := range tail {
@@ -54,26 +62,21 @@ func (s *Session) SplitTurnNeeded(keepCount int) bool {
 // Phase 1: Summarize history (messages before the split point)
 // Phase 2: Summarize the turn prefix (early part of the oversized turn)
 // Result: merged summary + tail of oversized turn + any messages after
-func (s *Session) splitTurnCompact() {
-	keepEnd := 10
+func (s *Session) splitTurnCompact(ctx context.Context) {
+	keepEnd := smartCompactKeepEnd
 	if pinned := s.Persistence().PinnedMessages(); pinned > keepEnd {
 		keepEnd = pinned
 	}
-	if len(s.Persistence().RawMessages()) <= keepEnd {
+	// Snapshot once so the compaction observes a consistent transcript even
+	// if a concurrent AddUser appends mid-way.
+	raw := s.Persistence().RawMessages()
+	if len(raw) <= keepEnd {
 		return
 	}
 
 	// Find the oversized message in the tail
-	tail := s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-keepEnd:]
-	totalTokens := 0
-	for _, msg := range tail {
-		totalTokens += EstimateMessageTokens(msg)
-	}
-	avgTokens := totalTokens / len(tail)
-	budget := avgTokens * 3
-	if budget < 2000 {
-		budget = 2000
-	}
+	tail := raw[len(raw)-keepEnd:]
+	budget := turnTokenBudget(tail)
 
 	oversizedIdx := -1
 	for i, msg := range tail {
@@ -85,12 +88,12 @@ func (s *Session) splitTurnCompact() {
 
 	if oversizedIdx < 0 {
 		// No oversized turn found, fall back to normal compaction
-		s.smartCompactFallback()
+		s.smartCompactFallback(ctx)
 		return
 	}
 
 	// Split point in the full message array
-	tailStart := len(s.Persistence().RawMessages()) - keepEnd
+	tailStart := len(raw) - keepEnd
 	splitPoint := tailStart + oversizedIdx
 
 	// Extract file tracking before compaction
@@ -98,14 +101,14 @@ func (s *Session) splitTurnCompact() {
 		s.Persistence().SetFiles(NewFileTracker())
 	}
 	files := s.Persistence().Files()
-	files.ExtractFromMessages(s.Persistence().RawMessages()[:splitPoint])
+	files.ExtractFromMessages(raw[:splitPoint])
 
 	// Phase 1: Summarize everything before the oversized turn
-	phase1Summary := s.generatePartialSummary(s.Persistence().RawMessages()[:splitPoint])
+	phase1Summary := s.generatePartialSummary(ctx, raw[:splitPoint])
 
 	// Phase 2: Summarize the first half of the oversized turn's content
-	oversizedMsg := s.Persistence().RawMessages()[splitPoint]
-	phase2Summary := s.summarizeOversizedTurn(oversizedMsg)
+	oversizedMsg := raw[splitPoint]
+	phase2Summary := s.summarizeOversizedTurn(ctx, oversizedMsg)
 
 	// Build the combined summary
 	var combined strings.Builder
@@ -127,23 +130,47 @@ func (s *Session) splitTurnCompact() {
 
 	// Reconstruct messages: summary + tail from oversized turn onward
 	// Keep the second half of the oversized message + everything after
-	remainingMessages := s.Persistence().RawMessages()[splitPoint:]
+	// (its first half is covered by phase2Summary above).
+	remaining := append([]types.EyrieMessage(nil), raw[splitPoint:]...)
+	if len(remaining) > 0 {
+		first := remaining[0]
+		first.Content = secondHalfRunes(first.Content)
+		for i := range first.ToolResults {
+			first.ToolResults[i].Content = secondHalfRunes(first.ToolResults[i].Content)
+		}
+		remaining[0] = first
+	}
 
-	keep := make([]types.EyrieMessage, 0, len(remainingMessages)+2)
+	keep := make([]types.EyrieMessage, 0, len(remaining)+2)
 	keep = append(keep, types.EyrieMessage{
 		Role:    "user",
 		Content: combined.String() + "\n\n[Continue from the recent messages below.]",
 	})
-	keep = append(keep, types.EyrieMessage{
-		Role:    "assistant",
-		Content: "Understood. I have the context from the summary above. Continuing.",
-	})
-	keep = append(keep, remainingMessages...)
-	s.Persistence().SetRawMessages(keep)
+	// Only emit the assistant ack when the remaining tail starts with a user
+	// message; adjacent assistant messages are rejected by OpenAI-compat
+	// providers.
+	if len(remaining) == 0 || remaining[0].Role != "assistant" {
+		keep = append(keep, types.EyrieMessage{
+			Role:    "assistant",
+			Content: "Understood. I have the context from the summary above. Continuing.",
+		})
+	}
+	keep = append(keep, remaining...)
+	s.Persistence().ApplyCompaction(keep, len(raw))
+}
+
+// secondHalfRunes returns the second half of s, split on a rune boundary so
+// multi-byte UTF-8 is never cut mid-sequence. An empty string returns itself.
+func secondHalfRunes(s string) string {
+	if s == "" {
+		return s
+	}
+	runes := []rune(s)
+	return string(runes[len(runes)/2:])
 }
 
 // generatePartialSummary generates an LLM summary for a subset of messages.
-func (s *Session) generatePartialSummary(messages []types.EyrieMessage) string {
+func (s *Session) generatePartialSummary(ctx context.Context, messages []types.EyrieMessage) string {
 	if len(messages) == 0 {
 		return ""
 	}
@@ -156,10 +183,7 @@ func (s *Session) generatePartialSummary(messages []types.EyrieMessage) string {
 
 	for _, m := range messages {
 		if m.Role == "user" || m.Role == "assistant" {
-			c := m.Content
-			if len(c) > 500 {
-				c = c[:500] + "..."
-			}
+			c := truncateRunes(m.Content, 500)
 			content.WriteString(m.Role)
 			content.WriteString(": ")
 			content.WriteString(c)
@@ -172,7 +196,11 @@ func (s *Session) generatePartialSummary(messages []types.EyrieMessage) string {
 		Content: content.String(),
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	if s.ChatLLM() == nil {
+		return ""
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	resp, err := s.ChatLLM().Chat(ctx, summaryMsgs, types.ChatOptions{
@@ -187,7 +215,7 @@ func (s *Session) generatePartialSummary(messages []types.EyrieMessage) string {
 }
 
 // summarizeOversizedTurn summarizes the content of a single oversized message.
-func (s *Session) summarizeOversizedTurn(msg types.EyrieMessage) string {
+func (s *Session) summarizeOversizedTurn(ctx context.Context, msg types.EyrieMessage) string {
 	content := msg.Content
 	if content == "" {
 		// If it's a tool result, use that
@@ -199,21 +227,25 @@ func (s *Session) summarizeOversizedTurn(msg types.EyrieMessage) string {
 		return ""
 	}
 
-	// Take the first half for summarization
-	halfLen := len(content) / 2
+	// Take the first half for summarization, capped at 4000 runes so the
+	// summarization input stays small (the rest is retained verbatim).
+	halfLen := len([]rune(content)) / 2
 	if halfLen > 4000 {
-		halfLen = 4000 // cap at 4000 chars for the summarization input
+		halfLen = 4000
 	}
-	prefix := content[:halfLen]
 
 	var summaryMsgs []types.EyrieMessage
 	summaryMsgs = append(summaryMsgs, types.EyrieMessage{
 		Role: "user",
 		Content: BuildCompactPrompt(CompactUpTo) + "\n\nSummarize the key information from this content prefix (the rest will be retained verbatim):\n\n" +
-			msg.Role + ": " + prefix + "...",
+			msg.Role + ": " + truncateRunes(content, halfLen),
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	if s.ChatLLM() == nil {
+		return ""
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	resp, err := s.ChatLLM().Chat(ctx, summaryMsgs, types.ChatOptions{
@@ -227,48 +259,10 @@ func (s *Session) summarizeOversizedTurn(msg types.EyrieMessage) string {
 	return FormatCompactSummary(resp.Content)
 }
 
-// smartCompactFallback is the original smartCompact logic used when split-turn
-// is detected but no oversized message is found (edge case fallback).
-func (s *Session) smartCompactFallback() {
-	if len(s.Persistence().RawMessages()) <= 20 {
-		return
-	}
-
-	keepEnd := 10
-	if pinned := s.Persistence().PinnedMessages(); pinned > keepEnd {
-		keepEnd = pinned
-	}
-
-	if s.Persistence().Files() == nil {
-		s.Persistence().SetFiles(NewFileTracker())
-	}
-	files := s.Persistence().Files()
-	compactedMsgs := s.Persistence().RawMessages()[:len(s.Persistence().RawMessages())-keepEnd]
-	files.ExtractFromMessages(compactedMsgs)
-	if len(compactedMsgs) > 0 && strings.Contains(compactedMsgs[0].Content, "<tracked-files>") {
-		files.ParseFromSummary(compactedMsgs[0].Content)
-	}
-
-	summary := s.generateSummary()
-	if summary == "" {
-		s.compact()
-		return
-	}
-
-	fileBlock := files.FormatForSummary()
-	if fileBlock != "" {
-		summary += "\n\n" + fileBlock
-	}
-
-	keep := make([]types.EyrieMessage, 0, keepEnd+2)
-	keep = append(keep, types.EyrieMessage{
-		Role:    "user",
-		Content: "[Conversation summary]\n" + summary + "\n\n[Continue from the recent messages below.]",
-	})
-	keep = append(keep, types.EyrieMessage{
-		Role:    "assistant",
-		Content: "Understood. I have the context from the summary above. Continuing.",
-	})
-	keep = append(keep, s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-keepEnd:]...)
-	s.Persistence().SetRawMessages(keep)
+// smartCompactFallback is reached when split-turn compaction is detected but
+// no oversized message is found (edge case). It runs the standard summary-based
+// compaction body directly; the split-turn check is intentionally skipped to
+// avoid re-entering splitTurnCompact.
+func (s *Session) smartCompactFallback(ctx context.Context) {
+	s.smartCompactBody(ctx)
 }

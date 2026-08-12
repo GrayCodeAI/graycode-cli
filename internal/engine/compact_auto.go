@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"log"
 	"sync"
 
@@ -73,12 +74,29 @@ func (ac *AutoCompactor) AutoCompactIfNeeded(ctx context.Context, sess *Session)
 		ac.mu.Lock()
 		ac.consecutiveFailures++
 		ac.mu.Unlock()
-		sess.Logger().Warn("auto-compact failed", map[string]interface{}{
+		sess.Logger().Warn("auto-compact failed", map[string]any{
 			"error":    err.Error(),
 			"failures": ac.consecutiveFailures,
 		})
-		sess.compact()
+		sess.compact(ctx)
 		tokensAfter := EstimateTokens(sess.Persistence().RawMessages())
+		sess.recordCompaction("truncate_fallback", tokensBefore, tokensAfter, false)
+		return "truncate_fallback", true
+	}
+
+	tokensAfter := EstimateTokens(sess.Persistence().RawMessages())
+	if tokensAfter >= tokensBefore {
+		// Strategy ran but produced no reduction (e.g. LLM summary was
+		// rejected, or messages were not reduced); fall back to truncation.
+		ac.mu.Lock()
+		ac.consecutiveFailures++
+		ac.mu.Unlock()
+		sess.Logger().Warn("auto-compact produced no reduction, falling back to truncation", map[string]any{
+			"tokens_before": tokensBefore,
+			"tokens_after":  tokensAfter,
+		})
+		sess.compact(ctx)
+		tokensAfter = EstimateTokens(sess.Persistence().RawMessages())
 		sess.recordCompaction("truncate_fallback", tokensBefore, tokensAfter, false)
 		return "truncate_fallback", true
 	}
@@ -86,18 +104,26 @@ func (ac *AutoCompactor) AutoCompactIfNeeded(ctx context.Context, sess *Session)
 	ac.mu.Lock()
 	ac.consecutiveFailures = 0
 	ac.mu.Unlock()
-	tokensAfter := EstimateTokens(sess.Persistence().RawMessages())
 	sess.recordCompaction(strategy, tokensBefore, tokensAfter, false)
 	return strategy, true
 }
 
 // RunCompaction selects and executes the best compaction strategy.
 func (ac *AutoCompactor) RunCompaction(ctx context.Context, sess *Session) (string, error) {
+	// Snapshot the registry under the mutex: Configure() swaps the field, and
+	// reading it lock-free races with that write.
+	ac.mu.Lock()
+	registry := ac.registry
+	ac.mu.Unlock()
+
 	messages := sess.Persistence().RawMessages()
 	tokenCount := EstimateTokens(messages)
-	strategy := ac.registry.SelectStrategy(sess, messages, tokenCount)
+	strategy := registry.SelectStrategy(sess, messages, tokenCount)
+	if strategy == nil {
+		return "", errors.New("no compaction strategy available")
+	}
 
-	sess.Logger().Info("running compaction", map[string]interface{}{
+	sess.Logger().Info("running compaction", map[string]any{
 		"strategy": strategy.Name(),
 		"tokens":   tokenCount,
 	})
@@ -112,7 +138,7 @@ func (ac *AutoCompactor) RunCompaction(ctx context.Context, sess *Session) (stri
 	ac.lastStrategy = result.Strategy
 	ac.mu.Unlock()
 
-	sess.Logger().Info("compaction complete", map[string]interface{}{
+	sess.Logger().Info("compaction complete", map[string]any{
 		"strategy":      result.Strategy,
 		"tokens_before": result.TokensBefore,
 		"tokens_after":  result.TokensAfter,
@@ -148,7 +174,7 @@ func (s *SmartCompactStrategy) ShouldTrigger(msgs []types.EyrieMessage, tokenCou
 
 func (s *SmartCompactStrategy) Compact(ctx context.Context, sess *Session) (*CompactResult, error) {
 	tokensBefore := EstimateTokens(sess.Persistence().RawMessages())
-	sess.smartCompact()
+	sess.smartCompact(ctx)
 	messages := sess.Persistence().RawMessages()
 	tokensAfter := EstimateTokens(messages)
 
@@ -171,7 +197,7 @@ func (s *TruncateStrategy) ShouldTrigger(_ []types.EyrieMessage, tokenCount, thr
 
 func (s *TruncateStrategy) Compact(ctx context.Context, sess *Session) (*CompactResult, error) {
 	tokensBefore := EstimateTokens(sess.Persistence().RawMessages())
-	sess.compact()
+	sess.compact(ctx)
 	messages := sess.Persistence().RawMessages()
 	tokensAfter := EstimateTokens(messages)
 

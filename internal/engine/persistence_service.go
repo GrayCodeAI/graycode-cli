@@ -164,6 +164,27 @@ func (s *PersistenceService) SetMessages(msgs []types.EyrieMessage) {
 	s.mu.Unlock()
 }
 
+// ApplyCompaction atomically replaces the transcript with keep, preserving any
+// messages appended concurrently since the compaction snapshot was taken.
+// snapshotLen is the length of the snapshot keep was derived from; messages
+// past that index are re-appended to the tail so a compaction racing an
+// AddUser can never drop the new message. Safe on a nil receiver.
+func (s *PersistenceService) ApplyCompaction(keep []types.EyrieMessage, snapshotLen int) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if snapshotLen >= 0 && snapshotLen < len(s.messages) {
+		kept := make([]types.EyrieMessage, 0, len(keep)+(len(s.messages)-snapshotLen))
+		kept = append(kept, keep...)
+		kept = append(kept, s.messages[snapshotLen:]...)
+		s.messages = cloneMessages(kept)
+		return
+	}
+	s.messages = cloneMessages(keep)
+}
+
 // AddUser appends a user message. Safe on a nil receiver.
 func (s *PersistenceService) AddUser(content string) {
 	if s == nil {
