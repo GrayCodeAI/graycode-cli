@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"os"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -9,32 +10,62 @@ import (
 const (
 	maxContextMessages = 100 // auto-compact threshold
 	maxRecoveryRetries = 3   // max_tokens recovery attempts
+
+	// compactBoundaryKeepEnd is the number of trailing messages preserved by
+	// boundary-aware truncation (compact).
+	compactBoundaryKeepEnd = 16
+	// smartCompactKeepEnd is the number of trailing messages preserved by
+	// summary-based compaction (smartCompact and its variants).
+	smartCompactKeepEnd = 10
 )
 
-// Compact reduces conversation history (boundary-aware truncation).
-func (s *Session) Compact() { s.compact() }
+// Compact reduces conversation history using boundary-aware truncation.
+// Accepts ctx for cancellation and timeout control; if nil, defaults to context.Background.
+// Preserves tool_use/tool_result pairs during compaction.
+func (s *Session) Compact(ctx context.Context) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	s.compact(ctx)
+}
 
 // SmartCompact reduces conversation history using LLM-generated summaries.
-func (s *Session) SmartCompact() { s.smartCompact() }
+// Accepts ctx for cancellation and timeout control; if nil, defaults to context.Background.
+func (s *Session) SmartCompact(ctx context.Context) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	s.smartCompact(ctx)
+}
 
 // compact removes older messages while preserving tool_use/tool_result pairing.
-func (s *Session) compact() {
-	keepEnd := 16
+func (s *Session) compact(ctx context.Context) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	keepEnd := compactBoundaryKeepEnd
 	if pinned := s.Persistence().PinnedMessages(); pinned > keepEnd {
 		keepEnd = pinned
 	}
-	if len(s.Persistence().RawMessages()) <= keepEnd+4 {
+	// Single immutable snapshot for the whole method: repeated RawMessages()
+	// calls deep-clone each time (O(n²) on long transcripts) and can observe
+	// different states while a concurrent AddUser appends (TOCTOU).
+	raw := s.Persistence().RawMessages()
+	if len(raw) <= keepEnd+4 {
 		return
 	}
 	// Keep first 4 and last keepEnd, but ensure we don't break tool pairs.
 	cutStart := 4
-	cutEnd := len(s.Persistence().RawMessages()) - keepEnd
+	cutEnd := len(raw) - keepEnd
 
 	// Ensure cutEnd doesn't land in the middle of a tool_use/tool_result pair.
 	// A tool_result (user msg with ToolResult) must follow its tool_use (assistant msg with ToolUse).
 	// Walk cutEnd forward until we're at a clean boundary.
-	for cutEnd < len(s.Persistence().RawMessages()) {
-		msg := s.Persistence().RawMessages()[cutEnd]
+	for cutEnd < len(raw) {
+		if ctx.Err() != nil {
+			return
+		}
+		msg := raw[cutEnd]
 		if len(msg.ToolResults) > 0 {
 			// This is a tool_result — we'd orphan it. Include it.
 			cutEnd++
@@ -50,11 +81,20 @@ func (s *Session) compact() {
 
 	// Also walk cutStart forward to not orphan pairs at the beginning
 	for cutStart < cutEnd {
-		msg := s.Persistence().RawMessages()[cutStart]
+		if ctx.Err() != nil {
+			return
+		}
+		msg := raw[cutStart]
+		if len(msg.ToolResults) > 0 {
+			// A tool_result at the boundary: its tool_use is earlier in the
+			// kept head, so include it too (keeps the pair complete).
+			cutStart++
+			continue
+		}
 		if msg.Role == "assistant" && len(msg.ToolUse) > 0 {
 			// Include the tool results that follow
 			cutStart++
-			for cutStart < cutEnd && len(s.Persistence().RawMessages()[cutStart].ToolResults) > 0 {
+			for cutStart < cutEnd && len(raw[cutStart].ToolResults) > 0 {
 				cutStart++
 			}
 			continue
@@ -66,14 +106,14 @@ func (s *Session) compact() {
 		return // nothing to compact
 	}
 
-	keep := make([]types.EyrieMessage, 0, len(s.Persistence().RawMessages())-(cutEnd-cutStart)+1)
-	keep = append(keep, s.Persistence().RawMessages()[:cutStart]...)
+	keep := make([]types.EyrieMessage, 0, len(raw)-(cutEnd-cutStart)+1)
+	keep = append(keep, raw[:cutStart]...)
 	keep = append(keep, types.EyrieMessage{
 		Role:    "user",
 		Content: "[Earlier conversation compacted to save context.]",
 	})
-	keep = append(keep, s.Persistence().RawMessages()[cutEnd:]...)
-	s.Persistence().SetRawMessages(keep)
+	keep = append(keep, raw[cutEnd:]...)
+	s.Persistence().ApplyCompaction(keep, len(raw))
 }
 
 // readFileContent reads a file from disk and returns its content as a string.

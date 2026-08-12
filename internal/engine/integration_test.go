@@ -126,7 +126,7 @@ func TestCompact(t *testing.T) {
 	}
 
 	before := sess.MessageCount()
-	sess.Compact()
+	sess.Compact(context.Background())
 	after := sess.MessageCount()
 
 	if after >= before {

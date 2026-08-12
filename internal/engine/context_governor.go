@@ -91,19 +91,13 @@ func (s *Session) refreshContextWindowCache() {
 	if s == nil {
 		return
 	}
-	if s.Persistence() == nil {
-	} else {
-		s.SetContextWindowCached(0)
-	}
+	s.SetContextWindowCached(0)
 	model := ""
 	if s.ChatLLM() != nil {
 		model = s.ChatLLM().Model()
 	}
 	if info, ok := modelPkg.Find(model); ok && info.ContextSize > 0 {
-		if s.Persistence() == nil {
-		} else {
-			s.SetContextWindowCached(info.ContextSize)
-		}
+		s.SetContextWindowCached(info.ContextSize)
 	}
 	s.EnsureAutoCompactor()
 }
@@ -142,7 +136,7 @@ func (s *Session) ManageContextBeforeTurn(ctx context.Context) (strategy string,
 
 	if len(s.Persistence().RawMessagesView()) > maxContextMessages {
 		before := EstimateTokens(s.Persistence().RawMessagesView())
-		s.smartCompact()
+		s.smartCompact(ctx)
 		s.recordCompaction("smart_message_cap", before, EstimateTokens(s.Persistence().RawMessagesView()), false)
 		return "smart_message_cap", true
 	}
@@ -152,7 +146,7 @@ func (s *Session) ManageContextBeforeTurn(ctx context.Context) (strategy string,
 	budget := ctxmgr.NewContextBudget(window)
 	if budget.ShouldCompact(convTokens) {
 		before := EstimateTokens(s.Persistence().RawMessagesView())
-		s.smartCompact()
+		s.smartCompact(ctx)
 		s.recordCompaction("smart_budget", before, EstimateTokens(s.Persistence().RawMessagesView()), false)
 		return "smart_budget", true
 	}
@@ -170,7 +164,7 @@ func (s *Session) CompactConversation(ctx context.Context) (strategy string, tok
 	tokensBefore = EstimateTokens(s.Persistence().RawMessages())
 	strategy, err = s.Persistence().AutoCompactor().RunCompaction(ctx, s)
 	if err != nil {
-		s.smartCompact()
+		s.smartCompact(ctx)
 		strategy = "smart_fallback"
 	}
 	tokensAfter = EstimateTokens(s.Persistence().RawMessages())

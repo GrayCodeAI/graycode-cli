@@ -14,13 +14,14 @@ import (
 // ShouldAutoCompact returns true if the conversation is approaching context limits.
 func (s *Session) ShouldAutoCompact() bool {
 	// Check message count
-	if len(s.Persistence().RawMessages()) >= maxContextMessages {
+	messages := s.Persistence().RawMessagesView()
+	if len(messages) >= maxContextMessages {
 		return true
 	}
-	// Check token count using tok estimation
+	// Check token count using full message estimation (includes tool payloads).
 	totalTokens := 0
-	for _, msg := range s.Persistence().RawMessages() {
-		totalTokens += token.CountTokensFast(msg.Content)
+	for _, msg := range messages {
+		totalTokens += token.EstimateMessageTokens(msg)
 	}
 	window := s.ContextWindowSize()
 	threshold := window * s.compactThresholdPct() / 100
@@ -28,29 +29,46 @@ func (s *Session) ShouldAutoCompact() bool {
 }
 
 // AutoCompactIfNeeded runs compaction when the conversation exceeds the threshold.
-func (s *Session) AutoCompactIfNeeded() bool {
+func (s *Session) AutoCompactIfNeeded(ctx context.Context) bool {
 	if !s.ShouldAutoCompact() {
 		return false
 	}
-	s.smartCompact()
+	s.smartCompact(ctx)
 	return true
 }
 
 // smartCompact uses the LLM to generate a summary of the conversation being compacted.
-func (s *Session) smartCompact() {
+func (s *Session) smartCompact(ctx context.Context) {
 	if len(s.Persistence().RawMessages()) <= 20 {
 		return
 	}
 
+	// Check for split-turn condition first
+	if s.SplitTurnNeeded(smartCompactKeepEnd) {
+		s.splitTurnCompact(ctx)
+		return
+	}
+
+	s.smartCompactBody(ctx)
+}
+
+// smartCompactBody performs standard summary-based compaction. It is shared by
+// smartCompact and smartCompactFallback (which is reached when split-turn
+// compaction finds no oversized turn).
+func (s *Session) smartCompactBody(ctx context.Context) {
+	raw := s.Persistence().RawMessages()
+	if len(raw) <= 20 {
+		return
+	}
+
 	// Keep last N messages + summary, respecting pinned count
-	keepEnd := 10
+	keepEnd := smartCompactKeepEnd
 	if pinned := s.Persistence().PinnedMessages(); pinned > keepEnd {
 		keepEnd = pinned
 	}
-
-	// Check for split-turn condition first
-	if s.SplitTurnNeeded(keepEnd) {
-		s.splitTurnCompact()
+	// Guard against raw[:len-keepEnd] panicking with a negative index when
+	// pinned exceeds the message count (mirrors splitTurnCompact's guard).
+	if len(raw) <= keepEnd {
 		return
 	}
 
@@ -59,7 +77,7 @@ func (s *Session) smartCompact() {
 		s.Persistence().SetFiles(NewFileTracker())
 	}
 	files := s.Persistence().Files()
-	compactedMsgs := s.Persistence().RawMessages()[:len(s.Persistence().RawMessages())-keepEnd]
+	compactedMsgs := raw[:len(raw)-keepEnd]
 	files.ExtractFromMessages(compactedMsgs)
 	// Also parse any previous tracked-files from existing summary
 	if len(compactedMsgs) > 0 && strings.Contains(compactedMsgs[0].Content, "<tracked-files>") {
@@ -67,9 +85,9 @@ func (s *Session) smartCompact() {
 	}
 
 	// Try LLM-based summary first, fall back to truncation
-	summary := s.generateSummary()
+	summary := s.generateSummary(ctx, raw)
 	if summary == "" {
-		s.compact() // fallback to boundary-aware truncation
+		s.compact(ctx) // fallback to boundary-aware truncation
 		return
 	}
 
@@ -79,20 +97,30 @@ func (s *Session) smartCompact() {
 		summary += "\n\n" + fileBlock
 	}
 
-	keep := make([]types.EyrieMessage, 0, keepEnd+2)
+	tail := raw[len(raw)-keepEnd:]
+	keep := make([]types.EyrieMessage, 0, len(tail)+2)
 	keep = append(keep, types.EyrieMessage{
 		Role:    "user",
 		Content: "[Conversation summary]\n" + summary + "\n\n[Continue from the recent messages below.]",
 	})
-	keep = append(keep, types.EyrieMessage{
-		Role:    "assistant",
-		Content: "Understood. I have the context from the summary above. Continuing.",
-	})
-	keep = append(keep, s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-keepEnd:]...)
-	s.Persistence().SetRawMessages(keep)
+	// Only emit the assistant ack when the tail starts with a user message;
+	// two adjacent assistant messages are rejected by OpenAI-compat providers.
+	if len(tail) == 0 || tail[0].Role != "assistant" {
+		keep = append(keep, types.EyrieMessage{
+			Role:    "assistant",
+			Content: "Understood. I have the context from the summary above. Continuing.",
+		})
+	}
+	keep = append(keep, tail...)
+	s.Persistence().ApplyCompaction(keep, len(raw))
 }
 
-func (s *Session) generateSummary() string {
+// summaryInputRuneCap bounds the total rune budget fed into the summarizer so
+// the LLM fallback in generateSummary can never overflow the compact model's
+// window on very long transcripts.
+const summaryInputRuneCap = 32_000
+
+func (s *Session) generateSummary(ctx context.Context, raw []types.EyrieMessage) string {
 	// Build a compact version of the conversation for summarization
 	// using the structured compaction prompt from compact_prompt.go
 	var summaryMsgs []types.EyrieMessage
@@ -102,15 +130,21 @@ func (s *Session) generateSummary() string {
 		Content: compactPrompt + "\n\nConversation:\n",
 	})
 
-	// Add a condensed version of messages
-	for _, m := range s.Persistence().RawMessages() {
-		if m.Role == "user" || m.Role == "assistant" {
-			content := m.Content
-			if len(content) > 500 {
-				content = content[:500] + "..."
-			}
-			summaryMsgs[0].Content += m.Role + ": " + content + "\n"
+	// Add a condensed version of messages, capped at a bounded total size
+	budget := summaryInputRuneCap
+	for _, m := range raw {
+		if m.Role != "user" && m.Role != "assistant" {
+			continue
 		}
+		if budget <= 0 {
+			break
+		}
+		part := m.Role + ": " + truncateRunes(m.Content, 500) + "\n"
+		if runes := len([]rune(part)); runes > budget {
+			part = truncateRunes(part, budget)
+		}
+		budget -= len([]rune(part))
+		summaryMsgs[0].Content += part
 	}
 
 	// Try tok compression first as a fast, zero-cost alternative
@@ -119,14 +153,20 @@ func (s *Session) generateSummary() string {
 	compressed, stats := token.Compress(conversationText, targetBudget)
 	s.recordTokCompressionObservation(conversationText, "context-compaction", stats)
 	reductionRatio := float64(stats.FinalTokens) / float64(stats.OriginalTokens)
-	if reductionRatio < 0.5 && stats.OriginalTokens > targetBudget*2 {
+	// Only accept the tok path when the reduction is structural — a
+	// budget-enforcer hard truncation (HardTruncated) would return the head
+	// of the conversation cut mid-stream, which is not a summary.
+	if reductionRatio < 0.5 && stats.OriginalTokens > targetBudget*2 && !stats.HardTruncated() {
 		// tok achieved >50% reduction, use compressed output directly
 		// Extract key facts from compressed text for summary format
 		return extractSummaryFromCompressed(compressed)
 	}
 
 	// Fall back to LLM-based summarization if tok compression insufficient
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	if s.ChatLLM() == nil {
+		return ""
+	}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	resp, err := s.ChatLLM().Chat(ctx, summaryMsgs, types.ChatOptions{
@@ -144,6 +184,13 @@ func (s *Session) generateSummary() string {
 // extractSummaryFromCompressed pulls key information from tok-compressed text
 // to create a usable summary for the conversation context.
 func extractSummaryFromCompressed(compressed string) string {
+	// A meta-token digest ([META:...]) means the pipeline replaced content
+	// with placeholders rather than summarizing it — never treat that as a
+	// summary (defense in depth; the gate on HardTruncated already rejects
+	// budget-only reductions).
+	if strings.HasPrefix(compressed, "[META:") {
+		return ""
+	}
 	// tok compression preserves semantic meaning; extract actionable summary
 	lines := strings.Split(compressed, "\n")
 	var keyPoints []string
@@ -161,6 +208,20 @@ func extractSummaryFromCompressed(compressed string) string {
 		return ""
 	}
 	return strings.Join(keyPoints, "\n")
+}
+
+// truncateRunes truncates s to at most max runes, appending "..." when it was
+// truncated. Unlike byte slicing, this never splits a multi-byte UTF-8 rune,
+// so the result is always valid UTF-8.
+func truncateRunes(s string, max int) string {
+	if max <= 0 || len(s) <= max {
+		return s
+	}
+	runes := []rune(s)
+	if len(runes) <= max {
+		return s
+	}
+	return string(runes[:max]) + "..."
 }
 
 // CompressMessageContent compresses a single message's content if it exceeds the limit.

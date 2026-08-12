@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -254,7 +255,7 @@ func magicCost(session *Session, _ string) string {
 
 func magicCompact(session *Session, _ string) string {
 	before := session.MessageCount()
-	session.SmartCompact()
+	session.SmartCompact(context.Background())
 	after := session.MessageCount()
 	return fmt.Sprintf("Compacted: %d → %d messages.", before, after)
 }

@@ -204,7 +204,7 @@ func TestIntegration_CompactionTrigger(t *testing.T) {
 	}
 
 	// Compact should reduce the count.
-	sess.Compact()
+	sess.Compact(context.Background())
 	after := sess.MessageCount()
 	if after >= before {
 		t.Fatalf("expected compaction to reduce messages: before=%d, after=%d", before, after)
