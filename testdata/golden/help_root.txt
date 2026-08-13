@@ -1,6 +1,6 @@
 hawk is an AI coding agent that reads, writes, and runs code in your terminal.
 
-It connects to 27 first-class LLM providers through eyrie, executes tools (file I/O, shell,
+It connects to 28 first-class LLM providers through eyrie, executes tools (file I/O, shell,
 git, web search), and manages sessions — all from a keyboard-driven TUI or
 headless mode for scripts and CI.
 
