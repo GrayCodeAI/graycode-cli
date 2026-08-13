@@ -30,7 +30,7 @@ hawk is an AI-powered coding agent that lives in your terminal. It reads your co
 
 **Developer path:** one machine, keychain credentials, local memory. Run `hawk path` to check readiness.
 
-- **Model-agnostic** — supports 23 first-class providers through [eyrie](https://github.com/GrayCodeAI/eyrie), including Anthropic, OpenAI, Gemini, Concentrate AI (pay-as-you-go), DeepSeek, and Ollama
+- **Model-agnostic** — supports 28 first-class providers through [eyrie](https://github.com/GrayCodeAI/eyrie), including Anthropic, OpenAI, Gemini, Fireworks AI, Concentrate AI (pay-as-you-go), DeepSeek, and Ollama
 - **Zero CGO** — single static binary, cross-compiled for linux/darwin/windows on amd64/arm64
 - **Privacy-first** — your code never leaves your machine except to the LLM API you choose
 - **Docker-only execution** — agent commands run in an isolated container and
@@ -345,6 +345,7 @@ hawk works with any LLM provider. **Developer path:** paste keys in `/config` (s
 | OpenAI | `openai` | `OPENAI_API_KEY` |
 | Google Gemini | `gemini` | `GEMINI_API_KEY` |
 | OpenRouter | `openrouter` | `OPENROUTER_API_KEY` |
+| Fireworks AI | `fireworks` | `FIREWORKS_API_KEY` |
 | xAI (Grok) | `grok` | `XAI_API_KEY` |
 | Z.AI | `z-ai` | `ZAI_API_KEY` |
 | CanopyWave | `canopywave` | `CANOPYWAVE_API_KEY` |
