@@ -177,7 +177,7 @@ clean: ## Remove build artefacts.
 # Setup — bootstrap local development environment.
 # ---------------------------------------------------------------------------
 FOUNDATION_REPOS := hawk-core-contracts
-ECO_REPOS := eyrie inspect sight tok trace yaad
+ECO_REPOS := eyrie inspect sight tok trace yaad hawk-mcpkit
 WORKSPACE_REPOS := $(FOUNDATION_REPOS) $(ECO_REPOS)
 
 setup: ## Set up local development environment (go.work + external repos).
@@ -185,7 +185,7 @@ setup: ## Set up local development environment (go.work + external repos).
 	@mkdir -p external
 	@for repo in $(WORKSPACE_REPOS); do \
 		dest="external/$$repo"; \
-		if [ -d "$$dest/.git" ]; then \
+		if git -C "$$dest" rev-parse --git-dir >/dev/null 2>&1; then \
 			echo "✓ $$dest already exists"; \
 		else \
 			commit=$$(git ls-tree HEAD "$$dest" 2>/dev/null | awk '{print $$3}' || true); \

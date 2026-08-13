@@ -8,12 +8,12 @@ import (
 )
 
 func TestWatchdog_NoStall(t *testing.T) {
-	stallCalled := false
+	stallCalled := make(chan struct{}, 1)
 	w := NewWatchdog(WatchdogConfig{
 		StallTimeout:  100 * time.Millisecond,
 		CheckInterval: 20 * time.Millisecond,
 	}, func(featureID string) {
-		stallCalled = true
+		stallCalled <- struct{}{}
 	})
 
 	w.Register("feat-1")
@@ -25,8 +25,10 @@ func TestWatchdog_NoStall(t *testing.T) {
 	w.Touch("feat-1")
 	<-ctx.Done()
 
-	if stallCalled {
+	select {
+	case <-stallCalled:
 		t.Fatal("expected no stall callback when feature is touched within timeout")
+	default:
 	}
 }
 
@@ -62,12 +64,12 @@ func TestWatchdog_StallDetected(t *testing.T) {
 }
 
 func TestWatchdog_Unregister_StopsMonitoring(t *testing.T) {
-	stallCalled := false
+	stallCalled := make(chan struct{}, 1)
 	w := NewWatchdog(WatchdogConfig{
 		StallTimeout:  50 * time.Millisecond,
 		CheckInterval: 20 * time.Millisecond,
 	}, func(featureID string) {
-		stallCalled = true
+		stallCalled <- struct{}{}
 	})
 
 	w.Register("feat-unreg")
@@ -79,8 +81,10 @@ func TestWatchdog_Unregister_StopsMonitoring(t *testing.T) {
 	go w.Run(ctx)
 	<-ctx.Done()
 
-	if stallCalled {
+	select {
+	case <-stallCalled:
 		t.Fatal("expected no stall callback after Unregister")
+	default:
 	}
 }
 

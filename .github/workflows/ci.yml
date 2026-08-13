@@ -106,13 +106,22 @@ jobs:
         run: go mod verify
       - name: workspace points at external checkouts
         run: |
-          for module in hawk-core-contracts eyrie inspect sight tok trace yaad; do
+          for module in hawk-core-contracts eyrie inspect sight tok trace yaad hawk-mcpkit; do
             if ! grep -q "./external/${module}" go.work; then
               echo "::error::go.work must include ./external/${module}."
               cat go.work
               exit 1
             fi
           done
+      - name: Validate every Go module independently
+        run: |
+          while IFS= read -r modfile; do
+            dir=$(dirname "$modfile")
+            echo "==> validating $dir"
+            (cd "$dir" && GOWORK=off go mod tidy -diff)
+            (cd "$dir" && GOWORK=off go mod verify)
+            (cd "$dir" && GOWORK=off go test ./... -count=1 -timeout=300s)
+          done < <(find . -name go.mod -not -path './.git/*' -not -path './external/*' -print | sort)
 
   public-modules:
     name: public module graph

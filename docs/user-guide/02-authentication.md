@@ -17,6 +17,7 @@ Hawk supports multiple providers:
 | OpenAI | `openai` | `OPENAI_API_KEY` |
 | Google Gemini | `gemini` | `GEMINI_API_KEY` |
 | OpenRouter | `openrouter` | `OPENROUTER_API_KEY` |
+| Fireworks AI | `fireworks` | `FIREWORKS_API_KEY` |
 | Ollama (local) | `ollama` | `OLLAMA_BASE_URL` (no API key) |
 
 ### Setting Up Credentials
@@ -37,6 +38,12 @@ For CI/CD or headless environments, you can set API keys as environment variable
 export XAI_API_KEY="xai-..."
 hawk
 ```
+
+Fireworks uses its OpenAI-compatible API. Set `FIREWORKS_API_KEY`; the default
+base URL is `https://api.fireworks.ai/inference/v1`. See the official
+[quickstart](https://docs.fireworks.ai/getting-started/quickstart),
+[API reference](https://docs.fireworks.ai/api-reference/introduction), and
+[models overview](https://docs.fireworks.ai/models/overview).
 
 ---
 
