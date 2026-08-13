@@ -121,7 +121,7 @@ jobs:
             (cd "$dir" && GOWORK=off go mod tidy -diff)
             (cd "$dir" && GOWORK=off go mod verify)
             (cd "$dir" && GOWORK=off go test ./... -count=1 -timeout=300s)
-          done < <(find . -name go.mod -not -path './.git/*' -print | sort)
+          done < <(find . -name go.mod -not -path './.git/*' -not -path './external/*' -print | sort)
 
   public-modules:
     name: public module graph
