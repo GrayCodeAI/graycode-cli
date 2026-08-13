@@ -135,8 +135,8 @@ setting; the unified key is rendered down to it.
 |---------------------------------|-------------|--------------------------------------------------|
 | `model.default`                 | hawk        | `HAWK_MODEL` env / `config.json`                 |
 | `model.small_fast`              | hawk        | `GRAYCODE_SMALL_FAST_MODEL` env                  |
-| `providers[].api_key_env`       | eyrie/hawk  | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `XAI_API_KEY`, `ZAI_API_KEY`, `CANOPYWAVE_API_KEY` |
-| `providers[].base_url_env`      | eyrie       | `ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL` / `OPENAI_API_BASE`, `OLLAMA_BASE_URL` |
+| `providers[].api_key_env`       | eyrie/hawk  | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `XAI_API_KEY`, `ZAI_API_KEY`, `CANOPYWAVE_API_KEY`, `FIREWORKS_API_KEY` |
+| `providers[].base_url_env`      | eyrie       | `ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL` / `OPENAI_API_BASE`, `OLLAMA_BASE_URL`, `FIREWORKS_BASE_URL` |
 | `providers[].model` (openai)    | eyrie       | `OPENAI_MODEL` env                               |
 | `providers[].model` (gemini)    | eyrie       | `GEMINI_MODEL` env                               |
 | `providers[].model` (anthropic) | eyrie       | `ANTHROPIC_MODEL` env                            |
