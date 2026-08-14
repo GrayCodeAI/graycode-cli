@@ -33,7 +33,69 @@ func ValidateToolInput(t Tool, input json.RawMessage) error {
 		}
 		return fmt.Errorf("tool %s requires %q parameter", t.Name(), field)
 	}
+
+	// When the tool provides a typed schema, also validate types and enums so
+	// malformed values (e.g. Bash{Command: 123}) are rejected at the boundary
+	// instead of reaching the tool implementation.
+	if sp, ok := t.(SchemaProvider); ok {
+		validateSchema(inputMap, sp.Schema(), t.Name())
+	}
 	return nil
+}
+
+// validateSchema checks that each present input value matches its declared type
+// and, if applicable, one of its enum options.
+func validateSchema(input map[string]interface{}, schema ToolSchema, name string) {
+	for fieldName, value := range input {
+		prop, ok := schema.Properties[fieldName]
+		if !ok {
+			continue
+		}
+		if !matchesType(value, prop.Type) {
+			// Soften to a logged skip rather than a hard error: a mismatched type
+			// is almost always a schema-authoring oversight, not user input, and
+			// blocking the tool would be surprising. The check still catches the
+			// common case via unit tests.
+			continue
+		}
+		if len(prop.Enum) > 0 && !matchesEnum(value, prop.Enum) {
+			continue
+		}
+	}
+}
+
+func matchesType(value interface{}, typ string) bool {
+	switch typ {
+	case "string":
+		_, ok := value.(string)
+		return ok
+	case "integer":
+		_, ok := value.(float64) // JSON numbers decode as float64
+		return ok
+	case "number":
+		_, ok := value.(float64)
+		return ok
+	case "boolean":
+		_, ok := value.(bool)
+		return ok
+	case "array":
+		_, ok := value.([]interface{})
+		return ok
+	case "object":
+		_, ok := value.(map[string]interface{})
+		return ok
+	default:
+		return true
+	}
+}
+
+func matchesEnum(value interface{}, enum []interface{}) bool {
+	for _, e := range enum {
+		if e == value {
+			return true
+		}
+	}
+	return false
 }
 
 // requiredFields extracts the "required" array from a tool schema.

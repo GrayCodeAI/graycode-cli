@@ -184,20 +184,27 @@ func (BashTool) Name() string        { return "Bash" }
 func (BashTool) RiskLevel() string   { return "high" }
 func (BashTool) Aliases() []string   { return []string{"bash"} }
 func (BashTool) Description() string { return "Run a shell command." }
-func (BashTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"command": map[string]interface{}{"type": "string", "description": "The shell command to run"},
-			"timeout": map[string]interface{}{"type": "integer", "description": "Timeout in seconds (default 120)"},
-			"run_in_background": map[string]interface{}{
-				"type":        "boolean",
-				"description": "Run command in the background and return a task_id for TaskOutput/TaskStop",
-			},
+
+// Schema returns the typed input schema for Bash. Both Parameters() and the
+// validator read from this single source of truth, so they cannot diverge.
+func (BashTool) Schema() ToolSchema {
+	return ToolSchema{
+		Type: "object",
+		Properties: map[string]SchemaProperty{
+			"command":           {Type: "string", Description: "The shell command to run"},
+			"timeout":           {Type: "integer", Description: "Timeout in seconds (default 120)", Default: 120},
+			"run_in_background": {Type: "boolean", Description: "Run command in the background and return a task_id for TaskOutput/TaskStop"},
 		},
-		"required": []string{"command"},
+		Required: []string{"command"},
 	}
 }
+
+func (BashTool) Parameters() map[string]interface{} {
+	return bashSchema.ToJSONSchema()
+}
+
+// bashSchema is the single source of truth for Bash's input schema.
+var bashSchema = BashTool{}.Schema()
 
 // SegmentCommand splits a command string on &&, ||, ;, and | (respecting quotes
 // and heredocs) into individual segments for independent analysis.

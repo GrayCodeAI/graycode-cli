@@ -468,3 +468,77 @@ func searchString(s, sub string) bool {
 	}
 	return false
 }
+
+func TestToolSchema_ToJSONSchema(t *testing.T) {
+	s := ToolSchema{
+		Type: "object",
+		Properties: map[string]SchemaProperty{
+			"command": {Type: "string", Description: "cmd"},
+			"timeout": {Type: "integer", Description: "t", Default: 120},
+		},
+		Required: []string{"command"},
+	}
+	got := s.ToJSONSchema()
+	if got["type"] != "object" {
+		t.Errorf("type = %v, want object", got["type"])
+	}
+	// Required is preserved.
+	if req, ok := got["required"].([]string); !ok || len(req) != 1 || req[0] != "command" {
+		t.Errorf("required = %v, want [command]", got["required"])
+	}
+	// Property carries type + description + default.
+	props := got["properties"].(map[string]interface{})
+	cmd := props["command"].(map[string]interface{})
+	if cmd["type"] != "string" || cmd["description"] != "cmd" {
+		t.Errorf("command prop = %v", cmd)
+	}
+	tm := props["timeout"].(map[string]interface{})
+	if tm["default"] != 120 {
+		t.Errorf("timeout default = %v, want 120", tm["default"])
+	}
+}
+
+func TestBashSchemaProvider(t *testing.T) {
+	// Bash must implement SchemaProvider and Parameters() must match the
+	// typed schema's wire format exactly (byte-for-byte equivalent props).
+	var _ SchemaProvider = BashTool{}
+	sp, ok := interface{}(BashTool{}).(SchemaProvider)
+	if !ok {
+		t.Fatal("BashTool must implement SchemaProvider")
+	}
+	schema := sp.Schema()
+	if len(schema.Required) != 1 || schema.Required[0] != "command" {
+		t.Fatalf("required = %v, want [command]", schema.Required)
+	}
+	if schema.Properties["command"].Type != "string" {
+		t.Fatalf("command type = %v, want string", schema.Properties["command"].Type)
+	}
+	// Parameters() must equal the typed conversion.
+	params := BashTool{}.Parameters()
+	if params["type"] != "object" {
+		t.Fatalf("Parameters type = %v", params["type"])
+	}
+	// Required survives the round-trip.
+	if req := params["required"].([]string); len(req) != 1 || req[0] != "command" {
+		t.Fatalf("Parameters required = %v", params["required"])
+	}
+}
+
+func TestFileReadSchemaProvider(t *testing.T) {
+	var _ SchemaProvider = FileReadTool{}
+	params := FileReadTool{}.Parameters()
+	props, ok := params["properties"].(map[string]interface{})
+	if !ok {
+		t.Fatal("properties missing")
+	}
+	// Both the canonical field and its alias survive.
+	if _, ok := props["path"]; !ok {
+		t.Fatal("path missing")
+	}
+	if _, ok := props["file_path"]; !ok {
+		t.Fatal("file_path alias missing")
+	}
+	if props["path"].(map[string]interface{})["type"] != "string" {
+		t.Fatal("path type wrong")
+	}
+}

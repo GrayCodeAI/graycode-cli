@@ -22,20 +22,29 @@ func (FileReadTool) Description() string {
 	return "Read a file's contents, optionally a specific line range."
 }
 
-func (FileReadTool) Parameters() map[string]interface{} {
-	return map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"path":       map[string]interface{}{"type": "string", "description": "File path to read"},
-			"file_path":  map[string]interface{}{"type": "string", "description": "Archive-compatible alias for path"},
-			"start_line": map[string]interface{}{"type": "integer", "description": "Start line (1-based, optional)"},
-			"end_line":   map[string]interface{}{"type": "integer", "description": "End line (1-based, inclusive, optional)"},
-			"offset":     map[string]interface{}{"type": "integer", "description": "Archive-compatible 1-based start line alias"},
-			"limit":      map[string]interface{}{"type": "integer", "description": "Archive-compatible number of lines to read"},
+// Schema returns the typed input schema for FileRead. Parameters() derives
+// from it so the wire format and validator never diverge.
+func (FileReadTool) Schema() ToolSchema {
+	return ToolSchema{
+		Type: "object",
+		Properties: map[string]SchemaProperty{
+			"path":       {Type: "string", Description: "File path to read"},
+			"file_path":  {Type: "string", Description: "Archive-compatible alias for path"},
+			"start_line": {Type: "integer", Description: "Start line (1-based, optional)"},
+			"end_line":   {Type: "integer", Description: "End line (1-based, inclusive, optional)"},
+			"offset":     {Type: "integer", Description: "Archive-compatible 1-based start line alias"},
+			"limit":      {Type: "integer", Description: "Archive-compatible number of lines to read"},
 		},
-		"required": []string{"path"},
+		Required: []string{"path"},
 	}
 }
+
+func (FileReadTool) Parameters() map[string]interface{} {
+	return fileReadSchema.ToJSONSchema()
+}
+
+// fileReadSchema is the single source of truth for FileRead's input schema.
+var fileReadSchema = FileReadTool{}.Schema()
 
 func (FileReadTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {

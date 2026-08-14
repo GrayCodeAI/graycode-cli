@@ -37,11 +37,19 @@ type ProxyConfig struct {
 	BlockedDomains []string
 	Mode           string // "allowlist", "blocklist", "open", "closed"
 	LogRequests    bool
+	// Host is the address the proxy listens on. "127.0.0.1" (default) restricts
+	// it to the host; "0.0.0.0" or "" makes it reachable from containers / other
+	// hosts. Use AllInterfaces for the container-egress use case.
+	Host string
 	// BlockPrivateNetworks rejects loopback, link-local, private, multicast,
 	// and unspecified destinations after DNS resolution. It is intentionally
 	// opt-in for compatibility; secure built-in configurations enable it.
 	BlockPrivateNetworks bool
 }
+
+// AllInterfaces is a sentinel host that binds the proxy to every interface so
+// it is reachable from Docker containers via host.docker.internal.
+const AllInterfaces = "0.0.0.0"
 
 // NetworkProxy provides domain-level network access control for commands
 // run by the agent. Inspired by Codex CLI's network-proxy approach.
@@ -89,7 +97,11 @@ func (np *NetworkProxy) Start(ctx context.Context) (string, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	np.cancelFunc = cancel
 
-	addr := fmt.Sprintf("%s:%d", netutil.LoopbackHost, np.Port)
+	host := np.config.Host
+	if host == "" {
+		host = netutil.LoopbackHost
+	}
+	addr := fmt.Sprintf("%s:%d", host, np.Port)
 	var err error
 	np.listener, err = new(net.ListenConfig).Listen(ctx, "tcp", addr)
 	if err != nil {
@@ -190,7 +202,17 @@ func (np *NetworkProxy) IsAllowed(host string) bool {
 // EnvVars returns environment variables to set for child processes
 // so they route traffic through this proxy.
 func (np *NetworkProxy) EnvVars() map[string]string {
-	addr := fmt.Sprintf("http://%s:%d", netutil.LoopbackHost, np.Port)
+	return np.EnvVarsForHost(netutil.LoopbackHost)
+}
+
+// EnvVarsForHost returns proxy env vars pointing at a specific host. Use this
+// when the consumer runs in a different network namespace (e.g. a Docker
+// container reaching the host proxy via host.docker.internal).
+func (np *NetworkProxy) EnvVarsForHost(host string) map[string]string {
+	if host == "" {
+		host = netutil.LoopbackHost
+	}
+	addr := fmt.Sprintf("http://%s:%d", host, np.Port)
 	return map[string]string{
 		"HTTP_PROXY":  addr,
 		"HTTPS_PROXY": addr,

@@ -394,3 +394,51 @@ func TestDefaultHawkImageDigestOverride(t *testing.T) {
 		t.Fatalf("defaultHawkImage=%q, want digest suffix", got)
 	}
 }
+
+func TestDefaultEgressProxyConfig(t *testing.T) {
+	cfg := DefaultEgressProxyConfig()
+	if cfg.Host != AllInterfaces {
+		t.Errorf("Host = %q, want %q (proxy must be reachable from container)", cfg.Host, AllInterfaces)
+	}
+	if cfg.Mode != "allowlist" {
+		t.Errorf("Mode = %q, want allowlist", cfg.Mode)
+	}
+	if !cfg.BlockPrivateNetworks {
+		t.Error("BlockPrivateNetworks should be true for secure default")
+	}
+	if len(cfg.AllowedDomains) == 0 {
+		t.Error("AllowedDomains should not be empty")
+	}
+}
+
+func TestNewContainerSandboxWithEgressProxy(t *testing.T) {
+	cs := NewContainerSandboxWithEgressProxy(t.TempDir())
+	if cs.networkProxy() == nil {
+		t.Fatal("expected egress proxy to be set")
+	}
+	np := cs.networkProxy()
+	if np.config.Host != AllInterfaces {
+		t.Errorf("proxy Host = %q, want %q", np.config.Host, AllInterfaces)
+	}
+	env := np.EnvVarsForHost(hostDockerInternal)
+	if !strings.Contains(env["HTTP_PROXY"], hostDockerInternal) {
+		t.Errorf("HTTP_PROXY = %q, want it to contain %q", env["HTTP_PROXY"], hostDockerInternal)
+	}
+}
+
+func TestNetworkProxy_EnvVarsForHost(t *testing.T) {
+	np := NewNetworkProxy(ProxyConfig{Mode: "open"})
+	np.Port = 12345
+	env := np.EnvVarsForHost("host.docker.internal")
+	if env["HTTP_PROXY"] != "http://host.docker.internal:12345" {
+		t.Errorf("HTTP_PROXY = %q", env["HTTP_PROXY"])
+	}
+	if env["HTTPS_PROXY"] != "http://host.docker.internal:12345" {
+		t.Errorf("HTTPS_PROXY = %q", env["HTTPS_PROXY"])
+	}
+	// Empty host falls back to loopback.
+	env2 := np.EnvVarsForHost("")
+	if !strings.HasPrefix(env2["HTTP_PROXY"], "http://127.0.0.1:") {
+		t.Errorf("fallback HTTP_PROXY = %q, want loopback", env2["HTTP_PROXY"])
+	}
+}
