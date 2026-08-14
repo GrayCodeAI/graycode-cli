@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -319,7 +320,7 @@ func runRepl() error {
 		_, _ = fmt.Fprint(os.Stderr, "\n> ")
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				fmt.Fprintln(os.Stderr, "")
 				return nil
 			}

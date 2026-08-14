@@ -235,7 +235,10 @@ func parseGuardianResponse(response string) (*GuardianDecision, error) {
 
 	var decision GuardianDecision
 	if err := json.Unmarshal([]byte(candidate), &decision); err != nil {
-		return nil, fmt.Errorf("%w: %v in %q", ErrGuardianUnparseable, err, truncateForLog(candidate, 200))
+		// Wrap the unmarshal error so its chain is preserved (%w), and keep the
+		// candidate in the message for debuggability. The sentinel is reachable
+		// via errors.Is because fmt.Errorf with %w preserves the wrapped chain.
+		return nil, fmt.Errorf("%w (unmarshal %q: %w)", ErrGuardianUnparseable, truncateForLog(candidate, 200), err)
 	}
 
 	// Validate confidence range. Models occasionally emit

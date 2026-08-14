@@ -212,7 +212,7 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 	url := "https://github.com/" + repo + ".git"
 	cmd := exec.CommandContext(context.Background(), "git", "clone", "--depth", "1", "--single-branch", url, tmpDir) // #nosec G204 -- url is built from a caller-supplied repo slug prefixed with a fixed GitHub URL, consistent with other install paths in this package
 	if out, cloneErr := cmd.CombinedOutput(); cloneErr != nil {
-		return "", fmt.Errorf("git clone failed: %s\n%s", cloneErr, string(out))
+		return "", fmt.Errorf("git clone failed: %w\n%s", cloneErr, string(out))
 	}
 
 	// Discover skills in the cloned repo.

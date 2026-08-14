@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -278,7 +279,8 @@ func execCommand(name string, args ...string) (string, error) {
 	cmd := exec.CommandContext(context.Background(), name, args...) // #nosec G204 -- executable is selected by the platform credential backend
 	out, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return "", fmt.Errorf("%s: %w: %s", name, err, strings.TrimSpace(string(exitErr.Stderr)))
 		}
 		return "", fmt.Errorf("%s: %w", name, err)

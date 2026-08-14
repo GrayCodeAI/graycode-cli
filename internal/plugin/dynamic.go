@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -649,7 +650,8 @@ func (dm *DynamicPluginManager) executeSubprocessTool(ctx context.Context, dp *D
 		if ctx.Err() == context.DeadlineExceeded {
 			return "", fmt.Errorf("tool %q timed out after %s", tool.Name, timeout)
 		}
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return "", fmt.Errorf("tool %q failed: %s", tool.Name, string(exitErr.Stderr))
 		}
 		return "", fmt.Errorf("tool %q failed: %w", tool.Name, err)

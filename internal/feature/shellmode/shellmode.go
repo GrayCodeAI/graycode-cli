@@ -5,6 +5,7 @@ package shellmode
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -99,12 +100,15 @@ func ExecuteShellWithTimeout(ctx context.Context, cmdStr string, timeout time.Du
 		if ctx.Err() == context.DeadlineExceeded {
 			result.ExitCode = 124 // Standard timeout exit code.
 			result.Stderr += fmt.Sprintf("\ncommand timed out after %s", timeout)
-		} else if exitErr, ok := err.(*exec.ExitError); ok {
-			result.ExitCode = exitErr.ExitCode()
 		} else {
-			result.ExitCode = 1
-			if result.Stderr == "" {
-				result.Stderr = err.Error()
+			var exitErr *exec.ExitError
+			if errors.As(err, &exitErr) {
+				result.ExitCode = exitErr.ExitCode()
+			} else {
+				result.ExitCode = 1
+				if result.Stderr == "" {
+					result.Stderr = err.Error()
+				}
 			}
 		}
 	}

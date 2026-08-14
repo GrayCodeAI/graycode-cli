@@ -2,6 +2,7 @@ package code
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -133,7 +134,8 @@ func lookupTestStatus(file, funcName string) string {
 	if err == nil {
 		return "PASS"
 	}
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		if exitErr.ExitCode() == 1 {
 			return "FAIL"
 		}

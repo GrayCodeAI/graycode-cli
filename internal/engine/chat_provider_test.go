@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/GrayCodeAI/hawk-core-contracts/llm"
@@ -68,7 +69,7 @@ func TestEngineChatProviderIdentityAndPing(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if err := provider.Ping(ctx); err != context.Canceled {
+	if err := provider.Ping(ctx); !errors.Is(err, context.Canceled) {
 		t.Fatalf("Ping() error = %v, want context.Canceled", err)
 	}
 }

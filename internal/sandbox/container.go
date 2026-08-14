@@ -379,7 +379,7 @@ func (c *ContainerSandbox) BuildFromDockerfile(ctx context.Context, dockerfile s
 	cmd := exec.CommandContext(ctx, "docker", "build", "-t", tag, "-f", dfPath, c.projectDir) // #nosec G204 -- "docker" binary fixed; tag/dfPath/projectDir derived from internal state
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("docker build failed: %s\n%s", err, out)
+		return "", fmt.Errorf("docker build failed: %w\n%s", err, out)
 	}
 
 	c.mu.Lock()

@@ -153,7 +153,7 @@ func TestParallelExecution(t *testing.T) {
 		// Verify the worktree is functional by checking for README.
 		if _, err := os.Stat(filepath.Join(wtPath, "README.md")); err != nil {
 			running.Add(-1)
-			return "", fmt.Errorf("README not found: %v", err)
+			return "", fmt.Errorf("README not found: %w", err)
 		}
 
 		running.Add(-1)

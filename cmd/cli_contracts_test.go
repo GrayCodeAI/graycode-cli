@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -197,7 +198,7 @@ func TestPromptInputReadLine_WithoutInteractiveReader(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error when no interactive prompt input is available")
 	}
-	if err != errNoInteractivePromptInput {
+	if !errors.Is(err, errNoInteractivePromptInput) {
 		t.Fatalf("error = %v, want %v", err, errNoInteractivePromptInput)
 	}
 }

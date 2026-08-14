@@ -91,7 +91,7 @@ func TestSnapshotCache_GetOrCompute_ComputeError(t *testing.T) {
 	_, err := cache.GetOrCompute("key1", func() (string, error) {
 		return "", expectedErr
 	})
-	if err != expectedErr {
+	if !errors.Is(err, expectedErr) {
 		t.Fatalf("expected %v, got %v", expectedErr, err)
 	}
 

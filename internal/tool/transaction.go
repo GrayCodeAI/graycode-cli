@@ -193,7 +193,7 @@ func (tx *Transaction) Commit() error {
 			rollbackErr := rollbackOperations(tx.Operations, applied)
 			tx.Status = "rolled_back"
 			if rollbackErr != nil {
-				return fmt.Errorf("operation %d (%s %s) failed: %w; rollback also encountered errors: %v",
+				return fmt.Errorf("operation %d (%s %s) failed: %w; rollback also encountered errors: %w",
 					i, op.Type, op.Path, err, rollbackErr)
 			}
 			return fmt.Errorf("operation %d (%s %s) failed: %w; all changes rolled back",

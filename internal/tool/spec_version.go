@@ -114,12 +114,12 @@ func (SpecVersionTool) Execute(ctx context.Context, input json.RawMessage) (stri
 	}
 
 	if output, err := runGitCmd(cwd, "add", specRelPath); err != nil {
-		return "", fmt.Errorf("git add failed: %v\n%s", err, output)
+		return "", fmt.Errorf("git add failed: %w\n%s", err, output)
 	}
 
 	fullMessage := fmt.Sprintf("%s\n\nSpec: %s\nTimestamp: %s", p.Message, slug, time.Now().Format(time.RFC3339))
 	if output, err := runGitCmd(cwd, "commit", "-m", fullMessage); err != nil {
-		return "", fmt.Errorf("git commit failed: %v\n%s", err, output)
+		return "", fmt.Errorf("git commit failed: %w\n%s", err, output)
 	}
 
 	b.WriteString("**Committed successfully** OK\n")

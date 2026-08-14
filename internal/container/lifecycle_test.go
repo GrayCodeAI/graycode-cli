@@ -3,6 +3,7 @@ package container
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -144,7 +145,8 @@ func TestExecWithStdin(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for empty container ID")
 		}
-		ce, ok := err.(*ContainerError)
+		ce := &ContainerError{}
+		ok := errors.As(err, &ce)
 		if !ok {
 			t.Fatalf("expected *ContainerError, got %T", err)
 		}
