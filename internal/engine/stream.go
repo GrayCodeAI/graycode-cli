@@ -22,6 +22,106 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
+// turnContext carries the per-turn, pre-compute values that buildTurnOptions
+// assembles into a ChatOptions. Extracting it keeps agentLoop readable and
+// gives the prompt-assembly logic a single home (H3).
+type turnContext struct {
+	ctx         context.Context
+	activeModel string
+	maxTok      int
+	smallTalk   bool
+	lastUserMsg string
+	taskType    string
+}
+
+// buildTurnOptions assembles the ChatOptions for a single agentic turn: base
+// system prompt (tiered for small-talk), ephemeral injections (beliefs, memory
+// nudge, smart skills, spec stage, work mode), promoted tools, and the active
+// model. Kept side-effect free except for PromoteForIntent (a cache warm) so it
+// can be reasoned about and tested in isolation from the LLM call + stream
+// consumption that follow it in agentLoop.
+func (s *Session) buildTurnOptions(tc turnContext) types.ChatOptions {
+	activeModel := tc.activeModel
+	maxTok := tc.maxTok
+	smallTalk := tc.smallTalk
+	lastUserMsg := tc.lastUserMsg
+
+	baseSystem := s.Persistence().System()
+	if smallTalk {
+		// The identity preamble already coaches the model to answer
+		// greetings without tools — the role/tool/practice sections
+		// below it only add prefill cost on this turn.
+		baseSystem = prompt.System()
+	}
+	baseOpts := s.ChatLLM().BuildOptions(baseSystem, activeModel, maxTok, nil)
+	opts := baseOpts
+	// Inject beliefs as ephemeral context (not persisted to s.Persistence().System())
+	if s.LifecycleSvc().Beliefs() != nil && s.LifecycleSvc().Beliefs().Size() > 0 {
+		if summary := s.LifecycleSvc().Beliefs().FormatForPrompt(); summary != "" {
+			opts.System += "\n\n## Agent Beliefs\n" + summary
+		}
+	}
+	// Activity nudge: remind agent to persist learnings if idle. Injected
+	// ephemerally (not persisted) so it never accumulates across turns.
+	if s.MemorySvc().Activity() != nil {
+		if nudge := s.MemorySvc().Activity().NudgeMessage(); nudge != "" {
+			opts.System += "\n\n" + nudge
+		}
+	}
+	// Auto-skill: match smart skills against the last user message and
+	// inject a compact listing. The LLM uses the Skill tool for full content.
+	smartSkills := s.LifecycleSvc().SmartSkills()
+	if len(smartSkills) > 0 {
+		lum := ""
+		for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
+			if s.Persistence().RawMessages()[i].Role == "user" && len(s.Persistence().RawMessages()[i].ToolResults) == 0 {
+				lum = s.Persistence().RawMessages()[i].Content
+				break
+			}
+		}
+		if lum != "" {
+			if matched := plugin.MatchSkillsByContext(smartSkills, lum); len(matched) > 0 {
+				if skillsPrompt := plugin.FormatSkillsCompact(matched); skillsPrompt != "" {
+					opts.System += "\n\n" + skillsPrompt
+				}
+			}
+		}
+	}
+	// Spec stage: steer the model through Specify -> Plan -> Tasks and an
+	// explicit approval handoff before any changes. Ephemeral (not
+	// persisted to s.Persistence().System()) so it disappears once the
+	// stage advances to Implementing.
+	if stage := s.PermSvc().SpecStage(); stage != SpecStageNone && stage != SpecStageImplementing {
+		opts.System += specStageSystemPrompt
+		// Inject project constitution as governing principles
+		if constitution := constitutionForPrompt(s.PermSvc().SpecSlug()); constitution != "" {
+			opts.System += constitution
+		}
+		// Inject user's spec configuration (language, framework, etc.)
+		// as context so the model writes specs that match preferences.
+		if cfgPrompt := specConfigForPrompt(); cfgPrompt != "" {
+			opts.System += cfgPrompt
+		}
+	}
+	// Work mode (plan/act/review) — ephemeral product control plane.
+	if addon := s.workModeSystemAddon(); addon != "" {
+		opts.System += "\n\n" + addon
+	}
+	if s.Tools() != nil && s.Tools().Registry() != nil {
+		// Promote only the small set of registered tools that match the
+		// current request. This keeps the default schema compact while
+		// making URL, verification, git, and code-intelligence requests
+		// discoverable without requiring the model to guess ToolSearch.
+		if lastUserMsg != "" {
+			s.Tools().Registry().PromoteForIntent(lastUserMsg)
+		}
+		if !smallTalk {
+			opts.Tools = s.Tools().Registry().EyrieTools()
+		}
+	}
+	return opts
+}
+
 // Stream runs the agentic loop: LLM → tool_use → execute → loop.
 func (s *Session) Stream(ctx context.Context) (<-chan StreamEvent, error) {
 	ch := make(chan StreamEvent, 64)
@@ -243,84 +343,17 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 		smallTalk := lastUserMsg != "" && isSmallTalkPrompt(lastUserMsg) && !sessionHasToolUse(s.Persistence().RawMessages())
 
-		// Build the LLM ChatOptions via the ChatService. The service owns
-		// the GLMThinking toggle, output schema, anthropic caching flag,
-		// and the active provider/model — building opts manually here
-		// would duplicate that logic.
-		baseSystem := s.Persistence().System()
-		if smallTalk {
-			// The identity preamble already coaches the model to answer
-			// greetings without tools — the role/tool/practice sections
-			// below it only add prefill cost on this turn.
-			baseSystem = prompt.System()
-		}
-		baseOpts := s.ChatLLM().BuildOptions(baseSystem, activeModel, maxTok, nil)
-		opts := baseOpts
-		// Inject beliefs as ephemeral context (not persisted to s.Persistence().System())
-		if s.LifecycleSvc().Beliefs() != nil && s.LifecycleSvc().Beliefs().Size() > 0 {
-			if summary := s.LifecycleSvc().Beliefs().FormatForPrompt(); summary != "" {
-				opts.System += "\n\n## Agent Beliefs\n" + summary
-			}
-		}
-		// Activity nudge: remind agent to persist learnings if idle. Injected
-		// ephemerally (not persisted) so it never accumulates across turns —
-		// see H4 in the deep-review findings.
-		if s.MemorySvc().Activity() != nil {
-			if nudge := s.MemorySvc().Activity().NudgeMessage(); nudge != "" {
-				opts.System += "\n\n" + nudge
-			}
-		}
-		// Auto-skill: match smart skills against the last user message and
-		// inject a compact listing. The LLM uses the Skill tool for full content.
-		smartSkills := s.LifecycleSvc().SmartSkills()
-		if len(smartSkills) > 0 {
-			lastUserMsg := ""
-			for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
-				if s.Persistence().RawMessages()[i].Role == "user" && len(s.Persistence().RawMessages()[i].ToolResults) == 0 {
-					lastUserMsg = s.Persistence().RawMessages()[i].Content
-					break
-				}
-			}
-			if lastUserMsg != "" {
-				if matched := plugin.MatchSkillsByContext(smartSkills, lastUserMsg); len(matched) > 0 {
-					if skillsPrompt := plugin.FormatSkillsCompact(matched); skillsPrompt != "" {
-						opts.System += "\n\n" + skillsPrompt
-					}
-				}
-			}
-		}
-		// Spec stage: steer the model through Specify -> Plan -> Tasks and an
-		// explicit approval handoff before any changes. Ephemeral (not
-		// persisted to s.Persistence().System()) so it disappears once the
-		// stage advances to Implementing.
-		if stage := s.PermSvc().SpecStage(); stage != SpecStageNone && stage != SpecStageImplementing {
-			opts.System += specStageSystemPrompt
-			// Inject project constitution as governing principles
-			if constitution := constitutionForPrompt(s.PermSvc().SpecSlug()); constitution != "" {
-				opts.System += constitution
-			}
-			// Inject user's spec configuration (language, framework, etc.)
-			// as context so the model writes specs that match preferences.
-			if cfgPrompt := specConfigForPrompt(); cfgPrompt != "" {
-				opts.System += cfgPrompt
-			}
-		}
-		// Work mode (plan/act/review) — ephemeral product control plane.
-		if addon := s.workModeSystemAddon(); addon != "" {
-			opts.System += "\n\n" + addon
-		}
-		if s.Tools() != nil && s.Tools().Registry() != nil {
-			// Promote only the small set of registered tools that match the
-			// current request. This keeps the default schema compact while
-			// making URL, verification, git, and code-intelligence requests
-			// discoverable without requiring the model to guess ToolSearch.
-			if lastUserMsg != "" {
-				s.Tools().Registry().PromoteForIntent(lastUserMsg)
-			}
-			if !smallTalk {
-				opts.Tools = s.Tools().Registry().EyrieTools()
-			}
-		}
+		// Assemble the per-turn ChatOptions (system prompt tiering, ephemeral
+		// injections, promoted tools) via the extracted helper so agentLoop
+		// stays focused on the LLM call + stream consumption that follow.
+		opts := s.buildTurnOptions(turnContext{
+			ctx:         ctx,
+			activeModel: activeModel,
+			maxTok:      maxTok,
+			smallTalk:   smallTalk,
+			lastUserMsg: lastUserMsg,
+			taskType:    taskType,
+		})
 
 		// Inject memory metadata from yaad
 		if s.MemorySvc().Yaad() != nil && s.MemorySvc().Yaad().Ready() {
