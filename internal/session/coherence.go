@@ -147,7 +147,26 @@ func (ct *CoherenceTracker) FormatForPrompt() string {
 func (ct *CoherenceTracker) GetState() CoherenceState {
 	ct.mu.RLock()
 	defer ct.mu.RUnlock()
-	return ct.state
+	// Deep-copy: CoherenceState holds slices/pointers, so returning ct.state
+	// by value would share the underlying arrays with the live state. Without
+	// the copy, a caller mutating Threads/Pivots would race UpdateIntent /
+	// RecordPivot without holding the lock (M15).
+	threads := make([]*SessionThread, len(ct.state.Threads))
+	for i, t := range ct.state.Threads {
+		if t != nil {
+			tc := *t
+			threads[i] = &tc
+		}
+	}
+	pivots := make([]Pivot, len(ct.state.Pivots))
+	copy(pivots, ct.state.Pivots)
+	return CoherenceState{
+		Threads:         threads,
+		Pivots:          pivots,
+		LastUpdatedTurn: ct.state.LastUpdatedTurn,
+		CurrentAct:      ct.state.CurrentAct,
+		IntentSummary:   ct.state.IntentSummary,
+	}
 }
 
 func matchesAny(text, pattern string) bool {

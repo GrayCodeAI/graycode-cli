@@ -162,6 +162,22 @@ func TestSubcommandRegistry_NamesIsSorted(t *testing.T) {
 	}
 }
 
+// TestPackageSubcommandRegistry_IsPopulated verifies the real package-level
+// registry (built by the per-file init() functions) actually registered
+// subcommands and that the canonical entry points resolve (M12). A broken or
+// no-op init() would leave the registry empty or drop a command.
+func TestPackageSubcommandRegistry_IsPopulated(t *testing.T) {
+	if subcommandRegistry.Size() == 0 {
+		t.Fatal("package subcommandRegistry is empty — no init() registrations took effect")
+	}
+	// Core commands that must always resolve.
+	for _, name := range []string{"help", "config", "status", "quit"} {
+		if _, ok := subcommandRegistry.Lookup(name); !ok {
+			t.Errorf("package subcommandRegistry.Lookup(%q) = false", name)
+		}
+	}
+}
+
 // --- subcommand-interface contract ---
 
 func TestSubcommandInterface_Accessors(t *testing.T) {

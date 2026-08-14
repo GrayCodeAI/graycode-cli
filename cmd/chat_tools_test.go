@@ -189,6 +189,29 @@ func TestMergedMCPHeaders_ConfiguredAuthorizationTakesPrecedence(t *testing.T) {
 	}
 }
 
+// TestEssentialOptionalTools_NoOverlapOrDuplicates guards against drift between
+// the hand-maintained essentialTools() and optionalTools() lists (M11): a tool
+// must appear in exactly one list. Duplicates within a list or an overlap across
+// lists would silently double-register or misclassify a tool.
+func TestEssentialOptionalTools_NoOverlapOrDuplicates(t *testing.T) {
+	essential := essentialTools()
+	optional := optionalTools()
+
+	seen := make(map[string]struct{})
+	for _, tl := range essential {
+		if _, dup := seen[tl.Name()]; dup {
+			t.Fatalf("essentialTools() duplicates tool %q", tl.Name())
+		}
+		seen[tl.Name()] = struct{}{}
+	}
+	for _, tl := range optional {
+		if _, dup := seen[tl.Name()]; dup {
+			t.Fatalf("optionalTools() tool %q also appears in essentialTools()", tl.Name())
+		}
+		seen[tl.Name()] = struct{}{}
+	}
+}
+
 func TestDefaultRegistry_SkipsFailedStartupMCPServers(t *testing.T) {
 	orig := defaultRegistryLoadMCPTools
 	t.Cleanup(func() { defaultRegistryLoadMCPTools = orig })
