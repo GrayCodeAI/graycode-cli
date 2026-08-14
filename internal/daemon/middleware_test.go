@@ -70,22 +70,30 @@ func TestGenerateRequestID(t *testing.T) {
 	}
 }
 
-func TestIsCORSSettingAllowed(t *testing.T) {
+func TestMatchCORSOrigin(t *testing.T) {
 	s := &Server{corsOrigins: []string{"http://example.com", "http://other.com"}}
 	for _, origin := range []string{"http://example.com", "http://other.com"} {
-		if !s.isCORSSettingAllowed(origin) {
-			t.Errorf("isCORSSettingAllowed(%q) = false, want true", origin)
+		matched, wildcard := s.matchCORSOrigin(origin)
+		if !matched {
+			t.Errorf("matchCORSOrigin(%q) = false, want true", origin)
+		}
+		if wildcard {
+			t.Errorf("matchCORSOrigin(%q) = wildcard true, want false", origin)
 		}
 	}
 	for _, origin := range []string{"http://evil.com", ""} {
-		if s.isCORSSettingAllowed(origin) {
-			t.Errorf("isCORSSettingAllowed(%q) = true, want false", origin)
+		if matched, _ := s.matchCORSOrigin(origin); matched {
+			t.Errorf("matchCORSOrigin(%q) = true, want false", origin)
 		}
 	}
 
 	wildcard := &Server{corsOrigins: []string{"*"}}
-	if !wildcard.isCORSSettingAllowed("http://anything.com") {
+	matched, isWildcard := wildcard.matchCORSOrigin("http://anything.com")
+	if !matched {
 		t.Error("wildcard origin should allow any origin")
+	}
+	if !isWildcard {
+		t.Error("wildcard origin should report wildcard=true")
 	}
 }
 

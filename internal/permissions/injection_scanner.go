@@ -56,7 +56,15 @@ type ScanResult struct {
 	Recommendation string
 }
 
-// InjectionScanner detects malicious prompt injection attempts in user input and tool outputs.
+// InjectionScanner is a SIGNAL, not an authorization boundary. It detects
+// probable prompt-injection patterns in user input and tool output and flags
+// them for audit/visibility, but its result must never be the sole gate on a
+// tool call. Deterministic policy (hard-deny lists, the Guardian's structured
+// review, containment of untrusted data in <tool_data>) is what actually
+// enforces the decision; this scanner is a noisy heuristic that is trivially
+// evaded by paraphrase, non-English text, or encoding. See the security review
+// (H9): keep it as a detection signal, and do not promote it to a gate without
+// structural containment backing the decision.
 type InjectionScanner struct {
 	Patterns  []*InjectionPattern
 	Threshold float64

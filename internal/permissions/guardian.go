@@ -222,7 +222,13 @@ func (g *Guardian) buildReviewPrompt(req GuardianRequest) string {
 func parseGuardianResponse(response string) (*GuardianDecision, error) {
 	response = strings.TrimSpace(response)
 
-	candidate := extractFirstJSONObject(response)
+	// Prefer a JSON object that carries the "allowed" key — the real decision —
+	// over an arbitrary earlier "{...}" that could be an injected fragment.
+	// Fall back to the first object for backward compatibility.
+	candidate := extractJSONObjectWithKey(response, "allowed")
+	if candidate == "" {
+		candidate = extractFirstJSONObject(response)
+	}
 	if candidate == "" {
 		return nil, fmt.Errorf("%w: no JSON object found in %q", ErrGuardianUnparseable, truncateForLog(response, 200))
 	}
@@ -296,6 +302,56 @@ func extractFirstJSONObject(response string) string {
 				depth--
 				if depth == 0 {
 					return response[i : j+1]
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// extractJSONObjectWithKey walks response and returns the first brace-balanced
+// JSON object substring that contains the given JSON object key (e.g.
+// "allowed"), or "" if none does. It reuses the same brace/tracking rules as
+// extractFirstJSONObject. Preferring a key-bearing object makes the parser
+// resists an adversary that prepends a spoofed "{...}" ahead of the real
+// decision: injected fragments without the expected key are skipped.
+func extractJSONObjectWithKey(response, key string) string {
+	for i := 0; i < len(response); i++ {
+		if response[i] != '{' {
+			continue
+		}
+		depth := 0
+		inString := false
+		escape := false
+		for j := i; j < len(response); j++ {
+			c := response[j]
+			if escape {
+				escape = false
+				continue
+			}
+			if c == '\\' && inString {
+				escape = true
+				continue
+			}
+			if c == '"' {
+				inString = !inString
+				continue
+			}
+			if inString {
+				continue
+			}
+			if c == '{' {
+				depth++
+				continue
+			}
+			if c == '}' {
+				depth--
+				if depth == 0 {
+					obj := response[i : j+1]
+					if strings.Contains(obj, key) {
+						return obj
+					}
+					break // this object lacks the key; move to the next '{'
 				}
 			}
 		}
