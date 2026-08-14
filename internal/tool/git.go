@@ -3,6 +3,7 @@ package tool
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -85,7 +86,8 @@ func (t GitTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 	out, err := cmd.CombinedOutput()
 	output := string(out)
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			return fmt.Sprintf("exit code: %d\n%s", exitErr.ExitCode(), output), nil
 		}
 		return "", fmt.Errorf("git exec: %w", err)

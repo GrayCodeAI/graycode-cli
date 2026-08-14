@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -293,7 +294,8 @@ func runVerificationCommand(parent context.Context, root string, spec verificati
 	if err != nil {
 		result.Status = "failed"
 		result.ExitCode = 1
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			result.ExitCode = exitErr.ExitCode()
 		} else {
 			result.Error = err.Error()

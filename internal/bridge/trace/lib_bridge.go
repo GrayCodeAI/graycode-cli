@@ -8,6 +8,7 @@ package tracebridge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -253,7 +254,7 @@ func (a *SubprocessBridgeAdapter) Enable(ctx context.Context, _ string) error {
 // Disable stops the active capture session, mirroring the `trace disable` subprocess call.
 func (a *SubprocessBridgeAdapter) Disable(ctx context.Context, _ string) error {
 	_, err := a.capture.StopCapture(ctx)
-	if err == ErrNotActive {
+	if errors.Is(err, ErrNotActive) {
 		return nil // idempotent: disable on an already-disabled session is a no-op
 	}
 	return err

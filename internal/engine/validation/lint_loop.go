@@ -3,6 +3,7 @@ package validation
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -114,7 +115,8 @@ func (ll *LintLoop) RunLint(path string) (*LintResult, error) {
 
 	// Lint failed — parse errors from output
 	exitCode := 1
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		exitCode = exitErr.ExitCode()
 	}
 

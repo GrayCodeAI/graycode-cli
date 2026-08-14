@@ -1,4 +1,4 @@
-package session
+package compression
 
 import (
 	"fmt"
@@ -298,19 +298,17 @@ func SemanticCompress(messages []CompressMessage, budget int) []CompressMessage 
 	result := make([]CompressMessage, 0)
 
 	for _, group := range groups {
-		if len(group) == 0 {
+		if len(group.messages) == 0 {
 			continue
 		}
 
-		// Check if this is a recent group (contains messages from last 20%)
+		// Check if this is a recent group (contains messages from last 20%).
+		// Use the members' original indices (carried by the group) instead of
+		// content equality, which is ambiguous when the same text recurs.
 		lastIdx := -1
-		for i, msg := range messages {
-			for _, gMsg := range group {
-				if msg.Content == gMsg.Content && msg.Role == gMsg.Role {
-					if i > lastIdx {
-						lastIdx = i
-					}
-				}
+		for _, idx := range group.indices {
+			if idx > lastIdx {
+				lastIdx = idx
 			}
 		}
 
@@ -318,15 +316,15 @@ func SemanticCompress(messages []CompressMessage, budget int) []CompressMessage 
 
 		if isRecent {
 			// Keep recent topics verbatim
-			result = append(result, group...)
-		} else if len(group) <= 2 {
+			result = append(result, group.messages...)
+		} else if len(group.messages) <= 2 {
 			// Short groups kept as-is
-			result = append(result, group...)
+			result = append(result, group.messages...)
 		} else {
 			// Keep the conclusion (last message) and summarize the journey
-			journeySummary := createSummaryMessage(group[:len(group)-1])
+			journeySummary := createSummaryMessage(group.messages[:len(group.messages)-1])
 			result = append(result, journeySummary)
-			result = append(result, group[len(group)-1])
+			result = append(result, group.messages[len(group.messages)-1])
 		}
 	}
 
@@ -645,13 +643,25 @@ func selectiveKeep(messages []CompressMessage) []CompressMessage {
 	return result
 }
 
-func groupByTopic(messages []CompressMessage) [][]CompressMessage {
+// topicGroup is a group of messages that share a topic, paired with each
+// member's original index in the source slice. Carrying the indices avoids
+// identifying members by content equality (which is ambiguous when the same
+// text appears more than once — e.g. repeated "ok" or identical tool results).
+type topicGroup struct {
+	messages []CompressMessage
+	indices  []int
+}
+
+func groupByTopic(messages []CompressMessage) []topicGroup {
 	if len(messages) == 0 {
 		return nil
 	}
 
-	groups := make([][]CompressMessage, 0)
-	current := []CompressMessage{messages[0]}
+	groups := make([]topicGroup, 0)
+	current := topicGroup{
+		messages: []CompressMessage{messages[0]},
+		indices:  []int{0},
+	}
 
 	for i := 1; i < len(messages); i++ {
 		// Topic boundary heuristics:
@@ -660,13 +670,17 @@ func groupByTopic(messages []CompressMessage) [][]CompressMessage {
 		// - Significant gap in tool usage patterns
 		if isTopicBoundary(messages[i-1], messages[i]) {
 			groups = append(groups, current)
-			current = []CompressMessage{messages[i]}
+			current = topicGroup{
+				messages: []CompressMessage{messages[i]},
+				indices:  []int{i},
+			}
 		} else {
-			current = append(current, messages[i])
+			current.messages = append(current.messages, messages[i])
+			current.indices = append(current.indices, i)
 		}
 	}
 
-	if len(current) > 0 {
+	if len(current.messages) > 0 {
 		groups = append(groups, current)
 	}
 

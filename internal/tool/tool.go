@@ -33,6 +33,77 @@ type AliasedTool interface {
 	Aliases() []string
 }
 
+// ToolSchema is a typed, compile-time-safe description of a tool's input
+// schema. It replaces the error-prone hand-written map[string]interface{}
+// JSON-schema literals that every tool used to embed in Parameters(). A
+// ToolSchema converts to the wire format via ToJSONSchema(), so the external
+// EyrieTool.Parameters contract (map[string]interface{}) is unchanged.
+//
+// Tools that don't implement SchemaProvider keep working exactly as before —
+// Parameters() is still the source of truth and validation stays permissive.
+type ToolSchema struct {
+	// Type is the JSON-schema type, almost always "object" for tool inputs.
+	Type string
+	// Properties maps each input field name to its schema.
+	Properties map[string]SchemaProperty
+	// Required lists required field names.
+	Required []string
+}
+
+// SchemaProperty describes a single tool input field.
+type SchemaProperty struct {
+	Type        string      `json:"type"`
+	Description string      `json:"description,omitempty"`
+	Default     interface{} `json:"default,omitempty"`
+	// Enum, if non-nil, restricts the value to one of the listed options.
+	Enum []interface{} `json:"enum,omitempty"`
+	// Items describes the element type for array fields.
+	Items *SchemaProperty `json:"items,omitempty"`
+}
+
+// SchemaProvider is an optional interface tools can implement to expose a typed
+// input schema. When a tool provides one, ValidateToolInput checks types and
+// enums in addition to the required-field presence check that all tools get.
+type SchemaProvider interface {
+	// Schema returns the typed input schema. Implementations should derive it
+	// from the same source as Parameters() so the two never diverge.
+	Schema() ToolSchema
+}
+
+// ToJSONSchema converts the typed schema to the wire-format
+// map[string]interface{} expected by EyrieTool.Parameters.
+func (s ToolSchema) ToJSONSchema() map[string]interface{} {
+	props := make(map[string]interface{}, len(s.Properties))
+	for name, p := range s.Properties {
+		props[name] = p.toMap()
+	}
+	schema := map[string]interface{}{
+		"type":       s.Type,
+		"properties": props,
+	}
+	if len(s.Required) > 0 {
+		schema["required"] = s.Required
+	}
+	return schema
+}
+
+func (p SchemaProperty) toMap() map[string]interface{} {
+	m := map[string]interface{}{"type": p.Type}
+	if p.Description != "" {
+		m["description"] = p.Description
+	}
+	if p.Default != nil {
+		m["default"] = p.Default
+	}
+	if len(p.Enum) > 0 {
+		m["enum"] = p.Enum
+	}
+	if p.Items != nil {
+		m["items"] = p.Items.toMap()
+	}
+	return m
+}
+
 // RiskLevelProvider can be implemented by tools to declare their risk level.
 // Tools that don't implement it default to "medium".
 type RiskLevelProvider interface {
@@ -279,8 +350,8 @@ func (r *Registry) EyrieTools() []types.EyrieTool {
 // against the tool's declared schema before dispatch (H5).
 func (r *Registry) Execute(ctx context.Context, name string, input json.RawMessage) (string, error) {
 	r.mu.RLock()
-	defer r.mu.RUnlock()
 	t, ok := r.tools[name]
+	r.mu.RUnlock()
 	if !ok {
 		return "", fmt.Errorf("unknown tool: %s", name)
 	}

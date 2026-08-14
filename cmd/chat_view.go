@@ -408,9 +408,9 @@ func (m chatModel) View() tea.View {
 		}
 		if slashOpen {
 			if sugs := m.slashSuggestionsFor(m.input.Value()); len(sugs) > 0 {
-				if m.slashSel < 0 || m.slashSel >= len(sugs) {
-					m.slashSel = 0
-				}
+				// NOTE: slashSel is clamped in Update (chat_update.go) and
+				// submit (chat_submit.go), not here — View is by-value, so any
+				// mutation would be silently discarded.
 				cmdStyle := slashCmdStyle
 				descStyle := slashDescStyle
 				selCmdStyle := slashSelCmdStyle

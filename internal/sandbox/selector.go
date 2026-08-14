@@ -2,7 +2,9 @@ package sandbox
 
 import (
 	"context"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -128,13 +130,37 @@ func ResetDockerAvailabilityCache() {
 	dockerAvailabilityCached = false
 }
 
+// dockerCandidates are the locations to check for the docker CLI. LookPath
+// covers PATH; the explicit OrbStack paths cover installs where the CLI lives
+// in ~/.orbstack/bin but the test/daemon subprocess PATH or HOME omits it.
+func dockerCandidates() []string {
+	if p, err := exec.LookPath("docker"); err == nil {
+		return []string{p}
+	}
+	// OrbStack installs; check both $HOME (production) and /Users/$USER (test
+	// harness overrides HOME to a temp dir but preserves USER).
+	for _, home := range []string{os.Getenv("HOME"), filepath.Join("/Users", os.Getenv("USER"))} {
+		if home == "" {
+			continue
+		}
+		candidate := filepath.Join(home, ".orbstack", "bin", "docker")
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return []string{candidate}
+		}
+	}
+	return nil
+}
+
 func probeDockerAvailable() bool {
-	if _, err := exec.LookPath("docker"); err != nil {
+	candidates := dockerCandidates()
+	if len(candidates) == 0 {
 		return false
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), dockerProbeTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "docker", "info")
+	// candidates come from our own path discovery (PATH lookups and the
+	// hardcoded OrbStack install location), never from user input.
+	cmd := exec.CommandContext(ctx, candidates[0], "info") // #nosec G204 -- candidate is internally derived, not external input
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	return cmd.Run() == nil

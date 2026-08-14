@@ -22,6 +22,106 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
+// turnContext carries the per-turn, pre-compute values that buildTurnOptions
+// assembles into a ChatOptions. Extracting it keeps agentLoop readable and
+// gives the prompt-assembly logic a single home (H3).
+type turnContext struct {
+	ctx         context.Context
+	activeModel string
+	maxTok      int
+	smallTalk   bool
+	lastUserMsg string
+	taskType    string
+}
+
+// buildTurnOptions assembles the ChatOptions for a single agentic turn: base
+// system prompt (tiered for small-talk), ephemeral injections (beliefs, memory
+// nudge, smart skills, spec stage, work mode), promoted tools, and the active
+// model. Kept side-effect free except for PromoteForIntent (a cache warm) so it
+// can be reasoned about and tested in isolation from the LLM call + stream
+// consumption that follow it in agentLoop.
+func (s *Session) buildTurnOptions(tc turnContext) types.ChatOptions {
+	activeModel := tc.activeModel
+	maxTok := tc.maxTok
+	smallTalk := tc.smallTalk
+	lastUserMsg := tc.lastUserMsg
+
+	baseSystem := s.Persistence().System()
+	if smallTalk {
+		// The identity preamble already coaches the model to answer
+		// greetings without tools — the role/tool/practice sections
+		// below it only add prefill cost on this turn.
+		baseSystem = prompt.System()
+	}
+	baseOpts := s.ChatLLM().BuildOptions(baseSystem, activeModel, maxTok, nil)
+	opts := baseOpts
+	// Inject beliefs as ephemeral context (not persisted to s.Persistence().System())
+	if s.LifecycleSvc().Beliefs() != nil && s.LifecycleSvc().Beliefs().Size() > 0 {
+		if summary := s.LifecycleSvc().Beliefs().FormatForPrompt(); summary != "" {
+			opts.System += "\n\n## Agent Beliefs\n" + summary
+		}
+	}
+	// Activity nudge: remind agent to persist learnings if idle. Injected
+	// ephemerally (not persisted) so it never accumulates across turns.
+	if s.MemorySvc().Activity() != nil {
+		if nudge := s.MemorySvc().Activity().NudgeMessage(); nudge != "" {
+			opts.System += "\n\n" + nudge
+		}
+	}
+	// Auto-skill: match smart skills against the last user message and
+	// inject a compact listing. The LLM uses the Skill tool for full content.
+	smartSkills := s.LifecycleSvc().SmartSkills()
+	if len(smartSkills) > 0 {
+		lum := ""
+		for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
+			if s.Persistence().RawMessages()[i].Role == "user" && len(s.Persistence().RawMessages()[i].ToolResults) == 0 {
+				lum = s.Persistence().RawMessages()[i].Content
+				break
+			}
+		}
+		if lum != "" {
+			if matched := plugin.MatchSkillsByContext(smartSkills, lum); len(matched) > 0 {
+				if skillsPrompt := plugin.FormatSkillsCompact(matched); skillsPrompt != "" {
+					opts.System += "\n\n" + skillsPrompt
+				}
+			}
+		}
+	}
+	// Spec stage: steer the model through Specify -> Plan -> Tasks and an
+	// explicit approval handoff before any changes. Ephemeral (not
+	// persisted to s.Persistence().System()) so it disappears once the
+	// stage advances to Implementing.
+	if stage := s.PermSvc().SpecStage(); stage != SpecStageNone && stage != SpecStageImplementing {
+		opts.System += specStageSystemPrompt
+		// Inject project constitution as governing principles
+		if constitution := constitutionForPrompt(s.PermSvc().SpecSlug()); constitution != "" {
+			opts.System += constitution
+		}
+		// Inject user's spec configuration (language, framework, etc.)
+		// as context so the model writes specs that match preferences.
+		if cfgPrompt := specConfigForPrompt(); cfgPrompt != "" {
+			opts.System += cfgPrompt
+		}
+	}
+	// Work mode (plan/act/review) — ephemeral product control plane.
+	if addon := s.workModeSystemAddon(); addon != "" {
+		opts.System += "\n\n" + addon
+	}
+	if s.Tools() != nil && s.Tools().Registry() != nil {
+		// Promote only the small set of registered tools that match the
+		// current request. This keeps the default schema compact while
+		// making URL, verification, git, and code-intelligence requests
+		// discoverable without requiring the model to guess ToolSearch.
+		if lastUserMsg != "" {
+			s.Tools().Registry().PromoteForIntent(lastUserMsg)
+		}
+		if !smallTalk {
+			opts.Tools = s.Tools().Registry().EyrieTools()
+		}
+	}
+	return opts
+}
+
 // Stream runs the agentic loop: LLM → tool_use → execute → loop.
 func (s *Session) Stream(ctx context.Context) (<-chan StreamEvent, error) {
 	ch := make(chan StreamEvent, 64)
@@ -31,6 +131,16 @@ func (s *Session) Stream(ctx context.Context) (<-chan StreamEvent, error) {
 
 func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	defer close(ch)
+	// emit sends an event to the consumer, but abandons the send (instead of
+	// blocking forever) if the context is already done — e.g. the consumer
+	// exited early after an error. This bounds the agentLoop goroutine and
+	// prevents leaks on the post-stream bare sends below.
+	emit := func(ev StreamEvent) {
+		select {
+		case ch <- ev:
+		case <-ctx.Done():
+		}
+	}
 	sessionStart := time.Now()
 
 	// Start session-level trace span
@@ -121,7 +231,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Context governor: collapse → micro/smart/truncate (settings threshold %).
 		tokensBefore := EstimateTokens(s.Persistence().RawMessages())
 		if s.WillCompactBeforeTurn() {
-			ch <- StreamEvent{Type: "compact_start"}
+			emit(StreamEvent{Type: "compact_start"})
 		}
 		if compactStrategy, didCompact := s.ManageContextBeforeTurn(ctx); didCompact {
 			tokensAfter := EstimateTokens(s.Persistence().RawMessages())
@@ -129,12 +239,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				"strategy": compactStrategy,
 				"messages": len(s.Persistence().RawMessages()),
 			})
-			ch <- StreamEvent{
+			emit(StreamEvent{
 				Type:         "compact",
 				Content:      compactStrategy,
 				TokensBefore: tokensBefore,
 				TokensAfter:  tokensAfter,
-			}
+			})
 		}
 
 		// Integration pipeline: pre-query (intent, tools, budget, injection scan, cache)
@@ -150,14 +260,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			if preResult != nil {
 				// Cache hit: short-circuit the LLM call
 				if preResult.CacheHit && preResult.CachedResponse != "" {
-					ch <- StreamEvent{Type: "content", Content: preResult.CachedResponse}
+					emit(StreamEvent{Type: "content", Content: preResult.CachedResponse})
 					s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse}))
-					ch <- StreamEvent{Type: "done"}
+					emit(StreamEvent{Type: "done"})
 					return
 				}
 				if preResult.InjectionRisk != nil && preResult.InjectionRisk.IsRisky {
 					if preResult.InjectionRisk.RiskLevel == "high" {
-						ch <- StreamEvent{Type: "error", Content: "High-risk prompt injection detected. Message blocked."}
+						emit(StreamEvent{Type: "error", Content: "High-risk prompt injection detected. Message blocked."})
 						return
 					}
 					s.Logger().Warn("injection risk detected", map[string]interface{}{
@@ -205,7 +315,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			activeModel = s.LifecycleSvc().Cascade().SelectModel(lastUserMsg, activeModel, "")
 		}
 		if strings.TrimSpace(activeModel) == "" {
-			ch <- StreamEvent{Type: "error", Content: "no model selected — open /config → Models and pick one"}
+			emit(StreamEvent{Type: "error", Content: "no model selected — open /config → Models and pick one"})
 			return
 		}
 
@@ -233,76 +343,17 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 		smallTalk := lastUserMsg != "" && isSmallTalkPrompt(lastUserMsg) && !sessionHasToolUse(s.Persistence().RawMessages())
 
-		// Build the LLM ChatOptions via the ChatService. The service owns
-		// the GLMThinking toggle, output schema, anthropic caching flag,
-		// and the active provider/model — building opts manually here
-		// would duplicate that logic.
-		baseSystem := s.Persistence().System()
-		if smallTalk {
-			// The identity preamble already coaches the model to answer
-			// greetings without tools — the role/tool/practice sections
-			// below it only add prefill cost on this turn.
-			baseSystem = prompt.System()
-		}
-		baseOpts := s.ChatLLM().BuildOptions(baseSystem, activeModel, maxTok, nil)
-		opts := baseOpts
-		// Inject beliefs as ephemeral context (not persisted to s.Persistence().System())
-		if s.LifecycleSvc().Beliefs() != nil && s.LifecycleSvc().Beliefs().Size() > 0 {
-			if summary := s.LifecycleSvc().Beliefs().FormatForPrompt(); summary != "" {
-				opts.System += "\n\n## Agent Beliefs\n" + summary
-			}
-		}
-		// Auto-skill: match smart skills against the last user message and
-		// inject a compact listing. The LLM uses the Skill tool for full content.
-		smartSkills := s.LifecycleSvc().SmartSkills()
-		if len(smartSkills) > 0 {
-			lastUserMsg := ""
-			for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
-				if s.Persistence().RawMessages()[i].Role == "user" && len(s.Persistence().RawMessages()[i].ToolResults) == 0 {
-					lastUserMsg = s.Persistence().RawMessages()[i].Content
-					break
-				}
-			}
-			if lastUserMsg != "" {
-				if matched := plugin.MatchSkillsByContext(smartSkills, lastUserMsg); len(matched) > 0 {
-					if skillsPrompt := plugin.FormatSkillsCompact(matched); skillsPrompt != "" {
-						opts.System += "\n\n" + skillsPrompt
-					}
-				}
-			}
-		}
-		// Spec stage: steer the model through Specify -> Plan -> Tasks and an
-		// explicit approval handoff before any changes. Ephemeral (not
-		// persisted to s.Persistence().System()) so it disappears once the
-		// stage advances to Implementing.
-		if stage := s.PermSvc().SpecStage(); stage != SpecStageNone && stage != SpecStageImplementing {
-			opts.System += specStageSystemPrompt
-			// Inject project constitution as governing principles
-			if constitution := constitutionForPrompt(s.PermSvc().SpecSlug()); constitution != "" {
-				opts.System += constitution
-			}
-			// Inject user's spec configuration (language, framework, etc.)
-			// as context so the model writes specs that match preferences.
-			if cfgPrompt := specConfigForPrompt(); cfgPrompt != "" {
-				opts.System += cfgPrompt
-			}
-		}
-		// Work mode (plan/act/review) — ephemeral product control plane.
-		if addon := s.workModeSystemAddon(); addon != "" {
-			opts.System += "\n\n" + addon
-		}
-		if s.Tools() != nil && s.Tools().Registry() != nil {
-			// Promote only the small set of registered tools that match the
-			// current request. This keeps the default schema compact while
-			// making URL, verification, git, and code-intelligence requests
-			// discoverable without requiring the model to guess ToolSearch.
-			if lastUserMsg != "" {
-				s.Tools().Registry().PromoteForIntent(lastUserMsg)
-			}
-			if !smallTalk {
-				opts.Tools = s.Tools().Registry().EyrieTools()
-			}
-		}
+		// Assemble the per-turn ChatOptions (system prompt tiering, ephemeral
+		// injections, promoted tools) via the extracted helper so agentLoop
+		// stays focused on the LLM call + stream consumption that follow.
+		opts := s.buildTurnOptions(turnContext{
+			ctx:         ctx,
+			activeModel: activeModel,
+			maxTok:      maxTok,
+			smallTalk:   smallTalk,
+			lastUserMsg: lastUserMsg,
+			taskType:    taskType,
+		})
 
 		// Inject memory metadata from yaad
 		if s.MemorySvc().Yaad() != nil && s.MemorySvc().Yaad().Ready() {
@@ -333,7 +384,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		inPrice, outPrice := ModelPricing(s.ChatLLM().Model())
 		estCost := float64(inputTokens)*inPrice/1_000_000 + float64(maxTok)*outPrice/1_000_000
 		if estCost > 0.50 {
-			ch <- StreamEvent{Type: "blast_radius", Content: fmt.Sprintf("%s This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.", icons.Alert(), inputTokens+maxTok, estCost)}
+			emit(StreamEvent{Type: "blast_radius", Content: fmt.Sprintf("%s This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.", icons.Alert(), inputTokens+maxTok, estCost)})
 		}
 
 		// Trace: start agent loop span for this turn
@@ -362,7 +413,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			s.Logger().Error("stream error", map[string]interface{}{
 				"error": err.Error(),
 			})
-			ch <- StreamEvent{Type: "error", Content: err.Error()}
+			emit(StreamEvent{Type: "error", Content: err.Error()})
 			return
 		}
 
@@ -492,13 +543,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			case <-retryTimer.C:
 			case <-ctx.Done():
 				retryTimer.Stop()
-				ch <- StreamEvent{Type: "error", Content: "stream retry cancelled: " + ctx.Err().Error()}
+				emit(StreamEvent{Type: "error", Content: "stream retry cancelled: " + ctx.Err().Error()})
 				result.Close()
 				return
 			}
 
 			// Notify consumer to discard previously streamed content for this turn.
-			ch <- StreamEvent{Type: "retry", Content: fmt.Sprintf("retrying after %s (attempt %d)", retryReason, streamAttempt+2)}
+			emit(StreamEvent{Type: "retry", Content: fmt.Sprintf("retrying after %s (attempt %d)", retryReason, streamAttempt+2)})
 
 			// Re-open the stream for retry. We bypass the ChatService
 			// here on purpose: ChatService.Stream has its own retry
@@ -507,7 +558,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			// The session agent loop owns this layer.
 			result, err = s.ChatLLM().Client().StreamChatContinue(ctx, s.Persistence().RawMessages(), opts, types.DefaultContinuationConfig())
 			if err != nil {
-				ch <- StreamEvent{Type: "error", Content: err.Error()}
+				emit(StreamEvent{Type: "error", Content: err.Error()})
 				return
 			}
 			// Reset accumulated state for the retry
@@ -519,7 +570,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			streamErr = nil
 		}
 		if streamErr != nil {
-			ch <- StreamEvent{Type: "error", Content: streamErr.Error()}
+			emit(StreamEvent{Type: "error", Content: streamErr.Error()})
 			return
 		}
 
@@ -559,8 +610,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// checkGuardConditions) enforces the same budget as this explicit check.
 		limits.SetCostUSD(s.CostValue().TotalUSD())
 		if limits.MaxBudgetUSD() > 0 && s.CostValue().TotalUSD() >= limits.MaxBudgetUSD() {
-			ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nBudget limit reached ($%.2f spent of $%.2f).", s.CostValue().TotalUSD(), limits.MaxBudgetUSD())}
-			ch <- StreamEvent{Type: "done"}
+			emit(StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nBudget limit reached ($%.2f spent of $%.2f).", s.CostValue().TotalUSD(), limits.MaxBudgetUSD())})
+			emit(StreamEvent{Type: "done"})
 			return
 		}
 
@@ -583,7 +634,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			excess := toolCalls[maxToolCallsPerStep:]
 			toolCalls = toolCalls[:maxToolCallsPerStep]
 			for _, tc := range excess {
-				ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Error: too many tool calls in one step (max 32). Retry with fewer calls."}
+				emit(StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Error: too many tool calls in one step (max 32). Retry with fewer calls."})
 			}
 		}
 
@@ -599,13 +650,6 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if loopSpan != nil {
 			loopSpan.SetTag("tools", fmt.Sprintf("%d", len(toolCalls)))
 			oteltrace.EndSpanWithError(loopSpan, nil)
-		}
-
-		// Activity nudge: remind agent to persist learnings if idle
-		if s.MemorySvc().Activity() != nil {
-			if nudge := s.MemorySvc().Activity().NudgeMessage(); nudge != "" {
-				s.AppendSystemContext(nudge)
-			}
 		}
 
 		// Compatibility-only max_tokens recovery. Eyrie's engine facade owns
@@ -634,14 +678,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 			if textContent.Len() > 0 {
 				s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: textContent.String()}))
-				// Auto-remember corrections and learnings
+				// Auto-remember corrections and learnings. Best-effort
+				// fire-and-forget: the memory backend's Remember does not yet
+				// accept a context, so this goroutine cannot be cancelled mid-call.
+				// MemoryService.Remember(ctx, ...) reserves ctx for exactly this
+				// extension when the backend becomes context-aware.
 				if s.MemorySvc().Memory() != nil && shouldRemember(textContent.String()) {
 					go func(content string) {
-						// Use timeout context so goroutine doesn't hang if backend is slow.
-						rCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
-						defer cancel()
 						_ = s.MemorySvc().Memory().Remember(content, "assistant_learning")
-						_ = rCtx // timeout context available if Remember is extended to accept it
 					}(textContent.String())
 				}
 			}
@@ -716,7 +760,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					_ = s.MemorySvc().Yaad().Remember(string(content), "skill")
 				}()
 			}
-			ch <- StreamEvent{Type: "done"}
+			emit(StreamEvent{Type: "done"})
 			// Integration pipeline: end-session (assess, learn, store experience)
 			if s.LifecycleSvc().Pipeline() != nil {
 				taskGoal := ""
@@ -839,7 +883,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					Role:    "user",
 					Content: "[User guidance during execution]: " + steer.Content,
 				}))
-				ch <- StreamEvent{Type: "content", Content: "\n[Steering received: " + steer.Content + "]\n"}
+				emit(StreamEvent{Type: "content", Content: "\n[Steering received: " + steer.Content + "]\n"})
 			}
 		}
 
@@ -859,7 +903,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if s.Tools().Sandbox() != nil && s.Tools().Sandbox().IsEnabled() {
 			pending := s.Tools().Sandbox().List()
 			if len(pending) > 0 {
-				ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n[%d change(s) staged for review]", len(pending))}
+				emit(StreamEvent{Type: "content", Content: fmt.Sprintf("\n[%d change(s) staged for review]", len(pending))})
 			}
 		}
 
@@ -896,17 +940,41 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 // full system prompt nor any tool schemas. The system prompt instructs the
 // model to answer these directly, so sending the tool surface would only
 // add prompt-prefill cost.
+// isSmallTalkPrompt detects short greetings/closings so the payload can be
+// tiered down. The match must be conservative: this function decides whether
+// to SKIP the full prompt context, so a false positive (dropping context for a
+// real request like "hi there, who fixes this bug?") is far costlier than a
+// false negative (sending a slightly bigger payload for genuine small talk).
+//
+// It returns true when the whole prompt is small talk: an exact match against
+// a closed phrase list, or a phrase followed only by short filler (no comma or
+// clause that introduces a real request).
 func isSmallTalkPrompt(prompt string) bool {
 	text := strings.ToLower(strings.TrimSpace(prompt))
 	text = strings.Trim(text, " \t\r\n.,!?;:")
-	switch text {
-	case "hi", "hello", "hey", "how are you", "how are you doing", "how's it going", "what's up",
-		"who are you", "what can you do", "thanks", "thank you", "good morning", "good afternoon",
-		"good evening", "nice to meet you", "goodbye", "bye":
-		return true
-	default:
-		return false
+	for _, phrase := range smallTalkPhrases {
+		if text == phrase {
+			return true
+		}
+		// Allow a trailing filler word (e.g. "hi there") but stop at a comma or
+		// anything that looks like a real request clause.
+		if strings.HasPrefix(text, phrase+" ") {
+			remainder := text[len(phrase)+1:]
+			if !strings.ContainsAny(remainder, ",;:?") && len(remainder) <= 12 {
+				return true
+			}
+		}
 	}
+	return false
+}
+
+var smallTalkPhrases = []string{
+	"hi", "hi there", "hello", "hey", "hey there",
+	"how are you", "how are you doing", "how's it going", "how's it going today",
+	"what's up", "who are you", "what can you do",
+	"thanks", "thank you", "thanks a lot",
+	"good morning", "good afternoon", "good evening", "nice to meet you",
+	"goodbye", "bye",
 }
 
 // sessionHasToolUse reports whether any message in the conversation already

@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -146,7 +147,7 @@ func TestHeal_ContextCanceled(t *testing.T) {
 	}
 	sh := NewSelfHealer(chatFn)
 	_, err := sh.Heal(ctx, script)
-	if err != context.Canceled {
+	if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context.Canceled, got %v", err)
 	}
 }

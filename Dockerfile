@@ -1,7 +1,7 @@
 # Build stage
 # Supply-chain hardening: both stages are pinned by digest so a mutable tag
 # cannot silently change the build.
-FROM golang:1.26.5-alpine@sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2 AS builder
+FROM golang:1.26.6-alpine@sha256:af8d6740070b8906d12eae1c3e3ea0957fb63f492051ea05e354c38ef9fe88df AS builder
 
 RUN apk upgrade --no-cache && \
     apk add --no-cache git ca-certificates tzdata
@@ -43,7 +43,7 @@ COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     rm -f go.work go.work.sum && \
-    { echo "go 1.26.5"; echo; echo "use ."; echo; echo "replace ("; \
+    { echo "go 1.26.6"; echo; echo "use ."; echo; echo "replace ("; \
       for repo in hawk-core-contracts eyrie inspect sight tok trace yaad; do \
         echo "	github.com/GrayCodeAI/${repo} => ./external/${repo}"; \
       done; echo ")"; } > go.work && \

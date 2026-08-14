@@ -411,7 +411,7 @@ func (gp *GitProvider) runGH(args ...string) (string, error) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("%s: %s", err, stderr.String())
+		return "", fmt.Errorf("%w: %s", err, stderr.String())
 	}
 
 	return stdout.String(), nil

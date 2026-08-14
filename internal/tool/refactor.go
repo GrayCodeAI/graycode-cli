@@ -10,8 +10,15 @@ import (
 	"sync"
 )
 
-// Refactorer applies common refactoring patterns using pure AST-based transformations
-// without requiring LLM calls.
+// Refactorer applies common refactoring patterns without requiring LLM calls.
+//
+// NOTE (M9): the current implementation is regex-based, not AST-based. That makes
+// it fast and dependency-free but imprecise: RenameSymbol can rename a symbol
+// inside a string literal, a comment, or a different scope that happens to share
+// the name, and ExtractFunction's parameter detection is heuristic. A correct
+// implementation needs go/ast + go/types (scope-aware resolution). Keep the
+// caller-facing contract small and verify results with a build/test before trusting
+// output on code where those edge cases matter.
 type Refactorer struct {
 	mu sync.Mutex
 }

@@ -1,6 +1,7 @@
 package session
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -40,11 +41,8 @@ func TestAcquireLock_AlreadyLocked(t *testing.T) {
 		t.Error("should fail when session is already locked")
 	}
 	var lockErr *SessionLockedError
-	if err != nil {
-		lockErr, _ = err.(*SessionLockedError)
-		if lockErr == nil {
-			t.Errorf("expected SessionLockedError, got %T", err)
-		}
+	if !errors.As(err, &lockErr) {
+		t.Errorf("expected SessionLockedError, got %T", err)
 	}
 }
 

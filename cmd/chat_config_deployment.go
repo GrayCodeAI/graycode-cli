@@ -83,7 +83,7 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 			if refreshErr := hawkconfig.RefreshCatalogAfterCredentials(ctx, nil); refreshErr == nil {
 				result, err = hawkconfig.ApplyEyrieCredentialsForProvider(ctx, inference.ProviderID)
 			} else {
-				err = fmt.Errorf("%w; automatic catalog refresh failed: %v", err, refreshErr)
+				err = fmt.Errorf("%w; automatic catalog refresh failed: %w", err, refreshErr)
 			}
 		}
 		if err != nil {

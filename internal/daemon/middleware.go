@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/feature"
@@ -59,7 +60,10 @@ func (s *Server) loggingMiddleware(next http.Handler) http.Handler {
 			slog.Info(
 				"http_request",
 				"method", r.Method,
-				"path", r.URL.Path,
+				// Redact credential-like segments (e.g. bot tokens embedded in URL
+				// paths such as Telegram's /bot<TOKEN>/...) so secrets never land
+				// in logs even if an inbound proxy folds an outbound URL into a path.
+				"path", redactURLPath(r.URL.Path),
 				"remote", clientIP(r),
 				"status", ww.status,
 				"duration_ms", duration.Milliseconds(),
@@ -114,8 +118,15 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		allowed := s.isCORSSettingAllowed(origin)
-		if allowed {
+		matched, wildcard := s.matchCORSOrigin(origin)
+		if wildcard {
+			// Wildcard: reflect "*" and omit credentials — browsers reject the
+			// "*" + Allow-Credentials combination, and reflecting an arbitrary
+			// origin with credentials would let any site authenticate against us.
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		} else if matched {
+			// Explicit origin: echo back only the matched origin (never the raw
+			// request Origin) and allow credentials.
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Set("Vary", "Origin")
@@ -170,16 +181,37 @@ func (rw *responseWriter) Flush() {
 
 // isCORSSettingAllowed reports whether the given origin is permitted
 // by the configured CORS origins.
-func (s *Server) isCORSSettingAllowed(origin string) bool {
+// matchCORSOrigin reports whether origin is allowed and whether the match came
+// from the wildcard entry "*". Callers use the wildcard flag to decide whether
+// it is safe to echo credentials (it is not — see corsMiddleware).
+func (s *Server) matchCORSOrigin(origin string) (matched bool, wildcard bool) {
 	for _, o := range s.corsOrigins {
 		if o == "*" {
-			return true
+			return true, true
 		}
 		if o == origin {
-			return true
+			return true, false
 		}
 	}
-	return false
+	return false, false
+}
+
+// credentialPathSegments are URL path prefixes that commonly embed a secret
+// token directly in the path (e.g. Telegram's /bot<TOKEN>/...). When a logged
+// path starts with one of these, the remainder of that segment is replaced
+// with "<REDACTED>" so the token never appears in logs.
+var credentialPathSegments = []string{"/bot"}
+
+// redactURLPath masks credential-like segments in a URL path before logging.
+// It only alters paths beginning with a known credential segment; everything
+// else is returned unchanged.
+func redactURLPath(path string) string {
+	for _, seg := range credentialPathSegments {
+		if strings.HasPrefix(path, seg) {
+			return seg + "<REDACTED>" + strings.TrimPrefix(path, seg)
+		}
+	}
+	return path
 }
 
 // installMiddleware wraps the server's mux with the standard middleware

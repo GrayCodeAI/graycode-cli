@@ -1,4 +1,4 @@
-package session
+package compression
 
 import (
 	"encoding/json"

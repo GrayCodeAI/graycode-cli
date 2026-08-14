@@ -456,7 +456,9 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 	cancel()
 	result.output, result.err, result.isErr, result.span = output, execErr, execErr != nil, span
 	if result.isErr {
-		result.output = fmt.Sprintf("Error: %s", execErr.Error())
+		// Preserve any partial output the tool produced before failing so the
+		// LLM can see what happened, then append the error.
+		result.output = output + "\n\nError: " + execErr.Error()
 	}
 	return result
 }

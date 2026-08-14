@@ -40,6 +40,11 @@ var usernsProbe = func() (bool, error) {
 	return strings.Contains(strings.ToLower(string(out)), "userns"), nil
 }
 
+// hostDockerInternal is the DNS name a Docker container resolves to reach the
+// host. A proxy bound on the host is reachable from inside the container at
+// this address (mapped to the docker gateway by Docker/Orbstack).
+const hostDockerInternal = "host.docker.internal"
+
 var (
 	usernsOnce sync.Once
 	usernsOK   bool
@@ -85,6 +90,9 @@ type ContainerSandbox struct {
 	isolatedNetName string
 	// credentialGate manages approval-gated access to host credentials.
 	credentialGate *CredentialGate
+	// proxy, if set, restricts container egress through a NetworkProxy. The proxy
+	// is started on Start and stopped on Stop.
+	proxy *NetworkProxy
 }
 
 // NewContainerSandbox creates a container sandbox for the given project.
@@ -94,6 +102,46 @@ func NewContainerSandbox(projectDir string) *ContainerSandbox {
 		image:      resolveImage(projectDir),
 		runtime:    LoadRuntimeConfig(projectDir),
 	}
+}
+
+// DefaultEgressProxyConfig returns a proxy configuration for restricting
+// container outbound traffic. It runs in allowlist mode: only destinations
+// matching AllowedDomains are permitted; everything else is blocked. The list
+// covers the common package registries and code hosts an agent needs (npm,
+// PyPI, GitHub, Go, crates.io, Docker Hub). Bind it to AllInterfaces so the
+// container reaches it via host.docker.internal.
+func DefaultEgressProxyConfig() ProxyConfig {
+	return ProxyConfig{
+		Host:                 AllInterfaces,
+		Mode:                 "allowlist",
+		LogRequests:          true,
+		BlockPrivateNetworks: true,
+		AllowedDomains: []string{
+			// JavaScript / TypeScript
+			"registry.npmjs.org", "*.npmjs.org",
+			// Python
+			"pypi.org", "files.pythonhosted.org",
+			// Go
+			"proxy.golang.org", "sum.golang.org", "*.golang.org",
+			// Rust
+			"crates.io", "static.crates.io", "docs.rs",
+			// GitHub / GitLab (code, releases, raw assets)
+			"github.com", "raw.githubusercontent.com", "objects.githubusercontent.com",
+			"gitlab.com",
+			// Container images
+			"registry-1.docker.io", "auth.docker.io", "production.cloudflare.docker.com",
+			// General CDN / object storage often used by builds
+			"cloudflare.com", "*.cloudflare.com",
+		},
+	}
+}
+
+// NewContainerSandboxWithEgressProxy creates a sandbox whose outbound traffic
+// is restricted to DefaultEgressProxyConfig. Use this for the secure default.
+func NewContainerSandboxWithEgressProxy(projectDir string) *ContainerSandbox {
+	cs := NewContainerSandbox(projectDir)
+	cs.SetNetworkProxy(NewNetworkProxy(DefaultEgressProxyConfig()))
+	return cs
 }
 
 // CredentialGate returns the container's credential gate, creating it on
@@ -123,6 +171,26 @@ func (c *ContainerSandbox) NetworkMode() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.networkMode
+}
+
+// networkProxy returns the configured egress proxy (nil if unrestricted).
+func (c *ContainerSandbox) networkProxy() *NetworkProxy {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.proxy
+}
+
+// SetNetworkProxy configures an egress proxy for the container. When set, the
+// container's outbound traffic is routed through the proxy (bound to all
+// interfaces) and the proxy env vars are injected so curl/wget/npm inside the
+// container use it. Pass nil to leave egress unrestricted (the default).
+//
+// The proxy is started on Start() and stopped on Stop(). It must be set before
+// Start() takes effect.
+func (c *ContainerSandbox) SetNetworkProxy(np *NetworkProxy) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.proxy = np
 }
 
 // SetRuntimeConfig overrides the declarative runtime config (extra deps and
@@ -174,6 +242,16 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	}
 	c.containerID = strings.TrimSpace(string(out))
 	c.running = true
+
+	// Start the egress proxy (if configured) now that the container is up.
+	// It binds to all interfaces so the container reaches it via
+	// host.docker.internal. Best-effort: a proxy failure must not fail boot.
+	if c.proxy != nil {
+		if _, proxyErr := c.proxy.Start(ctx); proxyErr != nil {
+			slog.Warn("egress proxy start failed; container egress is unrestricted",
+				"error", proxyErr)
+		}
+	}
 
 	// Set up the credential access layout inside the running container:
 	// staging mounts are already in place; create the denied placeholder
@@ -250,6 +328,17 @@ func (c *ContainerSandbox) dockerRunArgs(name, attachDir, cacheDir string) []str
 	// symlinks (see credentials.go); the mounts are just the raw material.
 	args = append(args, c.credentialMountArgs()...)
 
+	// Egress proxy: when configured, inject HTTP(S)_PROXY env vars pointing at
+	// the host proxy via host.docker.internal (the container's route to the
+	// host). This is the mechanism that restricts container outbound traffic to
+	// the proxy's allowlist/blocklist. The proxy is started in Start() after the
+	// container is up.
+	if c.proxy != nil {
+		for k, v := range c.proxy.EnvVarsForHost(hostDockerInternal) {
+			args = append(args, "-e", k+"="+v)
+		}
+	}
+
 	args = append(args, c.runtime.StartupEnvArgs()...)
 	args = append(args, c.image, "infinity")
 	return args
@@ -312,6 +401,12 @@ func (c *ContainerSandbox) Stop() error {
 	defer c.mu.Unlock()
 	if !c.running {
 		return nil
+	}
+	// Stop the egress proxy (best-effort) before tearing down the container.
+	if c.proxy != nil {
+		if proxyErr := c.proxy.Stop(); proxyErr != nil {
+			slog.Warn("egress proxy stop failed", "error", proxyErr)
+		}
 	}
 	// Force-remove our ephemeral --rm container instead of waiting through
 	// Docker's default stop grace period. Bound cleanup as well so exiting the
@@ -379,7 +474,7 @@ func (c *ContainerSandbox) BuildFromDockerfile(ctx context.Context, dockerfile s
 	cmd := exec.CommandContext(ctx, "docker", "build", "-t", tag, "-f", dfPath, c.projectDir) // #nosec G204 -- "docker" binary fixed; tag/dfPath/projectDir derived from internal state
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("docker build failed: %s\n%s", err, out)
+		return "", fmt.Errorf("docker build failed: %w\n%s", err, out)
 	}
 
 	c.mu.Lock()

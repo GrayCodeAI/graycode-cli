@@ -13,6 +13,8 @@ linters:
     - unconvert
     - whitespace
     - gosec
+    # Catch fmt.Errorf("%s", err) — discards the wrapped chain; should be %w.
+    - errorlint
   settings:
     errcheck:
       check-type-assertions: true
@@ -89,6 +91,9 @@ linters:
           - errcheck
           - unused
           - gosec
+          # Tests conventionally compare errors for exact identity (err != sentinel)
+          # or type-assert with a concrete type; enforcing errors.Is/As there is noise.
+          - errorlint
     issues:
   max-issues-per-linter: 0
   max-same-issues: 0

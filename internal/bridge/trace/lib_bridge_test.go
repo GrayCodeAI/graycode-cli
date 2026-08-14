@@ -2,6 +2,7 @@ package tracebridge
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -144,7 +145,7 @@ func TestGetTranscriptPath_EmptyBeforeCapture(t *testing.T) {
 func TestStopCapture_WithoutStart_ReturnsError(t *testing.T) {
 	sc := NewSessionCapture(CaptureConfig{RepoPath: "/repo"}, nil)
 	result, err := sc.StopCapture(context.Background())
-	if err != ErrNotActive {
+	if !errors.Is(err, ErrNotActive) {
 		t.Errorf("StopCapture error = %v, want ErrNotActive", err)
 	}
 	if result != nil {

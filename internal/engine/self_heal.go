@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -437,7 +438,8 @@ func (sh *SelfHealer) RunScript(ctx context.Context, path string) (stdout, stder
 	stderr = errBuf.String()
 
 	if runErr != nil {
-		if exitErr, ok := runErr.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(runErr, &exitErr) {
 			exitCode = exitErr.ExitCode()
 		} else {
 			exitCode = -1
@@ -472,7 +474,8 @@ func (sh *SelfHealer) runCommand(ctx context.Context, command string) (stdout, s
 	stderr = errBuf.String()
 
 	if runErr != nil {
-		if exitErr, ok := runErr.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(runErr, &exitErr) {
 			exitCode = exitErr.ExitCode()
 		} else {
 			exitCode = -1

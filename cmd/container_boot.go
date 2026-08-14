@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -29,8 +30,15 @@ func shouldUseContainer() bool {
 
 // startRequiredContainer starts Hawk's mandatory Docker sandbox. It fails
 // closed with an actionable error; there is deliberately no host fallback.
+// Egress is restricted to a domain allowlist via NetworkProxy by default; set
+// HAWK_DISABLE_EGRESS_PROXY=1 to opt out (unrestricted bridge egress).
 func startRequiredContainer(projectDir string) (*sandbox.ContainerSandbox, error) {
-	cs := sandbox.NewContainerSandbox(projectDir)
+	var cs *sandbox.ContainerSandbox
+	if os.Getenv("HAWK_DISABLE_EGRESS_PROXY") == "1" {
+		cs = sandbox.NewContainerSandbox(projectDir)
+	} else {
+		cs = sandbox.NewContainerSandboxWithEgressProxy(projectDir)
+	}
 	sandbox.ResetDockerAvailabilityCache()
 	if !dockerAvailable() {
 		return nil, fmt.Errorf("docker is required but is not running — start Docker and retry")

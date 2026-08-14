@@ -247,10 +247,11 @@ func (s *Session) compactModel() string {
 		return s.ChatLLM().Model()
 	}
 
-	// Find the cheapest model by input price
+	// Find the cheapest model by input price. Free/local models (price 0) are
+	// preferred for summarization, so they must not be skipped.
 	cheapest := models[0]
 	for _, m := range models[1:] {
-		if m.InputPrice > 0 && m.InputPrice < cheapest.InputPrice {
+		if m.InputPrice < cheapest.InputPrice {
 			cheapest = m
 		}
 	}

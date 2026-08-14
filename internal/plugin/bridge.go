@@ -75,7 +75,7 @@ func (pb *PluginBridge) Run(ctx context.Context, args ...string) (string, error)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("%s: %s", err, strings.TrimSpace(stderr.String()))
+		return "", fmt.Errorf("%w: %s", err, strings.TrimSpace(stderr.String()))
 	}
 	return strings.TrimSpace(stdout.String()), nil
 }

@@ -31,8 +31,13 @@ func (sd *SnowballDetector) RecordTurn(tokens int, progress float64) {
 	sd.turnProgress = append(sd.turnProgress, progress)
 }
 
-// IsSnowballing returns true if the last 3 turns consumed 2x+ tokens compared
-// to the first 3 turns AND progress per token is declining.
+// IsSnowballing returns true if the last 3 turns consumed threshold-x+ tokens
+// compared to the first 3 turns, i.e. token consumption is accelerating without
+// a proportional bound. The progress-per-token dimension is intentionally not
+// used here: with the coarse progress signal available per turn it collapses
+// to a pure growth check and adds no independent information (see RecordTurn
+// call sites). Keeping this a honest growth-rate detector avoids a false sense
+// of a second, stricter signal.
 func (sd *SnowballDetector) IsSnowballing() bool {
 	n := len(sd.turnTokens)
 	if n < 6 {
@@ -49,15 +54,7 @@ func (sd *SnowballDetector) IsSnowballing() bool {
 	}
 
 	growthRate := float64(lastAvg) / float64(firstAvg)
-	if growthRate < sd.threshold {
-		return false
-	}
-
-	// Check that progress per token is declining
-	firstPPT := avgFloat(sd.turnProgress[:3]) / float64(firstAvg)
-	lastPPT := avgFloat(sd.turnProgress[n-3:]) / float64(lastAvg)
-
-	return lastPPT < firstPPT
+	return growthRate >= sd.threshold
 }
 
 // ShouldAbort returns true if total tokens exceed maxTokens or the growth rate

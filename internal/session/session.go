@@ -368,7 +368,7 @@ func scanJSONLLines(r io.Reader, logID string) (meta map[string]any, messages []
 	firstLine := true
 	for {
 		line, lpErr := reader.ReadSlice('\n')
-		isPrefix := lpErr == bufio.ErrBufferFull
+		isPrefix := errors.Is(lpErr, bufio.ErrBufferFull)
 		if isPrefix {
 			flushOversize()
 			lineNo++

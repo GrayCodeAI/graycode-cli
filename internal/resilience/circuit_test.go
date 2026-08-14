@@ -50,7 +50,7 @@ func TestBreakerOpens(t *testing.T) {
 	// Fail 3 times
 	for i := 0; i < 3; i++ {
 		err := b.Call(func() error { return errors.New("fail") })
-		if err == nil || err == ErrOpen {
+		if err == nil || errors.Is(err, ErrOpen) {
 			t.Fatalf("expected error, got %v", err)
 		}
 	}

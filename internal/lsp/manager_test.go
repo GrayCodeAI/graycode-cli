@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -54,9 +55,10 @@ func TestManagerExecute_LanguageNotConfigured(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for unconfigured language")
 	}
-	if e, ok := err.(*LSPError); ok {
-		if e.Code != "LANG_NOT_CONFIGURED" {
-			t.Errorf("expected LANG_NOT_CONFIGURED, got %s", e.Code)
+	var lspErr *LSPError
+	if errors.As(err, &lspErr) {
+		if lspErr.Code != "LANG_NOT_CONFIGURED" {
+			t.Errorf("expected LANG_NOT_CONFIGURED, got %s", lspErr.Code)
 		}
 	}
 }
