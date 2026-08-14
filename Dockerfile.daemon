@@ -24,7 +24,7 @@ COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     rm -f go.work go.work.sum && \
-    { echo "go 1.26.5"; echo; echo "use ."; echo; echo "replace ("; \
+    { echo "go 1.26.6"; echo; echo "use ."; echo; echo "replace ("; \
       for repo in hawk-core-contracts eyrie inspect sight tok trace yaad; do \
         echo "	github.com/GrayCodeAI/${repo} => ./external/${repo}"; \
       done; echo ")"; } > go.work && \

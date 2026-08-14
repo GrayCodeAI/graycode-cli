@@ -206,7 +206,7 @@ setup: ## Set up local development environment (go.work + external repos).
 		fi; \
 	done
 	@echo "Generating go.work..."
-	@echo "go 1.26.5" > go.work
+	@echo "go 1.26.6" > go.work
 	@echo "" >> go.work
 	@echo "use ." >> go.work
 	@echo "" >> go.work

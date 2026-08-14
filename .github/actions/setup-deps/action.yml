@@ -42,4 +42,4 @@ runs:
     - name: Create workspace
       shell: bash
       run: |
-        printf 'go 1.26.5\n\nuse .\n\nreplace (\n\tgithub.com/GrayCodeAI/hawk-core-contracts => ./external/hawk-core-contracts\n\tgithub.com/GrayCodeAI/eyrie => ./external/eyrie\n\tgithub.com/GrayCodeAI/inspect => ./external/inspect\n\tgithub.com/GrayCodeAI/sight => ./external/sight\n\tgithub.com/GrayCodeAI/tok => ./external/tok\n\tgithub.com/GrayCodeAI/trace => ./external/trace\n\tgithub.com/GrayCodeAI/yaad => ./external/yaad\n\tgithub.com/GrayCodeAI/hawk-mcpkit => ./external/hawk-mcpkit\n)\n' > go.work
+        printf 'go 1.26.6\n\nuse .\n\nreplace (\n\tgithub.com/GrayCodeAI/hawk-core-contracts => ./external/hawk-core-contracts\n\tgithub.com/GrayCodeAI/eyrie => ./external/eyrie\n\tgithub.com/GrayCodeAI/inspect => ./external/inspect\n\tgithub.com/GrayCodeAI/sight => ./external/sight\n\tgithub.com/GrayCodeAI/tok => ./external/tok\n\tgithub.com/GrayCodeAI/trace => ./external/trace\n\tgithub.com/GrayCodeAI/yaad => ./external/yaad\n\tgithub.com/GrayCodeAI/hawk-mcpkit => ./external/hawk-mcpkit\n)\n' > go.work
