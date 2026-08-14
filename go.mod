@@ -1,6 +1,6 @@
 module github.com/GrayCodeAI/hawk
 
-go 1.26.5
+go 1.26.6
 
 // The charmbracelet v2 modules (bubbles, bubbletea, lipgloss, glamour, huh) have
 // moved their module paths from github.com/charmbracelet/... to charm.land/...

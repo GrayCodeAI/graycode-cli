@@ -101,9 +101,18 @@ func (np *NetworkProxy) Start(ctx context.Context) (string, error) {
 	if host == "" {
 		host = netutil.LoopbackHost
 	}
+	// Use an explicit network so the listener matches how clients reach us.
+	// Containers reach the host proxy via host.docker.internal, which resolves
+	// to an IPv4 address, so the AllInterfaces (0.0.0.0) egress case binds IPv4
+	// explicitly (on some platforms "tcp" + "0.0.0.0" yields an IPv6 [::] socket
+	// that drops IPv4 connections). Loopback stays "tcp" for dual-stack.
+	network := "tcp"
+	if host == AllInterfaces || host == "0.0.0.0" {
+		network = "tcp4"
+	}
 	addr := fmt.Sprintf("%s:%d", host, np.Port)
 	var err error
-	np.listener, err = new(net.ListenConfig).Listen(ctx, "tcp", addr)
+	np.listener, err = new(net.ListenConfig).Listen(ctx, network, addr)
 	if err != nil {
 		cancel()
 		return "", fmt.Errorf("failed to start proxy listener: %w", err)
@@ -114,17 +123,11 @@ func (np *NetworkProxy) Start(ctx context.Context) (string, error) {
 		np.Port = tcpAddr.Port
 	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodConnect {
-			np.handleConnect(w, r)
-		} else {
-			np.handleHTTP(w, r)
-		}
-	})
-
 	np.server = &http.Server{
-		Handler:           mux,
+		// Handle requests directly rather than via ServeMux: the mux's "/"
+		// pattern matches path-form requests but not authority-form CONNECT
+		// targets (e.g. "CONNECT host:port"), which would fall through to 404.
+		Handler:           np,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      5 * time.Minute, // long for CONNECT tunnels
@@ -144,6 +147,17 @@ func (np *NetworkProxy) Start(ctx context.Context) (string, error) {
 	}()
 
 	return np.listener.Addr().String(), nil
+}
+
+// ServeHTTP routes CONNECT tunneling vs plain-HTTP forwarding. Kept on the
+// proxy (not ServeMux) because ServeMux pattern matching only handles
+// path-form request URIs and returns 404 for authority-form CONNECT targets.
+func (np *NetworkProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodConnect {
+		np.handleConnect(w, r)
+	} else {
+		np.handleHTTP(w, r)
+	}
 }
 
 // Stop stops the proxy server and cleans up resources.
