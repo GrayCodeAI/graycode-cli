@@ -1,27 +1,27 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/engine/session"
+import "github.com/GrayCodeAI/hawk/internal/engine/compression"
 
 type (
-	Timeline            = session.Timeline
-	TimelineEvent       = session.TimelineEvent
-	SessionCompressor   = session.SessionCompressor
-	CompressStrategy    = session.CompressStrategy
-	CompressMessage     = session.CompressMessage
-	CompressedBlock     = session.CompressedBlock
-	CompressionResult   = session.CompressionResult
-	CrossSessionLearner = session.CrossSessionLearner
-	Insight             = session.Insight
-	FailurePattern      = session.FailurePattern
-	SessionConvention   = session.SessionConvention
-	LearnerStats        = session.LearnerStats
+	Timeline            = compression.Timeline
+	TimelineEvent       = compression.TimelineEvent
+	SessionCompressor   = compression.SessionCompressor
+	CompressStrategy    = compression.CompressStrategy
+	CompressMessage     = compression.CompressMessage
+	CompressedBlock     = compression.CompressedBlock
+	CompressionResult   = compression.CompressionResult
+	CrossSessionLearner = compression.CrossSessionLearner
+	Insight             = compression.Insight
+	FailurePattern      = compression.FailurePattern
+	SessionConvention   = compression.SessionConvention
+	LearnerStats        = compression.LearnerStats
 )
 
-func NewTimeline(sessionID string) *Timeline { return session.NewTimeline(sessionID) }
+func NewTimeline(sessionID string) *Timeline { return compression.NewTimeline(sessionID) }
 func NewSessionCompressor(strategy CompressStrategy) *SessionCompressor {
-	return session.NewSessionCompressor(strategy)
+	return compression.NewSessionCompressor(strategy)
 }
 
 func NewCrossSessionLearner(dir string) *CrossSessionLearner {
-	return session.NewCrossSessionLearner(dir)
+	return compression.NewCrossSessionLearner(dir)
 }

@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/safewrite"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
@@ -198,13 +199,16 @@ func (ss *SnapshotStore) cleanupLocked() {
 }
 
 // saveIndexLocked writes the snapshot index to disk; the caller must hold ss.mu.
+// Atomic (temp file + rename) so a crash mid-write cannot corrupt the index,
+// which is the authoritative list of all snapshots. A truncated index would
+// orphan otherwise-intact snapshot files.
 func (ss *SnapshotStore) saveIndexLocked() error {
 	indexPath := filepath.Join(ss.dir, "snapshots.json")
 	data, err := json.MarshalIndent(ss.snapshots, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(indexPath, data, 0o600)
+	return safewrite.WriteFile(indexPath, data)
 }
 
 // writeSessionJSONL writes a session as JSONL to the given path.

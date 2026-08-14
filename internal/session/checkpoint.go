@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/safewrite"
 	"github.com/GrayCodeAI/hawk/internal/token"
 )
 
@@ -404,7 +405,9 @@ func (cm *CheckpointManager) saveIndex() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(indexPath, data, 0o600)
+	// Atomic (temp + rename): the index is the authoritative checkpoint list, so
+	// a crash mid-write must not truncate it and orphan intact checkpoints.
+	return safewrite.WriteFile(indexPath, data)
 }
 
 func (cm *CheckpointManager) saveMessages(id string, messages []Message) error {
@@ -417,7 +420,7 @@ func (cm *CheckpointManager) saveMessages(id string, messages []Message) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o600)
+	return safewrite.WriteFile(path, data)
 }
 
 func (cm *CheckpointManager) loadMessages(id string) ([]Message, error) {

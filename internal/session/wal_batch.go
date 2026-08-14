@@ -11,6 +11,13 @@ import (
 // timer (100ms) or when the buffer reaches 10 entries. This reduces the
 // number of f.Sync() calls from one-per-append to one-per-flush.
 //
+// DURABILITY WINDOW: at most batchMaxSize messages or batchFlushInterval of
+// not-yet-flushed appends can be lost on a hard crash (kill -9 / OOM) between
+// an Append and the next flush. Call Flush() before graceful shutdown to drain
+// the buffer. The unbuffered WAL type documents "the WAL has everything"; this
+// batched variant explicitly trades that for fewer fsyncs — see the recovery
+// path (RecoverFromWAL) for the lossy-by-design crash story.
+//
 // LOCK ORDERING: b.mu must always be acquired before b.wal.mu.
 // The timer callback acquires b.mu then calls flushLocked() which acquires b.wal.mu.
 // Never acquire b.mu while holding b.wal.mu.
