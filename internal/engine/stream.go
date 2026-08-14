@@ -896,17 +896,41 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 // full system prompt nor any tool schemas. The system prompt instructs the
 // model to answer these directly, so sending the tool surface would only
 // add prompt-prefill cost.
+// isSmallTalkPrompt detects short greetings/closings so the payload can be
+// tiered down. The match must be conservative: this function decides whether
+// to SKIP the full prompt context, so a false positive (dropping context for a
+// real request like "hi there, who fixes this bug?") is far costlier than a
+// false negative (sending a slightly bigger payload for genuine small talk).
+//
+// It returns true when the whole prompt is small talk: an exact match against
+// a closed phrase list, or a phrase followed only by short filler (no comma or
+// clause that introduces a real request).
 func isSmallTalkPrompt(prompt string) bool {
 	text := strings.ToLower(strings.TrimSpace(prompt))
 	text = strings.Trim(text, " \t\r\n.,!?;:")
-	switch text {
-	case "hi", "hello", "hey", "how are you", "how are you doing", "how's it going", "what's up",
-		"who are you", "what can you do", "thanks", "thank you", "good morning", "good afternoon",
-		"good evening", "nice to meet you", "goodbye", "bye":
-		return true
-	default:
-		return false
+	for _, phrase := range smallTalkPhrases {
+		if text == phrase {
+			return true
+		}
+		// Allow a trailing filler word (e.g. "hi there") but stop at a comma or
+		// anything that looks like a real request clause.
+		if strings.HasPrefix(text, phrase+" ") {
+			remainder := text[len(phrase)+1:]
+			if !strings.ContainsAny(remainder, ",;:?") && len(remainder) <= 12 {
+				return true
+			}
+		}
 	}
+	return false
+}
+
+var smallTalkPhrases = []string{
+	"hi", "hi there", "hello", "hey", "hey there",
+	"how are you", "how are you doing", "how's it going", "how's it going today",
+	"what's up", "who are you", "what can you do",
+	"thanks", "thank you", "thanks a lot",
+	"good morning", "good afternoon", "good evening", "nice to meet you",
+	"goodbye", "bye",
 }
 
 // sessionHasToolUse reports whether any message in the conversation already

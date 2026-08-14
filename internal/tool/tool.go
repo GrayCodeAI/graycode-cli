@@ -279,8 +279,8 @@ func (r *Registry) EyrieTools() []types.EyrieTool {
 // against the tool's declared schema before dispatch (H5).
 func (r *Registry) Execute(ctx context.Context, name string, input json.RawMessage) (string, error) {
 	r.mu.RLock()
-	defer r.mu.RUnlock()
 	t, ok := r.tools[name]
+	r.mu.RUnlock()
 	if !ok {
 		return "", fmt.Errorf("unknown tool: %s", name)
 	}
