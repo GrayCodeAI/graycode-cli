@@ -31,6 +31,16 @@ func (s *Session) Stream(ctx context.Context) (<-chan StreamEvent, error) {
 
 func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	defer close(ch)
+	// emit sends an event to the consumer, but abandons the send (instead of
+	// blocking forever) if the context is already done — e.g. the consumer
+	// exited early after an error. This bounds the agentLoop goroutine and
+	// prevents leaks on the post-stream bare sends below.
+	emit := func(ev StreamEvent) {
+		select {
+		case ch <- ev:
+		case <-ctx.Done():
+		}
+	}
 	sessionStart := time.Now()
 
 	// Start session-level trace span
@@ -121,7 +131,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Context governor: collapse → micro/smart/truncate (settings threshold %).
 		tokensBefore := EstimateTokens(s.Persistence().RawMessages())
 		if s.WillCompactBeforeTurn() {
-			ch <- StreamEvent{Type: "compact_start"}
+			emit(StreamEvent{Type: "compact_start"})
 		}
 		if compactStrategy, didCompact := s.ManageContextBeforeTurn(ctx); didCompact {
 			tokensAfter := EstimateTokens(s.Persistence().RawMessages())
@@ -129,12 +139,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				"strategy": compactStrategy,
 				"messages": len(s.Persistence().RawMessages()),
 			})
-			ch <- StreamEvent{
+			emit(StreamEvent{
 				Type:         "compact",
 				Content:      compactStrategy,
 				TokensBefore: tokensBefore,
 				TokensAfter:  tokensAfter,
-			}
+			})
 		}
 
 		// Integration pipeline: pre-query (intent, tools, budget, injection scan, cache)
@@ -150,14 +160,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			if preResult != nil {
 				// Cache hit: short-circuit the LLM call
 				if preResult.CacheHit && preResult.CachedResponse != "" {
-					ch <- StreamEvent{Type: "content", Content: preResult.CachedResponse}
+					emit(StreamEvent{Type: "content", Content: preResult.CachedResponse})
 					s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse}))
-					ch <- StreamEvent{Type: "done"}
+					emit(StreamEvent{Type: "done"})
 					return
 				}
 				if preResult.InjectionRisk != nil && preResult.InjectionRisk.IsRisky {
 					if preResult.InjectionRisk.RiskLevel == "high" {
-						ch <- StreamEvent{Type: "error", Content: "High-risk prompt injection detected. Message blocked."}
+						emit(StreamEvent{Type: "error", Content: "High-risk prompt injection detected. Message blocked."})
 						return
 					}
 					s.Logger().Warn("injection risk detected", map[string]interface{}{
@@ -205,7 +215,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			activeModel = s.LifecycleSvc().Cascade().SelectModel(lastUserMsg, activeModel, "")
 		}
 		if strings.TrimSpace(activeModel) == "" {
-			ch <- StreamEvent{Type: "error", Content: "no model selected — open /config → Models and pick one"}
+			emit(StreamEvent{Type: "error", Content: "no model selected — open /config → Models and pick one"})
 			return
 		}
 
@@ -250,6 +260,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if s.LifecycleSvc().Beliefs() != nil && s.LifecycleSvc().Beliefs().Size() > 0 {
 			if summary := s.LifecycleSvc().Beliefs().FormatForPrompt(); summary != "" {
 				opts.System += "\n\n## Agent Beliefs\n" + summary
+			}
+		}
+		// Activity nudge: remind agent to persist learnings if idle. Injected
+		// ephemerally (not persisted) so it never accumulates across turns —
+		// see H4 in the deep-review findings.
+		if s.MemorySvc().Activity() != nil {
+			if nudge := s.MemorySvc().Activity().NudgeMessage(); nudge != "" {
+				opts.System += "\n\n" + nudge
 			}
 		}
 		// Auto-skill: match smart skills against the last user message and
@@ -333,7 +351,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		inPrice, outPrice := ModelPricing(s.ChatLLM().Model())
 		estCost := float64(inputTokens)*inPrice/1_000_000 + float64(maxTok)*outPrice/1_000_000
 		if estCost > 0.50 {
-			ch <- StreamEvent{Type: "blast_radius", Content: fmt.Sprintf("%s This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.", icons.Alert(), inputTokens+maxTok, estCost)}
+			emit(StreamEvent{Type: "blast_radius", Content: fmt.Sprintf("%s This request will use ~%d tokens (~$%.2f). Continue? The agent will proceed automatically.", icons.Alert(), inputTokens+maxTok, estCost)})
 		}
 
 		// Trace: start agent loop span for this turn
@@ -362,7 +380,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			s.Logger().Error("stream error", map[string]interface{}{
 				"error": err.Error(),
 			})
-			ch <- StreamEvent{Type: "error", Content: err.Error()}
+			emit(StreamEvent{Type: "error", Content: err.Error()})
 			return
 		}
 
@@ -492,13 +510,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			case <-retryTimer.C:
 			case <-ctx.Done():
 				retryTimer.Stop()
-				ch <- StreamEvent{Type: "error", Content: "stream retry cancelled: " + ctx.Err().Error()}
+				emit(StreamEvent{Type: "error", Content: "stream retry cancelled: " + ctx.Err().Error()})
 				result.Close()
 				return
 			}
 
 			// Notify consumer to discard previously streamed content for this turn.
-			ch <- StreamEvent{Type: "retry", Content: fmt.Sprintf("retrying after %s (attempt %d)", retryReason, streamAttempt+2)}
+			emit(StreamEvent{Type: "retry", Content: fmt.Sprintf("retrying after %s (attempt %d)", retryReason, streamAttempt+2)})
 
 			// Re-open the stream for retry. We bypass the ChatService
 			// here on purpose: ChatService.Stream has its own retry
@@ -507,7 +525,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			// The session agent loop owns this layer.
 			result, err = s.ChatLLM().Client().StreamChatContinue(ctx, s.Persistence().RawMessages(), opts, types.DefaultContinuationConfig())
 			if err != nil {
-				ch <- StreamEvent{Type: "error", Content: err.Error()}
+				emit(StreamEvent{Type: "error", Content: err.Error()})
 				return
 			}
 			// Reset accumulated state for the retry
@@ -519,7 +537,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			streamErr = nil
 		}
 		if streamErr != nil {
-			ch <- StreamEvent{Type: "error", Content: streamErr.Error()}
+			emit(StreamEvent{Type: "error", Content: streamErr.Error()})
 			return
 		}
 
@@ -559,8 +577,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// checkGuardConditions) enforces the same budget as this explicit check.
 		limits.SetCostUSD(s.CostValue().TotalUSD())
 		if limits.MaxBudgetUSD() > 0 && s.CostValue().TotalUSD() >= limits.MaxBudgetUSD() {
-			ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nBudget limit reached ($%.2f spent of $%.2f).", s.CostValue().TotalUSD(), limits.MaxBudgetUSD())}
-			ch <- StreamEvent{Type: "done"}
+			emit(StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nBudget limit reached ($%.2f spent of $%.2f).", s.CostValue().TotalUSD(), limits.MaxBudgetUSD())})
+			emit(StreamEvent{Type: "done"})
 			return
 		}
 
@@ -583,7 +601,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			excess := toolCalls[maxToolCallsPerStep:]
 			toolCalls = toolCalls[:maxToolCallsPerStep]
 			for _, tc := range excess {
-				ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Error: too many tool calls in one step (max 32). Retry with fewer calls."}
+				emit(StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: "Error: too many tool calls in one step (max 32). Retry with fewer calls."})
 			}
 		}
 
@@ -599,13 +617,6 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if loopSpan != nil {
 			loopSpan.SetTag("tools", fmt.Sprintf("%d", len(toolCalls)))
 			oteltrace.EndSpanWithError(loopSpan, nil)
-		}
-
-		// Activity nudge: remind agent to persist learnings if idle
-		if s.MemorySvc().Activity() != nil {
-			if nudge := s.MemorySvc().Activity().NudgeMessage(); nudge != "" {
-				s.AppendSystemContext(nudge)
-			}
 		}
 
 		// Compatibility-only max_tokens recovery. Eyrie's engine facade owns
@@ -634,14 +645,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 			if textContent.Len() > 0 {
 				s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: textContent.String()}))
-				// Auto-remember corrections and learnings
+				// Auto-remember corrections and learnings. Best-effort
+				// fire-and-forget: the memory backend's Remember does not yet
+				// accept a context, so this goroutine cannot be cancelled mid-call.
+				// MemoryService.Remember(ctx, ...) reserves ctx for exactly this
+				// extension when the backend becomes context-aware.
 				if s.MemorySvc().Memory() != nil && shouldRemember(textContent.String()) {
 					go func(content string) {
-						// Use timeout context so goroutine doesn't hang if backend is slow.
-						rCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
-						defer cancel()
 						_ = s.MemorySvc().Memory().Remember(content, "assistant_learning")
-						_ = rCtx // timeout context available if Remember is extended to accept it
 					}(textContent.String())
 				}
 			}
@@ -716,7 +727,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					_ = s.MemorySvc().Yaad().Remember(string(content), "skill")
 				}()
 			}
-			ch <- StreamEvent{Type: "done"}
+			emit(StreamEvent{Type: "done"})
 			// Integration pipeline: end-session (assess, learn, store experience)
 			if s.LifecycleSvc().Pipeline() != nil {
 				taskGoal := ""
@@ -839,7 +850,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					Role:    "user",
 					Content: "[User guidance during execution]: " + steer.Content,
 				}))
-				ch <- StreamEvent{Type: "content", Content: "\n[Steering received: " + steer.Content + "]\n"}
+				emit(StreamEvent{Type: "content", Content: "\n[Steering received: " + steer.Content + "]\n"})
 			}
 		}
 
@@ -859,7 +870,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if s.Tools().Sandbox() != nil && s.Tools().Sandbox().IsEnabled() {
 			pending := s.Tools().Sandbox().List()
 			if len(pending) > 0 {
-				ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n[%d change(s) staged for review]", len(pending))}
+				emit(StreamEvent{Type: "content", Content: fmt.Sprintf("\n[%d change(s) staged for review]", len(pending))})
 			}
 		}
 

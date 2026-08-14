@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/spec"
 )
@@ -54,6 +56,17 @@ const specStageSystemPrompt = "\n\n## Spec Stage (workflow gate)\n" +
 	"Use `SpecList` to see existing specs. Use `SpecEdit` to refine artifacts mid-workflow. " +
 	"Use `Constitution` tool to create/update project governing principles."
 
+// constitutionCache caches the on-disk constitution.md contents keyed by path
+// + mtime, so the per-turn prompt assembly (constitutionForPrompt) does not
+// re-read an unchanged file from disk every turn. The file only changes when
+// the spec tools rewrite it, so mtime is a sufficient invalidation signal.
+var constitutionCache = struct {
+	sync.Mutex
+	path    string
+	modTime time.Time
+	content string
+}{}
+
 func constitutionForPrompt(slug string) string {
 	if slug == "" {
 		return ""
@@ -63,9 +76,26 @@ func constitutionForPrompt(slug string) string {
 		return ""
 	}
 	path := filepath.Join(cwd, ".hawk", "specs", slug, "constitution.md")
+
+	constitutionCache.Lock()
+	if constitutionCache.path == path {
+		if info, statErr := os.Stat(path); statErr == nil && info.ModTime().Equal(constitutionCache.modTime) {
+			content := constitutionCache.content
+			constitutionCache.Unlock()
+			return content
+		}
+	}
+	constitutionCache.Unlock()
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return ""
+	}
+	if info, statErr := os.Stat(path); statErr == nil {
+		constitutionCache.Lock()
+		constitutionCache.path = path
+		constitutionCache.modTime = info.ModTime()
+		constitutionCache.Unlock()
 	}
 	return "\n\n## Project Constitution (active)\n" +
 		"The following constitution governs all decisions in this spec workflow. " +
