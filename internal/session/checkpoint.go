@@ -454,7 +454,7 @@ func (cm *CheckpointManager) saveFileContents(id string, files []string) error {
 			"content": string(content),
 		}
 		data, _ := json.Marshal(entry)
-		if err := os.WriteFile(filepath.Join(cpDir, safeName+".json"), data, 0o600); err != nil {
+		if err := safewrite.WriteFile(filepath.Join(cpDir, safeName+".json"), data); err != nil {
 			return err
 		}
 	}
@@ -492,7 +492,10 @@ func (cm *CheckpointManager) restoreFileContents(id string, filesState map[strin
 		if err := os.MkdirAll(filepath.Dir(filePath), 0o750); err != nil {
 			continue
 		}
-		if err := os.WriteFile(filePath, []byte(content), 0o600); err != nil {
+		// safewrite keeps the previous 0600 mode and refuses to restore
+		// through a symlinked destination (an attacker-planted symlink at a
+		// restore path would otherwise receive checkpoint contents).
+		if err := safewrite.WriteFile(filePath, []byte(content)); err != nil {
 			return fmt.Errorf("restore file %s: %w", filePath, err)
 		}
 	}

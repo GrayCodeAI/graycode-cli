@@ -15,6 +15,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/hawk/internal/safewrite"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -401,8 +402,9 @@ func SaveGlobal(s Settings) error {
 	if err != nil {
 		return err
 	}
-	// 0600: per-user config; keep it unreadable to other local users.
-	if err := os.WriteFile(globalSettingsPath(), data, 0o600); err != nil {
+	// safewrite keeps the previous 0600 mode (per-user config, unreadable to
+	// other local users) while making the write atomic and symlink-resistant.
+	if err := safewrite.WriteFile(globalSettingsPath(), data); err != nil {
 		return err
 	}
 	// Invalidate the in-process byte cache so subsequent loads within the

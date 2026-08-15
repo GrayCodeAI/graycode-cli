@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/safewrite"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -95,13 +97,10 @@ func SaveNamedCheckpoint(name string, s *Session) (*NamedCheckpoint, error) {
 	}
 
 	target := namedCheckpointPath(name)
-	tmp := target + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	// safewrite replaces the hand-rolled tmp+rename dance with the hardened
+	// atomic writer (same 0600 mode, plus symlink refusal and fsync).
+	if err := safewrite.WriteFile(target, data); err != nil {
 		return nil, fmt.Errorf("write checkpoint: %w", err)
-	}
-	if err := os.Rename(tmp, target); err != nil {
-		_ = os.Remove(tmp)
-		return nil, fmt.Errorf("atomic rename checkpoint: %w", err)
 	}
 	return cp, nil
 }
