@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // ValidationResult holds the outcome of validating a file.
@@ -27,6 +28,13 @@ type ValidationError struct {
 
 // MaxAutoFixRetries is the maximum number of times to retry auto-fixing a file.
 const MaxAutoFixRetries = 3
+
+// validatorTimeout bounds each external syntax-validator invocation
+// (go vet, python3, node, npx tsc). Validators run as part of post-edit
+// checks without a request context; the timeout keeps a misbehaving
+// toolchain (e.g. npx resolving packages, a wedged go build cache) from
+// hanging the session forever.
+const validatorTimeout = 5 * time.Minute
 
 // ValidateFile determines the language from the file extension and runs
 // the appropriate syntax checker.
@@ -81,8 +89,11 @@ func languageValidator(ext string) func(path string) *ValidationResult {
 
 // validateGo runs go vet on a Go file and parses the output.
 func validateGo(path string) *ValidationResult {
+	ctx, cancel := context.WithTimeout(context.Background(), validatorTimeout)
+	defer cancel()
+
 	dir := filepath.Dir(path)
-	cmd := exec.CommandContext(context.Background(), "go", "vet", "./...")
+	cmd := exec.CommandContext(ctx, "go", "vet", "./...")
 	cmd.Dir = dir
 
 	output, err := cmd.CombinedOutput()
@@ -108,7 +119,10 @@ func validateGo(path string) *ValidationResult {
 
 // validatePython runs py_compile on a Python file.
 func validatePython(path string) *ValidationResult {
-	cmd := exec.CommandContext(context.Background(), "python3", "-c", // #nosec G204 -- debugger/interpreter invocation with file path or expression from tool params
+	ctx, cancel := context.WithTimeout(context.Background(), validatorTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "python3", "-c", // #nosec G204 -- debugger/interpreter invocation with file path or expression from tool params
 		fmt.Sprintf("import py_compile; py_compile.compile('%s', doraise=True)", path))
 
 	output, err := cmd.CombinedOutput()
@@ -133,7 +147,10 @@ func validatePython(path string) *ValidationResult {
 
 // validateJS runs node --check on a JavaScript file.
 func validateJS(path string) *ValidationResult {
-	cmd := exec.CommandContext(context.Background(), "node", "--check", path) // #nosec G204 -- fixed Node executable
+	ctx, cancel := context.WithTimeout(context.Background(), validatorTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "node", "--check", path) // #nosec G204 -- fixed Node executable
 
 	output, err := cmd.CombinedOutput()
 	if err == nil {
@@ -158,8 +175,11 @@ func validateJS(path string) *ValidationResult {
 // validateTS performs a basic syntax check for TypeScript files.
 // Uses npx tsc --noEmit if available, otherwise falls back to node --check.
 func validateTS(path string) *ValidationResult {
+	ctx, cancel := context.WithTimeout(context.Background(), validatorTimeout)
+	defer cancel()
+
 	// Try tsc first
-	cmd := exec.CommandContext(context.Background(), "npx", "tsc", "--noEmit", "--allowJs", path) // #nosec G204 -- fixed TypeScript compiler executable
+	cmd := exec.CommandContext(ctx, "npx", "tsc", "--noEmit", "--allowJs", path) // #nosec G204 -- fixed TypeScript compiler executable
 	output, err := cmd.CombinedOutput()
 	if err == nil {
 		return &ValidationResult{Valid: true}
