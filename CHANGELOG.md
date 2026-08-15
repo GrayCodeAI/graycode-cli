@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Session lock TOCTOU eliminated**: `AcquireLock`'s stat → stale-if->5min → remove → O_EXCL dance could delete a live lock on misjudged staleness and let two instances open the same session. Mutual exclusion now uses an OS advisory lock (`gofrs/flock`, promoted to a direct dependency); a crashed holder's lock is reclaimed instantly because the kernel drops the flock at process death. The lock file keeps PID/timestamps purely as diagnostics.
+- **Hardened atomic writes for state files**: global settings, checkpoint file contents and restores, handovers, and named checkpoints now go through `internal/safewrite` (same 0600 mode as before, plus fsync+rename atomicity and symlink refusal at the destination).
+- **Dead shell-injection surface removed**: `AssumptionTracker.VerifyCommandSucceeds` ran caller-supplied strings through `sh -c`, bypassing the permission stack; it had zero callers and is deleted. `SelfHealer.RunScript` no longer shell-evaluates the script path (double evaluation) and invokes it directly via `/bin/sh`.
+
+### Fixed
+- **Engine subprocesses are bounded and observable**: experiment-loop rollback, auto-commit git calls, and post-edit syntax validators (`go vet`, `python3`, `node`, `npx tsc`) ran on `context.Background()` with ignored errors; they are now time-bounded and log failures instead of discarding them.
+- **Memory and config failures no longer silently dropped**: stream-loop memory persists (assistant learnings, skills, conversation summaries, insights) and the self-improve lesson store log failures via slog, corrupt lesson stores are reported, and the config panel surfaces failed `provider` setting saves instead of ignoring them.
+
+### Changed
+- **Makefile lint pin matches CI**: `make lint`/`lint-fix`/`setup` install `golangci-lint@v2.1.0` (was `@latest`), the same version CI enforces.
+- **Docs truth and housekeeping**: SECURITY.md/CONTRIBUTING.md now describe the actual Go toolchain (golangci-lint, go vet, govulncheck) instead of the polyglot template's ruff/mypy/pip-audit/pnpm-lock language, CONTRIBUTING documents `make setup`/`boundaries`/`test-10x`/`smoke`, and the planning docs (`SPEC_DRIVEN_PLAN.md`, `SPEC_DRIVEN_PHASE2_PLAN.md`, `internal/engine/REFACTOR_PLAN.md`) moved to `docs/plans/`.
+
 ## [0.2.0] — 2026-07-13
 
 ### Changed
