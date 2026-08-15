@@ -121,7 +121,7 @@ func renderStatusBarPrimaryLeft(m *chatModel) string {
 	if !ok {
 		return ""
 	}
-	parts := []string{statusCwdStyle.Render(cwd + ":")}
+	parts := []string{statusCwdStyle.Render(cwd)}
 	if branch := cachedStatusBranch(m); branch != "" {
 		parts = append(parts, statusBranchStyle.Render(icons.Branch()+" "+branch))
 		if m != nil && len(m.statusLeftPRs) > 0 {
@@ -165,15 +165,7 @@ func formatStatusCost(c *engine.Cost) string {
 }
 
 func renderStatusBarSecondaryLeft(m *chatModel) string {
-	if m == nil || m.session == nil {
-		return ""
-	}
-	parts := []string{}
-	branch := cachedStatusBranch(m)
-	if branch == "main" || branch == "master" {
-		parts = append(parts, dryRunStyle.Render(icons.Alert()+" default-branch"))
-	}
-	return strings.Join(parts, statusDimStyle.Render(" · "))
+	return ""
 }
 
 // renderStatusBarSecondaryRight — errors, dry-run, vim, focus/pause, spend.
@@ -304,7 +296,7 @@ func renderStatusBarLeft(m *chatModel) string {
 	if !ok {
 		return ""
 	}
-	parts := []string{statusCwdStyle.Render(cwd + ":")}
+	parts := []string{statusCwdStyle.Render(cwd)}
 	if branch := cachedStatusBranch(m); branch != "" {
 		parts = append(parts, statusBranchStyle.Render(icons.Branch()+" "+branch))
 		if m != nil && len(m.statusLeftPRs) > 0 {

@@ -89,7 +89,7 @@ func TestRenderStatusBarRight_OmitsDuplicatedContext(t *testing.T) {
 func TestRenderStatusBarLeft_UsesCachedState(t *testing.T) {
 	m := &chatModel{statusLeftVal: "~/repo", statusLeftBranch: "main"}
 	got := renderStatusBarLeft(m)
-	if !strings.Contains(got, "~/repo:") {
+	if !strings.Contains(got, "~/repo") {
 		t.Fatalf("status left = %q, want cached cwd", got)
 	}
 	if !strings.Contains(got, "main") {

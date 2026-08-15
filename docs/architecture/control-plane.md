@@ -96,7 +96,7 @@ Single entry for subagents + background tasks:
 ### Git safety
 - `engine.InspectGitBranch` / `EnsureAgentBranch`
 - `/branch-agent` when on main/master
-- Status bar warns `default-branch` when on main
+- Status bar warns `main!` when on main
 
 ### HUD
 - Wide status secondary row: `mode:act · iso:workspace · trusted`
