@@ -69,6 +69,13 @@ func NewYaadBridge() *YaadBridge {
 	return b
 }
 
+// yaadEncryptionKeyEnv names the environment variable supplying the
+// at-rest encryption key for the yaad memory database. It is opt-in:
+// without it, node content is stored in plaintext (the historical
+// behaviour). Set it consistently on every process that opens the same
+// database — content sealed without the key becomes unreadable.
+const yaadEncryptionKeyEnv = "YAAD_ENCRYPTION_KEY"
+
 func (b *YaadBridge) init() {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -83,6 +90,18 @@ func (b *YaadBridge) init() {
 	store, err := storage.NewStore(dbPath)
 	if err != nil {
 		return
+	}
+
+	// Opt-in at-rest encryption (PR yaad#59): when the key variable is set,
+	// node content is sealed with AES-256-GCM before writing. An invalid key
+	// disables the bridge entirely rather than silently storing plaintext
+	// the user did not ask for.
+	if v := strings.TrimSpace(os.Getenv(yaadEncryptionKeyEnv)); v != "" {
+		if err := store.EnableEncryption(storage.NewEnvKeyProvider(yaadEncryptionKeyEnv)); err != nil {
+			_ = store.Close()
+			slog.Warn("[hawk/memory] yaad encryption key invalid; memory disabled", "error", err)
+			return
+		}
 	}
 
 	g := yaadGraph.New(store, store.DB())

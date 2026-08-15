@@ -16,7 +16,7 @@ require (
 	github.com/GrayCodeAI/inspect v0.0.0-20260726091806-08f3151d5738
 	github.com/GrayCodeAI/sight v0.0.0-20260726091804-84c96edfc589
 	github.com/GrayCodeAI/tok v0.1.5-0.20260812042126-622cafb3bd1b
-	github.com/GrayCodeAI/yaad v0.2.1-0.20260815132449-fbc04665cca6
+	github.com/GrayCodeAI/yaad v0.2.1-0.20260815153959-ab5e6490c052
 	github.com/alecthomas/chroma/v2 v2.26.1
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/charmbracelet/x/ansi v0.11.7
@@ -36,7 +36,7 @@ require (
 	golang.org/x/mod v0.38.0
 	golang.org/x/sys v0.47.0
 	golang.org/x/term v0.45.0
-	golang.org/x/text v0.40.0
+	golang.org/x/text v0.41.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.51.0
 )
@@ -150,7 +150,7 @@ require (
 	github.com/yuin/goldmark-emoji v1.0.6 // indirect
 	github.com/zalando/go-keyring v0.2.8 // indirect
 	go4.org v0.0.0-20260112195520-a5071408f32f // indirect
-	golang.org/x/crypto v0.54.0 // indirect
+	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/time v0.15.0
 )
