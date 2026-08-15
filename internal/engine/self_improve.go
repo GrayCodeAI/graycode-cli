@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -64,7 +65,11 @@ func (si *SelfImprover) Learn(what, why, lesson, category string) {
 	if len(si.Entries) > maxSelfImproveEntries {
 		si.Entries = si.Entries[len(si.Entries)-maxSelfImproveEntries:]
 	}
-	si.save()
+	// Learn is best-effort by contract (nil-safe, fire-and-forget), but a
+	// failed persist must not be silent — the lesson is otherwise lost.
+	if err := si.save(); err != nil {
+		slog.Warn("self-improve: persisting lesson failed", "error", err)
+	}
 }
 
 // Lessons returns all lessons, optionally filtered by category.
@@ -97,7 +102,9 @@ func (si *SelfImprover) Clear() {
 		return
 	}
 	si.Entries = nil
-	si.save()
+	if err := si.save(); err != nil {
+		slog.Warn("self-improve: clearing lesson store failed", "error", err)
+	}
 }
 
 // ForPrompt formats recent lessons as context for the system prompt.
@@ -124,15 +131,27 @@ func (si *SelfImprover) ForPrompt(maxEntries int) string {
 func (si *SelfImprover) load() {
 	data, err := os.ReadFile(si.Path)
 	if err != nil {
-		return
+		return // no store yet — first run
 	}
-	_ = json.Unmarshal(data, &si.Entries)
+	if err := json.Unmarshal(data, &si.Entries); err != nil {
+		// A corrupt store should not crash the session; log and start fresh.
+		slog.Warn("self-improve: lesson store is corrupt; starting empty", "path", si.Path, "error", err)
+		si.Entries = nil
+	}
 }
 
-func (si *SelfImprover) save() {
-	_ = os.MkdirAll(filepath.Dir(si.Path), 0o750)
-	data, _ := json.MarshalIndent(si.Entries, "", "  ")
-	_ = os.WriteFile(si.Path, data, 0o600)
+func (si *SelfImprover) save() error {
+	if err := os.MkdirAll(filepath.Dir(si.Path), 0o750); err != nil {
+		return fmt.Errorf("self-improve: create state dir: %w", err)
+	}
+	data, err := json.MarshalIndent(si.Entries, "", "  ")
+	if err != nil {
+		return fmt.Errorf("self-improve: marshal lessons: %w", err)
+	}
+	if err := os.WriteFile(si.Path, data, 0o600); err != nil {
+		return fmt.Errorf("self-improve: write lesson store: %w", err)
+	}
+	return nil
 }
 
 // LearnPrompt generates a prompt that asks a model to extract a lesson from a

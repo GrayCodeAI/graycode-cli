@@ -965,12 +965,20 @@ func (m chatModel) selectConfigModelFromOptions(opts []configModelOption) (chatM
 		return m.closeConfigPanel(), nil
 	}
 	m.session.SetModel(modelID)
+	// Same precedence as before (manual pick > gateway > provider), but a
+	// failed provider persist is surfaced instead of silently dropped.
+	provider := ""
 	if gw := strings.TrimSpace(m.configModelProvider); gw != "" {
-		_ = hawkconfig.SetGlobalSetting("provider", gw)
+		provider = gw
 	} else if gw := strings.TrimSpace(selected.GatewayID); gw != "" {
-		_ = hawkconfig.SetGlobalSetting("provider", gw)
+		provider = gw
 	} else if prov := strings.TrimSpace(selected.ProviderID); prov != "" {
-		_ = hawkconfig.SetGlobalSetting("provider", prov)
+		provider = prov
+	}
+	if provider != "" {
+		if err := hawkconfig.SetGlobalSetting("provider", provider); err != nil {
+			m.messages = append(m.messages, displayMsg{role: "error", content: "model set, but saving provider failed: " + err.Error()})
+		}
 	}
 	m.applyModelThinkingPref(selected)
 	m.syncSessionSelection()
