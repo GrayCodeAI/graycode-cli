@@ -432,6 +432,10 @@ func configureSessionHeavy(sess *engine.Session) {
 	// Memory initialization touches persisted state and optional bridges.
 	enhancedMem := memory.NewEnhancedMemoryManager(cwd)
 	if enhancedMem.Yaad.Ready() {
+		// Periodic yaad snapshots only for long-lived sessions — short-lived
+		// diagnostic bridges skip scheduling entirely.
+		enhancedMem.Yaad.EnsureBackups()
+
 		sess.MemorySvc().SetMemory(enhancedMem)
 		sess.MemorySvc().SetYaad(enhancedMem.Yaad)
 		sess.MemorySvc().SetEnhanced(enhancedMem)

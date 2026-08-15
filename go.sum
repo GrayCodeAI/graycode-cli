@@ -30,8 +30,8 @@ github.com/GrayCodeAI/tok v0.1.5-0.20260812042126-622cafb3bd1b h1:iVEaIbxkbyQ751
 github.com/GrayCodeAI/tok v0.1.5-0.20260812042126-622cafb3bd1b/go.mod h1:/KTHlWg+qg8fDV8qRsLUfp4VKtt5seTyED1byxldBtE=
 github.com/GrayCodeAI/trace v0.1.4-0.20260812042155-a31e98c7d75b h1:xqdfzKQ+wzy7B0aTr14Y7CXply41M7z2LoG/qjO0cYE=
 github.com/GrayCodeAI/trace v0.1.4-0.20260812042155-a31e98c7d75b/go.mod h1:RPt/KV4f2DKezxzqAPe960z3vVmO5eJUGB/ZDlV/sOI=
-github.com/GrayCodeAI/yaad v0.2.1-0.20260815092111-8bc7a83d4a72 h1:WPHUhoPW3jay4VbYgRxLHOAFXKKFmgm08FtKFhRPRns=
-github.com/GrayCodeAI/yaad v0.2.1-0.20260815092111-8bc7a83d4a72/go.mod h1:oL8Wr0JPEtayrKrQxVqVUQODDQ8g8YjzUadETQVE55A=
+github.com/GrayCodeAI/yaad v0.2.1-0.20260815132449-fbc04665cca6 h1:Udda7o9RremeNJ4ETwb6Ltu546PsTSS/KoXP/R8VOOU=
+github.com/GrayCodeAI/yaad v0.2.1-0.20260815132449-fbc04665cca6/go.mod h1:oL8Wr0JPEtayrKrQxVqVUQODDQ8g8YjzUadETQVE55A=
 github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ4pzQ=
 github.com/MakeNowJust/heredoc v1.0.0/go.mod h1:mG5amYoWBHf8vpLOuehzbGGw0EHxpZZ6lCpQ4fNJ8LE=
 github.com/Masterminds/semver/v3 v3.5.0 h1:kQceYJfbupGfZOKZQg0kou0DgAKhzDg2NZPAwZ/2OOE=

@@ -172,6 +172,68 @@ func TestYaadBridge_Close(t *testing.T) {
 	_ = b.store.Close()
 }
 
+// TestYaadBridge_EnsureBackups verifies the scheduler is started once per
+// database directory, idempotent across repeated calls, and torn down by
+// Close so a later bridge can restart snapshots.
+func TestYaadBridge_EnsureBackups(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	_ = os.MkdirAll(dir+"/.yaad/data", 0o755)
+
+	b := NewYaadBridge()
+	if !b.ready {
+		t.Skip("yaad not available")
+	}
+
+	b.EnsureBackups()
+	b.EnsureBackups() // must be a no-op, not a second scheduler
+
+	b.mu.Lock()
+	sched := b.backupSched
+	b.mu.Unlock()
+	if sched == nil {
+		t.Fatal("expected backupSched to be set after EnsureBackups")
+	}
+
+	// Second bridge on the same dbDir reuses the existing claim.
+	b2 := NewYaadBridge()
+	if !b2.ready {
+		t.Skip("yaad not available")
+	}
+	b2.EnsureBackups()
+	b2.mu.Lock()
+	dup := b2.backupSched
+	b2.mu.Unlock()
+	if dup != nil {
+		t.Fatal("second bridge must reuse the existing scheduler")
+	}
+	// Close a non-owning bridge: no scheduler to stop, no claim freed.
+	b2.Close()
+
+	b.Close()
+	b.mu.Lock()
+	stopped := b.backupSched == nil
+	b.mu.Unlock()
+	if !stopped {
+		t.Fatal("expected Close to clear the scheduler reference")
+	}
+
+	// After Close the directory claim is released: a fresh bridge can
+	// re-register without error.
+	b3 := NewYaadBridge()
+	if !b3.ready {
+		t.Skip("yaad not available")
+	}
+	b3.EnsureBackups()
+	b3.mu.Lock()
+	restarted := b3.backupSched != nil
+	b3.mu.Unlock()
+	if !restarted {
+		t.Fatal("expected a fresh bridge to start its own scheduler after Close")
+	}
+	b3.Close()
+}
+
 func TestConfidenceTracker_WithBridge(t *testing.T) {
 	b := newTestBridge(t)
 	if !b.ready {
