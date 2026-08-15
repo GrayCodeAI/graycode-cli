@@ -13,7 +13,7 @@ func TestLayoutFooterRow_StyledStringsAlignRight(t *testing.T) {
 	tokenStyle := lipgloss.NewStyle().Foreground(statusTokenColor).Inline(true)
 	dim := lipgloss.NewStyle().Foreground(dimColor).Inline(true)
 
-	left := cwdStyle.Render("~/hawk:") + " " + cwdStyle.Render("⎇ main")
+	left := cwdStyle.Render("~/hawk") + " " + cwdStyle.Render("⎇ main")
 	right := tokenStyle.Render("[db] 13k") + dim.Render(" · ") + tokenStyle.Render("$0.00")
 	width := 80
 
@@ -42,7 +42,7 @@ func TestLayoutFooterRow_StyledStringsAlignRight(t *testing.T) {
 func TestFinishFooterLine_PreservesRightAlignedStats(t *testing.T) {
 	m := chatModel{width: 100, height: 24}
 	tokenStyle := lipgloss.NewStyle().Foreground(statusTokenColor).Inline(true)
-	left := lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true).Render("~/proj:")
+	left := lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true).Render("~/proj")
 	right := tokenStyle.Render("[db] 1k") + lipgloss.NewStyle().Foreground(dimColor).Inline(true).Render(" · ") + tokenStyle.Render("$1.00")
 	row := layoutFooterRow(left, right, m.footerContentWidth(100))
 	out := m.finishFooterLine(row, 100)
