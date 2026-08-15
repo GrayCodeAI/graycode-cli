@@ -23,6 +23,27 @@ import (
 	"github.com/GrayCodeAI/yaad/storage"
 )
 
+// Backup tuning for the yaad snapshot scheduler. Snapshots go to
+// ~/.yaad/data/backups/, kept hourly with a bounded window so an idle or
+// crash-prone host always has a recent consistent copy of the memory DB.
+const (
+	yaadBackupDir      = "backups"
+	yaadBackupInterval = time.Hour
+	yaadBackupKeep     = 7
+	yaadBackupMaxAge   = 30 * 24 * time.Hour
+)
+
+// yaadBackupsMu guards yaadBackupDirs. yaadBackupDirs tracks which backup
+// directories already have a running scheduler so the many bridges a host
+// creates (one per callsite) share a single loop per directory instead of
+// stacking duplicate schedulers. Keying on the directory (not a global
+// sync.Once) keeps tests with distinct temp homes isolated and still dedups
+// the repeated NewYaadBridge calls a real host makes against one home.
+var (
+	yaadBackupsMu  sync.Mutex
+	yaadBackupDirs = make(map[string]struct{})
+)
+
 // YaadBridge connects hawk's memory system to the yaad memory graph.
 // If yaad is not initialized (missing DB), operations return a BridgeError
 // and log a warning on first access.
@@ -32,6 +53,9 @@ type YaadBridge struct {
 	mu       sync.Mutex
 	ready    bool
 	warnOnce sync.Once
+
+	dbDir       string
+	backupSched *storage.BackupScheduler
 
 	graphSessionID string
 	graphScope     graphcontracts.Scope
@@ -66,7 +90,50 @@ func (b *YaadBridge) init() {
 
 	b.store = store
 	b.engine = eng
+	b.dbDir = dbDir
 	b.ready = true
+}
+
+// EnsureBackups starts the yaad snapshot scheduler for the bridge's database
+// directory. It is called once by the long-lived memory manager at session
+// startup — not from NewYaadBridge — so short-lived bridges (diagnostics,
+// status queries, tests) never leave scheduler goroutines writing into
+// their working directories. The directory is claimed so concurrent or
+// repeated calls reuse one loop; Close releases the claim and stops the
+// loop this bridge started.
+func (b *YaadBridge) EnsureBackups() {
+	if b == nil || !b.ready {
+		return
+	}
+
+	yaadBackupsMu.Lock()
+	if _, busy := yaadBackupDirs[b.dbDir]; busy {
+		yaadBackupsMu.Unlock()
+		return
+	}
+	// Claim the directory under the lock so concurrent callers cannot both
+	// start a scheduler; released on failure so a later caller can retry.
+	yaadBackupDirs[b.dbDir] = struct{}{}
+	yaadBackupsMu.Unlock()
+
+	sched, err := b.store.ScheduleBackups(
+		filepath.Join(b.dbDir, yaadBackupDir),
+		yaadBackupInterval,
+		yaadBackupKeep,
+		yaadBackupMaxAge,
+	)
+	if err != nil {
+		yaadBackupsMu.Lock()
+		delete(yaadBackupDirs, b.dbDir)
+		yaadBackupsMu.Unlock()
+		slog.Warn("[hawk/memory] yaad backup scheduler not started", "error", err)
+		return
+	}
+	sched.Start()
+
+	b.mu.Lock()
+	b.backupSched = sched
+	b.mu.Unlock()
 }
 
 // Ready reports whether the yaad bridge is initialized and usable.
@@ -673,15 +740,30 @@ func (b *YaadBridge) GetFullContent(ids []string) ([]FullResult, error) {
 }
 
 // Close shuts down the yaad engine and closes the database connection.
+// If this bridge started the backup scheduler, it is stopped here and the
+// directory claim released so a later bridge can restart snapshots.
 func (b *YaadBridge) Close() {
-	if !b.ready {
+	b.mu.Lock()
+	sched := b.backupSched
+	b.backupSched = nil
+	wasReady := b.ready
+	b.ready = false
+	b.mu.Unlock()
+
+	if sched != nil {
+		sched.Stop()
+		yaadBackupsMu.Lock()
+		delete(yaadBackupDirs, b.dbDir)
+		yaadBackupsMu.Unlock()
+	}
+
+	if !wasReady {
 		return
 	}
 	b.engine.Close()
 	if b.store != nil {
 		_ = b.store.Close()
 	}
-	b.ready = false
 }
 
 func bridgeDigest(value string) string {
