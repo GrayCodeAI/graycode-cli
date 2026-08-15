@@ -22,6 +22,7 @@ require (
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/chromedp/chromedp v0.16.0
 	github.com/fsnotify/fsnotify v1.10.1
+	github.com/gofrs/flock v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-runewidth v0.0.27
 	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
@@ -56,7 +57,6 @@ require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
-	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ogen-go/ogen v1.23.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
