@@ -26,6 +26,8 @@ LDFLAGS := -s -w \
 # ---------------------------------------------------------------------------
 GOBIN_DIR    := $(shell go env GOPATH)/bin
 GOLANGCI     := $(GOBIN_DIR)/golangci-lint
+# Keep in sync with the pin in .github/workflows/ci.yml (lint job).
+GOLANGCI_VERSION := v2.1.0
 GOFUMPT      := $(GOBIN_DIR)/gofumpt
 GOIMPORTS    := $(GOBIN_DIR)/goimports
 GOVULNCHECK  := $(GOBIN_DIR)/govulncheck
@@ -134,11 +136,11 @@ submodule-release-parity: ## Verify every go.mod ecosystem version resolves to i
 	bash ./scripts/check-submodule-release-parity.sh
 
 lint: ## Run golangci-lint.
-	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" && exit 1)
+	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION)" && exit 1)
 	$(GOLANGCI) run ./... --timeout=5m
 
 lint-fix: ## Run golangci-lint with --fix.
-	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" && exit 1)
+	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION)" && exit 1)
 	$(GOLANGCI) run ./... --fix --timeout=5m
 
 security: ## Run govulncheck.
@@ -228,7 +230,7 @@ setup: ## Set up local development environment (go.work + external repos).
 	@echo "=== Installing development tools ==="
 	@command -v $(GOFUMPT)   >/dev/null 2>&1 || go install mvdan.cc/gofumpt@latest || echo "  ⚠ Could not install gofumpt"
 	@command -v $(GOIMPORTS) >/dev/null 2>&1 || go install golang.org/x/tools/cmd/goimports@latest || echo "  ⚠ Could not install goimports"
-	@command -v $(GOLANGCI)  >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest || echo "  ⚠ Could not install golangci-lint"
+	@command -v $(GOLANGCI)  >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION) || echo "  ⚠ Could not install golangci-lint"
 	@command -v $(GOVULNCHECK) >/dev/null 2>&1 || go install golang.org/x/vuln/cmd/govulncheck@latest || echo "  ⚠ Could not install govulncheck"
 	@command -v lefthook >/dev/null 2>&1 || go install github.com/evilmartians/lefthook@latest || echo "  ⚠ Could not install lefthook"
 	@echo "✓ All tools installed"
