@@ -1,5 +1,5 @@
 // Package session is the Stage-1 namespace for session-lifecycle types in
-// package engine. See ../REFACTOR_PLAN.md.
+// package engine. See ../../docs/plans/engine-refactor-plan.md.
 package compression
 
 // Compressor is a shorter name for SessionCompressor.

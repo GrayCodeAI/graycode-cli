@@ -46,11 +46,12 @@ We follow [coordinated vulnerability disclosure](https://en.wikipedia.org/wiki/C
 
 - **Dependency monitoring:** vulnerable dependencies are detected by
   `govulncheck`, which runs on every CI build (see "Vulnerability scanning").
-- **Static analysis:** `golangci-lint` / `ruff` / `mypy` enforced in CI.
-- **Vulnerability scanning:** `govulncheck` (Go) / `pip-audit` (Python) run
-  on every CI build.
-- **Lockfiles:** `go.sum` / `pnpm-lock.yaml` / `pyproject.toml` are pinned
-  and committed.
+- **Static analysis:** `golangci-lint` (including `gosec` rules) and `go vet`
+  are enforced in CI.
+- **Vulnerability scanning:** `govulncheck` runs on every CI build.
+- **Dependency pinning:** `go.sum` is pinned and committed; ecosystem
+  submodules are pinned to exact Gitlinks and verified by
+  `make submodule-release-parity`.
 - **Reproducible builds:** release artefacts ship with SHA-256 checksums via
   goreleaser.
 - **No secrets in source:** API keys are configuration, not constants. Pre-

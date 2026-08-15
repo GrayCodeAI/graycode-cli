@@ -29,11 +29,20 @@ for the full list. The most common targets:
 | `make test`         | Run unit tests                                   |
 | `make test-race`    | Run unit tests with the race detector            |
 | `make cover`        | Generate a coverage report                       |
-| `make lint`         | Run the linter (`golangci-lint` / `ruff`)        |
+| `make lint`         | Run `golangci-lint` (pinned to CI's version)     |
 | `make fmt`          | Format source files                              |
-| `make vet`          | Run `go vet` / `mypy`                            |
-| `make security`     | Run `govulncheck` / `pip-audit`                  |
+| `make vet`          | Run `go vet`                                     |
+| `make security`     | Run `govulncheck`                                |
 | `make ci`           | Run everything CI runs (the gate before pushing) |
+
+Repo-specific dev targets:
+
+| Target             | What it does                                                        |
+| ------------------ | ------------------------------------------------------------------- |
+| `make setup`       | Set up local development environment (go.work + external repos).     |
+| `make boundaries`  | Alias for all boundary guards (matches `make boundaries` in engine repos). |
+| `make test-10x`    | Run tests 10 times to surface flakes.                               |
+| `make smoke`       | Quick build + doctor + ecosystem verification.                      |
 
 ## Commit message convention
 

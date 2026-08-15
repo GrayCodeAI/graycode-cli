@@ -75,7 +75,7 @@ REEXPORT="engine/${SUBPKG}_reexports.go"
 {
   echo "// This file re-exports symbols from the $SUBPKG sub-package so that existing"
   echo "// callers of engine.* keep compiling during Stage 2 migration."
-  echo "// See REFACTOR_PLAN.md."
+  echo "// See docs/plans/engine-refactor-plan.md."
   echo "package engine"
   echo ""
   echo "import \"github.com/GrayCodeAI/hawk/internal/engine/$SUBPKG\""

@@ -1,5 +1,5 @@
 // Package workflow is the Stage-1 namespace for workflow + workspace +
-// trajectory types in package engine. See ../REFACTOR_PLAN.md.
+// trajectory types in package engine. See ../../docs/plans/engine-refactor-plan.md.
 package workflow
 
 import "context"

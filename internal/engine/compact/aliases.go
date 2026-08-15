@@ -1,5 +1,5 @@
 // Package compact provides compaction strategies, types, and helpers
-// for context-window management. See ../REFACTOR_PLAN.md.
+// for context-window management. See ../../docs/plans/engine-refactor-plan.md.
 package compact
 
 // Result is the outcome of a compaction pass.

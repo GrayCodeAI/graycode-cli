@@ -1,5 +1,5 @@
 // Package diff is the Stage-1 namespace for diff sandbox, staging, preview,
-// summariser, test selector, and 3-way merge. See ../REFACTOR_PLAN.md.
+// summariser, test selector, and 3-way merge. See ../../docs/plans/engine-refactor-plan.md.
 package diff
 
 type (
