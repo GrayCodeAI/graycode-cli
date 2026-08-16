@@ -497,11 +497,16 @@ jobs:
           size=$(go build -trimpath -ldflags="-s -w" -o /tmp/hawk-bin ./cmd/hawk && wc -c < /tmp/hawk-bin)
           size_mb=$((size / 1024 / 1024))
           echo "Binary size: ${size_mb}MB"
-          # Threshold lowered from 110MB → 80MB. With -ldflags="-s -w" the
-          # release binary is ~76MB. A 80MB threshold gives 4MB headroom for
-          # regression detection while still being realistic.
-          if [ "$size_mb" -gt 80 ]; then
-            echo "::warning::Binary size ${size_mb}MB exceeds 80MB threshold"
+          # Threshold history: 110MB → 80MB (binary was ~76MB) → 98MB.
+          # The 80MB line became stale: the audit-sweep merges (trace
+          # rebrand, yaad at-rest encryption, engine features) grew the
+          # release binary to ~95MB (linux/amd64, -trimpath -ldflags="-s -w").
+          # Re-baselined to 98MB (3MB headroom) so this check detects new
+          # bloat regressions instead of warning on every run. A real size
+          # reduction (e.g. swapping modernc.org/sqlite for cgo sqlite,
+          # lazy-loading WASM/CEL) is tracked separately.
+          if [ "$size_mb" -gt 98 ]; then
+            echo "::warning::Binary size ${size_mb}MB exceeds 98MB threshold"
           fi
           rm -f /tmp/hawk-bin
 
