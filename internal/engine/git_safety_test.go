@@ -21,6 +21,7 @@ func TestInspectGitBranch_NonRepo(t *testing.T) {
 
 func TestEnsureAgentBranch_FromMain(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
+		// TODO: install git in minimal CI images instead of skipping.
 		t.Skip("git not available")
 	}
 	dir := t.TempDir()

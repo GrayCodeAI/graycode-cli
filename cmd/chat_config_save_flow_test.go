@@ -225,6 +225,7 @@ func TestHandleConfigApplyCredentialsMsg_CatalogFailureDoesNotBlameProvider(t *t
 
 // Skipped: integration test requiring specific eyrie model catalog state
 func TestHandleConfigApplyCredentialsMsg_ValidationFailureDoesNotBlameProvider(t *testing.T) {
+	// TODO: enable once eyrie catalog fixtures pin the claude-fable-5 model state.
 	t.Skip("requires specific eyrie model catalog state (claude-fable-5)")
 	hawkconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
@@ -253,6 +254,7 @@ func TestHandleConfigApplyCredentialsMsg_ValidationFailureDoesNotBlameProvider(t
 
 // Skipped: integration test requiring specific eyrie model catalog state
 func TestHandleConfigApplyCredentialsMsg_AuthenticationFailureBlamesKey(t *testing.T) {
+	// TODO: enable once eyrie catalog fixtures pin the auth-failure model state.
 	t.Skip("requires specific eyrie model catalog state")
 	hawkconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}

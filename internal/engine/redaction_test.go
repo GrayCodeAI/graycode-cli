@@ -32,6 +32,7 @@ func TestRedactToolResultRedactsEnvSecrets(t *testing.T) {
 func TestRedactToolResultRedactsHomePaths(t *testing.T) {
 	home, err := os.UserHomeDir()
 	if err != nil || home == "" {
+		// TODO: set a deterministic HOME in CI instead of skipping.
 		t.Skip("no home directory available")
 	}
 	s := &Session{life: NewLifecycleService(nil)}

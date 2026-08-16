@@ -47,6 +47,7 @@ func TestPowerShellTool_SandboxFailClosed(t *testing.T) {
 	// Skip if pwsh is not installed — the sandbox check happens after the
 	// pwsh-availability check, so we can't test it without pwsh.
 	if findPowerShell() == "" {
+		// TODO: track pwsh availability on Linux/macOS CI runners.
 		t.Skip("pwsh not installed")
 	}
 	ctx := sandbox.ContextWithMode(context.Background(), sandbox.ModeWorkspace)
@@ -74,6 +75,7 @@ func TestPowerShellTool_SandboxFailClosed(t *testing.T) {
 func TestPowerShellTool_SandboxOffExecutes(t *testing.T) {
 	// Skip if pwsh is not installed.
 	if findPowerShell() == "" {
+		// TODO: track pwsh availability on Linux/macOS CI runners.
 		t.Skip("pwsh not installed")
 	}
 	ctx := context.Background()
