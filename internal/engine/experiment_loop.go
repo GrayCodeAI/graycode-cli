@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +12,12 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
+
+// gitRollbackTimeout bounds rollback git operations in the experiment loop.
+// Rollback deliberately uses a detached context: reverting an experiment must
+// complete even when the surrounding request context has already been
+// canceled, but it must not hang forever on a stuck git invocation.
+const gitRollbackTimeout = 2 * time.Minute
 
 // ExperimentResult holds the outcome of a single autonomous experiment.
 type ExperimentResult struct {
@@ -59,7 +66,7 @@ func (el *ExperimentLoop) Run(ctx context.Context, modifyFn func(ctx context.Con
 		}
 
 		// Snapshot current state
-		snapshot, err := el.snapshot()
+		snapshot, err := el.snapshot(ctx)
 		if err != nil {
 			return fmt.Errorf("snapshot failed: %w", err)
 		}
@@ -117,28 +124,44 @@ func (el *ExperimentLoop) validate(ctx context.Context) (bool, string) {
 }
 
 // snapshot captures git state for rollback.
-func (el *ExperimentLoop) snapshot() (string, error) {
-	cmd := exec.CommandContext(context.Background(), "git", "stash", "create")
+func (el *ExperimentLoop) snapshot(ctx context.Context) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", "stash", "create")
 	cmd.Dir = el.WorkDir
 	out, err := cmd.Output()
 	if err != nil {
 		// No changes to stash — use HEAD
-		cmd = exec.CommandContext(context.Background(), "git", "rev-parse", "HEAD")
+		cmd = exec.CommandContext(ctx, "git", "rev-parse", "HEAD")
 		cmd.Dir = el.WorkDir
-		out, _ = cmd.Output()
+		out, err = cmd.Output()
+		if err != nil {
+			// Fall back to the empty-ref rollback path, but make the failure
+			// visible instead of silently discarding it.
+			slog.Warn("experiment loop: git rev-parse HEAD failed; falling back to checkout rollback", "dir", el.WorkDir, "error", err)
+		}
 	}
 	return strings.TrimSpace(string(out)), nil
 }
 
-// restore reverts to a snapshot.
+// restore reverts to a snapshot. It uses a detached, time-bounded context
+// (gitRollbackTimeout) rather than the request context because a rollback
+// must still complete when the request has just been canceled.
 func (el *ExperimentLoop) restore(ref string) {
+	ctx, cancel := context.WithTimeout(context.Background(), gitRollbackTimeout)
+	defer cancel()
+
 	if ref == "" {
-		_ = exec.CommandContext(context.Background(), "git", "checkout", "--", ".").Run()
+		// NOTE: no WorkDir here (pre-existing behaviour): rolls back the
+		// process CWD when no snapshot ref was captured.
+		if err := exec.CommandContext(ctx, "git", "checkout", "--", ".").Run(); err != nil {
+			slog.Warn("experiment loop: rollback (checkout) failed", "error", err)
+		}
 		return
 	}
-	cmd := exec.CommandContext(context.Background(), "git", "checkout", "--", ".")
+	cmd := exec.CommandContext(ctx, "git", "checkout", "--", ".")
 	cmd.Dir = el.WorkDir
-	_ = cmd.Run()
+	if err := cmd.Run(); err != nil {
+		slog.Warn("experiment loop: rollback (checkout) failed", "dir", el.WorkDir, "error", err)
+	}
 }
 
 // Summary returns a formatted summary of all experiments.

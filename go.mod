@@ -11,17 +11,18 @@ require (
 	charm.land/bubbles/v2 v2.1.1
 	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.5
-	github.com/GrayCodeAI/eyrie v0.2.3-0.20260813100729-7ec579abfaa9
-	github.com/GrayCodeAI/hawk-core-contracts v0.1.12
-	github.com/GrayCodeAI/inspect v0.0.0-20260813092651-2a40bbb1727c
-	github.com/GrayCodeAI/sight v0.0.0-20260726091804-84c96edfc589
-	github.com/GrayCodeAI/tok v0.1.5-0.20260815024238-5355fcab2ef6
-	github.com/GrayCodeAI/yaad v0.2.1-0.20260815153959-ab5e6490c052
+	github.com/GrayCodeAI/eyrie v0.2.3-0.20260816034245-ede6671749b1
+	github.com/GrayCodeAI/hawk-core-contracts v0.1.13-0.20260816034142-16ebcfd5ad6e
+	github.com/GrayCodeAI/inspect v0.0.0-20260816034902-b5b658421c8b
+	github.com/GrayCodeAI/sight v0.0.0-20260816034858-481d3d1d5705
+	github.com/GrayCodeAI/tok v0.1.5-0.20260816034249-643b6675ebc7
+	github.com/GrayCodeAI/yaad v0.2.1-0.20260816034238-42bdda93995b
 	github.com/alecthomas/chroma/v2 v2.26.1
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/chromedp/chromedp v0.16.0
 	github.com/fsnotify/fsnotify v1.10.1
+	github.com/gofrs/flock v0.13.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-runewidth v0.0.27
 	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
@@ -42,7 +43,7 @@ require (
 )
 
 require (
-	github.com/GrayCodeAI/hawk-mcpkit v0.1.6-0.20260729083555-85ac53f3ec84 // indirect
+	github.com/GrayCodeAI/hawk-mcpkit v0.1.6-0.20260816034242-4a5ea251cd7a // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/chromedp/cdproto v0.0.0-20260714215040-dc233986426f // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
@@ -56,7 +57,6 @@ require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
-	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ogen-go/ogen v1.23.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
@@ -157,7 +157,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0
-	github.com/GrayCodeAI/trace v0.1.4-0.20260812042155-a31e98c7d75b
+	github.com/GrayCodeAI/trace v0.1.4-0.20260816034253-59b437bbe8dc
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect

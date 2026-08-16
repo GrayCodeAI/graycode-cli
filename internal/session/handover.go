@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/safewrite"
 )
 
 // Handover represents a session transfer between models, machines, or team members.
@@ -363,7 +365,9 @@ func SaveHandover(handover *Handover, path string) error {
 	if err != nil {
 		return fmt.Errorf("marshal handover: %w", err)
 	}
-	if err := os.WriteFile(path, data, 0o600); err != nil {
+	// safewrite keeps the previous 0600 mode while making the write atomic
+	// (temp + rename) and symlink-resistant.
+	if err := safewrite.WriteFile(path, data); err != nil {
 		return fmt.Errorf("write handover: %w", err)
 	}
 	return nil

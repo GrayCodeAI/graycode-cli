@@ -43,7 +43,6 @@ Available Commands:
   daemon      Manage the hawk background server
   doctor      Run local diagnostics
   ecosystem   Show eyrie, yaad, and tok integration status
-  entire      Entire CLI
   eval        Evaluate model performance on coding benchmarks
   exec        Execute a single command non-interactively
   features    List and manage feature flags
@@ -81,6 +80,7 @@ Available Commands:
   stats       Show usage statistics and cost analytics
   taste       Manage taste profile (learned coding style preferences)
   tools       List built-in tools
+  trace       Git-native session capture for AI coding agents
   trust       Manage folder trust for project automation
   update      Check for hawk updates
   verify      Run local self-verification (security log, governance policy)

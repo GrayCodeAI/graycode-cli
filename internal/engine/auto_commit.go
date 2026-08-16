@@ -3,10 +3,17 @@ package engine
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os/exec"
 	"strings"
 	"time"
 )
+
+// autoCommitTimeout bounds each git operation run by the auto-committer.
+// These operations run after an edit completes, detached from any request
+// context (the caller has none to give), so a hung git invocation — e.g. on
+// a slow network filesystem — cannot block the session forever.
+const autoCommitTimeout = 2 * time.Minute
 
 // AutoCommitter automatically commits changes after every successful edit.
 // Never lose work — every change is a git commit you can undo.
@@ -25,16 +32,25 @@ func (ac *AutoCommitter) CommitIfChanged(description string) error {
 	if !ac.Enabled {
 		return nil
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), autoCommitTimeout)
+	defer cancel()
+
 	// Check if there are changes
-	cmd := exec.CommandContext(context.Background(), "git", "status", "--porcelain")
+	cmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
 	cmd.Dir = ac.RepoDir
 	out, err := cmd.Output()
-	if err != nil || len(strings.TrimSpace(string(out))) == 0 {
+	if err != nil {
+		// Distinguish "git status failed" from "nothing to commit" so the
+		// failure is not silently swallowed as a no-op.
+		slog.Warn("auto-commit: git status failed; skipping commit", "dir", ac.RepoDir, "error", err)
+		return nil
+	}
+	if len(strings.TrimSpace(string(out))) == 0 {
 		return nil // no changes
 	}
 
 	// Stage all changes
-	stage := exec.CommandContext(context.Background(), "git", "add", "-A")
+	stage := exec.CommandContext(ctx, "git", "add", "-A")
 	stage.Dir = ac.RepoDir
 	if err := stage.Run(); err != nil {
 		return err
@@ -44,14 +60,17 @@ func (ac *AutoCommitter) CommitIfChanged(description string) error {
 	msg := ac.generateMessage(description)
 
 	// Commit
-	commit := exec.CommandContext(context.Background(), "git", "commit", "-m", msg, "--no-verify") // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
+	commit := exec.CommandContext(ctx, "git", "commit", "-m", msg, "--no-verify") // #nosec G204 -- git subcommand invocation with fixed subcommand and internally-derived args
 	commit.Dir = ac.RepoDir
 	return commit.Run()
 }
 
 // Undo reverts the last auto-commit.
 func (ac *AutoCommitter) Undo() error {
-	cmd := exec.CommandContext(context.Background(), "git", "reset", "--soft", "HEAD~1")
+	ctx, cancel := context.WithTimeout(context.Background(), autoCommitTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "git", "reset", "--soft", "HEAD~1")
 	cmd.Dir = ac.RepoDir
 	return cmd.Run()
 }

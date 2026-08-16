@@ -1,5 +1,5 @@
 // Package git provides git-context enrichment and remote-forge integration.
-// See ../REFACTOR_PLAN.md.
+// See ../../docs/plans/engine-refactor-plan.md.
 package git
 
 // Context wraps a local git repo and exposes file/commit/blame queries.

@@ -1,10 +1,8 @@
 package engine
 
 import (
-	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"sync"
 
@@ -60,21 +58,8 @@ func (at *AssumptionTracker) VerifyFileExists(text, path string) {
 	at.Assumptions = append(at.Assumptions, a)
 }
 
-// VerifyCommandSucceeds checks if a command-based assumption holds.
-func (at *AssumptionTracker) VerifyCommandSucceeds(text, cmd string) {
-	at.mu.Lock()
-	defer at.mu.Unlock()
-	a := Assumption{Text: text}
-	out, err := exec.CommandContext(context.Background(), "sh", "-c", cmd).CombinedOutput() // #nosec G204 -- intentional assumption-check command boundary
-	if err == nil {
-		a.Status = AssumptionConfirmed
-		a.Proof = "command succeeded"
-	} else {
-		a.Status = AssumptionFailed
-		a.Proof = strings.TrimSpace(string(out))
-	}
-	at.Assumptions = append(at.Assumptions, a)
-}
+// VerifyCommandSucceeds was removed: it ran caller-supplied strings through
+// `sh -c`, bypassing the permission/safety stack, and had no callers.
 
 // Failed returns all assumptions that were proven wrong.
 func (at *AssumptionTracker) Failed() []Assumption {

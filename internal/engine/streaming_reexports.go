@@ -1,6 +1,6 @@
 // This file re-exports symbols from the streaming sub-package so that existing
 // callers of engine.ResponseCache, engine.NewResponseCache, etc. keep compiling
-// during the Stage 2 migration. See REFACTOR_PLAN.md.
+// during the Stage 2 migration. See docs/plans/engine-refactor-plan.md.
 package engine
 
 import "github.com/GrayCodeAI/hawk/internal/engine/streaming"

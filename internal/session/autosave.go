@@ -3,11 +3,15 @@ package session
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 	"unicode/utf8"
+
+	"github.com/gofrs/flock"
 )
 
 // AutoSaver periodically saves sessions and tracks session metadata.
@@ -81,12 +85,27 @@ type SessionMeta struct {
 	TokenCount int       `json:"token_count,omitempty"`
 }
 
+// lockStaleAfter is the age at which a lock file's diagnostics timestamp is
+// considered stale. It is diagnostics-only: ownership is decided by flock(2),
+// so staleness never causes a live lock to be removed.
+const lockStaleAfter = 5 * time.Minute
+
 // LockFile prevents double-opening a session.
+//
+// Mutual exclusion is an OS-level advisory lock (flock via gofrs/flock) on the
+// lock file, so a lock held by a live process can never be deleted by another
+// instance that misjudges it as stale — the old stat→remove→O_EXCL dance had
+// exactly that TOCTOU race. The file's contents (PID + timestamps) are purely
+// diagnostic; if the holder crashes, the kernel releases the flock and the
+// next AcquireLock simply rewrites the file.
 type LockFile struct {
 	path string
+	fl   *flock.Flock
 }
 
-// AcquireLock creates a lock file for the session. Returns error if already locked.
+// AcquireLock takes the session lock. Returns a *SessionLockedError if
+// another live instance holds it. A leftover lock file from a crashed
+// process is reclaimed automatically because its flock died with the process.
 func AcquireLock(sessionID string) (*LockFile, error) {
 	if err := ValidateID(sessionID); err != nil {
 		return nil, err
@@ -94,37 +113,55 @@ func AcquireLock(sessionID string) (*LockFile, error) {
 	dir := sessionsDir()
 	path := filepath.Join(dir, sessionID+".lock")
 
-	// Check if lock exists and is stale (>5 min old)
-	if info, err := os.Stat(path); err == nil {
-		if time.Since(info.ModTime()) > 5*time.Minute {
-			_ = os.Remove(path) // stale lock
-		} else {
-			return nil, &SessionLockedError{ID: sessionID}
-		}
-	}
-
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600) // #nosec G304 -- path built from sessionsDir()+session ID, internal lock file
+	fl := flock.New(path)
+	ok, err := fl.TryLock()
 	if err != nil {
+		return nil, fmt.Errorf("session %s: acquire lock: %w", sessionID, err)
+	}
+	if !ok {
+		// Diagnostics: report whether the holder's heartbeat looks abandoned.
+		// This never removes the lock — ownership is the kernel's call.
+		if info, statErr := os.Stat(path); statErr == nil && time.Since(info.ModTime()) > lockStaleAfter {
+			slog.Warn("session lock is held but its heartbeat is stale; holder may be hung (not removing: flock owns exclusion)", "session", sessionID, "lock_age", time.Since(info.ModTime()).Round(time.Second))
+		}
 		return nil, &SessionLockedError{ID: sessionID}
 	}
-	_, _ = f.Write([]byte(time.Now().Format(time.RFC3339)))
-	_ = f.Close()
 
-	return &LockFile{path: path}, nil
+	writeLockDiagnostics(path, time.Now())
+
+	return &LockFile{path: path, fl: fl}, nil
 }
 
-// Release removes the lock file.
+// writeLockDiagnostics records PID and timestamps in the lock file. Best
+// effort: lock correctness never depends on these contents.
+func writeLockDiagnostics(path string, acquiredAt time.Time) {
+	content := fmt.Sprintf("pid=%d acquired=%s\n", os.Getpid(), acquiredAt.Format(time.RFC3339))
+	_ = os.WriteFile(path, []byte(content), 0o600) // #nosec G304 -- path built from sessionsDir()+session ID, internal lock file
+}
+
+// Release drops the lock. The diagnostics file is intentionally kept, with a
+// released marker: unlinking right after unlock has a classic flock race
+// where a concurrent opener holds the old inode while a later acquirer
+// creates a fresh file at the same path — both would then "hold" a lock.
+// Presence of the file means nothing; only flock ownership does.
 func (l *LockFile) Release() {
-	if l != nil && l.path != "" {
-		_ = os.Remove(l.path)
+	if l == nil || l.path == "" {
+		return
 	}
+	if l.fl != nil {
+		_ = l.fl.Unlock()
+	}
+	content := fmt.Sprintf("pid=%d released=%s\n", os.Getpid(), time.Now().Format(time.RFC3339))
+	_ = os.WriteFile(l.path, []byte(content), 0o600) // #nosec G304 -- path built from sessionsDir()+session ID, internal lock file
 }
 
-// Refresh updates the lock file timestamp to prevent it from going stale.
+// Refresh updates the lock file's heartbeat (PID + timestamp) so stale-lock
+// diagnostics can tell an active holder from an abandoned one.
 func (l *LockFile) Refresh() {
-	if l != nil && l.path != "" {
-		_ = os.Chtimes(l.path, time.Now(), time.Now())
+	if l == nil || l.path == "" {
+		return
 	}
+	writeLockDiagnostics(l.path, time.Now())
 }
 
 // SessionLockedError indicates a session is already open.

@@ -1,5 +1,5 @@
 // Package review is the Stage-1 namespace for self-review / critique / quality
-// scoring types in package engine. See ../REFACTOR_PLAN.md.
+// scoring types in package engine. See ../../docs/plans/engine-refactor-plan.md.
 package review
 
 // Bot is the rule-driven review bot for diffs.

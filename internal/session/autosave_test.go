@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 	"unicode/utf8"
@@ -282,6 +284,92 @@ func TestSessionLockedError(t *testing.T) {
 	if msg == "" {
 		t.Error("Error() should not be empty")
 	}
+}
+
+// TestAcquireLock_ConcurrentOnlyOneWins fires N concurrent acquirers at the
+// same session and asserts exactly one holds the lock while all of them have
+// attempted — the mutual-exclusion property the stat→remove→O_EXCL design
+// could not guarantee.
+func TestAcquireLock_ConcurrentOnlyOneWins(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	_ = os.MkdirAll(setTestSessionsDir(t, dir), 0o755)
+
+	const goroutines = 8
+	var (
+		mu       sync.Mutex
+		held     int
+		attempt  sync.WaitGroup
+		release  = make(chan struct{})
+		done     sync.WaitGroup
+		badErrTy int
+	)
+	for i := 0; i < goroutines; i++ {
+		attempt.Add(1)
+		done.Add(1)
+		go func() {
+			defer done.Done()
+			lock, err := AcquireLock("concurrent-session")
+			// Signal the attempt BEFORE blocking on the release gate so
+			// attempt.Wait() cannot wait on a goroutine that is itself
+			// waiting for attempt.Wait() to proceed.
+			attempt.Done()
+			if err != nil {
+				var lockErr *SessionLockedError
+				if !errors.As(err, &lockErr) {
+					mu.Lock()
+					badErrTy++
+					mu.Unlock()
+				}
+				return
+			}
+			mu.Lock()
+			held++
+			mu.Unlock()
+			<-release // hold until every goroutine has attempted
+			lock.Release()
+		}()
+	}
+	attempt.Wait()
+	close(release)
+	done.Wait()
+
+	if badErrTy != 0 {
+		t.Errorf("%d losers returned a non-SessionLockedError error", badErrTy)
+	}
+	if held != 1 {
+		t.Fatalf("expected exactly 1 concurrent lock holder, got %d", held)
+	}
+
+	// After the holder releases, the lock must be acquirable again.
+	lock, err := AcquireLock("concurrent-session")
+	if err != nil {
+		t.Fatalf("re-acquire after release: %v", err)
+	}
+	lock.Release()
+}
+
+// TestAcquireLock_CrashReclaim verifies a leftover lock file with no live
+// flock holder (the post-crash state) is reclaimed without waiting out the
+// stale window — the kernel dropped the flock when the holder died.
+func TestAcquireLock_CrashReclaim(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	sessDir := setTestSessionsDir(t, dir)
+	_ = os.MkdirAll(sessDir, 0o755)
+
+	// Simulate a crashed holder: lock file exists, fresh mtime, but no
+	// process holds the flock on it.
+	lockPath := filepath.Join(sessDir, "crashed-session.lock")
+	if err := os.WriteFile(lockPath, []byte("pid=999999 acquired=just-now\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	lock, err := AcquireLock("crashed-session")
+	if err != nil {
+		t.Fatalf("should reclaim a lock whose holder died, got: %v", err)
+	}
+	lock.Release()
 }
 
 func TestAddTag(t *testing.T) {

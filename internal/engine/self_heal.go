@@ -428,7 +428,12 @@ func (sh *SelfHealer) RunScript(ctx context.Context, path string) (stdout, stder
 	ctx, cancel := context.WithTimeout(ctx, sh.Timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "sh", "-c", path) // #nosec G204 -- intentional self-heal script execution boundary
+	// Pass the path as a direct argument instead of `sh -c <path>`: the
+	// shell-eval form re-parses the path, so a path containing shell
+	// metacharacters would be executed as shell code (double evaluation).
+	// /bin/sh treats a leading `#!` shebang line as a comment, so script
+	// semantics are unchanged.
+	cmd := exec.CommandContext(ctx, "/bin/sh", path)
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf

@@ -1,3 +1,3 @@
 // Package agent is the namespace for sub-agent orchestration types.
-// See ../REFACTOR_PLAN.md.
+// See ../../docs/plans/engine-refactor-plan.md.
 package agent

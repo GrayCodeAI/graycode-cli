@@ -685,7 +685,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				// extension when the backend becomes context-aware.
 				if s.MemorySvc().Memory() != nil && shouldRemember(textContent.String()) {
 					go func(content string) {
-						_ = s.MemorySvc().Memory().Remember(content, "assistant_learning")
+						if err := s.MemorySvc().Memory().Remember(content, "assistant_learning"); err != nil {
+							slog.Warn("background assistant_learning remember failed", "error", err)
+						}
 					}(textContent.String())
 				}
 			}
@@ -757,7 +759,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						return
 					}
 					content, _ := json.Marshal(skill)
-					_ = s.MemorySvc().Yaad().Remember(string(content), "skill")
+					if err := s.MemorySvc().Yaad().Remember(string(content), "skill"); err != nil {
+						slog.Warn("background skill remember failed", "error", err)
+					}
 				}()
 			}
 			emit(StreamEvent{Type: "done"})
@@ -925,11 +929,15 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 			if userMsg != "" && assistantMsg != "" {
 				condensed := fmt.Sprintf("Q: %s\nA: %s", truncate(userMsg, 200), truncate(assistantMsg, 300))
-				_ = s.MemorySvc().Memory().Remember(condensed, "conversation")
+				if err := s.MemorySvc().Memory().Remember(condensed, "conversation"); err != nil {
+					slog.Warn("conversation remember failed", "error", err)
+				}
 			}
 			// Also save insights if the response has learning signals
 			if assistantMsg != "" && shouldRemember(assistantMsg) {
-				_ = s.MemorySvc().Memory().Remember(truncate(assistantMsg, 500), "insight")
+				if err := s.MemorySvc().Memory().Remember(truncate(assistantMsg, 500), "insight"); err != nil {
+					slog.Warn("insight remember failed", "error", err)
+				}
 			}
 		}
 	}
