@@ -18,8 +18,8 @@ github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/GrayCodeAI/eyrie v0.2.3-0.20260813100729-7ec579abfaa9 h1:PmA9hUIiFWs66V4UNfB/NE/uw4LxHcmTS+055SeYGes=
 github.com/GrayCodeAI/eyrie v0.2.3-0.20260813100729-7ec579abfaa9/go.mod h1:AW/UPuj+EWxMibiD+/Cy0TWd6RmTvth+KeGXSxU3t6I=
-github.com/GrayCodeAI/hawk-core-contracts v0.1.12 h1:percfsd771JLmO9gMkrQtENEPBA9ZN3dG1Nc1moN3ZQ=
-github.com/GrayCodeAI/hawk-core-contracts v0.1.12/go.mod h1:BXbh68YrCf+s9HVqND5F8DAvl2MnE5NcOwZZZB56HGA=
+github.com/GrayCodeAI/hawk-core-contracts v0.1.13-0.20260816034142-16ebcfd5ad6e h1:cG9bLB3rWmMVU/7GwDxUIrEFbGHz7OTD5s9I4K+udr0=
+github.com/GrayCodeAI/hawk-core-contracts v0.1.13-0.20260816034142-16ebcfd5ad6e/go.mod h1:BXbh68YrCf+s9HVqND5F8DAvl2MnE5NcOwZZZB56HGA=
 github.com/GrayCodeAI/hawk-mcpkit v0.1.6-0.20260729083555-85ac53f3ec84 h1:HzoXUYNNyt88IccaPBxSvOQ/5PZzJOcSHbvBjX3l2mQ=
 github.com/GrayCodeAI/hawk-mcpkit v0.1.6-0.20260729083555-85ac53f3ec84/go.mod h1:C32HPDRqiDETbVbMIbOTvguek6KImpLCffJjet7sqck=
 github.com/GrayCodeAI/inspect v0.0.0-20260813092651-2a40bbb1727c h1:IVGlQTaYScCL4wsEzCGPxgBP4s9QIXhtZTX6aeHUqMw=
