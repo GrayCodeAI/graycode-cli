@@ -16,6 +16,7 @@ import (
 // TODO: https://github.com/GrayCodeAI/hawk/issues/273 track live-browser CI coverage.
 func TestBrowserLive(t *testing.T) {
 	if os.Getenv("HAWK_LIVE_BROWSER") == "" {
+		// TODO: https://github.com/GrayCodeAI/hawk/issues/273 live-browser CI coverage.
 		t.Skip("requires HAWK_LIVE_BROWSER=1 and a Chrome/Chromium binary")
 	}
 	t.Cleanup(releaseBrowser)

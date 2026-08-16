@@ -111,6 +111,7 @@ func TestProjectID_RelativeVsAbsolute(t *testing.T) {
 	// Same directory accessed via relative and absolute path should produce same ID
 	abs, err := filepath.Abs(".")
 	if err != nil {
+		// TODO: investigate environments where filepath.Abs fails.
 		t.Skip("Cannot get absolute path")
 	}
 	id1 := ProjectID(".")

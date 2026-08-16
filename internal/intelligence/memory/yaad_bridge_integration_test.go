@@ -68,6 +68,7 @@ func TestYaadBridgeRecallRecordsPortableContextGraph(t *testing.T) {
 	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	b := newTestBridge(t)
 	if !b.ready {
+		// TODO: track hermetic yaad availability so this test runs without skipping.
 		t.Skip("yaad not available")
 	}
 	defer b.Close()
@@ -111,6 +112,7 @@ func TestYaadBridgeCodeSearchRecordsPortableContextGraph(t *testing.T) {
 	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	b := newTestBridge(t)
 	if !b.ready {
+		// TODO: track hermetic yaad availability so this test runs without skipping.
 		t.Skip("yaad not available")
 	}
 	defer b.Close()
@@ -182,6 +184,7 @@ func TestYaadBridge_EnsureBackups(t *testing.T) {
 
 	b := NewYaadBridge()
 	if !b.ready {
+		// TODO: track hermetic yaad availability so this test runs without skipping.
 		t.Skip("yaad not available")
 	}
 
@@ -198,6 +201,7 @@ func TestYaadBridge_EnsureBackups(t *testing.T) {
 	// Second bridge on the same dbDir reuses the existing claim.
 	b2 := NewYaadBridge()
 	if !b2.ready {
+		// TODO: track hermetic yaad availability so this test runs without skipping.
 		t.Skip("yaad not available")
 	}
 	b2.EnsureBackups()
@@ -222,6 +226,7 @@ func TestYaadBridge_EnsureBackups(t *testing.T) {
 	// re-register without error.
 	b3 := NewYaadBridge()
 	if !b3.ready {
+		// TODO: track hermetic yaad availability so this test runs without skipping.
 		t.Skip("yaad not available")
 	}
 	b3.EnsureBackups()

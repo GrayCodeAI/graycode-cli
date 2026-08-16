@@ -86,6 +86,7 @@ func runTask(t *testing.B, fix taskFixture, events []types.EyrieStreamEvent) (te
 // harness execution lives in bench_suite.go and is invoked via `hawk bench`.
 func TestBenchmark_SWE_benchHeadless(t *testing.T) {
 	if v := os.Getenv("HAWK_BENCH_HEADLESS"); v != "1" {
+		// TODO: track scheduling the headless benchmark smoke in CI.
 		t.Skip("set HAWK_BENCH_HEADLESS=1 to run agent-loop benchmark smoke")
 	}
 	b := &testing.B{}
