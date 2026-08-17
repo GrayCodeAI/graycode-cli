@@ -99,7 +99,12 @@ concrete tool, carry it through `toolExecResult` in a later PR.
 
 ## Phase 3 — Titles + plan-mode-as-state (optional)
 
-- Log-backed session titles with one provider spot + deterministic fallback.
+- ~~Log-backed session titles with one provider spot + deterministic fallback.~~
+  Partial: `internal/eventlog.TitleFromMessages` projects a provider-free,
+  deterministic title from model-visible events, and
+  `PersistenceService.JournalTitle` exposes it. Persisting titles from live
+  sessions against the `session.Session` metadata for the UI provider spot is
+  not yet connected.
 - `internal/spec` plan state as logged facts.
 
 ## Gates

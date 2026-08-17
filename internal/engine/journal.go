@@ -58,7 +58,19 @@ func (s *PersistenceService) AppendAssistantJournaled(msg types.EyrieMessage) {
 	s.mu.Unlock()
 }
 
-// JournalProjection returns the model-visible message surface rebuilt from the
+// JournalTitle returns the deterministic, provider-free session title derived from
+// the journal's model-visible message events. It is the log-backed title seam
+// described in docs/plans/dsh-harness-port-plan.md Phase 3. This method
+// intentionally has no LLM dependency and does NOT mutate any state; it only
+// projects the existing log.
+func (s *PersistenceService) JournalTitle() string {
+	if s == nil || s.Journal() == nil {
+		return "Untitled Session"
+	}
+	return eventlog.TitleFromMessages(eventlog.ProjectMessages(s.Journal().Snapshot()))
+}
+
+// JournalTitle returns the deterministic, provider-free session title derived from
 // event spine. It is the reference projection the invariant checks against
 // Messages(); compactions and other non-append transcript edits are not yet
 // represented as journal events, so consistency is only expected for transcripts
