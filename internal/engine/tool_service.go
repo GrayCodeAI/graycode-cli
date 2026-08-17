@@ -670,6 +670,27 @@ func (s *ToolService) PostProcess(ctx context.Context, result toolExecResult, tu
 		}
 	}
 	output = s.NormalizeOutput(output, canonical, result.tc.ID, contextWindow)
+	// Tool pipeline (stage post): the deepseek-harness tools/post-execute
+	// waterfall. Registered interceptors observe and may replace the normalized
+	// result before the lifecycle hooks below. An empty pipeline is a strict
+	// pass-through.
+	if s.pipeline != nil {
+		post := &tool.ToolResult{
+			Request: tool.ToolRequest{Call: result.tc},
+			Output:  output,
+			IsError: isErr,
+		}
+		if runErr := s.pipeline.Run(tool.StagePostExecute, ctx, post.Request, post); runErr != nil {
+			var sc *tool.ShortCircuit
+			if errors.As(runErr, &sc) {
+				if msg, scErr := sc.ToolError(); msg != "" {
+					output, isErr = msg, scErr
+				}
+			}
+		} else {
+			output, isErr = post.Output, post.IsError
+		}
+	}
 	if life != nil && life.Pipeline() != nil {
 		var execErr error
 		if isErr {

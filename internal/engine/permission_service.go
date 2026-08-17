@@ -222,7 +222,7 @@ func (s *PermissionService) ApplyPolicySnapshot(snapshot safety.PolicySnapshot) 
 // via the Session.CheckApproval method (which has the full state). The
 // service's own CheckApproval is a no-op when s.approval is nil so
 // callers can use it as the canonical entry point.
-func (s *PermissionService) CheckApproval(_ context.Context, toolName string, args map[string]interface{}) (bool, string) {
+func (s *PermissionService) CheckApproval(ctx context.Context, toolName string, args map[string]interface{}) (bool, string) {
 	g := s.approval
 	if g == nil || !g.Enabled {
 		return true, ""
@@ -245,6 +245,25 @@ func (s *PermissionService) CheckApproval(_ context.Context, toolName string, ar
 		Category: cat,
 		Summary:  approvalSummary(toolName, args),
 		Args:     args,
+	}
+	if g.Waterfall != nil {
+		resp, denyMsg := g.Waterfall.Decide(ctx, req)
+		switch resp {
+		case ApprovalApproveForSession:
+			g.sessionApprove(cat)
+			return true, ""
+		case ApprovalApproveForN:
+			n := req.N
+			if n <= 0 {
+				n = 5
+			}
+			g.nApprove(cat, n)
+			return true, ""
+		case ApprovalApprove:
+			return true, ""
+		default:
+			return false, denyMsg
+		}
 	}
 	if g.ConfirmFn != nil {
 		switch g.ConfirmFn(req) {

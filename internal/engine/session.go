@@ -166,6 +166,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.persist.SetAutoCompactThresholdPct(DefaultAutoCompactThresholdPct)
 	s.persist.SetSystem(systemPrompt)
 	s.tools = NewToolService(registry).WithMetrics(s.llm.Metrics()).WithTracer(oteltrace.NewTracer())
+	s.tools.SetPipeline(DefaultToolPipeline())
 	s.tools.WithExecutionDeps(toolExecutionDeps{
 		permissions: s.perms,
 		chat:        s.llm,
