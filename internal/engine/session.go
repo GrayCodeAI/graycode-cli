@@ -818,6 +818,27 @@ func (s *Session) JournalWire() []eventlog.WireEvent {
 	return wire
 }
 
+// ReplayJournal rebuilds the append-only event spine from a persisted wire record and
+// attaches it to persistence. The live transcript is not touched: this only restores
+// the log so future appends continue the sequence and new projections stay faithful.
+// A record that fails validation is returned as an error and leaves the journal
+// untouched. A nil or empty record is a no-op (version-0 sessions).
+func (s *Session) ReplayJournal(wire []eventlog.WireEvent) error {
+	if s == nil || len(wire) == 0 {
+		return nil
+	}
+	log, err := eventlog.Rehydrate(wire, nil)
+	if err != nil {
+		return err
+	}
+	p := s.Persistence()
+	if p == nil {
+		return fmt.Errorf("session: cannot attach journal without persistence")
+	}
+	p.SetJournal(log)
+	return nil
+}
+
 // CostValue returns the session's cost accumulator (a pointer
 // to a value type, so its methods can be called). New code
 // should call this instead of reading s.Cost directly.

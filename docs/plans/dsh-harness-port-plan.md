@@ -45,7 +45,9 @@ Remaining (subsequent PRs, each gated):
    `session.Session.Events` (`[]eventlog.WireEvent`), `Save` writes event lines
    plus `format_version=1` in meta when present, `scanJSONLLines`/`loadJSONLFile`
    decode and validate them, and `engine.Session.JournalWire()` exports the spine
-   for `persistDaemonSession`. Version `0` stays byte-compatible.
+   for `persistDaemonSession`. Loaded spines are replayed into the engine journal
+   on resume via `eventlog.Rehydrate` + `Session.ReplayJournal`; version `0` stays
+   byte-compatible.
 
 ## Phase 1 — Typed tool-pipeline interceptors + fail-closed approval
 

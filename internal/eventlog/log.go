@@ -67,3 +67,28 @@ func (l *Log) Len() int {
 	defer l.mu.RUnlock()
 	return len(l.events)
 }
+
+// Rehydrate rebuilds a validated, populated Log from wire events without firing the
+// observer. It is the load-side counterpart of New + Append: sequence assignment is
+// restored from the record (the loaded Seq values), the by-type index is rebuilt,
+// and any unknown kind or non-monotonic ordering is rejected before the log is
+// trusted. Events with a zero At time are assigned time.Now() so a replay never
+// carries back-in-epoch timestamps.
+func Rehydrate(wire []WireEvent, opt Listener) (*Log, error) {
+	events, err := DecodeWire(wire)
+	if err != nil {
+		return nil, err
+	}
+	l := &Log{byType: make(map[Type][]Event), listener: opt}
+	for _, ev := range events {
+		if ev.At.IsZero() {
+			ev.At = time.Now()
+		}
+		if ev.Seq > l.seq {
+			l.seq = ev.Seq
+		}
+		l.events = append(l.events, ev)
+		l.byType[ev.Type] = append(l.byType[ev.Type], ev)
+	}
+	return l, nil
+}

@@ -764,6 +764,11 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 	if saved != nil {
 		sess.LoadMessages(hawksession.ToRuntimeMessages(saved.Messages))
+		if err := sess.ReplayJournal(saved.Events); err != nil {
+			slog.Error("replay session event journal failed", "err", err, "session_id", sessionID)
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "session event journal replay failed"})
+			return
+		}
 	}
 
 	// Set autonomy, capped by server-side policy. The daemon is

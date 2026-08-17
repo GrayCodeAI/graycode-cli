@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -111,6 +112,47 @@ func TestReconstructibleFailsAfterTranscriptEdit(t *testing.T) {
 	ps.SetRawMessages(nil)
 	if err := ps.Reconstructible(); err == nil {
 		t.Fatal("Reconstructible() = nil, want mismatch after SetRawMessages")
+	}
+}
+
+func TestReplayJournalRebuildsLogFromWire(t *testing.T) {
+	ps := NewPersistenceService(nil)
+	ps.SetJournal(eventlog.New(nil))
+	ps.AddUser("hello")
+	ps.AddAssistant("hi")
+	wire, err := eventlog.MarshalWire(ps.Journal().Snapshot())
+	if err != nil {
+		t.Fatalf("MarshalWire: %v", err)
+	}
+
+	restored := NewPersistenceService(nil)
+	log, err := eventlog.Rehydrate(wire, nil)
+	if err != nil {
+		t.Fatalf("Rehydrate: %v", err)
+	}
+	restored.SetJournal(log)
+
+	want := []types.EyrieMessage{
+		{Role: "user", Content: "hello"},
+		{Role: "assistant", Content: "hi"},
+	}
+	if got := restored.JournalProjection(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("JournalProjection() = %+v, want %+v", got, want)
+	}
+	// The rebuilt log must continue sequence assignment after the largest Seq.
+	restored.AppendUserJournaled(types.EyrieMessage{Role: "user", Content: "next"})
+	if got := restored.JournalProjection(); len(got) != 3 {
+		t.Fatalf("projected %d messages after append, want 3", len(got))
+	}
+}
+
+func TestReplayJournalRejectsInvalidWire(t *testing.T) {
+	bad := []eventlog.WireEvent{
+		{Type: eventlog.UserMessage, Seq: 2, Data: json.RawMessage(`{"role":"user","content":"b"}`)},
+		{Type: eventlog.UserMessage, Seq: 1, Data: json.RawMessage(`{"role":"user","content":"a"}`)},
+	}
+	if _, err := eventlog.Rehydrate(bad, nil); err == nil {
+		t.Fatal("Rehydrate() = nil, want monotonic violation error")
 	}
 }
 
