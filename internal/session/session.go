@@ -15,6 +15,7 @@ import (
 	"time"
 
 	contracts "github.com/GrayCodeAI/hawk-core-contracts/tools"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -30,6 +31,12 @@ type Message struct {
 	ToolResults  []contracts.ToolResult `json:"tool_results,omitempty"`
 }
 
+// SessionFormatVersion is the JSONL schema revision persisted by Save. Version 0 is
+// the historical meta + message-lines shape; version 1 additionally writes the
+// append-only event spine as event lines after the messages so the durable record
+// carries the "model-visible ⟺ logged" facts. Version 0 remains byte-compatible.
+const SessionFormatVersion = 1
+
 // ToolCall is an alias to the shared ToolCall type for persistence.
 type ToolCall = contracts.ToolCall
 
@@ -38,15 +45,18 @@ type ToolResult = contracts.ToolResult
 
 // Session is a persisted conversation.
 type Session struct {
-	ID        string    `json:"id"`
-	Model     string    `json:"model"`
-	Provider  string    `json:"provider"`
-	Agent     string    `json:"agent,omitempty"`
-	CWD       string    `json:"cwd,omitempty"`
-	Name      string    `json:"name,omitempty"`
-	Messages  []Message `json:"messages"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID       string    `json:"id"`
+	Model    string    `json:"model"`
+	Provider string    `json:"provider"`
+	Agent    string    `json:"agent,omitempty"`
+	CWD      string    `json:"cwd,omitempty"`
+	Name     string    `json:"name,omitempty"`
+	Messages []Message `json:"messages"`
+	// Events carries the append-only event spine for version-1 sessions. Version-0
+	// sessions leave it unset and keep the byte-compatible messages-only shape.
+	Events    []eventlog.WireEvent `json:"events,omitempty"`
+	CreatedAt time.Time            `json:"created_at"`
+	UpdatedAt time.Time            `json:"updated_at"`
 }
 
 // ErrNotFound identifies a missing durable session without conflating it with
@@ -122,6 +132,9 @@ func Save(s *Session) error {
 		"created_at": s.CreatedAt.Format(time.RFC3339),
 		"updated_at": s.UpdatedAt.Format(time.RFC3339),
 	}
+	if len(s.Events) > 0 {
+		meta["format_version"] = SessionFormatVersion
+	}
 	metaData, err := json.Marshal(meta)
 	if err != nil {
 		_ = f.Close()
@@ -151,6 +164,28 @@ func Save(s *Session) error {
 			_ = f.Close()
 			_ = os.Remove(tmp)
 			return fmt.Errorf("write message: %w", err)
+		}
+		if err := w.WriteByte('\n'); err != nil {
+			_ = f.Close()
+			_ = os.Remove(tmp)
+			return fmt.Errorf("write newline: %w", err)
+		}
+	}
+
+	// Write each event as a JSON line (version-1 only). The event spine is
+	// owned by internal/eventlog and marshals itself bypassing Session's own
+	// fields, so version-0 sessions carry no extra lines.
+	for _, ev := range s.Events {
+		evData, err := json.Marshal(ev)
+		if err != nil {
+			_ = f.Close()
+			_ = os.Remove(tmp)
+			return fmt.Errorf("marshal event: %w", err)
+		}
+		if _, err := w.Write(evData); err != nil {
+			_ = f.Close()
+			_ = os.Remove(tmp)
+			return fmt.Errorf("write event: %w", err)
 		}
 		if err := w.WriteByte('\n'); err != nil {
 			_ = f.Close()
@@ -286,7 +321,7 @@ func RecoverFromWAL(sessionID string) (*Session, error) {
 	// Use the same tolerant line scanner as JSONL loading: oversize/corrupt
 	// lines no longer brick recovery (LOW finding). The WAL's first record is
 	// session_meta, so the meta is captured by scanJSONLLines.
-	meta, messages, err := scanJSONLLines(f, sessionID)
+	meta, messages, events, err := scanJSONLLines(f, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("recover session %s: %w", sessionID, err)
 	}
@@ -297,6 +332,12 @@ func RecoverFromWAL(sessionID string) (*Session, error) {
 	var s Session
 	s.ID = sessionID
 	s.Messages = messages
+	if len(events) > 0 {
+		if _, derr := eventlog.DecodeWire(events); derr != nil {
+			return nil, fmt.Errorf("recover session %s: %w", sessionID, derr)
+		}
+		s.Events = events
+	}
 	s.Model = asString(meta["model"])
 	s.Provider = asString(meta["provider"])
 	s.Agent = asString(meta["agent"])
@@ -357,8 +398,10 @@ func loadJSONL(id string) (*Session, error) {
 // per-line cap are drained+logged and skipped (the prior 1MB bufio.Scanner
 // cap bricked the whole load on a single oversized line — LOW finding), and
 // JSON-corrupt lines are logged+skipped rather than failing the load. The
-// first non-empty line is decoded into meta.
-func scanJSONLLines(r io.Reader, logID string) (meta map[string]any, messages []Message, err error) {
+// first non-empty line is decoded into meta. Message lines carry a role and
+// become Session.Messages; version-1 event lines (type in the eventlog
+// vocabulary) become Session.Events.
+func scanJSONLLines(r io.Reader, logID string) (meta map[string]any, messages []Message, events []eventlog.WireEvent, err error) {
 	const maxLine = 16 * 1024 * 1024
 	reader := bufio.NewReaderSize(r, maxLine)
 	flushOversize := func() {
@@ -380,7 +423,7 @@ func scanJSONLLines(r io.Reader, logID string) (meta map[string]any, messages []
 			if errors.Is(lpErr, io.EOF) {
 				break
 			}
-			return nil, nil, lpErr
+			return nil, nil, nil, lpErr
 		}
 		lineNo++
 		raw := bytes.TrimRight(line, "\r\n")
@@ -399,7 +442,25 @@ func scanJSONLLines(r io.Reader, logID string) (meta map[string]any, messages []
 				// First non-empty line is not valid JSON — the session file is
 				// corrupt, not merely empty. Surface this as a load error
 				// (distinct from ErrNotFound) so callers report a 500, not 404.
-				return nil, nil, fmt.Errorf("session %s: parse meta line %d: %w", logID, lineNo, err)
+				return nil, nil, nil, fmt.Errorf("session %s: parse meta line %d: %w", logID, lineNo, err)
+			}
+			if errors.Is(lpErr, io.EOF) {
+				break
+			}
+			continue
+		}
+		// Version-1 event lines carry a "type" in the eventlog vocabulary.
+		// Distinguish them from message lines before falling through to Message.
+		var kind struct {
+			Type string `json:"type"`
+		}
+		_ = json.Unmarshal(raw, &kind)
+		if eventlog.Type(kind.Type).Known() {
+			var ev eventlog.WireEvent
+			if jerr := json.Unmarshal(raw, &ev); jerr != nil {
+				slog.Warn("session: skipped corrupted event line", "session", logID, "line", lineNo, "err", jerr)
+			} else {
+				events = append(events, ev)
 			}
 			if errors.Is(lpErr, io.EOF) {
 				break
@@ -419,7 +480,7 @@ func scanJSONLLines(r io.Reader, logID string) (meta map[string]any, messages []
 			break
 		}
 	}
-	return meta, messages, nil
+	return meta, messages, events, nil
 }
 
 func loadJSONLFile(path, id string) (*Session, error) {
@@ -429,13 +490,21 @@ func loadJSONLFile(path, id string) (*Session, error) {
 	}
 	defer func() { _ = f.Close() }()
 
-	meta, messages, err := scanJSONLLines(f, id)
+	meta, messages, events, err := scanJSONLLines(f, id)
 	if err != nil {
 		return nil, fmt.Errorf("read session %s: %w", id, err)
 	}
 	var s Session
 	s.ID = id
 	s.Messages = messages
+	// Fail loud on a version-1 event spine that does not validate, so a record
+	// the build cannot project is never trusted or silently rewritten.
+	if len(events) > 0 {
+		if _, derr := eventlog.DecodeWire(events); derr != nil {
+			return nil, fmt.Errorf("read session %s: %w", id, derr)
+		}
+		s.Events = events
+	}
 	if meta != nil {
 		s.Model = asString(meta["model"])
 		s.Provider = asString(meta["provider"])

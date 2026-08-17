@@ -134,4 +134,7 @@ func TestWireRoundTrip(t *testing.T) {
 	if len(decoded) != 2 {
 		t.Fatalf("decoded %d events, want 2", len(decoded))
 	}
+	if got, ok := decoded[1].Data.(Message); !ok || got.Content != "hi" {
+		t.Fatalf("decoded message payload not reconstructed: %#v", decoded[1].Data)
+	}
 }

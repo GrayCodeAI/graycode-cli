@@ -1,11 +1,14 @@
 package session
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 )
 
 func TestLoadLatestForCWD(t *testing.T) {
@@ -48,6 +51,74 @@ func TestSaveFillsCWD(t *testing.T) {
 	want, _ = filepath.Abs(want)
 	if got.CWD != want {
 		t.Fatalf("got cwd %q, want %q", got.CWD, want)
+	}
+}
+
+// TestSaveLoadRoundTripsEvents verifies that a version-1 session persists its
+// event spine alongside messages, and that a version-0 session stays byte-compatible
+// (no event lines, meta has no format_version).
+func TestSaveLoadRoundTripsEvents(t *testing.T) {
+	setTestSessionsDir(t, t.TempDir())
+
+	mkEvent := func(typ eventlog.Type, seq uint64, data string) eventlog.WireEvent {
+		return eventlog.WireEvent{
+			Type: typ,
+			Seq:  seq,
+			Data: json.RawMessage([]byte(data)),
+		}
+	}
+
+	s := &Session{
+		ID:       "evt-session",
+		Model:    "m",
+		Provider: "p",
+		Messages: []Message{{Role: "user", Content: "hi"}},
+		Events: []eventlog.WireEvent{
+			mkEvent(eventlog.UserMessage, 1, `{"role":"user","content":"hi"}`),
+			mkEvent(eventlog.AssistantMsg, 2, `{"role":"assistant","content":"hello"}`),
+		},
+	}
+	if err := Save(s); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	raw, err := os.ReadFile(jsonlPathFor("evt-session"))
+	if err != nil {
+		t.Fatalf("read persisted session: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
+	if len(lines) != 4 { // meta + 1 message + 2 events
+		t.Fatalf("persisted %d lines, want 4:\n%s", len(lines), raw)
+	}
+	if !strings.Contains(lines[0], `"format_version":1`) {
+		t.Fatalf("meta missing format_version: %s", lines[0])
+	}
+
+	got, err := Load("evt-session")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got.Events == nil || len(got.Events) != 2 {
+		t.Fatalf("loaded %d events, want 2", len(got.Events))
+	}
+	if len(got.Messages) != 1 {
+		t.Fatalf("loaded %d messages, want 1", len(got.Messages))
+	}
+
+	// Version-0 (no events) stays byte-compatible.
+	v0 := &Session{
+		ID:       "v0-session",
+		Messages: []Message{{Role: "user", Content: "plain"}},
+	}
+	if err := Save(v0); err != nil {
+		t.Fatalf("Save v0: %v", err)
+	}
+	v0Raw, err := os.ReadFile(jsonlPathFor("v0-session"))
+	if err != nil {
+		t.Fatalf("read v0 session: %v", err)
+	}
+	if strings.Contains(string(v0Raw), "format_version") {
+		t.Fatalf("v0 session unexpectedly contains format_version:\n%s", v0Raw)
 	}
 }
 

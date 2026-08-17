@@ -1063,6 +1063,7 @@ func persistDaemonSession(id string, req ChatRequest, sess *engine.Session, prev
 		CWD:       req.CWD,
 		Name:      name,
 		Messages:  hawksession.FromRuntimeMessages(sess.RawMessages()),
+		Events:    sess.JournalWire(),
 		CreatedAt: createdAt,
 	})
 }

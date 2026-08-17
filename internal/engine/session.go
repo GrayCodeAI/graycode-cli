@@ -799,6 +799,25 @@ func (s *Session) ContextWindowCachedValue() int {
 	return 0
 }
 
+// JournalWire exports the session's append-only event spine for durable persistence.
+// It returns nil when no journal is attached, so callers that persist the session
+// can write the version-0 messages-only shape with no changes.
+func (s *Session) JournalWire() []eventlog.WireEvent {
+	if s == nil {
+		return nil
+	}
+	p := s.Persistence()
+	if p == nil || p.Journal() == nil {
+		return nil
+	}
+	wire, err := eventlog.MarshalWire(p.Journal().Snapshot())
+	if err != nil {
+		slog.Warn("marshal event journal", "error", err)
+		return nil
+	}
+	return wire
+}
+
 // CostValue returns the session's cost accumulator (a pointer
 // to a value type, so its methods can be called). New code
 // should call this instead of reading s.Cost directly.

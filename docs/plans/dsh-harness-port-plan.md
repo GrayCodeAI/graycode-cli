@@ -41,8 +41,11 @@ Remaining (subsequent PRs, each gated):
    append methods, and every `Session` materializes an `eventlog.Log` at
    construction. `PersistenceService.Reconstructible()` now asserts the strict
    "model-visible ⟺ logged" invariant; the reconstructible assert is delivered.
-2. Persist the event log through `internal/session.Save/loadJSONL` behind
-   `SESSION_FORMAT_VERSION == 1`; version `0` stays byte-compatible.
+2. ~~Persist the event log behind `SESSION_FORMAT_VERSION == 1`.~~ Delivered:
+   `session.Session.Events` (`[]eventlog.WireEvent`), `Save` writes event lines
+   plus `format_version=1` in meta when present, `scanJSONLLines`/`loadJSONLFile`
+   decode and validate them, and `engine.Session.JournalWire()` exports the spine
+   for `persistDaemonSession`. Version `0` stays byte-compatible.
 
 ## Phase 1 — Typed tool-pipeline interceptors + fail-closed approval
 
