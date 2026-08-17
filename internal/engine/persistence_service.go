@@ -156,9 +156,7 @@ func (s *PersistenceService) SetSteering(sq *SteeringQueue) { s.steering = sq }
 
 // AddAssistant appends an assistant message.
 func (s *PersistenceService) AddAssistant(content string) {
-	s.mu.Lock()
-	s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: content})
-	s.mu.Unlock()
+	s.AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: content})
 }
 
 // SetMessages replaces the transcript.
@@ -191,12 +189,7 @@ func (s *PersistenceService) ApplyCompaction(keep []types.EyrieMessage, snapshot
 
 // AddUser appends a user message. Safe on a nil receiver.
 func (s *PersistenceService) AddUser(content string) {
-	if s == nil {
-		return
-	}
-	s.mu.Lock()
-	s.messages = append(s.messages, types.EyrieMessage{Role: "user", Content: content})
-	s.mu.Unlock()
+	s.AppendUserJournaled(types.EyrieMessage{Role: "user", Content: content})
 }
 
 // AddUserWithImage appends a user message with an inline image.
@@ -209,13 +202,11 @@ func (s *PersistenceService) AddUserWithImage(content, imageBase64, imageType st
 		return
 	}
 	dataURL := "data:" + imageType + ";base64," + imageBase64
-	s.mu.Lock()
-	s.messages = append(s.messages, types.EyrieMessage{
+	s.AppendUserJournaled(types.EyrieMessage{
 		Role:    "user",
 		Content: content,
 		Images:  []string{dataURL},
 	})
-	s.mu.Unlock()
 }
 
 // AppendSystemContext appends a string to the system prompt.

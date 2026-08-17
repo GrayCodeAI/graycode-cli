@@ -74,6 +74,23 @@ func TestJournaledAppendPreservesToolFactoryRoundTrip(t *testing.T) {
 	}
 }
 
+func TestAddUserAddAssistantRoutesThroughJournal(t *testing.T) {
+	ps := NewPersistenceService(nil)
+	ps.SetJournal(eventlog.New(nil))
+	ps.AddUser("hello")
+	ps.AddAssistant("hi")
+	want := []types.EyrieMessage{
+		{Role: "user", Content: "hello"},
+		{Role: "assistant", Content: "hi"},
+	}
+	if got := ps.Messages(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("Messages() = %+v, want %+v", got, want)
+	}
+	if got := ps.JournalProjection(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("JournalProjection() = %+v, want %+v", got, want)
+	}
+}
+
 func TestJournaledAppendContentPartsRoundTrip(t *testing.T) {
 	ps := NewPersistenceService(nil)
 	ps.SetJournal(eventlog.New(nil))

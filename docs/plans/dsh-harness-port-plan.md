@@ -33,9 +33,13 @@ Delivered in this branch: `internal/eventlog` package.
 
 Remaining (subsequent PRs, each gated):
 
-1. Project `Session.Persistence().RawMessages()` through `DeriveMessages`; replace
+1. ~~Project `Session.Persistence().RawMessages()` through `DeriveMessages`; replace
    direct `SetRawMessages(append(...))` in `agentLoop`/`ToolService` with
-   journaled append. Add the `Reconstructible` invariant assert.
+   journaled append.~~ Delivered: `adduser`/`AddAssistant` and the agent loop's
+   model-visible appends (cache hit, max-tokens recovery, final text, tool-call,
+   tool-result, steering, vision attachment) now route through the journaled
+   append methods, and every `Session` materializes an `eventlog.Log` at
+   construction. Add the `Reconstructible` invariant assert is still pending.
 2. Persist the event log through `internal/session.Save/loadJSONL` behind
    `SESSION_FORMAT_VERSION == 1`; version `0` stays byte-compatible.
 

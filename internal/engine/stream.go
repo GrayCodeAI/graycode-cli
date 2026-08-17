@@ -261,7 +261,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				// Cache hit: short-circuit the LLM call
 				if preResult.CacheHit && preResult.CachedResponse != "" {
 					emit(StreamEvent{Type: "content", Content: preResult.CachedResponse})
-					s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse}))
+					s.Persistence().AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse})
 					emit(StreamEvent{Type: "done"})
 					return
 				}
@@ -658,8 +658,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// change behavior while they migrate to the facade.
 		if !managesResilience && stopReason == "max_tokens" && len(toolCalls) == 0 && recoveryCount < maxRecoveryRetries {
 			recoveryCount++
-			s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: textContent.String()}))
-			s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "user", Content: "Continue from where you left off."}))
+			s.Persistence().AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: textContent.String()})
+			s.Persistence().AppendUserJournaled(types.EyrieMessage{Role: "user", Content: "Continue from where you left off."})
 			continue
 		}
 
@@ -677,7 +677,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}
 			}
 			if textContent.Len() > 0 {
-				s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: textContent.String()}))
+				s.Persistence().AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: textContent.String()})
 				// Auto-remember corrections and learnings. Best-effort
 				// fire-and-forget: the memory backend's Remember does not yet
 				// accept a context, so this goroutine cannot be cancelled mid-call.
@@ -848,11 +848,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if assistContent == "" && len(toolCalls) > 0 {
 			assistContent = " " // non-empty to satisfy APIs that reject empty content
 		}
-		s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{
+		s.Persistence().AppendAssistantJournaled(types.EyrieMessage{
 			Role:    "assistant",
 			Content: assistContent,
 			ToolUse: toolCalls,
-		}))
+		})
 		// Append tool results as proper tool_result messages. Tool output is
 		// redacted before it is appended so secrets never reach the model;
 		// the user-facing stream events already carried the raw output.
@@ -877,16 +877,16 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					msg.Images = []string{imgURI}
 				}
 			}
-			s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), msg))
+			s.Persistence().AppendUserJournaled(msg)
 		}
 
 		// --- STEERING: Inject user guidance between tool batches ---
 		if s.Persistence().Steering() != nil && s.Persistence().Steering().HasPending() {
 			for _, steer := range s.Persistence().Steering().Drain() {
-				s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{
+				s.Persistence().AppendUserJournaled(types.EyrieMessage{
 					Role:    "user",
 					Content: "[User guidance during execution]: " + steer.Content,
-				}))
+				})
 				emit(StreamEvent{Type: "content", Content: "\n[Steering received: " + steer.Content + "]\n"})
 			}
 		}

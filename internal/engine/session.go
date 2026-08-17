@@ -11,6 +11,7 @@ import (
 	"time"
 
 	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
@@ -161,6 +162,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.life = NewLifecycleService(log)
 	s.memory = NewMemoryService(log)
 	s.persist = NewPersistenceService(log)
+	s.persist.SetJournal(eventlog.New(nil))
 	s.persist.SetAutoCompactThresholdPct(DefaultAutoCompactThresholdPct)
 	s.persist.SetSystem(systemPrompt)
 	s.tools = NewToolService(registry).WithMetrics(s.llm.Metrics()).WithTracer(oteltrace.NewTracer())
@@ -389,6 +391,7 @@ func (s *Session) Persistence() *PersistenceService {
 	// lazy service materialization for that compatibility case, but there is no
 	// second transcript or system-prompt state to import.
 	s.persist = NewPersistenceService(s.Logger())
+	s.persist.SetJournal(eventlog.New(nil))
 	return s.persist
 }
 
