@@ -22,10 +22,10 @@ github.com/GrayCodeAI/hawk-core-contracts v0.1.13-0.20260816034142-16ebcfd5ad6e 
 github.com/GrayCodeAI/hawk-core-contracts v0.1.13-0.20260816034142-16ebcfd5ad6e/go.mod h1:BXbh68YrCf+s9HVqND5F8DAvl2MnE5NcOwZZZB56HGA=
 github.com/GrayCodeAI/hawk-mcpkit v0.1.6-0.20260816034242-4a5ea251cd7a h1:kvZ2IKMOEs3yxU0j+rEAF3rtlJ+f97/01Tlv3RmodA4=
 github.com/GrayCodeAI/hawk-mcpkit v0.1.6-0.20260816034242-4a5ea251cd7a/go.mod h1:3JAUitpEyUL08KNOUP+p58zcxTuFIMF9/co/669Ncmo=
-github.com/GrayCodeAI/inspect v0.0.0-20260816034902-b5b658421c8b h1:TTVybhl/x8fzsjWlv9sH02eOcjF4dd2EGYaC3aSBuik=
-github.com/GrayCodeAI/inspect v0.0.0-20260816034902-b5b658421c8b/go.mod h1:ipnOyNHbY1I6H5BlZY4RBDmFBpRnuQbshwawTqzHS/8=
-github.com/GrayCodeAI/sight v0.0.0-20260816034858-481d3d1d5705 h1:q463jd+dPzRmLsBWbA1CUfZHS+5VujpxTHOMXvdS2uI=
-github.com/GrayCodeAI/sight v0.0.0-20260816034858-481d3d1d5705/go.mod h1:0D2fhnfizzjywVOx/QPIdMduOtv3nZt1xrC3SBYmaF8=
+github.com/GrayCodeAI/inspect v0.0.0-20260816041238-8556ee05ff07 h1:XQRSF6Migl5X89tq406rLCme2drtdSa2ny4dFjccxeM=
+github.com/GrayCodeAI/inspect v0.0.0-20260816041238-8556ee05ff07/go.mod h1:ipnOyNHbY1I6H5BlZY4RBDmFBpRnuQbshwawTqzHS/8=
+github.com/GrayCodeAI/sight v0.0.0-20260816041235-39553454cd60 h1:mXkSBokYHL83fTM9i77n8ID2gSl5fUr2bISunzCw+CI=
+github.com/GrayCodeAI/sight v0.0.0-20260816041235-39553454cd60/go.mod h1:0D2fhnfizzjywVOx/QPIdMduOtv3nZt1xrC3SBYmaF8=
 github.com/GrayCodeAI/tok v0.1.5-0.20260816034249-643b6675ebc7 h1:agvfUOO5eVzCyI/mCYFr5Di8bB4OQSgEhrKgMyViTSA=
 github.com/GrayCodeAI/tok v0.1.5-0.20260816034249-643b6675ebc7/go.mod h1:zHM1Ei/uHq2793uVY5mEtli4o9znAwtfdzPgSCrTjyQ=
 github.com/GrayCodeAI/trace v0.1.4-0.20260816034253-59b437bbe8dc h1:b83/X8ETGFfu8Dn976v9ZLZJy6O1pVpInnqKc7i/TjU=

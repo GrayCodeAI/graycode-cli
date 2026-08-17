@@ -13,8 +13,8 @@ require (
 	charm.land/lipgloss/v2 v2.0.5
 	github.com/GrayCodeAI/eyrie v0.2.3-0.20260816034245-ede6671749b1
 	github.com/GrayCodeAI/hawk-core-contracts v0.1.13-0.20260816034142-16ebcfd5ad6e
-	github.com/GrayCodeAI/inspect v0.0.0-20260816034902-b5b658421c8b
-	github.com/GrayCodeAI/sight v0.0.0-20260816034858-481d3d1d5705
+	github.com/GrayCodeAI/inspect v0.0.0-20260816041238-8556ee05ff07
+	github.com/GrayCodeAI/sight v0.0.0-20260816041235-39553454cd60
 	github.com/GrayCodeAI/tok v0.1.5-0.20260816034249-643b6675ebc7
 	github.com/GrayCodeAI/yaad v0.2.1-0.20260816034238-42bdda93995b
 	github.com/alecthomas/chroma/v2 v2.26.1
