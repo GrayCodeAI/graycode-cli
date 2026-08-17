@@ -3,6 +3,7 @@ package session
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,11 +12,13 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	contracts "github.com/GrayCodeAI/hawk-core-contracts/tools"
 	"github.com/GrayCodeAI/hawk/internal/eventlog"
+	"github.com/GrayCodeAI/hawk/internal/eventlog/zstdz"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -78,7 +81,18 @@ func jsonlPathFor(id string) string {
 // Save persists a session to disk atomically.
 // Writes to a temp file first, then renames — a crash at any point
 // leaves either the old valid file or the new valid file, never a partial write.
+// When zstd compression is enabled, the JSONL body is written as concatenated
+// independently-decodable Zstandard frames (one per event batch), ported from
+// DSH's session-persistence-jsonl compression layer.
 func Save(s *Session) error {
+	return saveWithCompression(s, false)
+}
+
+// saveWithCompression is the implementation of Save, with an optional zstd
+// compression parameter. When compress is true, the event spine is written as
+// concatenated independently-decodable Zstandard frames (ported from DSH's
+// session-persistence-jsonl/src/zstd.ts).
+func saveWithCompression(s *Session, compress bool) error {
 	if s == nil {
 		return fmt.Errorf("session is required")
 	}
@@ -172,25 +186,66 @@ func Save(s *Session) error {
 		}
 	}
 
-	// Write each event as a JSON line (version-1 only). The event spine is
-	// owned by internal/eventlog and marshals itself bypassing Session's own
-	// fields, so version-0 sessions carry no extra lines.
-	for _, ev := range s.Events {
-		evData, err := json.Marshal(ev)
-		if err != nil {
-			_ = f.Close()
-			_ = os.Remove(tmp)
-			return fmt.Errorf("marshal event: %w", err)
+	// Write events as JSONL lines, applying chunk-packing compression to runs
+	// of assistant.chunk events (ported from DeepSeek Harness chunk-rows.ts).
+	// Each StorageRecord is either a verbatim event or a packed text-chunks
+	// row; DecodeStorageRecord expands rows back on load. Version-0 sessions
+	// carry no extra lines.
+	records := eventlog.PackChunkRuns(s.Events)
+
+	if compress {
+		// DSH parity: write the event spine as a single zstd frame for
+		// independently-checkable compression. Meta + messages stay plaintext.
+		var buf bytes.Buffer
+		for _, rec := range records {
+			var evData []byte
+			if rec.ChunkRow != nil {
+				evData, err = json.Marshal(rec.ChunkRow)
+			} else {
+				evData, err = json.Marshal(rec.Event)
+			}
+			if err != nil {
+				_ = f.Close()
+				_ = os.Remove(tmp)
+				return fmt.Errorf("marshal event: %w", err)
+			}
+			buf.Write(evData)
+			buf.WriteByte('\n')
 		}
-		if _, err := w.Write(evData); err != nil {
+		compressed, cerr := zstdz.CompressFrame(buf.Bytes())
+		if cerr != nil {
 			_ = f.Close()
 			_ = os.Remove(tmp)
-			return fmt.Errorf("write event: %w", err)
+			return fmt.Errorf("compress events: %w", cerr)
 		}
-		if err := w.WriteByte('\n'); err != nil {
+		if _, err := w.Write(compressed); err != nil {
 			_ = f.Close()
 			_ = os.Remove(tmp)
-			return fmt.Errorf("write newline: %w", err)
+			return fmt.Errorf("write compressed events: %w", err)
+		}
+	} else {
+		for _, rec := range records {
+			var evData []byte
+			if rec.ChunkRow != nil {
+				evData, err = json.Marshal(rec.ChunkRow)
+			} else {
+				evData, err = json.Marshal(rec.Event)
+			}
+			if err != nil {
+				_ = f.Close()
+				_ = os.Remove(tmp)
+				return fmt.Errorf("marshal event: %w", err)
+			}
+			if _, err := w.Write(evData); err != nil {
+				_ = f.Close()
+				_ = os.Remove(tmp)
+				return fmt.Errorf("write event: %w", err)
+			}
+			if err := w.WriteByte('\n'); err != nil {
+				_ = f.Close()
+				_ = os.Remove(tmp)
+				return fmt.Errorf("write newline: %w", err)
+			}
 		}
 	}
 
@@ -391,7 +446,13 @@ func Load(id string) (*Session, error) {
 }
 
 func loadJSONL(id string) (*Session, error) {
-	return loadJSONLFile(jsonlPathFor(id), id)
+	path := jsonlPathFor(id)
+	// Check for zstd-compressed variant
+	zstdPath := jsonlPathForCompressed(id, true)
+	if _, err := os.Stat(zstdPath); err == nil {
+		return loadZstdJSONLFile(zstdPath, id)
+	}
+	return loadJSONLFile(path, id)
 }
 
 // scanJSONLLines reads a JSONL session file tolerantly: lines larger than the
@@ -455,6 +516,22 @@ func scanJSONLLines(r io.Reader, logID string) (meta map[string]any, messages []
 			Type string `json:"type"`
 		}
 		_ = json.Unmarshal(raw, &kind)
+		// A chunk-packing storage row uses a bare tag (text-chunks) that is
+		// NOT in the eventlog Type vocabulary. Expand it into individual events.
+		if eventlog.IsStorageRecord(kind.Type) {
+			decoded, derr := eventlog.DecodeStorageRecord(raw)
+			if derr != nil {
+				slog.Warn("session: skipped corrupted chunk row", "session", logID, "line", lineNo, "err", derr)
+			} else {
+				events = append(events, decoded...)
+			}
+			if errors.Is(lpErr, io.EOF) {
+				break
+			}
+			continue
+		}
+		// Version-1 event lines carry a "type" in the eventlog vocabulary.
+		// Distinguish them from message lines before falling through to Message.
 		if eventlog.Type(kind.Type).Known() {
 			var ev eventlog.WireEvent
 			if jerr := json.Unmarshal(raw, &ev); jerr != nil {
@@ -570,11 +647,19 @@ func List() ([]Entry, error) {
 
 	var out []Entry
 	for _, e := range entries {
-		ext := filepath.Ext(e.Name())
-		if ext != ".json" && ext != ".jsonl" {
+		name := e.Name()
+		// Handle compound extension .jsonl.zstd
+		id := name
+		switch {
+		case strings.HasSuffix(name, ".jsonl.zstd"):
+			id = name[:len(name)-len(".jsonl.zstd")]
+		case strings.HasSuffix(name, ".jsonl"):
+			id = name[:len(name)-len(".jsonl")]
+		case strings.HasSuffix(name, ".json"):
+			id = name[:len(name)-len(".json")]
+		default:
 			continue
 		}
-		id := e.Name()[:len(e.Name())-len(ext)]
 
 		// Use file info for timestamp (fast, no parsing needed)
 		info, err := e.Info()
@@ -652,15 +737,21 @@ func LoadLatestForCWD(cwd string) (*Session, error) {
 	var candidates []candidate
 
 	for _, e := range entries {
-		ext := filepath.Ext(e.Name())
-		if ext != ".jsonl" && ext != ".json" {
-			continue
+		name := e.Name()
+		var id string
+		if strings.HasSuffix(name, ".jsonl.zstd") {
+			id = name[:len(name)-len(".jsonl.zstd")]
+		} else {
+			ext := filepath.Ext(name)
+			if ext != ".jsonl" && ext != ".json" {
+				continue
+			}
+			id = name[:len(name)-len(ext)]
 		}
 		info, err := e.Info()
 		if err != nil {
 			continue
 		}
-		id := e.Name()[:len(e.Name())-len(ext)]
 		candidates = append(candidates, candidate{id: id, time: info.ModTime()})
 	}
 
@@ -700,4 +791,364 @@ func MigrateToJSONL(id string) error {
 		return err
 	}
 	return Save(s)
+}
+
+// JsonlCompression selects the physical encoding for JSONL session artifacts.
+// Ported from DSH's session-persistence-jsonl/src/format.ts.
+type JsonlCompression string
+
+const (
+	// JsonlCompressionNone writes plaintext JSONL lines.
+	JsonlCompressionNone JsonlCompression = "none"
+	// JsonlCompressionZstd writes the event spine as concatenated independent
+	// Zstandard frames while leaving meta + message lines plaintext.
+	JsonlCompressionZstd JsonlCompression = "zstd"
+)
+
+// jsonlPathFor returns the JSONL artifact path for a session with optional
+// zstd compression suffix, matching DSH's sessionDirectory/logPath layout.
+func jsonlPathForCompressed(id string, compress bool) string {
+	var suffix string
+	if compress {
+		suffix = logSuffix(JsonlCompressionZstd)
+	} else {
+		suffix = logSuffix(JsonlCompressionNone)
+	}
+	return filepath.Join(sessionsDir(), id+suffix)
+}
+
+// logSuffix returns the file suffix for one compression encoding.
+// Ported from DSH's logSuffix().
+func logSuffix(c JsonlCompression) string {
+	if c == JsonlCompressionZstd {
+		return ".jsonl.zstd"
+	}
+	return ".jsonl"
+}
+
+// SaveWithZstd persists a session with zstd frame compression on the event
+// spine, matching DSH's session-persistence-jsonl compression layer.
+func SaveWithZstd(s *Session) error {
+	return saveWithCompression(s, true)
+}
+
+// parseHeaderMeta reads only the first line of a session file and returns the
+// parsed session metadata, without parsing the event spine or messages.
+// Ported from DSH's parseHeaderMeta — used by List to avoid loading every
+// session's full history just for session listing.
+func parseHeaderMeta(path string) (map[string]any, error) {
+	f, err := os.Open(path) // #nosec G304 -- path built from sessionsDir() + directory entry name from os.ReadDir
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+
+	// For zstd-compressed files, we need to check the magic bytes of subsequent
+	// data; but the header is always plaintext as the first line.
+	reader := bufio.NewReaderSize(f, 65536)
+	line, err := reader.ReadSlice('\n')
+	if err != nil && !(errors.Is(err, io.EOF) && len(line) > 0) {
+		return nil, err
+	}
+	raw := bytes.TrimRight(line, "\r\n")
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return nil, nil
+	}
+	var m map[string]any
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// detectCompression checks whether a session file uses zstd compression by
+// examining the file extension (.jsonl.zstd) or zstd magic bytes. Returns
+// JsonlCompressionNone for plaintext files.
+func detectCompression(path string) JsonlCompression {
+	if strings.HasSuffix(path, ".jsonl.zstd") {
+		return JsonlCompressionZstd
+	}
+	f, err := os.Open(path) // #nosec G304 -- path built from sessionsDir()+session ID
+	if err != nil {
+		return JsonlCompressionNone
+	}
+	defer func() { _ = f.Close() }()
+
+	reader := bufio.NewReaderSize(f, 65536)
+	// Skip all plaintext JSONL lines (header + messages) until we hit binary data
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			return JsonlCompressionNone
+		}
+		// Check if this line starts with a zstd magic byte (binary frame)
+		if len(line) >= 4 && binary.LittleEndian.Uint32([]byte(line[:4])) == zstdz.ZstdMagic {
+			return JsonlCompressionZstd
+		}
+		// If the line is not valid JSON (doesn't start with '{'), it's binary
+		trimmed := bytes.TrimSpace([]byte(line))
+		if len(trimmed) == 0 {
+			return JsonlCompressionNone
+		}
+		if trimmed[0] != '{' {
+			// Not JSON, likely binary zstd data without full magic on this read
+			return JsonlCompressionNone
+		}
+		// Line is JSON — continue to next line
+	}
+}
+
+// loadZstdJSONLFile reads a zstd-compressed JSONL session file. The header
+// line and message lines are plaintext; the event spine is written as
+// concatenated independently-decodable Zstandard frames.
+func loadZstdJSONLFile(path, id string) (*Session, error) {
+	f, err := os.Open(path) // #nosec G304 -- path built from sessionsDir()+session ID
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+
+	// Use SessionLogScanner to read header + messages (plaintext), then
+	// decompress zstd frames for events.
+	scanner := NewSessionLogScanner(f, id)
+	if err := scanner.Scan(); err != nil {
+		return nil, fmt.Errorf("read zstd session %s: %w", id, err)
+	}
+	meta := scanner.Header()
+	messages := scanner.Messages()
+
+	// Read remaining bytes and decompress zstd frames
+	remaining := scanner.Remaining()
+	if len(remaining) > 0 {
+		scan := zstdz.ScanFrames(remaining, 0)
+		dec := zstdz.NewFrameDecoder()
+		defer dec.Close()
+		for frameData := range dec.Decode(remaining, scan.Frames) {
+			for _, raw := range bytes.Split(bytes.TrimRight(frameData, "\n"), []byte("\n")) {
+				if len(bytes.TrimSpace(raw)) == 0 {
+					continue
+				}
+				// Decode as chunk row or event line
+				var kind struct {
+					Type string `json:"type"`
+				}
+				_ = json.Unmarshal(raw, &kind)
+				if eventlog.IsStorageRecord(kind.Type) {
+					decoded, derr := eventlog.DecodeStorageRecord(raw)
+					if derr != nil {
+						slog.Warn("session: skipped corrupted chunk row in zstd", "session", id, "err", derr)
+						continue
+					}
+					scanner.events = append(scanner.events, decoded...)
+					continue
+				}
+				if eventlog.Type(kind.Type).Known() {
+					var ev eventlog.WireEvent
+					if jerr := json.Unmarshal(raw, &ev); jerr != nil {
+						slog.Warn("session: skipped corrupted event in zstd", "session", id, "err", jerr)
+						continue
+					}
+					scanner.events = append(scanner.events, ev)
+				}
+			}
+		}
+	}
+
+	var s Session
+	s.ID = id
+	s.Messages = messages
+	events := scanner.Events()
+	if len(events) > 0 {
+		if _, derr := eventlog.DecodeWire(events); derr != nil {
+			return nil, fmt.Errorf("read zstd session %s: %w", id, derr)
+		}
+		s.Events = events
+	}
+	if meta != nil {
+		s.Model = asString(meta["model"])
+		s.Provider = asString(meta["provider"])
+		s.Agent = asString(meta["agent"])
+		s.CWD = asString(meta["cwd"])
+		s.Name = asString(meta["name"])
+		if v, ok := meta["created_at"].(string); ok {
+			s.CreatedAt, _ = time.Parse(time.RFC3339, v)
+		}
+		if v, ok := meta["updated_at"].(string); ok {
+			s.UpdatedAt, _ = time.Parse(time.RFC3339, v)
+		}
+	}
+	if len(s.Messages) == 0 && meta == nil {
+		return nil, ErrNotFound
+	}
+	return &s, nil
+}
+
+// SessionLogScanResult is the structured result of scanning a session log.
+// Ported from DSH's SessionLogScan interface.
+type SessionLogScanResult struct {
+	Meta           map[string]any
+	Messages       []Message
+	Events         []eventlog.WireEvent
+	CommittedBytes int64 // safe truncation offset
+	Error          error
+}
+
+// SessionLogScanner is an incremental JSONL session log scanner with DSH parity:
+// it validates sequence ordering, tracks committed bytes, and handles torn
+// final records. Ported from DSH's session-persistence-jsonl/src/format.ts
+// SessionLogScanner class.
+type SessionLogScanner struct {
+	reader         *bufio.Reader
+	meta           map[string]any
+	messages       []Message
+	events         []eventlog.WireEvent
+	committedBytes int64
+	inputBytes     int64
+	issue          error
+	finished       bool
+	tornStart      bool
+}
+
+// NewSessionLogScanner creates a scanner that reads header + messages from
+// a JSONL session file (or a reader over one).
+func NewSessionLogScanner(r io.Reader, logID string) *SessionLogScanner {
+	return &SessionLogScanner{
+		reader: bufio.NewReaderSize(r, 16*1024*1024),
+	}
+}
+
+// Header returns the parsed session metadata from the first line.
+func (s *SessionLogScanner) Header() map[string]any { return s.meta }
+
+// Messages returns the parsed messages (non-event lines).
+func (s *SessionLogScanner) Messages() []Message { return s.messages }
+
+// Events returns the parsed events (version-1 event lines).
+func (s *SessionLogScanner) Events() []eventlog.WireEvent { return s.events }
+
+// CommittedBytes returns the byte offset safe to append at (last complete record).
+func (s *SessionLogScanner) CommittedBytes() int64 { return s.committedBytes }
+
+// Error returns any corruption error encountered during scanning.
+func (s *SessionLogScanner) Error() error { return s.issue }
+
+// Remaining reads and returns all bytes after the scanner's position.
+func (s *SessionLogScanner) Remaining() []byte {
+	data, _ := io.ReadAll(s.reader)
+	return data
+}
+
+// Scan processes the next available data from the file. It reads the header
+// line, then all message lines and event lines until EOF or corruption.
+// Sequence ordering is validated: event seqs must be contiguous from 0.
+func (s *SessionLogScanner) Scan() error {
+	if s.finished {
+		return s.issue
+	}
+	lineNo := 0
+	firstLine := true
+	for {
+		line, lpErr := s.reader.ReadSlice('\n')
+		isPrefix := errors.Is(lpErr, bufio.ErrBufferFull)
+		if isPrefix {
+			// Drain oversize line
+			_, _ = s.reader.ReadString('\n')
+			slog.Warn("session: skipped oversize line", "line", lineNo, "max", 16*1024*1024)
+			s.inputBytes += int64(len(line))
+			lineNo++
+			firstLine = false
+			continue
+		}
+		// Check for zstd frame magic after the first line
+		if firstLine && len(line) > 0 {
+			// Check if this is a zstd frame (not a JSON header line)
+			if len(line) >= 4 && binary.LittleEndian.Uint32(line[:4]) == zstdz.ZstdMagic {
+				s.tornStart = true
+				s.finished = true
+				return s.issue
+			}
+		}
+		s.inputBytes += int64(len(line))
+		if lpErr != nil && !(errors.Is(lpErr, io.EOF) && len(line) > 0) {
+			if errors.Is(lpErr, io.EOF) {
+				s.finished = true
+				return s.issue
+			}
+			s.issue = lpErr
+			s.finished = true
+			return s.issue
+		}
+		raw := bytes.TrimRight(line, "\r\n")
+		if len(bytes.TrimSpace(raw)) == 0 {
+			if errors.Is(lpErr, io.EOF) {
+				s.finished = true
+				return s.issue
+			}
+			continue
+		}
+		if firstLine {
+			firstLine = false
+			if err := json.Unmarshal(raw, &s.meta); err != nil {
+				s.issue = fmt.Errorf("parse meta line %d: %w", lineNo, err)
+				s.finished = true
+				return s.issue
+			}
+			s.committedBytes = s.inputBytes
+			if errors.Is(lpErr, io.EOF) {
+				s.finished = true
+				return s.issue
+			}
+			continue
+		}
+		lineNo++
+		s.processEventOrMessage(raw, lineNo)
+		s.committedBytes = s.inputBytes // update committed boundary
+		if errors.Is(lpErr, io.EOF) {
+			s.finished = true
+			return s.issue
+		}
+	}
+}
+
+// processEventOrMessage classifies a JSONL line as event, chunk row, or message.
+// Validates event sequence ordering (must be contiguous from 0).
+func (s *SessionLogScanner) processEventOrMessage(raw []byte, lineNo int) {
+	var kind struct {
+		Type string `json:"type"`
+		Seq  uint64 `json:"seq"`
+	}
+	_ = json.Unmarshal(raw, &kind)
+
+	if eventlog.IsStorageRecord(kind.Type) {
+		decoded, derr := eventlog.DecodeStorageRecord(raw)
+		if derr != nil {
+			slog.Warn("session: skipped corrupted chunk row", "line", lineNo, "err", derr)
+			return
+		}
+		s.events = append(s.events, decoded...)
+		return
+	}
+
+	if eventlog.Type(kind.Type).Known() {
+		var ev eventlog.WireEvent
+		if jerr := json.Unmarshal(raw, &ev); jerr != nil {
+			slog.Warn("session: skipped corrupted event line", "line", lineNo, "err", jerr)
+			return
+		}
+		// Validate sequence ordering (DSH SessionLogScanner invariant)
+		expectedSeq := uint64(len(s.events))
+		if ev.Seq != expectedSeq {
+			s.issue = fmt.Errorf("seq gap at line %d: expected %d, got %d", lineNo, expectedSeq, ev.Seq)
+			return
+		}
+		s.events = append(s.events, ev)
+		return
+	}
+
+	var msg Message
+	if jerr := json.Unmarshal(raw, &msg); jerr != nil {
+		slog.Warn("session: skipped corrupted line", "line", lineNo, "err", jerr)
+		return
+	}
+	s.messages = append(s.messages, msg)
 }

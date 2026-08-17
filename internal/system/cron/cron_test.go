@@ -1,9 +1,12 @@
 package cron
 
 import (
+	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 )
 
 func TestNewEngineDefaults(t *testing.T) {
@@ -212,4 +215,69 @@ func TestMarshalJSON(t *testing.T) {
 	if len(data) == 0 {
 		t.Error("MarshalJSON returned empty data")
 	}
+}
+
+// TestScheduleChangeLog verifies that AddJob/RemoveJob/EnableJob emit
+// schedule.change events through an attached eventlog.Log.
+func TestScheduleChangeLog(t *testing.T) {
+	e := NewEngine(nil, 3)
+
+	var observed []eventlog.Event
+	journal := eventlog.New(func(ev eventlog.Event) {
+		observed = append(observed, ev)
+	})
+	e.SetJournal(journal)
+
+	// AddJob should emit schedule.change.
+	e.AddJob(&Job{
+		ID:       "j1",
+		Name:     "TestJob",
+		Enabled:  true,
+		Schedule: Schedule{Kind: ScheduleEvery, Every: time.Hour},
+	})
+	if len(observed) != 1 {
+		t.Fatalf("expected 1 schedule.change after AddJob, got %d", len(observed))
+	}
+	if observed[0].Type != eventlog.ScheduleChange {
+		t.Fatalf("expected ScheduleChange type, got %s", observed[0].Type)
+	}
+	f, ok := observed[0].Data.(eventlog.ScheduleChangeFact)
+	if !ok {
+		t.Fatalf("expected ScheduleChangeFact, got %T", observed[0].Data)
+	}
+	if f.Cron == "" {
+		t.Fatal("expected non-empty cron string")
+	}
+	if !strings.Contains(f.Cron, "added") {
+		t.Fatalf("expected cron to contain 'added', got %q", f.Cron)
+	}
+
+	// EnableJob(false) should emit schedule.change.
+	e.EnableJob("j1", false)
+	if len(observed) != 2 {
+		t.Fatalf("expected 2 schedule.change events, got %d", len(observed))
+	}
+	f2, _ := observed[1].Data.(eventlog.ScheduleChangeFact)
+	if !strings.Contains(f2.Cron, "disabled") {
+		t.Fatalf("expected cron to contain 'disabled', got %q", f2.Cron)
+	}
+
+	// RemoveJob should emit schedule.change.
+	e.RemoveJob("j1")
+	if len(observed) != 3 {
+		t.Fatalf("expected 3 schedule.change events, got %d", len(observed))
+	}
+	f3, _ := observed[2].Data.(eventlog.ScheduleChangeFact)
+	if !strings.Contains(f3.Cron, "removed") {
+		t.Fatalf("expected cron to contain 'removed', got %q", f3.Cron)
+	}
+}
+
+// TestScheduleChangeNoJournal verifies no panic when journal is nil.
+func TestScheduleChangeNoJournal(t *testing.T) {
+	e := NewEngine(nil, 3)
+	// Should not panic without a journal.
+	e.AddJob(&Job{ID: "j1", Name: "NoJournal", Enabled: true})
+	e.EnableJob("j1", false)
+	e.RemoveJob("j1")
 }

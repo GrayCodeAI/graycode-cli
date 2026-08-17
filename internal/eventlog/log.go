@@ -30,12 +30,25 @@ func New(opt Listener) *Log {
 // observer. It panics on an unknown Type, matching the "fail loud" stance: a
 // record the build cannot project must never be written silently.
 func (l *Log) Append(typ Type, data any) {
+	l.appendWithFlags(typ, data, false)
+}
+
+// AppendIgnorable is like Append but marks the event ignorable: a reader may
+// safely skip it when it does not recognize the type. Ported from DSH's
+// `ignorable` invariant — used for purely informational records whose loss
+// cannot affect reconstruction (e.g. telemetry, stats, non-deterministic
+// metadata).
+func (l *Log) AppendIgnorable(typ Type, data any) {
+	l.appendWithFlags(typ, data, true)
+}
+
+func (l *Log) appendWithFlags(typ Type, data any, ignorable bool) {
 	if !typ.Known() {
 		panic(fmt.Sprintf("eventlog: unknown event type %q", typ))
 	}
 	l.mu.Lock()
 	l.seq++
-	ev := Event{Type: typ, Seq: l.seq, At: time.Now(), Data: data}
+	ev := Event{Type: typ, Seq: l.seq, At: time.Now(), Data: data, Ignorable: ignorable}
 	l.events = append(l.events, ev)
 	l.byType[typ] = append(l.byType[typ], ev)
 	l.mu.Unlock()

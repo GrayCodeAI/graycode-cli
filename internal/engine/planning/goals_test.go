@@ -4,6 +4,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 )
 
 func TestGoalAddStartCompleteLifecycle(t *testing.T) {
@@ -481,5 +483,65 @@ func TestBudgetExceededGoalSkippedByGetNext(t *testing.T) {
 	}
 	if next.ID != g2.ID {
 		t.Fatal("expected budget-exceeded goal to be skipped")
+	}
+}
+
+func TestGoalChangeJournalEmission(t *testing.T) {
+	// Verify that goal lifecycle methods emit goal.change events
+	// through an attached eventlog.Log (DSH goal.change seam).
+	l := NewGoalTracker()
+
+	// Without a journal, operations should not panic.
+	g := l.AddGoal("no journal goal")
+	if err := l.CompleteGoal(g.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	// With a journal, goal.change events should be recorded.
+	var observed []eventlog.Event
+	journal := eventlog.New(func(ev eventlog.Event) {
+		observed = append(observed, ev)
+	})
+	l.SetJournal(journal)
+
+	g2 := l.AddGoal("journal goal")
+	if len(observed) != 1 {
+		t.Fatalf("expected 1 goal.change event after AddGoal, got %d", len(observed))
+	}
+	if observed[0].Type != eventlog.GoalChange {
+		t.Fatalf("expected GoalChange type, got %s", observed[0].Type)
+	}
+	f, ok := observed[0].Data.(eventlog.GoalChangeFact)
+	if !ok {
+		t.Fatalf("expected GoalChangeFact payload, got %T", observed[0].Data)
+	}
+	if f.Goal != "journal goal" || !f.Added {
+		t.Fatalf("expected Added=true with goal text, got %+v", f)
+	}
+
+	// CompleteGoal should emit goal.change with Added=false.
+	if err := l.CompleteGoal(g2.ID); err != nil {
+		t.Fatal(err)
+	}
+	if len(observed) != 2 {
+		t.Fatalf("expected 2 goal.change events, got %d", len(observed))
+	}
+	f2, ok := observed[1].Data.(eventlog.GoalChangeFact)
+	if !ok {
+		t.Fatalf("expected GoalChangeFact payload, got %T", observed[1].Data)
+	}
+	if f2.Goal != "journal goal" || !f2.Removed {
+		t.Fatalf("expected Removed=true on completion, got %+v", f2)
+	}
+
+	// FailGoal should also emit goal.change with Removed=true.
+	g3 := l.AddGoal("failing goal")
+	_ = l.FailGoal(g3.ID, "timeout")
+	if len(observed) != 4 { // AddGoal(g2) + CompleteGoal(g2) + AddGoal(g3) + FailGoal(g3)
+		t.Fatalf("expected 4 goal.change events, got %d", len(observed))
+	}
+	f3, _ := observed[3].Data.(eventlog.GoalChangeFact)
+	if f3.Goal != "failing goal" || !f3.Removed {
+		t.Fatalf("expected Removed=true on failure, got %+v", f3)
 	}
 }

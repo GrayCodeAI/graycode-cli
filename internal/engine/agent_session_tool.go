@@ -10,6 +10,7 @@ import (
 	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
 
 	engagent "github.com/GrayCodeAI/hawk/internal/engine/agent"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 	"github.com/GrayCodeAI/hawk/internal/gitworktree"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
@@ -45,12 +46,29 @@ func (s *Session) spawnSubAgentRequest(ctx context.Context, req agentcontracts.S
 	mode := mapContractsType(norm.SubagentType)
 	start := time.Now()
 
-	_ = hooks.Execute(ctx, hooks.EventSubagentStart, map[string]interface{}{
+	// Emit subagent.descriptor and tool-workflow.agent-start to the journal.
+	if j := s.Persistence().Journal(); j != nil {
+		j.AppendSubagentDescriptor(eventlog.SubagentDescriptorFact{
+			Name:  string(norm.SubagentType),
+			Agent: string(mode),
+			Depth: depth,
+		})
+		j.AppendToolWorkflowAgentStart(string(norm.SubagentType))
+	}
+
+	subStartErr := hooks.Execute(ctx, hooks.EventSubagentStart, map[string]interface{}{
 		"subagent_type": string(norm.SubagentType),
 		"prompt":        norm.Prompt,
 		"isolation":     string(norm.Isolation),
 		"depth":         depth,
 	})
+	if j := s.Persistence().Journal(); j != nil {
+		hookErr := ""
+		if subStartErr != nil {
+			hookErr = subStartErr.Error()
+		}
+		j.AppendHookResult(string(hooks.EventSubagentStart), hookErr)
+	}
 
 	out, wtPath, err := s.spawnSubAgent(ctx, norm, mode, depth)
 	res := agentcontracts.SpawnResult{
@@ -63,23 +81,53 @@ func (s *Session) spawnSubAgentRequest(ctx context.Context, req agentcontracts.S
 	if err != nil {
 		res.Status = agentcontracts.StatusFailed
 		res.Error = err.Error()
-		_ = hooks.Execute(ctx, hooks.EventSubagentStop, map[string]interface{}{
+		if j := s.Persistence().Journal(); j != nil {
+			j.AppendToolWorkflowAgentEnd(string(norm.SubagentType))
+			j.AppendHookInvoked(string(hooks.EventSubagentStop))
+			j.AppendHookInvoked(string(hooks.EventFailure))
+		}
+		subStopErr := hooks.Execute(ctx, hooks.EventSubagentStop, map[string]interface{}{
 			"subagent_type": string(norm.SubagentType),
 			"status":        res.Status,
 			"error":         res.Error,
 		})
-		_ = hooks.Execute(ctx, hooks.EventFailure, map[string]interface{}{
+		if j := s.Persistence().Journal(); j != nil {
+			hookErr := ""
+			if subStopErr != nil {
+				hookErr = subStopErr.Error()
+			}
+			j.AppendHookResult(string(hooks.EventSubagentStop), hookErr)
+		}
+		failErr := hooks.Execute(ctx, hooks.EventFailure, map[string]interface{}{
 			"source": "subagent",
 			"error":  res.Error,
 		})
+		if j := s.Persistence().Journal(); j != nil {
+			hookErr := ""
+			if failErr != nil {
+				hookErr = failErr.Error()
+			}
+			j.AppendHookResult(string(hooks.EventFailure), hookErr)
+		}
 		return res, err
 	}
 	res.Status = agentcontracts.StatusCompleted
-	_ = hooks.Execute(ctx, hooks.EventSubagentStop, map[string]interface{}{
+	if j := s.Persistence().Journal(); j != nil {
+		j.AppendToolWorkflowAgentEnd(string(norm.SubagentType))
+		j.AppendHookInvoked(string(hooks.EventSubagentStop))
+	}
+	subStopErr := hooks.Execute(ctx, hooks.EventSubagentStop, map[string]interface{}{
 		"subagent_type": string(norm.SubagentType),
 		"status":        res.Status,
 		"duration_ms":   res.DurationMs,
 	})
+	if j := s.Persistence().Journal(); j != nil {
+		hookErr := ""
+		if subStopErr != nil {
+			hookErr = subStopErr.Error()
+		}
+		j.AppendHookResult(string(hooks.EventSubagentStop), hookErr)
+	}
 	return res, nil
 }
 
@@ -111,6 +159,12 @@ func (s *Session) spawnSubAgent(ctx context.Context, norm agentcontracts.Normali
 		model = norm.Model
 	}
 	registry := s.resolveSubAgentTools(mode)
+
+	// Emit agent.preset.selected when the model is resolved based on
+	// the sub-agent mode preset (DSH agent.preset.selected seam).
+	if j := s.Persistence().Journal(); j != nil && norm.Model == "" {
+		j.AppendAgentPresetSelected(string(mode))
+	}
 
 	// Capability mode can further restrict tools beyond profile defaults.
 	if norm.CapabilityMode == agentcontracts.CapReadOnly {

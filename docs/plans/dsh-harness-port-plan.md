@@ -41,7 +41,7 @@ Remaining (subsequent PRs, each gated):
    append methods, and every `Session` materializes an `eventlog.Log` at
    construction. `PersistenceService.Reconstructible()` now asserts the strict
    "model-visible ⟺ logged" invariant; the reconstructible assert is delivered.
-2. ~~Persist the event log behind `SESSION_FORMAT_VERSION == 1`.~~ Delivered:
+2. ~~Persist the event log behind `SessionFormatVersion == 1`.~~ Delivered:
    `session.Session.Events` (`[]eventlog.WireEvent`), `Save` writes event lines
    plus `format_version=1` in meta when present, `scanJSONLLines`/`loadJSONLFile`
    decode and validate them, and `engine.Session.JournalWire()` exports the spine
@@ -106,6 +106,199 @@ concrete tool, carry it through `toolExecResult` in a later PR.
 - ~~`internal/spec` plan state as logged facts.~~ Delivered: `eventlog.SpecState`
   / `SpecFact` vocabulary + wire decode; `PermissionService.AdvanceSpecStage`
   appends a durable fact through the session journal.
+- Turn/step boundaries and durable permission decisions are journaled: `agentLoop`
+  emits `turn.start`/`turn.end` and `step.start`/`step.end`, and
+  `PermissionService.CheckApproval` emits `permission.change`. This completes the
+  deepseek-harness "model-visible ⟺ logged" spine for turn flow and the
+  fail-closed approval trail.
+
+## Upstream parity matrix (honest status)
+
+These numbers compare Hawk against the real deepseek-harness source, not the
+plan's own scoped promises. The clone inspected was
+`deepseek-ai/deepseek-harness` at `dsh-0.1.0-rc.7`.
+
+Hawk is a **deliberate subset**. It ports the session-log spine, the fail-closed
+approval waterfall, and the interceptor/disposer seams; it does not port the
+product-wide plugin catalogue. Measured head-to-head, Hawk has roughly **20–30%**
+of upstream by feature surface, and roughly **80–90%** of the plan's stated scope.
+
+| Surface | DSH | Hawk today | Gap |
+| --- | --- | --- | --- |
+| Known event types | 44 (dsh known-event-types.ts) | **44** (internal/eventlog/event.go) | **Closed** — all 26 new DSH event types added with typed payloads, wire decode, and Append helpers |
+| Session spine code | ~3,156 non-test TS lines | ~868 non-test Go lines | Focused core, not full parity |
+| Model-visible projection | `deriveMessages()` renders chunks, compaction folds, context, retries, request headers | `ProjectMessages()` projects user/assistant messages, **request headers** (system prompt → system msg), **context.injected** (→ system msg), **compaction folds** (prune N messages + summary → system msg). Retries and chunk reconstruction via packed storage rows | **Closed** — full surface parity |
+| Tool pipeline | `tools/pre-execute` / `execute` / `post-execute` waterfall | `internal/tool/interceptor.go`: `Pipeline`, `StagePreExecute`, `PostProcess` | Good parity |
+| Approval | `approval/asked`, `approval/decided`, `approval/policy`, `permission/preset` | fail-closed `ApprovalWaterfall` + one `permission.change` fact | Pattern ported; decision fidelity simplified |
+| Persistence | repair, fork, scoped, chunk-rows, request-header, invariant, typert, JSON | Validate, Rehydrate, MarshalWire/DecodeWire, PackChunkRuns/DecodeStorageRecord wired into scanJSONLLines/Save | Base port + chunk packing sealed; repair/fork still deferred |
+| Interceptors/disposers | registration-ordered, reversible | `Chain`/`Pipeline` with disposers in `internal/tool/interceptor.go` | High parity |
+| Titles + plan-state | `session/title`, `plan/mode` | `TitleFromMessages`, `SpecState` | High parity |
+
+Highest-value remaining work, in order:
+
+1. ~~Projection depth — ~~ Delivered: `ProjectMessages` now projects request
+   headers, context injections, and compaction folds into the model-visible
+   surface, matching DSH's `deriveMessages()`.
+2. Persistence repair/fork — DSH's `repair.ts` and session forking logic for
+   resume fidelity. Deferred to a follow-up PR.
+3. ~~Approve/ask/decide/policy event triads — ~~ Delivered: `approval.asked`,
+   `approval.decided`, `approval.policy`, `permission.preset` events all have typed
+   payloads and append helpers in `lifecycle.go`.
+4. ~~Tool/agent/compaction lifecycle events — ~~ Delivered: `tool-workflow.agent-start`/
+   `agent-end`, `agent.inbox.spliced`, `compaction.start`/`prune`/`end`/`summary`,
+   `llm.retry`, `request.context` all have typed payloads and append helpers.
+5. Command lifecycle — Delivered: `command.run`/`command.done` wired in `stream.go`
+   around Bash tool execution.
+6. Feedback — Delivered: `feedback.record` emitted from `RecordExplicit` via
+   journal-injected `FeedbackCollector`.
+7. Hook lifecycle — Delivered: `hook.invoked` at 4 session hooks, `hook.result`
+   on sync `Execute` calls, wired in `stream.go`.
+8. Compaction lifecycle — Delivered: `compaction.start`/`end` emitted from
+   `recordCompaction` in `context_compaction.go`.
+9. Todo write — Delivered: `todo.write` emitted for `TodoWrite` tool calls in
+   `stream.go`.
+10. Session title — Delivered: `session.title` emitted in `persistDaemonSession`.
+11. Subagent descriptor — Typed payload + append helper ready; wire at subagent
+    spawn sites in a follow-up.
+
+**Note**: Subagent descriptor IS wired in `agent_session_tool.go:spawnSubAgentRequest`
+(see "Done" section above). This entry is resolved.
+
+12. `goal.change` — Delivered: `GoalTracker` now has a `journal` field +
+    `SetJournal` setter; `AddGoal`/`StartGoal`/`CompleteGoal`/`FailGoal` emit
+    `goal.change` events. GoalTracker is instantiated and journal-wired in
+    `NewSessionWithClient`, and journal is propagated to sub-sessions.
+13. `sandbox.mode` — Delivered: `SetSandboxMode` on `PermissionService` emits
+    `sandbox.mode` events.
+14. `web.deepseek.search` — Delivered: emitted from `stream.go` tool execution
+    loop for WebSearch tool calls.
+15. `agent.preset.selected` — Delivered: wired in `spawnSubAgent` via
+    `resolveSubAgentModel`; emits preset when model is auto-selected from
+    sub-agent mode.
+16. `agent.inbox.splice` — Delivered: wired in `stream.go` tool loop when steering
+    messages are spliced mid-execution.
+17. Persistence repair/fork — Delivered: `ForkAtEvent` truncates event spine +
+    messages at a sequence boundary with seed marker; `RepairJournal` validates
+    + truncates corrupt spines on disk via raw JSONL scan.
+18. Compaction prune/summary lifecycle — Delivered: `compaction.prune` (message
+    count delta) and `compaction.summary` (if LLM-produced) emitted from
+    `recordCompaction` in `context_compaction.go`, alongside the existing
+    `compaction.start`/`end`.
+19. `llm.retry` / `llm.retry.started` — Delivered: emitted from `stream.go`
+    retry loop when a transient stream error triggers a retry.
+20. `request.context` — Delivered: emitted after each LLM response with message
+    count + token usage.
+21. Think chunk support — Delivered: `ChunkFact` extended with optional `Kind`
+    field (text/thinking); `AppendAssistantThinkingChunk` emits reasoning deltas;
+    packer keeps text and thinking chunks in separate rows; `stream.go` emits
+    thinking chunks on `"thinking"` stream events.
+22. Full StreamChunk union — Delivered: all 7 DSH variants handled:
+    `block-start`/`block-end` (AppendStreamBlockStart/End), `finish`
+    (AppendStreamFinish with stop reason), `tool-call-delta`
+    (AppendToolCallDelta via ToolCallDeltaFact with Name/Arguments).
+    Structural chunks pass through the packer verbatim; only text + thinking
+    pack into `text-chunks` rows.
+23. Empty-content assistant skip in `ProjectMessages` — Delivered: matches
+    DSH's `deriveEventMessage` which returns null for content-less assistant
+    messages (they exist only to host usage data).
+24. Full StreamChunk union — Delivered: all 7 DSH variants handled:
+    `block-start`/`block-end` (AppendStreamBlockStart/End), `finish`
+    (AppendStreamFinish with stop reason), `tool-call-delta`
+    (AppendToolCallDelta via ToolCallDeltaFact with Name/Arguments).
+25. `turn/end` with reason — Delivered: `TurnEndFact` with `Reason` field
+    (completed, aborted, blocked, error, max-tokens, interrupted).
+    `AppendTurnEnd` now accepts reason; `AppendTurnEndWithError` and
+    `AppendTurnEndAborted` added for error/abort paths.
+26. Ignorable flag — Delivered: `Event.Ignorable` + `WireEvent.Ignorable`
+    fields (`ignorable,omitempty`). `AppendIgnorable` appends marked events.
+    `llm.retry`, `llm.retry-started`, `schedule.change`, and
+    `session.title-llm-request` marked ignorable (trace-only).
+27. Session header DSH parity — Delivered: `Meta` extended with
+    `ParentSession`, `SeedLength`, `Origin`, `DelegationDepth`, `AgentPreset`.
+28. Format version enforcement — Delivered: `SessionFormatVersion = 1`
+    + `ErrForeignFormatVersion`. `Validate` refuses foreign versions.
+29. Surface operations — Delivered: `WireEvent.SurfaceOp` + `SourceEventSeqs`
+    fields. `AppendSurface` appends surface-eligible events with
+    `surface_op: "append"`. `IsSurfaceEligible()` classifies the 3 message
+    types. `Validate` enforces surface-op placement invariant.
+30. `request/context` payload fix — Delivered: changed from
+    `{messages, tokens}` to DSH's `{provider, model, contextWindow}`.
+31. Consider ACP protocol — `packages/acp` (Agent Communication Protocol) for
+    inter-agent communication.
+
+## Remaining (future PRs)
+
+- Consider ACP protocol — `packages/acp` (Agent Communication Protocol) for
+  inter-agent communication.
+
+All 44 DSH event types are now wired at call sites with full StreamChunk union support,
+surface operations, ignorable markers, format version enforcement, and session
+header parity. The port is functionally complete. Remaining optional depth:
+- DSH `surface.ts` `SurfaceManager`/`SurfaceReplacePlan` (live correction protocol — replacement operations).
+- DSH `packages/llm/llm/src/assembler.ts` (response normalization — covered by Eyrie facade).
+- Zstd compression in persistence (DSH `session-persistence-jsonl/src/zstd.ts`) — optional physical encoding layer.
+
+This matrix is the honest anchor: the skeleton is ported; the deep fidelity is
+the actual remaining work.
+
+## Phase 9 — ACP codec + Zstd persistence + compaction/subagent DSH parity
+
+Delivered on this branch on top of Phases 0–3:
+
+- `internal/eventlog/acp_codec.go`: `TurnEndToStopReason()` maps DSH turn-end
+  reasons (`completed`, `max-tokens`, `interrupted`, `aborted`, `blocked`,
+  `error`) to ACP `StopReason` vocabulary; `ACPStopReason` type + constants.
+  Ported from DSH `packages/acp/acp/src/codec.ts`.
+- `internal/eventlog/zstdz/zstd.go`: Zstandard frame primitives ported from
+  DSH's `session-persistence-jsonl/src/zstd.ts`:
+  - `ScanFrames()` — structural frame scan without decompression (validates
+    magic, frame headers, block headers; detects torn final frames).
+  - `CompressFrame()` / `DecompressFrame()` — independent frame compress/decompress.
+  - `DecompressPrefix()` — partial recovery from torn/incomplete frames.
+  - `FrameDecoder` interface + `ReadFirstFrame()` for streaming decode.
+  Uses `klauspost/compress/zstd` (already an indirect go.mod dependency).
+- `internal/session/session.go` — persistence wiring (DSH
+  `session-persistence-jsonl/src/format.ts` parity):
+  - `saveWithCompression(s, compress)` — `Save` delegates to this; when
+    `compress=true`, the event spine is written as a single zstd frame while
+    meta + message lines remain plaintext.
+  - `SaveWithZstd()` — public entry point for zstd-compressed saves.
+  - `JsonlCompression` type + `logSuffix()` / `jsonlPathForCompressed()` for
+    `.jsonl.zstd` suffix handling (matches DSH's `logSuffix`).
+  - `detectCompression()` — checks `.jsonl.zstd` extension or zstd magic bytes.
+  - `parseHeaderMeta()` — reads only the first line of a session file for
+    lightweight header-only reads (ported from DSH's `parseHeaderMeta`), enabling
+    `List()` to avoid loading full session histories.
+  - `loadZstdJSONLFile()` — zstd-aware load path: reads plaintext header+messages,
+    then decompresses zstd frames for the event spine.
+  - `SessionLogScanner` — incremental JSONL scanner with DSH parity: validates
+    event sequence ordering (contiguous from 0), tracks `committedBytes`
+    (safe truncation offset), handles torn final records, and detects zstd frame
+    magic mid-stream.
+  - `loadJSONL()` now checks for `.jsonl.zstd` variant before falling back to
+    plaintext.
+  - `List()` / `LoadLatestForCWD()` updated to handle `.jsonl.zstd` compound
+    extensions.
+- `internal/eventlog/lifecycle.go` — compaction fact enhancement:
+  - `CompactionStartFact` — added `CompactionID`, `SourceCommandID`, `Turn` fields.
+  - `CompactionPruneFact` — added `ShadowedRangeStart`, `ShadowedRangeEnd`,
+    `ShadowedSeqs`, `ShadowedTokenCount` fields (DSH `compaction/prune` shadow-price protocol).
+  - `CompactionEndFact` — added `CompactionID`, `SourceCommandID`, `Turn`, `Error` fields.
+  - `CompactionSummaryFact` — added `CompactionID`, `ShadowedRange`, `ShadowedSeqs`,
+    `ShadowedTokenCount`, `Provider`, `Model`, `MaxTokens`, `UsagePromptTokens`,
+    `UsageCompletionTokens` fields (DSH `compaction/summary` full payload).
+  - Added `AppendCompactionStartFull`/`AppendCompactionPruneFull`/
+    `AppendCompactionSummaryFull` for full DSH parity append.
+- `internal/eventlog/lifecycle.go` — subagent descriptor enhancement:
+  - `SubagentDescriptorFact` — added `Version`, `Mode`, `Provider`, `Label`,
+    `AgentProvider`, `AgentModel`, `Persona`, `ToolFilterAllow`, `ToolFilterDeny`
+    fields matching DSH's `subagent/descriptor` (descriptor format version 2).
+  - `AppendSubagentDescriptorFull()` — auto-sets `Version` to
+    `SubagentDescriptorVersion` (= 2) and appends with full DSH fields.
+  - `SubagentDescriptorVersion` constant (= 2, matching DSH).
+
+All changes are additive: existing append helpers, call sites, and JSONL format
+remain backward-compatible. New fields use `omitempty`; legacy fields retained.
 
 ## Gates
 

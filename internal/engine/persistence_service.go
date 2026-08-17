@@ -225,6 +225,11 @@ func (s *PersistenceService) AppendSystemContext(content string) {
 		s.system += "\n\n" + content
 	}
 	s.mu.Unlock()
+	// Emit context.injected so the model-visible surface is reconstructible
+	// from the log alone (DSH context.injected seam).
+	if j := s.Journal(); j != nil {
+		j.AppendContextInjected(content)
+	}
 }
 
 // ReplaceSystemContextSection replaces a section of the system prompt

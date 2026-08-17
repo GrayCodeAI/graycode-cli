@@ -37,7 +37,7 @@ func (s *PersistenceService) AppendUserJournaled(msg types.EyrieMessage) {
 		return
 	}
 	if j := s.Journal(); j != nil {
-		j.Append(eventlog.UserMessage, toJournalMessage(msg))
+		j.AppendSurface(eventlog.UserMessage, toJournalMessage(msg), "append", 0, 0, nil)
 	}
 	s.mu.Lock()
 	s.messages = append(s.messages, cloneSingleMessage(msg))
@@ -51,7 +51,7 @@ func (s *PersistenceService) AppendAssistantJournaled(msg types.EyrieMessage) {
 		return
 	}
 	if j := s.Journal(); j != nil {
-		j.Append(eventlog.AssistantMsg, toJournalMessage(msg))
+		j.AppendSurface(eventlog.AssistantMsg, toJournalMessage(msg), "append", 0, 0, nil)
 	}
 	s.mu.Lock()
 	s.messages = append(s.messages, cloneSingleMessage(msg))
