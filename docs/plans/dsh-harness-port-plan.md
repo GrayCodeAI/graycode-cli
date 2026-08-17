@@ -51,11 +51,35 @@ Remaining (subsequent PRs, each gated):
 
 ## Phase 1 — Typed tool-pipeline interceptors + fail-closed approval
 
-- `internal/tool/interceptor.go`: `InterceptFn`, `Stage`, `ChainNode`/`Chain`.
-- `DefaultToolPipeline()` on `ToolService`; default nodes preserve current behavior
-  (permission → blast-radius → trace; timeout/retry/exec; redact/loop-detect/memory-distill).
-- `EventBus.Waterfall` (ordered, short-circuit, returns a value) + `Dispose`.
-- `approval.request` waterfall; no answerer = deny (fail-closed).
+Delivered in this branch on top of Phase 0:
+
+- `internal/tool/interceptor.go`: `Stage`, `ToolRequest`/`ToolResult`, `InterceptFn`,
+  `Chain`, and `Pipeline` with registration-ordered waterfall semantics and disposers.
+- `internal/tool/interceptor_test.go`: order, short-circuit, head/tail removal,
+  stage isolation, fail-closed deny, and disposer behavior.
+- `internal/engine/tool_service.go`: `ToolService.Pipeline()`/`SetPipeline` and a
+  `StagePreExecute` run inside `ExecuteOne` after the permission engine and before
+  approval/execution. `ShortCircuitDeny` stops the call; non-`ShortCircuit` errors
+  are treated as fail-closed denials.
+- `internal/engine/stream_tool_exec_test.go`: integration tests proving the wired
+  path stops execution and that an empty pipeline is a strict pass-through.
+- `internal/engine/event_bus.go`: ordered, value-returning `Waterfall` handlers plus
+  `RunWaterfall` (separate from the existing pub/sub `Subscribe`/`Publish` path).
+- `internal/engine/approval_waterfall.go` + test: `approval.request` waterfall
+  with "no answerer = deny" (fail-closed).
+
+GitNexus `detect-changes` flags CRITICAL risk on `EventBus` because it is a
+high-degree node; the changed symbols are all additive (`waterfall*`), and no
+pre-existing caller or execution path is altered.
+
+Remaining for Phase 1 (subsequent PRs, each gated):
+
+- Wire `DefaultToolPipeline()` at the composition root: a default node set that
+  preserves the existing permission → blast-radius → trace → timeout → retry order.
+- Route the post-execute stage through `PostProcess` so the result lifecycle is also
+  extensible.
+- Decide whether the existing `ApprovalGate` should dispatch through
+  `ApprovalWaterfall` rather than its current inline chain (requires migration).
 
 ## Phase 2 — Seam discipline (docs + disposers)
 
