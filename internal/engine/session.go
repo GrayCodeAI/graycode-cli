@@ -801,6 +801,16 @@ func (s *Session) ContextWindowCachedValue() int {
 	return 0
 }
 
+// JournalTitle returns the deterministic, provider-free session title derived from the
+// journal's model-visible messages. Callers that persist a session can store it on
+// session.Session.Name when no explicit human-provided title exists (Phase 3 title seam).
+func (s *Session) JournalTitle() string {
+	if s == nil || s.Persistence() == nil {
+		return ""
+	}
+	return s.Persistence().JournalTitle()
+}
+
 // JournalWire exports the session's append-only event spine for durable persistence.
 // It returns nil when no journal is attached, so callers that persist the session
 // can write the version-0 messages-only shape with no changes.

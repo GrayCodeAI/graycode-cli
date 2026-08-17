@@ -1060,6 +1060,9 @@ func persistDaemonSession(id string, req ChatRequest, sess *engine.Session, prev
 		createdAt = previous.CreatedAt
 		name = previous.Name
 	}
+	if name == "" {
+		name = sess.JournalTitle()
+	}
 	return hawksession.Save(&hawksession.Session{
 		ID:        id,
 		Model:     sess.Model(),
