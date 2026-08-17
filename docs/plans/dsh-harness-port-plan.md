@@ -74,12 +74,22 @@ pre-existing caller or execution path is altered.
 
 Remaining for Phase 1 (subsequent PRs, each gated):
 
-- Wire `DefaultToolPipeline()` at the composition root: a default node set that
-  preserves the existing permission → blast-radius → trace → timeout → retry order.
-- Route the post-execute stage through `PostProcess` so the result lifecycle is also
-  extensible.
-- Decide whether the existing `ApprovalGate` should dispatch through
-  `ApprovalWaterfall` rather than its current inline chain (requires migration).
+- ~~Wire `DefaultToolPipeline()` at the composition root:~~ Delivered:
+  `internal/engine/tool_pipeline.go` exposes `DefaultToolPipeline()` as the
+  empty, strict pass-through seam and `NewSessionWithClient` installs it via
+  `SetPipeline`.
+- ~~Route the post-execute stage through `PostProcess`~~ Delivered: the stage runs
+  after `NormalizeOutput` and before the legacy lifecycle pipeline; an interceptor
+  may mutate or replace the normalized result, and `*tool.ShortCircuit` overrides
+  output/isErr.
+- ~~ApprovalGate dispatch through `ApprovalWaterfall`.~~ Delivered: `ApprovalGate`
+  gained a `Waterfall` field and `PermissionService.CheckApproval` consults it
+  first (additive); all-abstain and empty chains deny (fail-closed).
+
+Phase 1 follow-ups are delivered on this branch. Note: the post-execute
+`ToolRequest.Tool` is nil at `PostProcess` because the resolved tool is not yet
+carried through to that stage; pre-execute has it. If a post-stage needs the
+concrete tool, carry it through `toolExecResult` in a later PR.
 
 ## Phase 2 — Seam discipline (docs + disposers)
 
