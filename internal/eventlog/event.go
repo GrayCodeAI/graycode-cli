@@ -37,7 +37,20 @@ const (
 	// SessionCompacted marks a compaction pass. Compaction mutates the projected
 	// surface, so it is a first-class durable fact.
 	SessionCompacted Type = "session.compacted"
+	// SpecState records the active spec workflow stage as a durable fact.
+	SpecState Type = "spec.state"
 )
+
+// Known reports whether t is part of the current vocabulary.
+func (t Type) Known() bool {
+	switch t {
+	case SessionMeta, UserMessage, AssistantMsg, ToolCall, ToolResult,
+		ContextInjected, SessionCompacted, SpecState:
+		return true
+	default:
+		return false
+	}
+}
 
 // Event is one durable fact. Seq is assigned by the Log at append time and is
 // what makes the record order reconstructible.
@@ -96,13 +109,10 @@ type ToolResultPayload struct {
 	IsError   bool   `json:"is_error,omitempty"`
 }
 
-// Known reports whether t is part of the current vocabulary.
-func (t Type) Known() bool {
-	switch t {
-	case SessionMeta, UserMessage, AssistantMsg, ToolCall, ToolResult,
-		ContextInjected, SessionCompacted:
-		return true
-	default:
-		return false
-	}
+// SpecFact is the payload for the durable spec-state event. The stage string is
+// stored as a plain value (not an enum) so the eventlog vocabulary stays
+// decoupled from the owning product package that defines the lifecycle.
+type SpecFact struct {
+	Stage string `json:"stage"`
+	Slug  string `json:"slug,omitempty"`
 }
