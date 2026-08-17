@@ -63,11 +63,23 @@ type Meta struct {
 // Message is the model-surface payload for User and Assistant events. It mirrors
 // the wire message shape without importing the product layer.
 type Message struct {
-	Content     string              `json:"content,omitempty"`
-	Thinking    string              `json:"thinking,omitempty"`
-	Images      []string            `json:"images,omitempty"`
-	ToolUse     []ToolCallPayload   `json:"tool_use,omitempty"`
-	ToolResults []ToolResultPayload `json:"tool_results,omitempty"`
+	Role         string               `json:"role,omitempty"`
+	Content      string               `json:"content,omitempty"`
+	Thinking     string               `json:"thinking,omitempty"`
+	Images       []string             `json:"images,omitempty"`
+	ContentParts []ContentPartPayload `json:"content_parts,omitempty"`
+	ToolUse      []ToolCallPayload    `json:"tool_use,omitempty"`
+	ToolResults  []ToolResultPayload  `json:"tool_results,omitempty"`
+}
+
+// ContentPartPayload records one multimodal part of a Message.
+type ContentPartPayload struct {
+	Type        string `json:"type"`
+	Text        string `json:"text,omitempty"`
+	ImageURL    string `json:"image_url,omitempty"`
+	ImageDetail string `json:"image_detail,omitempty"`
+	AudioData   string `json:"audio_data,omitempty"`
+	AudioFormat string `json:"audio_format,omitempty"`
 }
 
 // ToolCallPayload records the invocation facts needed to reconstruct a ToolCall.

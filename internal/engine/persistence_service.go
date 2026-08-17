@@ -4,6 +4,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -36,6 +37,9 @@ type PersistenceService struct {
 	contextWindowCached int
 	// graph is Hawk's product-owned conversation graph (for branching).
 	graph *session.ConversationGraph
+	// journal is the append-only session event spine. It is attached by the
+	// composition root; nil means journaling is disabled (pure in-memory mode).
+	journal *eventlog.Log
 	// steering is the per-iteration user-guidance queue.
 	steering *SteeringQueue
 	// logger.
