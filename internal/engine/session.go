@@ -163,6 +163,7 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.memory = NewMemoryService(log)
 	s.persist = NewPersistenceService(log)
 	s.persist.SetJournal(eventlog.New(nil))
+	s.perms.SetJournal(s.persist.Journal())
 	s.persist.SetAutoCompactThresholdPct(DefaultAutoCompactThresholdPct)
 	s.persist.SetSystem(systemPrompt)
 	s.tools = NewToolService(registry).WithMetrics(s.llm.Metrics()).WithTracer(oteltrace.NewTracer())

@@ -8,10 +8,12 @@ import (
 	"sync"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/safety"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 	"github.com/GrayCodeAI/hawk/internal/governance"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/spec"
 )
 
 // PermissionService is the Session's view of the safety/approval layer.
@@ -50,6 +52,8 @@ type PermissionService struct {
 	approval *ApprovalGate
 	// askUserFn is the fallback interactive approval callback.
 	askUserFn func(question string) (string, error)
+	// journal logs durable spec-workflow facts when non-nil.
+	journal *eventlog.Log
 	// log is the session logger.
 	log *logger.Logger
 }
@@ -538,6 +542,17 @@ func (s *PermissionService) AdvanceSpecStage(toolName string) {
 		return
 	}
 	s.perm.AdvanceSpecStage(toolName)
+	if s.journal != nil {
+		stage := spec.StringFromStageEnum(int(s.perm.Stage))
+		s.journal.AppendSpec(stage, s.perm.SpecSlug)
+	}
+}
+
+// SetJournal attaches the append-only event spine used for durable spec facts.
+func (s *PermissionService) SetJournal(j *eventlog.Log) {
+	if s != nil {
+		s.journal = j
+	}
 }
 
 // ResetSpec clears the active spec workflow.
