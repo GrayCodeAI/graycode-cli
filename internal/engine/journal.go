@@ -1,6 +1,9 @@
 package engine
 
 import (
+	"fmt"
+	"reflect"
+
 	"github.com/GrayCodeAI/hawk/internal/eventlog"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -74,6 +77,34 @@ func (s *PersistenceService) JournalProjection() []types.EyrieMessage {
 		out[i] = fromJournalMessage(m)
 	}
 	return out
+}
+
+// Reconstructible asserts the two halves of the "model-visible ⟺ logged"
+// invariant: the event spine must validate, and its projection must equal the live
+// transcript. It returns nil when no journal is attached (pure in-memory mode) or
+// when the invariant holds. Transcripts that have been edited outside the journaled
+// append methods (compaction, branching) violate the strict equality and are
+// reported; those edits gain journal events in a later phase.
+func (s *PersistenceService) Reconstructible() error {
+	if s == nil {
+		return nil
+	}
+	j := s.Journal()
+	if j == nil {
+		return nil
+	}
+	if err := eventlog.Validate(j.Snapshot()); err != nil {
+		return err
+	}
+	var live []types.EyrieMessage
+	s.mu.RLock()
+	live = cloneMessages(s.messages)
+	s.mu.RUnlock()
+	proj := s.JournalProjection()
+	if !reflect.DeepEqual(live, proj) {
+		return fmt.Errorf("journal not reconstructible: transcript has %d messages, projection has %d", len(live), len(proj))
+	}
+	return nil
 }
 
 func toJournalMessage(m types.EyrieMessage) eventlog.Message {

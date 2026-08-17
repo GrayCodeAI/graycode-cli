@@ -39,7 +39,8 @@ Remaining (subsequent PRs, each gated):
    model-visible appends (cache hit, max-tokens recovery, final text, tool-call,
    tool-result, steering, vision attachment) now route through the journaled
    append methods, and every `Session` materializes an `eventlog.Log` at
-   construction. Add the `Reconstructible` invariant assert is still pending.
+   construction. `PersistenceService.Reconstructible()` now asserts the strict
+   "model-visible ⟺ logged" invariant; the reconstructible assert is delivered.
 2. Persist the event log through `internal/session.Save/loadJSONL` behind
    `SESSION_FORMAT_VERSION == 1`; version `0` stays byte-compatible.
 

@@ -91,6 +91,29 @@ func TestAddUserAddAssistantRoutesThroughJournal(t *testing.T) {
 	}
 }
 
+func TestReconstructiblePassesForJournaledTranscript(t *testing.T) {
+	ps := NewPersistenceService(nil)
+	ps.SetJournal(eventlog.New(nil))
+	ps.AddUser("hello")
+	ps.AddAssistant("hi")
+	if err := ps.Reconstructible(); err != nil {
+		t.Fatalf("Reconstructible() = %v, want nil", err)
+	}
+}
+
+func TestReconstructibleFailsAfterTranscriptEdit(t *testing.T) {
+	ps := NewPersistenceService(nil)
+	ps.SetJournal(eventlog.New(nil))
+	ps.AddUser("hello")
+	ps.AddAssistant("hi")
+	// SetRawMessages rewrites the transcript without a journal event, so the
+	// projection no longer matches. The invariant must report that.
+	ps.SetRawMessages(nil)
+	if err := ps.Reconstructible(); err == nil {
+		t.Fatal("Reconstructible() = nil, want mismatch after SetRawMessages")
+	}
+}
+
 func TestJournaledAppendContentPartsRoundTrip(t *testing.T) {
 	ps := NewPersistenceService(nil)
 	ps.SetJournal(eventlog.New(nil))
