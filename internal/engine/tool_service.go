@@ -676,7 +676,7 @@ func (s *ToolService) PostProcess(ctx context.Context, result toolExecResult, tu
 	// pass-through.
 	if s.pipeline != nil {
 		post := &tool.ToolResult{
-			Request: tool.ToolRequest{Call: result.tc},
+			Request: tool.ToolRequest{Call: result.tc, Tool: result.tool},
 			Output:  output,
 			IsError: isErr,
 		}

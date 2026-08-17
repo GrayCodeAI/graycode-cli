@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/GrayCodeAI/hawk/internal/tool"
@@ -26,13 +27,18 @@ func TestToolServicePostProcessRunsPostExecuteStage(t *testing.T) {
 		if err := next(); err != nil {
 			return err
 		}
+		if req.Tool == nil {
+			t.Fatal("StagePostExecute saw a nil resolved Tool")
+		}
 		res.Output = "rewritten by post-execute stage"
 		res.IsError = false
 		return nil
 	})
 
+	stub := stubTool{}
 	got := service.PostProcess(context.Background(), toolExecResult{
 		tc:     types.ToolCall{Name: "Read", ID: "r1"},
+		tool:   stub,
 		output: "raw output",
 		isErr:  true,
 	}, 0, "", 128_000)
@@ -44,6 +50,13 @@ func TestToolServicePostProcessRunsPostExecuteStage(t *testing.T) {
 		t.Fatalf("output = %q, want rewritten", got.output)
 	}
 }
+
+type stubTool struct{}
+
+func (stubTool) Name() string                                             { return "Stub" }
+func (stubTool) Description() string                                      { return "stub" }
+func (stubTool) Parameters() map[string]interface{}                       { return map[string]interface{}{} }
+func (stubTool) Execute(context.Context, json.RawMessage) (string, error) { return "", nil }
 
 func TestDefaultToolPipelineIsEmptyPassThrough(t *testing.T) {
 	p := DefaultToolPipeline()
