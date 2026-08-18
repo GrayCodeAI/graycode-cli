@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -145,8 +146,14 @@ func RepairJournal(sessionID string) (int, error) {
 		return 0, nil // nothing to repair
 	}
 
-	// If the spine validates, no repair needed.
-	if _, err := eventlog.DecodeWire(events); err == nil {
+	// If the spine validates structurally and relationally, no repair needed.
+	if decoded, err := eventlog.DecodeWire(events); err == nil {
+		if rerr := eventlog.ValidateRelations(decoded); rerr != nil {
+			slog.Warn("session: relational invariant violation during repair", "session", sessionID, "err", rerr)
+			// Log only — structural validity is the hard gate; relational
+			// violations are best-effort warnings so we don't refuse to load
+			// valid-but-relationally-inconsistent legacy logs.
+		}
 		return 0, nil
 	}
 

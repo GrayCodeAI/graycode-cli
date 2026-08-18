@@ -253,6 +253,10 @@ type Message struct {
 	ContentParts []ContentPartPayload `json:"content_parts,omitempty"`
 	ToolUse      []ToolCallPayload    `json:"tool_use,omitempty"`
 	ToolResults  []ToolResultPayload  `json:"tool_results,omitempty"`
+	// Turn and Step record the turn/step coordinates of the producing step.
+	// Present on assistant/message (DSH parity); absent on user/message.
+	Turn int `json:"turn,omitempty"`
+	Step int `json:"step,omitempty"`
 }
 
 // ContentPartPayload records one multimodal part of a Message.
@@ -267,6 +271,8 @@ type ContentPartPayload struct {
 
 // ToolCallPayload records the invocation facts needed to reconstruct a ToolCall.
 type ToolCallPayload struct {
+	Turn      int            `json:"turn,omitempty"`
+	Step      int            `json:"step,omitempty"`
 	ID        string         `json:"id,omitempty"`
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments"`
@@ -274,6 +280,8 @@ type ToolCallPayload struct {
 
 // ToolResultPayload records one tool result fact.
 type ToolResultPayload struct {
+	Turn      int    `json:"turn,omitempty"`
+	Step      int    `json:"step,omitempty"`
 	ToolUseID string `json:"tool_use_id"`
 	Content   string `json:"content"`
 	IsError   bool   `json:"is_error,omitempty"`
