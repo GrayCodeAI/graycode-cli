@@ -73,15 +73,22 @@ type PermissionFact struct {
 }
 
 // ApprovalAskedFact records that a gated action reached the approval gate.
+// Hawk fields are the primary model (turn/step/tool/category/question); DSH
+// parity fields (ID, CallID, Reason) are optional extensions for cross-platform log reading.
 type ApprovalAskedFact struct {
 	Turn     int    `json:"turn,omitempty"`
 	Step     int    `json:"step,omitempty"`
 	Tool     string `json:"tool,omitempty"`
 	Category string `json:"category,omitempty"`
 	Question string `json:"question,omitempty"`
+	// DSH parity fields:
+	ID     string `json:"id,omitempty"`      // ApprovalRequestId pairing ask with decide
+	CallID string `json:"call_id,omitempty"` // CallId of the exact tool call, when the asker had one
 }
 
 // ApprovalDecidedFact records the outcome of an approval gate decision.
+// Hawk fields are the primary model (turn/step/tool/category/allowed/message);
+// DSH parity fields (ID, Outcome) are optional extensions.
 type ApprovalDecidedFact struct {
 	Turn     int    `json:"turn,omitempty"`
 	Step     int    `json:"step,omitempty"`
@@ -89,12 +96,20 @@ type ApprovalDecidedFact struct {
 	Category string `json:"category,omitempty"`
 	Allowed  bool   `json:"allowed"`
 	Message  string `json:"message,omitempty"`
+	// DSH parity fields:
+	ID      string `json:"id,omitempty"`      // ApprovalRequestId pairing with approval/asked
+	Outcome string `json:"outcome,omitempty"` // "allowed-once" | "rejected" | "cancelled" | "unavailable"
 }
 
 // ApprovalPolicyFact records whether a category is covered by the active policy.
+// DSH parity: PresetName and Source fields added alongside Hawk's Category/Covered.
 type ApprovalPolicyFact struct {
 	Category string `json:"category,omitempty"`
 	Covered  bool   `json:"covered"`
+	// DSH parity fields:
+	PresetName string `json:"preset,omitempty"` // the active preset name (DSH: preset)
+	Policy     string `json:"policy,omitempty"` // "ask" or "never" (DSH: ApprovalPolicy)
+	Source     string `json:"source,omitempty"` // "delegation" for seeded child override
 }
 
 // AppendTurnStart appends a turn.start boundary fact.

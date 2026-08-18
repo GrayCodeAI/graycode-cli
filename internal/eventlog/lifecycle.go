@@ -281,10 +281,12 @@ func (l *Log) AppendGoalChange(goal string, added bool) {
 // --- Permission preset ---
 
 // PermissionPresetFact records whether a category is covered by the active
-// permission policy preset.
+// permission policy preset, matching DSH's permission/preset event.
 type PermissionPresetFact struct {
 	Category string `json:"category,omitempty"`
 	Covered  bool   `json:"covered"`
+	// DSH parity: the preset name, matching DSH's { preset: string } payload.
+	PresetName string `json:"preset,omitempty"`
 }
 
 // AppendPermissionPreset records whether a category is covered by the policy.
@@ -452,6 +454,11 @@ func (l *Log) AppendAgentInboxSpliced(count, position int) {
 // CommandRunFact records a command execution start.
 type CommandRunFact struct {
 	Command string `json:"command,omitempty"`
+	// DSH parity fields:
+	CommandID string         `json:"command_id,omitempty"` // paired with command/done
+	Name      string         `json:"name,omitempty"`       // resolved command name
+	Args      string         `json:"args,omitempty"`       // raw input arguments
+	Source    map[string]any `json:"source,omitempty"`     // who issued the command (e.g. {"kind":"user"})
 }
 
 // CommandDoneFact records a command execution completion.
@@ -459,6 +466,11 @@ type CommandDoneFact struct {
 	Command  string `json:"command,omitempty"`
 	ExitCode int    `json:"exit_code,omitempty"`
 	Error    string `json:"error,omitempty"`
+	// DSH parity fields:
+	CommandID      string `json:"command_id,omitempty"`       // paired with command/run
+	Kind           string `json:"kind,omitempty"`             // "success" or "error"
+	Text           string `json:"text,omitempty"`             // rendered outcome text
+	SourceEventSeq uint64 `json:"source_event_seq,omitempty"` // paired domain event seq
 }
 
 // AppendCommandRun records a command execution start.
