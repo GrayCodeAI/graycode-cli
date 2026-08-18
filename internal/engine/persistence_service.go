@@ -40,6 +40,11 @@ type PersistenceService struct {
 	// journal is the append-only session event spine. It is attached by the
 	// composition root; nil means journaling is disabled (pure in-memory mode).
 	journal *eventlog.Log
+	// writeBehind buffers journal events and flushes them in batches via a
+	// configured write function, porting DSH's SessionWriteBehind pattern.
+	// Nil means write-behind batching is disabled (events are only durable
+	// at explicit Save calls).
+	writeBehind *session.WriteBehind
 	// steering is the per-iteration user-guidance queue.
 	steering *SteeringQueue
 	// logger.

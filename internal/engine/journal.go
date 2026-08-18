@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/GrayCodeAI/hawk/internal/eventlog"
+	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -28,6 +29,46 @@ func (s *PersistenceService) Journal() *eventlog.Log {
 	s.stateMu.RLock()
 	defer s.stateMu.RUnlock()
 	return s.journal
+}
+
+// SetWriteBehind attaches a write-behind batching controller that buffers
+// journal events and flushes them in batches. Ported from DSH's
+// SessionWriteBehind pattern. The write function should persist the given
+// event batch to durable storage.
+func (s *PersistenceService) SetWriteBehind(wb *session.WriteBehind) {
+	if s == nil {
+		return
+	}
+	s.stateMu.Lock()
+	s.writeBehind = wb
+	s.stateMu.Unlock()
+}
+
+// WriteBehind returns the attached write-behind controller, or nil.
+func (s *PersistenceService) WriteBehind() *session.WriteBehind {
+	if s == nil {
+		return nil
+	}
+	s.stateMu.RLock()
+	defer s.stateMu.RUnlock()
+	return s.writeBehind
+}
+
+// FlushWriteBehind forces a drain of any buffered journal events through the
+// write-behind controller. This is the durability barrier — call it before
+// relying on persisted journal state (e.g. at session end). Returns nil if no
+// write-behind is configured.
+func (s *PersistenceService) FlushWriteBehind() error {
+	if s == nil {
+		return nil
+	}
+	s.stateMu.RLock()
+	wb := s.writeBehind
+	s.stateMu.RUnlock()
+	if wb == nil {
+		return nil
+	}
+	return wb.Flush()
 }
 
 // AppendUserJournaled journals a user message and appends it to the transcript.

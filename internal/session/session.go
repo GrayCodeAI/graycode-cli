@@ -388,8 +388,12 @@ func RecoverFromWAL(sessionID string) (*Session, error) {
 	s.ID = sessionID
 	s.Messages = messages
 	if len(events) > 0 {
-		if _, derr := eventlog.DecodeWire(events); derr != nil {
+		decoded, derr := eventlog.DecodeWire(events)
+		if derr != nil {
 			return nil, fmt.Errorf("recover session %s: %w", sessionID, derr)
+		}
+		if rerr := eventlog.ValidateRelations(decoded); rerr != nil {
+			slog.Warn("session: relational invariant violation (recovery)", "session", sessionID, "err", rerr)
 		}
 		s.Events = events
 	}
@@ -577,8 +581,15 @@ func loadJSONLFile(path, id string) (*Session, error) {
 	// Fail loud on a version-1 event spine that does not validate, so a record
 	// the build cannot project is never trusted or silently rewritten.
 	if len(events) > 0 {
-		if _, derr := eventlog.DecodeWire(events); derr != nil {
+		decoded, derr := eventlog.DecodeWire(events)
+		if derr != nil {
 			return nil, fmt.Errorf("read session %s: %w", id, derr)
+		}
+		// Relational validation is best-effort: structural validity is the
+		// hard gate (DecodeWire above); relational violations are warnings
+		// so legacy logs with incomplete turn/step metadata still load.
+		if rerr := eventlog.ValidateRelations(decoded); rerr != nil {
+			slog.Warn("session: relational invariant violation", "session", id, "err", rerr)
 		}
 		s.Events = events
 	}
@@ -959,8 +970,13 @@ func loadZstdJSONLFile(path, id string) (*Session, error) {
 	s.Messages = messages
 	events := scanner.Events()
 	if len(events) > 0 {
-		if _, derr := eventlog.DecodeWire(events); derr != nil {
+		decoded, derr := eventlog.DecodeWire(events)
+		if derr != nil {
 			return nil, fmt.Errorf("read zstd session %s: %w", id, derr)
+		}
+		// Relational validation is best-effort for the same reason as loadJSONLFile.
+		if rerr := eventlog.ValidateRelations(decoded); rerr != nil {
+			slog.Warn("session: relational invariant violation (zstd)", "session", id, "err", rerr)
 		}
 		s.Events = events
 	}
