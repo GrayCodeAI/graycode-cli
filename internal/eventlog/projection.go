@@ -180,3 +180,57 @@ func ProjectSessionStats(events []Event) SessionStatsProjection {
 
 	return stats
 }
+
+// PresetOption is the select-option shape a presentation layer advertises
+// for one permission preset (DSH PresetOption parity).
+type PresetOption struct {
+	Value       string `json:"value"` // stable option value: table key, or "custom"
+	Name        string `json:"name"`  // display label
+	Description string `json:"description,omitempty"`
+}
+
+// PermissionSelect is the whole permissions projection value: every switchable
+// preset in table order plus the effective current value (DSH PermissionSelect).
+type PermissionSelect struct {
+	Options      []PresetOption `json:"options"`       // switchable presets, plus "custom" when current
+	CurrentValue string         `json:"current_value"` // effective: table key, or "custom"
+}
+
+// ProjectPermissions folds permission/preset, sandbox/mode, and approval/policy
+// events into a PermissionSelect view, matching DSH's permissions projection
+// which folds from those three event types over composition defaults.
+// Key absence means no permission service is composed — clients hide the control.
+func ProjectPermissions(events []Event) PermissionSelect {
+	var ps PermissionSelect
+	currentPolicy := "ask" // DSH default: APPROVAL_POLICIES[0]
+
+	for _, ev := range events {
+		switch ev.Type {
+		case PermissionPreset:
+			if f, ok := ev.Data.(PermissionPresetFact); ok && f.PresetName != "" {
+				// Track the preset name as the current value.
+				ps.CurrentValue = f.PresetName
+			}
+		case SandboxMode:
+			// DSH: sandbox/mode influences the effective permission surface.
+			if f, ok := ev.Data.(SandboxModeFact); ok {
+				if f.Mode != "" {
+					ps.CurrentValue = f.Mode
+				}
+			}
+		case ApprovalPolicy:
+			if f, ok := ev.Data.(ApprovalPolicyFact); ok {
+				if f.Policy != "" {
+					currentPolicy = f.Policy
+				}
+			}
+		}
+	}
+
+	// If no specific override landed, the effective value is the policy.
+	if ps.CurrentValue == "" {
+		ps.CurrentValue = currentPolicy
+	}
+
+	return ps
+}

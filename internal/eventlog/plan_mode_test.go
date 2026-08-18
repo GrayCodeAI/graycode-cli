@@ -99,6 +99,46 @@ func TestProjectSessionStatsEmpty(t *testing.T) {
 	}
 }
 
+func TestProjectPermissionsFromPresetAndPolicy(t *testing.T) {
+	now := time.Now().UTC()
+	events := []Event{
+		{Type: PermissionPreset, Seq: 1, At: now, Data: PermissionPresetFact{PresetName: "strict"}},
+		{Type: ApprovalPolicy, Seq: 2, At: now, Data: ApprovalPolicyFact{Policy: "never"}},
+	}
+	ps := ProjectPermissions(events)
+	if ps.CurrentValue != "strict" {
+		t.Errorf("expected preset value 'strict', got %q", ps.CurrentValue)
+	}
+}
+
+func TestProjectPermissionsDefaultPolicy(t *testing.T) {
+	events := []Event{
+		{Type: ApprovalPolicy, Seq: 1, At: time.Now().UTC(), Data: ApprovalPolicyFact{Policy: "never"}},
+	}
+	ps := ProjectPermissions(events)
+	if ps.CurrentValue != "never" {
+		t.Errorf("expected 'never', got %q", ps.CurrentValue)
+	}
+}
+
+func TestProjectPermissionsEmpty(t *testing.T) {
+	ps := ProjectPermissions(nil)
+	// DSH default: effectiveApprovalPolicy defaults to 'ask' (APPROVAL_POLICIES[0])
+	if ps.CurrentValue != "ask" {
+		t.Errorf("expected default 'ask', got %q", ps.CurrentValue)
+	}
+}
+
+func TestProjectPermissionsSandboxMode(t *testing.T) {
+	events := []Event{
+		{Type: SandboxMode, Seq: 1, At: time.Now().UTC(), Data: SandboxModeFact{Mode: "read-only"}},
+	}
+	ps := ProjectPermissions(events)
+	if ps.CurrentValue != "read-only" {
+		t.Errorf("expected 'read-only', got %q", ps.CurrentValue)
+	}
+}
+
 func mustJSONRaw(t *testing.T, v any) []byte {
 	t.Helper()
 	b, err := json.Marshal(v)
