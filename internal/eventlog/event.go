@@ -149,6 +149,10 @@ const (
 	// WebDeepSeekSearch records a web/deepseek-search LLM request. Ported from
 	// DeepSeek Harness web/deepseek-search-llm-request.
 	WebDeepSeekSearch Type = "web.deepseek-search-llm-request"
+
+	// PlanMode records plan-mode activation/deactivation, matching DSH's
+	// plan/mode event. The last event wins; a log with none folds to inactive.
+	PlanMode Type = "plan.mode"
 )
 
 // Known reports whether t is part of the current vocabulary.
@@ -166,7 +170,7 @@ func (t Type) Known() bool {
 		AgentInboxSpliced, CommandRun, CommandDone,
 		ToolWorkflowAgentStart, ToolWorkflowAgentEnd,
 		ToolCodeDispatch, ToolCodeDispatchStart,
-		WebDeepSeekSearch:
+		WebDeepSeekSearch, PlanMode:
 		return true
 	default:
 		return false

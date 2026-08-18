@@ -1,5 +1,7 @@
 package eventlog
 
+import "time"
+
 // ProjectMessages folds the append-only events into the model-visible message
 // surface. This ports DeepSeek Harness's deriveMessages() surface semantics:
 // system prompts and injected context become system messages; compaction
@@ -79,4 +81,102 @@ func ProjectMessages(events []Event) []Message {
 		}
 	}
 	return out
+}
+
+// SessionStatsProjection tracks whole-log conversation figures by folding over
+// the event spine, matching DSH's session-stats projection. Counts and wall
+// times fold from the complete durable log; every field is 0 until its first
+// contributing event lands.
+type SessionStatsProjection struct {
+	// Turns carrying at least one closed step (step/end).
+	Turns int `json:"turns"`
+	// Closed steps (step/end events) — all reasons.
+	Steps int `json:"steps"`
+	// Summed model wall time in milliseconds (step/start → assistant/message).
+	LLMMs int64 `json:"llm_ms"`
+	// Summed tool wall time in milliseconds (tool/call → tool/result).
+	ToolMs int64 `json:"tool_ms"`
+	// Summed first-token latency in milliseconds (step/start → first chunk).
+	TTFPMs int64 `json:"ttfp_ms"`
+	// Steps carrying a recorded first token.
+	TTFPSteps int `json:"ttfp_steps"`
+	// Summed decode wall time in milliseconds (first chunk → assistant/message).
+	DecodeMs int64 `json:"decode_ms"`
+	// Summed provider output tokens over decode-timed steps.
+	DecodeTokens int `json:"decode_tokens"`
+}
+
+// ProjectSessionStats folds the append-only events into a SessionStatsProjection,
+// matching DSH's session-stats drive unit. Step start/end pairs bracket tool
+// calls and assistant chunks; wall times are derived from event At timestamps.
+func ProjectSessionStats(events []Event) SessionStatsProjection {
+	var stats SessionStatsProjection
+	var stepStart time.Time
+	_ = stepStart
+	var turnActive bool
+	var pendingStepStart bool
+
+	for _, ev := range events {
+		switch ev.Type {
+		case TurnStart:
+			turnActive = true
+		case TurnEnd:
+			turnActive = false
+		case StepStart:
+			stepStart = ev.At
+			pendingStepStart = true
+		case StepEnd:
+			if stepStart != (time.Time{}) {
+				stats.Steps++
+				if turnActive {
+					stats.Turns++
+					turnActive = false
+				}
+				stepStart = time.Time{}
+			}
+			pendingStepStart = false
+		case AssistantMsg:
+			// End of decode window for a step that produced a message.
+			if pendingStepStart && stepStart != (time.Time{}) {
+				decodeDur := ev.At.Sub(stepStart)
+				if decodeDur > 0 {
+					stats.DecodeMs += decodeDur.Milliseconds()
+				}
+			}
+			// End of LLM response window for this step.
+			if stepStart != (time.Time{}) {
+				llmDur := ev.At.Sub(stepStart)
+				if llmDur > 0 {
+					stats.LLMMs += llmDur.Milliseconds()
+				}
+			}
+			pendingStepStart = false
+		case ToolCall:
+			// Start of tool wall time — tracked via ToolResult pairing below.
+		case ToolResult:
+			// End of tool wall time — best-effort: span from step start.
+			if stepStart != (time.Time{}) && ev.At.After(stepStart) {
+				toolDur := ev.At.Sub(stepStart)
+				if toolDur > 0 {
+					stats.ToolMs += toolDur.Milliseconds()
+				}
+			}
+		case AssistantChunk:
+			// First non-empty content chunk after step start → TTFT.
+			if pendingStepStart {
+				if c, ok := ev.Data.(ChunkFact); ok && c.Chunk != "" {
+					if stepStart != (time.Time{}) {
+						ttft := ev.At.Sub(stepStart)
+						if ttft > 0 {
+							stats.TTFPMs += ttft.Milliseconds()
+						}
+						stats.TTFPSteps++
+					}
+					pendingStepStart = false
+				}
+			}
+		}
+	}
+
+	return stats
 }

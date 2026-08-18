@@ -297,8 +297,25 @@ Delivered on this branch on top of Phases 0–3:
     `SubagentDescriptorVersion` (= 2) and appends with full DSH fields.
   - `SubagentDescriptorVersion` constant (= 2, matching DSH).
 
-All changes are additive: existing append helpers, call sites, and JSONL format
-remain backward-compatible. New fields use `omitempty`; legacy fields retained.
+## Phase 10 — Session stats projection + plan.mode completion
+
+Delivered on this branch on top of Phase 9:
+
+- `internal/eventlog/event.go` — added `PlanMode` event type (`plan.mode`),
+  completing 100% DSH known-event-types coverage (all 44 types now known).
+- `internal/eventlog/lifecycle.go` — `PlanModeFact` struct + `AppendPlanMode()`
+  helper. Last-write-wins semantics on replay (matches DSH's plan/mode folding).
+- `internal/eventlog/wire.go` — `decodePayload` case for `PlanMode`.
+- `internal/eventlog/projection.go` — `SessionStatsProjection` type +
+  `ProjectSessionStats()` function, ported from DSH's session-stats projection.
+  Tracks whole-log conversation figures: turns, steps, LLM wall time, tool wall
+  time, first-token latency (TTFT), decode wall time, and output token counts.
+  Folds over the event spine using step/start-end-bracketing and event At
+  timestamps.
+- `internal/eventlog/plan_mode_test.go` — tests for PlanMode round-trip, Known(),
+  wire decode, and SessionStats projection (single-turn/step and empty log).
+- `docs/plans/dsh-harness-port-plan.md` — Phase 10 section appended documenting
+  all deliverables.
 
 ## Gates
 

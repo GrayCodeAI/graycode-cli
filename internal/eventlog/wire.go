@@ -355,6 +355,12 @@ func decodePayload(w WireEvent) (any, error) {
 			return nil, err
 		}
 		return p, nil
+	case PlanMode:
+		var p PlanModeFact
+		if err := json.Unmarshal(w.Data, &p); err != nil {
+			return nil, err
+		}
+		return p, nil
 	default:
 		return nil, nil
 	}

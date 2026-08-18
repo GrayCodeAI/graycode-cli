@@ -537,3 +537,19 @@ func (l *Log) AppendWebDeepSeekSearch(query string) {
 	}
 	l.Append(WebDeepSeekSearch, WebSearchFact{Query: query})
 }
+
+// --- Plan mode ---
+
+// PlanModeFact records plan-mode activation/deactivation, matching DSH's
+// plan/mode event. The last appended event wins (last-write-wins on replay).
+type PlanModeFact struct {
+	Active bool `json:"active"`
+}
+
+// AppendPlanMode records plan-mode activation or deactivation.
+func (l *Log) AppendPlanMode(active bool) {
+	if l == nil {
+		return
+	}
+	l.Append(PlanMode, PlanModeFact{Active: active})
+}
