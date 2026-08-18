@@ -317,6 +317,34 @@ Delivered on this branch on top of Phase 9:
 - `docs/plans/dsh-harness-port-plan.md` — Phase 10 section appended documenting
   all deliverables.
 
+## Phase 11 — DSH parity field enhancements + permission projection
+
+Delivered on this branch on top of Phase 10:
+
+- `internal/eventlog/boundary.go` — DSH parity field enhancements to approval
+  fact structs (all optional/omitempty for backward compatibility):
+  - `ApprovalAskedFact` — added `ID` (ApprovalRequestId pairing ask↔decide),
+    `CallID` (exact tool call id).
+  - `ApprovalDecidedFact` — added `ID` (pairs with asked), `Outcome`
+    ("allowed-once"|"rejected"|"cancelled"|"unavailable").
+  - `ApprovalPolicyFact` — added `PresetName`, `Policy` ("ask"|"never"),
+    `Source` ("delegation" for seeded child override).
+- `internal/eventlog/lifecycle.go` — DSH parity field enhancements:
+  - `PermissionPresetFact` — added `PresetName` matching DSH's `{ preset: string }`.
+  - `CommandRunFact` — added `CommandID`, `Name`, `Args`, `Source`
+    matching DSH's `command/run` payload.
+  - `CommandDoneFact` — added `CommandID`, `Kind` ("success"|"error"),
+    `Text`, `SourceEventSeq` matching DSH's `command/done` payload.
+- `internal/eventlog/projection.go` — `ProjectPermissions()`:
+  Folds from `permission/preset`, `sandbox/mode`, and `approval/policy` events
+  into a `PermissionSelect` view (options list + effective current value),
+  matching DSH's permissions projection. `PresetOption` type added.
+- `internal/engine/work_mode.go` — `SetWorkMode()` now emits `plan.mode` journal
+  events when the mode actually transitions (plan↔act), matching DSH's
+  `plan/mode` last-write-wins folding.
+- `internal/eventlog/plan_mode_test.go` — added tests for
+  `ProjectPermissions` covering preset/policy/sandbox/default/empty cases.
+
 ## Gates
 
 Each phase: `make ci` + `hawk verify`; no direct commits to `main`.
