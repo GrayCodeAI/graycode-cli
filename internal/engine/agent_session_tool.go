@@ -48,10 +48,15 @@ func (s *Session) spawnSubAgentRequest(ctx context.Context, req agentcontracts.S
 
 	// Emit subagent.descriptor and tool-workflow.agent-start to the journal.
 	if j := s.Persistence().Journal(); j != nil {
-		j.AppendSubagentDescriptor(eventlog.SubagentDescriptorFact{
-			Name:  string(norm.SubagentType),
-			Agent: string(mode),
-			Depth: depth,
+		j.AppendSubagentDescriptorFull(eventlog.SubagentDescriptorFact{
+			Name:          string(norm.SubagentType),
+			Agent:         string(mode),
+			Depth:         depth,
+			Mode:          "one-shot",
+			Provider:      "hawk",
+			Label:         truncateSummary(norm.Prompt, 200),
+			AgentProvider: s.ChatLLM().Provider(),
+			AgentModel:    s.ChatLLM().Model(),
 		})
 		j.AppendToolWorkflowAgentStart(string(norm.SubagentType))
 	}
