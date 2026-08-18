@@ -341,8 +341,60 @@ Delivered on this branch on top of Phase 10:
 - `internal/engine/work_mode.go` — `SetWorkMode()` now emits `plan.mode` journal
   events when the mode actually transitions (plan↔act), matching DSH's
   `plan/mode` last-write-wins folding.
+- `internal/engine/agent_session_tool.go` — `spawnSubAgentRequest` upgraded to
+  use `AppendSubagentDescriptorFull` with DSH v2 parity fields (Mode, Provider,
+  Label, AgentProvider, AgentModel).
 - `internal/eventlog/plan_mode_test.go` — added tests for
   `ProjectPermissions` covering preset/policy/sandbox/default/empty cases.
+
+## Phase 12 — Relational invariants + write-behind batching + preparations cache
+
+Delivered on this branch on top of Phase 11:
+
+- `internal/eventlog/invariants.go` — `ValidateRelations()`: DSH-compatible
+  relational invariant checking (ported from dsh-session/invariant.ts):
+  - Turn/step nesting: turn/start, step/start, step/end must match open turn/step
+  - Tool call↔result pairing: tool/result with surfaceOp: append must have prior
+    tool/call with matching ID (unless fail-closed TOOL_NOT_STARTED)
+  - Core execution events (todo/write, request/header, request/context) must
+    be turn-enclosed
+  - Seq must strictly increase
+  - Surface replacement exempt from pairing check
+- `internal/eventlog/event.go` — added `Turn`/`Step` fields to `Message` and
+  `ToolCallPayload`/`ToolResultPayload` for relational invariant checks
+- `internal/eventlog/invariants_test.go` — 7 tests for relational validation
+- `internal/session/write_behind.go` — Go-native port of DSH's
+  `SessionWriteBehind` class (write-behind.ts):
+  - Bounded per-session write batching with fixed timer deadline
+  - Background write with failure retention (re-queues on error)
+  - Quiescence barrier: Flush() drains all pending events synchronously
+  - Concurrent flushes join the same barrier (no double-flush)
+  - CancelAutomaticWait() cancels the batching timer
+  - ReportBackgroundFailure callback for failure observation
+- `internal/session/write_behind_test.go` — 6 tests for write-behind controller
+- `internal/session/preparations.go` — Go-native port of DSH's
+  `SessionPreparations` class (preparations.ts):
+  - Bounded LRU cache of prepared session sources with load-sharing
+  - Phase-based state machine: loading/ready/committing/reserved
+  - Exclusive reservation: Reserve() transitions through committing→reserved
+  - Release/Discard/Attach/TakeReady/Invalidate/DiscardReady methods
+  - AssertWritable for phase-based write admission control
+  - LRU eviction at capacity
+- `internal/session/preparations_test.go` — 9 tests for preparations cache
+- `internal/session/session.go` — `ValidateRelations` wired into load/recovery
+  paths as best-effort warning
+- `internal/session/branch.go` — `ValidateRelations` wired into `RepairJournal`
+- `internal/engine/persistence_service.go` — `writeBehind` field added
+- `internal/engine/journal.go` — `SetWriteBehind()`/`WriteBehind()`/`FlushWriteBehind()`
+  methods + imports for session package
+
+## Latest DSH clone check
+
+Cloned the latest `deepseek-ai/deepseek-harness` (rc.7, Aug 17) and compared against
+the older clone (rc.7, Aug 13). Results: no new event types, no new invariants,
+no persistence protocol changes. 7 new files in the latest clone — all client-side
+UI additions (Safari support, outside pointer handling) or ACP content admission
+(`packages/acp/acp/src/content.ts`). The eventlog and session format are stable.
 
 ## Gates
 
