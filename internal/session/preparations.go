@@ -118,7 +118,6 @@ func (p *SessionPreparations) Inspect(id string, load func() (*PreparedSource, e
 
 	p.mu.Lock()
 	if elem, ok := p.entries[id]; ok {
-		_ = elem.Value.(*prepEntry)
 		p.lru.MoveToBack(elem)
 	}
 	p.mu.Unlock()
@@ -228,7 +227,7 @@ func (p *SessionPreparations) ReservationFor(session *eventlog.Log) *Reservation
 	defer p.mu.Unlock()
 
 	for _, elem := range p.entries {
-		entry := elem.Value.(*prepEntry)
+		entry, _ := elem.Value.(*prepEntry)
 		entry.mu.Lock()
 		if entry.phase == PhaseReserved && entry.source != nil && entry.source.Session == session {
 			r := entry.reservation
@@ -249,9 +248,12 @@ func (p *SessionPreparations) Attach(reservation *Reservation) {
 	defer p.mu.Unlock()
 
 	entry := reservation.entry
-	if elem, ok := p.entries[entry.id]; ok && elem.Value.(*prepEntry) == entry {
-		p.lru.Remove(elem)
-		delete(p.entries, entry.id)
+	if elem, ok := p.entries[entry.id]; ok {
+		v, ok := elem.Value.(*prepEntry)
+		if ok && v == entry {
+			p.lru.Remove(elem)
+			delete(p.entries, entry.id)
+		}
 	}
 }
 
@@ -262,9 +264,12 @@ func (p *SessionPreparations) Discard(reservation *Reservation) {
 	defer p.mu.Unlock()
 
 	entry := reservation.entry
-	if elem, ok := p.entries[entry.id]; ok && elem.Value.(*prepEntry) == entry && entry.reservation == reservation {
-		p.lru.Remove(elem)
-		delete(p.entries, entry.id)
+	if elem, ok := p.entries[entry.id]; ok {
+		v, ok := elem.Value.(*prepEntry)
+		if ok && v == entry && entry.reservation == reservation {
+			p.lru.Remove(elem)
+			delete(p.entries, entry.id)
+		}
 	}
 }
 
@@ -275,24 +280,26 @@ func (p *SessionPreparations) Release(reservation *Reservation, reusable bool) {
 	defer p.mu.Unlock()
 
 	entry := reservation.entry
-	if elem, ok := p.entries[entry.id]; ok && elem.Value.(*prepEntry) == entry {
-		e := elem.Value.(*prepEntry)
-		e.mu.Lock()
-		if e.reservation == reservation && e.phase == PhaseReserved {
-			if !reusable {
-				p.lru.Remove(elem)
-				delete(p.entries, entry.id)
+	if elem, ok := p.entries[entry.id]; ok {
+		e, ok := elem.Value.(*prepEntry)
+		if ok && e == entry {
+			e.mu.Lock()
+			if e.reservation == reservation && e.phase == PhaseReserved {
+				if !reusable {
+					p.lru.Remove(elem)
+					delete(p.entries, entry.id)
+					e.mu.Unlock()
+					return
+				}
+				e.reservation = nil
+				e.phase = PhaseReady
 				e.mu.Unlock()
+				p.lru.MoveToBack(elem)
+				p.evictLocked()
 				return
 			}
-			e.reservation = nil
-			e.phase = PhaseReady
 			e.mu.Unlock()
-			p.lru.MoveToBack(elem)
-			p.evictLocked()
-			return
 		}
-		e.mu.Unlock()
 	}
 }
 
@@ -319,7 +326,7 @@ func (p *SessionPreparations) DiscardReady(id string, expected *PreparedSource) 
 	if !ok {
 		return "missing"
 	}
-	entry := elem.Value.(*prepEntry)
+	entry, _ := elem.Value.(*prepEntry)
 	entry.mu.Lock()
 	if entry.source != expected || entry.phase != PhaseReady {
 		entry.mu.Unlock()
@@ -338,7 +345,7 @@ func (p *SessionPreparations) AssertWritable(id string) {
 	defer p.mu.Unlock()
 
 	if elem, ok := p.entries[id]; ok {
-		entry := elem.Value.(*prepEntry)
+		entry, _ := elem.Value.(*prepEntry)
 		entry.mu.Lock()
 		phase := entry.phase
 		entry.mu.Unlock()
@@ -356,7 +363,7 @@ func (p *SessionPreparations) TakeReady(id string) *PreparedSource {
 	defer p.mu.Unlock()
 
 	if elem, ok := p.entries[id]; ok {
-		entry := elem.Value.(*prepEntry)
+		entry, _ := elem.Value.(*prepEntry)
 		entry.mu.Lock()
 		if entry.phase == PhaseReady && entry.source != nil {
 			src := entry.source
@@ -384,7 +391,8 @@ func (p *SessionPreparations) entryFor(id string, load func() (*PreparedSource, 
 	defer p.mu.Unlock()
 
 	if elem, ok := p.entries[id]; ok {
-		return elem.Value.(*prepEntry)
+		v, _ := elem.Value.(*prepEntry)
+		return v
 	}
 
 	// Create new entry.
@@ -447,15 +455,10 @@ func (p *SessionPreparations) settleAndRemove(id string, entry *prepEntry) {
 	p.removeEntry(id)
 }
 
-func (e *prepEntry) touchLRU() {
-	// No-op: LRU touch is handled by the parent SessionPreparations
-	// via MoveToBack when it accesses the list element.
-}
-
 func (p *SessionPreparations) evictLocked() {
 	readyCount := 0
 	for _, elem := range p.entries {
-		entry := elem.Value.(*prepEntry)
+		entry, _ := elem.Value.(*prepEntry)
 		entry.mu.Lock()
 		if entry.phase == PhaseReady {
 			readyCount++
@@ -467,7 +470,7 @@ func (p *SessionPreparations) evictLocked() {
 	}
 	// Evict the least-recently-used ready entry.
 	for elem := p.lru.Front(); elem != nil; elem = elem.Next() {
-		entry := elem.Value.(*prepEntry)
+		entry, _ := elem.Value.(*prepEntry)
 		entry.mu.Lock()
 		isReady := entry.phase == PhaseReady
 		entry.mu.Unlock()
