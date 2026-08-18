@@ -11,6 +11,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/crash"
 	"github.com/GrayCodeAI/hawk/internal/hawkerr"
 	"github.com/GrayCodeAI/hawk/internal/mcp"
+	"github.com/GrayCodeAI/hawk/internal/observability/otellog"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 )
 
@@ -55,6 +56,21 @@ func main() {
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			_ = telemetryProviders.Shutdown(shutdownCtx)
+		}()
+	}
+
+	// OTLP log-record export (DSH session-telemetry-otel port). Opt-in like
+	// tracing: HAWK_CODE_ENABLE_TELEMETRY=1 plus an OTLP logs endpoint. The
+	// sharing policy gates emission; failures are non-fatal.
+	logBackend, logBackendErr := otellog.NewBackend(otellog.DefaultConfig())
+	if logBackendErr != nil {
+		fmt.Fprintln(os.Stderr, "warning: telemetry log backend initialization failed:", logBackendErr)
+	}
+	if logBackend != nil && logBackend.Sharing() != otellog.SharingDisabled {
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = logBackend.Shutdown(shutdownCtx)
 		}()
 	}
 

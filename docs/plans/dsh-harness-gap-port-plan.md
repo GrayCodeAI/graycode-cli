@@ -1,8 +1,9 @@
 # DSH gap port — close the remaining deepseek-harness catalogue gaps
 
-Status: Phases 13–17 **delivered** on `feat/dsh-harness-port-p0-eventlog` (each package
+Status: Phases 13–18 **delivered** on `feat/dsh-harness-port-p0-eventlog` (each package
 verified: `gofmt`/`go vet`/`go test -race` green, `golang.org/x/image` added for
-webp decode validation; full double-pass gate run below).
+webp decode validation, OTel log modules pinned at v0.20.0 to keep core at
+v1.44.0; full double-pass gate run below).
 
 Anchors to the parent tracker:
 [`docs/plans/dsh-harness-port-plan.md`](./dsh-harness-port-plan.md) declares the
@@ -30,7 +31,7 @@ Same as the parent plan:
 | 15 | `jobs/jobs`, `jobs/jobs-local`, `jobs/tool-jobs` | no background job service | **Delivered** |
 | 16 | `attachment/attachment` | no durable attachment seam | **Delivered** |
 | 17 | `session/session-projection-cache` | projections recompute from seq 0 every time | **Delivered** |
-| 18 | `session/session-telemetry-otel` | spans exist; no OTLP log-record export | deferred |
+| 18 | `session/session-telemetry-otel` | spans exist; no OTLP log-record export | **Delivered** |
 | 19 | `session/session-title-*-llm` | deterministic `JournalTitle` only | deferred |
 | 20 | `preset/agent-presets` | event + header metadata only, no standing mount | deferred |
 | 21 | `session/session-persistence-sqlite`, `session-query/*sqlite`, `storage/storage-sqlite` | JSONL-only session persistence | deferred |
@@ -114,6 +115,36 @@ Port of DSH `session/session-projection-cache` semantics.
   `Discard(sessionID)`.
 - JSON-file backend beside the session JSONL (DSH domain-data parity).
 
+## Phase 18 — OTLP log-record export (`internal/observability/otellog`)
+
+Port of DSH `session/session-telemetry-otel` backend semantics (the capture
+coordinator stays out of scope — hawk has no Cordis bus; records reach the
+backend via `Emit`/`EmitFeedback`).
+
+- `Record{Channel, Time, Severity, Attributes, Body}` / `Sink` seam —
+  channel (`ledger`/`ops`), three-level severity, minimal identity attributes,
+  JSON-safe body (DSH `SessionTelemetryRecord`/`Sink`).
+- `Mode` `FULL`/`FEEDBACK_ONLY`/`DISABLED` + `SharingStatus`; DISABLED
+  constructs **no SDK state** and drops every record.
+- Config validation at load: endpoint URL required + http(s) outside DISABLED,
+  shutdown timeout positive (default 3s), batch size non-negative (DSH
+  invariants).
+- Severity mapping info→INFO(9)/warn→WARN(13)/error→ERROR(17); ledger and ops
+  under separate instrumentation scopes; Resource carries
+  service.name/version + `user.id` (via `internal/identity`, fail-soft).
+- SDK pipeline composed as-is: `LoggerProvider` + batch processor +
+  `otlploghttp` exporter (`WithEndpointURL` — full-URL semantics). OTel Go
+  logs are still experimental (`otel/log`, `sdk/log`, `otlploghttp`
+  **v0.20.0**, chosen to keep core at v1.44.0).
+- Shutdown races the DSH deadline (default 3s); exporter-shutdown goroutine
+  stays observed after the deadline; `Emit` is a non-blocking enqueue.
+- `DefaultConfig()` mirrors oteltrace env conventions
+  (`HAWK_CODE_ENABLE_TELEMETRY=1` + `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`);
+  wired in `cmd/hawk/main.go` and `cmd/daemon.go`.
+- Tests: mode resolution, load-time validation, severity mapping, full/ops/
+  ledger emission (in-memory exporter), feedback-only direct-drop,
+  disabled-drop, idempotent shutdown, value conversion, attribute filtering.
+
 ## Gates
 
 Each phase: `gofmt`/`go vet`/`go test` on the touched packages, then `make lint`
@@ -142,3 +173,26 @@ Pass 2 (after lint fixes):
 
 New dependency: `golang.org/x/image v0.45.0` (direct) — webp decode validation
 for `internal/attachment` (stdlib has no webp decoder).
+
+### Phase 18 verification (2026-08-17, branch `feat/dsh-harness-port-p0-eventlog`)
+
+Pass 1:
+
+- `gofmt -l` (cmd/hawk/main.go, cmd/daemon.go, internal/observability/otellog): clean
+- `go vet` (otellog, cmd): clean
+- `go test -race` (otellog): ok; `go build ./...`: ok
+- `make lint`: **0 issues**
+- `hawk verify`: exit 0
+- `scripts/check-internal-layer-imports.sh`: passed
+
+Pass 2 (uncached re-run, no fixes were needed):
+
+- `gofmt -l`: clean; `go vet`: clean; `go build ./...`: clean
+- `go test -count=1 -race` (otellog): ok
+- `make lint`: 0 issues; `hawk verify`: exit 0
+
+New dependencies (all direct): `go.opentelemetry.io/otel/log v0.20.0`,
+`go.opentelemetry.io/otel/sdk/log v0.20.0`,
+`go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.20.0` — the
+log-signal v0.20.0 line pins exactly against core v1.44.0, so no OTel core
+bump was required.
