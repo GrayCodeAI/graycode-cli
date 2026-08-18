@@ -158,11 +158,10 @@ Highest-value remaining work, in order:
 9. Todo write — Delivered: `todo.write` emitted for `TodoWrite` tool calls in
    `stream.go`.
 10. Session title — Delivered: `session.title` emitted in `persistDaemonSession`.
-11. Subagent descriptor — Typed payload + append helper ready; wire at subagent
-    spawn sites in a follow-up.
-
-**Note**: Subagent descriptor IS wired in `agent_session_tool.go:spawnSubAgentRequest`
-(see "Done" section above). This entry is resolved.
+11. ~~Subagent descriptor DSH parity — Delivered: AppendSubagentDescriptorFull
+    with full DSH parity fields (Version=2, Mode, Provider, Label,
+    AgentProvider, AgentModel) wired at spawnSubAgentRequest call site in
+    agent_session_tool.go.~~ Resolved.
 
 12. `goal.change` — Delivered: `GoalTracker` now has a `journal` field +
     `SetJournal` setter; `AddGoal`/`StartGoal`/`CompleteGoal`/`FailGoal` emit
