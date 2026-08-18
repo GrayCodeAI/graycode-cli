@@ -29,6 +29,11 @@ func (WebFetchTool) Parameters() map[string]interface{} {
 	}
 }
 
+// Timeout declares WebFetch's execution budget so the engine's dispatch
+// deadline matches the tool's own 30s HTTP deadline. Declared budgets win
+// over the name-based fallback (DSH tool-declared timeout policy).
+func (WebFetchTool) Timeout() time.Duration { return 30 * time.Second }
+
 var (
 	htmlTagRe    = regexp.MustCompile(`<[^>]*>`)
 	multiSpaceRe = regexp.MustCompile(`\s{3,}`)

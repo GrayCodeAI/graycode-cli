@@ -33,7 +33,7 @@ Reference source: `deepseek-ai/deepseek-harness` at `dsh-v0.1.0-rc.7`
 
 | # | DSH source | Hawk gap | Status |
 | --- | --- | --- | --- |
-| 2.1 | `guard/timeout-policy` | no per-tool declared timeout enforced at dispatch | proposed |
+| 2.1 | `guard/timeout-policy` | no per-tool declared timeout enforced at dispatch | **implemented** on `feat/dsh-harness-rfc-2.1-timeout-policy` |
 | 2.2 | `compaction/compaction` tool-pairing helpers | compact strategies can cut across open tool call/result pairs | proposed |
 | 2.3 | `sandbox/sandbox-policy` | durable per-session sandbox override + model-facing policy statement | proposed |
 | 2.4 | `subagent/subagent` delegated policy inheritance | workers can prompt / policy not fixed at delegation boundary | proposed |
@@ -58,26 +58,33 @@ Port of DSH `guard/timeout-policy` (`dsh-tool-call-timeout-policy`) + the
 `@deepseek-ai/dsh-timeout` deadline library. Zero-config: the budget is read from
 the tool's own declaration, not from a policy table.
 
-- `tool.Meta`/tool definition gains `TimeoutMs time.Duration` (0 = no budget).
-  Owning tools declare it (e.g. WebFetch/WebSearch, Bash, LSP).
-- `internal/tool/interceptor.go` already exposes `StagePreExecute` /
-  `StagePostExecute` / `StageAll` with a `Pipeline` and disposers
-  (Wave 1 Phase 1). Add `TimeoutPolicyInterceptor(p) InterceptFn` that:
-  1. Reads `req.Tool`'s declared `TimeoutMs` from the registry.
-  2. Arms a cooperative deadline on a derived signal fusing the caller's abort
-     with a timer (`context.WithDeadline` + `sync.Once` timer).
-  3. Swaps the derived context onto the request for downstream dispatch, then
-     restores the caller's context afterward so post-execute sees the caller's
-     signal (mirror of DSH's in-place `exec.signal` swap + restore).
-  4. If the timer wins, replaces the result with a structured
-     `TOOL_TIMEOUT` result: `{ isError: true, code: "TOOL_TIMEOUT",
-     message: "tool call timed out after <ms>ms" }` — not a raw context error.
-- Registered in `DefaultToolPipeline()` (Wave 1 Phase 1 composition root).
+- `tool.Tool` gains an optional `TimeoutProvider` interface (`Timeout()
+  time.Duration`, 0 = no declaration) — the hawk-native form of DSH's
+  `ToolDefinition.timeoutMs`, consistent with the existing optional-provider
+  pattern (`RiskLevelProvider`, `RetryPolicyProvider`, `SchemaProvider`).
+  `tool.TimeoutOf(t Tool) time.Duration` reads it.
+- Owning tools declare a budget: `WebFetchTool` declares `30s` so the engine's
+  dispatch deadline matches its own 30s HTTP deadline. Bash/WebSearch keep the
+  name-based fallback (`engine.toolTimeout`), which still applies to undeclaring
+  tools.
+- Enforcement is at the **dispatch point in `ExecuteOne`** — the faithful port
+  of DSH's `tools/execute` around-dispatch listener, not a `StagePreExecute`
+  pipeline registration: a pre-execute interceptor cannot wrap the execution
+  context (its `next()` delegates to remaining interceptors only; the raw
+  `tool.Execute` runs after the pipeline returns). `ExecuteOne` resolves the
+  tool, picks the declared budget (winning over the fallback), derives
+  `context.WithTimeout`, and executes through the existing `RetryExecutor`.
+- If the imposed deadline wins, the result is a structured `TOOL_TIMEOUT`
+  error: `tool call timed out after <ms>ms (code TOOL_TIMEOUT)` — not a raw
+  `context deadline exceeded`. A `DeadlineExceeded` the tool produced on its
+  own (while the outer budget is still live) keeps the generic error
+  vocabulary: `timedOut` requires `toolCtx.Err() == DeadlineExceeded`.
 
-Tests: fires only for declared tools; caller cancellation wins; timer fires and
-produces structured result; context restored after dispatch; interceptor order
-(pre-execute runs before permission? after? — spec: after the permission engine,
-same slot as Wave 1 Phase 1 `StagePreExecute`); disposer removes enforcement.
+Tests: `internal/tool/timeout_test.go` (TimeoutOf: declared / zero-declaration /
+undeclaring); `internal/engine/tool_timeout_test.go` through `ExecuteOne`
+(declared budget fires and produces the structured result; undeclaring tool
+completes via the fallback; internal deadline error is not mislabelled
+TOOL_TIMEOUT).
 
 ## Phase 2.2 — Compaction tool-pairing boundaries (`internal/engine/compact` + `internal/eventlog`)
 
