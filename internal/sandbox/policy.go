@@ -53,6 +53,24 @@ func FormatPolicyStatement(mode Mode, workspaceRoot string) string {
 	}
 }
 
+// FormatDelegationStatement renders the model-facing statement for a delegated subagent
+// informing it that its execution scope is fixed and interactive approvals are disabled.
+func FormatDelegationStatement() string {
+	return "Delegation policy: this subagent operates with fixed permissions and cannot prompt for interactive approvals. If a task requires wider access or operations outside the allowed sandbox/scope, report the limitation in your final response rather than retrying or asking for confirmation."
+}
+
+// InheritDelegatedPolicy captures the explicit sandbox override from the parent
+// (if any) and appends it to the child's eventlog with source=delegation.
+// If the parent has no explicit override, nothing is stamped on the child.
+func InheritDelegatedPolicy(parent, child any) (Mode, bool) {
+	override, ok := OverrideOf(parent)
+	if !ok || override == "" {
+		return "", false
+	}
+	_ = SetSandboxModeWithSource(child, override, eventlog.SandboxModeSourceDelegation)
+	return override, true
+}
+
 // CanonicalizeWorkspaceRoot normalizes and resolves symlinks on the workspace
 // root so that canonicalization precedes lexical normalization (agreeing with
 // process cwd resolution).
