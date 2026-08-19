@@ -23,6 +23,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/schedule"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	"github.com/GrayCodeAI/hawk/internal/tool"
@@ -137,6 +138,9 @@ type Session struct {
 	// lastSkillCatalogDigest tracks the most recent skill catalog digest
 	// emitted into the transcript (DSH tool-skill catalog digest).
 	lastSkillCatalogDigest string
+
+	// scheduleManager coordinates session-log-backed schedule timers.
+	scheduleManager *schedule.Manager
 
 	// Control plane (product modes) — orthogonal to SpecStage and shellmode.
 	workMode  WorkMode
@@ -1077,6 +1081,40 @@ func (s *Session) Chat(ctx context.Context, msgs []types.EyrieMessage, opts type
 		return nil, fmt.Errorf("session: no LLM client configured")
 	}
 	return s.ChatLLM().Chat(ctx, msgs, opts)
+}
+
+// Schedule returns the session's in-conversation schedule manager.
+func (s *Session) Schedule() *schedule.Manager {
+	if s == nil {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.scheduleManager == nil {
+		s.scheduleManager = schedule.NewManager()
+		var j *eventlog.Log
+		if p := s.Persistence(); p != nil {
+			j = p.Journal()
+		}
+		s.scheduleManager.Attach(j, func(item schedule.Item) error {
+			content := fmt.Sprintf("[Scheduled Reminder: %s]\n%s", item.ID, item.Prompt)
+			if p := s.Persistence(); p != nil {
+				if sq := p.Steering(); sq != nil {
+					sq.Enqueue(SteeringMessage{
+						Content:  content,
+						Priority: 1,
+					})
+				} else {
+					p.AppendUserJournaled(types.EyrieMessage{
+						Role:    "user",
+						Content: content,
+					})
+				}
+			}
+			return nil
+		})
+	}
+	return s.scheduleManager
 }
 
 // RemoveLastExchange removes the last user+assistant message pair.

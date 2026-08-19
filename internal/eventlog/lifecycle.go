@@ -10,6 +10,8 @@
 // plus plugin packages: compaction, hooks, feedback, goal, subagent, shell, preset.
 package eventlog
 
+import "time"
+
 // --- Compaction lifecycle ---
 // DeepSeek Harness models compaction as a four-stage lifecycle:
 // start → prune → end → summary. Hawk previously recorded only a single
@@ -598,4 +600,67 @@ func (l *Log) AppendPlanMode(active bool) {
 		return
 	}
 	l.Append(PlanMode, PlanModeFact{Active: active})
+}
+
+// --- In-conversation schedule ---
+
+// ScheduleCreateFact records an in-conversation schedule creation.
+type ScheduleCreateFact struct {
+	ID        string    `json:"id"`
+	Prompt    string    `json:"prompt"`
+	DueAt     time.Time `json:"due_at"`
+	Interval  string    `json:"interval,omitempty"`
+	Recurring bool      `json:"recurring,omitempty"`
+}
+
+// AppendScheduleCreate records schedule creation.
+func (l *Log) AppendScheduleCreate(fact ScheduleCreateFact) {
+	if l == nil {
+		return
+	}
+	l.Append(ScheduleCreate, fact)
+}
+
+// ScheduleUpdateFact records an in-conversation schedule update.
+type ScheduleUpdateFact struct {
+	ID     string     `json:"id"`
+	Prompt *string    `json:"prompt,omitempty"`
+	DueAt  *time.Time `json:"due_at,omitempty"`
+}
+
+// AppendScheduleUpdate records schedule update.
+func (l *Log) AppendScheduleUpdate(fact ScheduleUpdateFact) {
+	if l == nil {
+		return
+	}
+	l.Append(ScheduleUpdate, fact)
+}
+
+// ScheduleDeleteFact records an in-conversation schedule deletion.
+type ScheduleDeleteFact struct {
+	ID     string `json:"id"`
+	Reason string `json:"reason,omitempty"`
+}
+
+// AppendScheduleDelete records schedule deletion.
+func (l *Log) AppendScheduleDelete(id, reason string) {
+	if l == nil {
+		return
+	}
+	l.Append(ScheduleDelete, ScheduleDeleteFact{ID: id, Reason: reason})
+}
+
+// ScheduleDueFact records that an in-conversation schedule became due and was delivered.
+type ScheduleDueFact struct {
+	ID          string     `json:"id"`
+	DeliveredAt time.Time  `json:"delivered_at"`
+	NextDueAt   *time.Time `json:"next_due_at,omitempty"`
+}
+
+// AppendScheduleDue records schedule reminder delivery.
+func (l *Log) AppendScheduleDue(fact ScheduleDueFact) {
+	if l == nil {
+		return
+	}
+	l.Append(ScheduleDue, fact)
 }

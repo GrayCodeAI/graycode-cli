@@ -286,6 +286,30 @@ func decodePayload(w WireEvent) (any, error) {
 			return nil, err
 		}
 		return p, nil
+	case ScheduleCreate:
+		var p ScheduleCreateFact
+		if err := json.Unmarshal(w.Data, &p); err != nil {
+			return nil, err
+		}
+		return p, nil
+	case ScheduleUpdate:
+		var p ScheduleUpdateFact
+		if err := json.Unmarshal(w.Data, &p); err != nil {
+			return nil, err
+		}
+		return p, nil
+	case ScheduleDelete:
+		var p ScheduleDeleteFact
+		if err := json.Unmarshal(w.Data, &p); err != nil {
+			return nil, err
+		}
+		return p, nil
+	case ScheduleDue:
+		var p ScheduleDueFact
+		if err := json.Unmarshal(w.Data, &p); err != nil {
+			return nil, err
+		}
+		return p, nil
 	case SessionTitle:
 		var p SessionTitleFact
 		if err := json.Unmarshal(w.Data, &p); err != nil {

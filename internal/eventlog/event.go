@@ -113,6 +113,14 @@ const (
 	// ScheduleChange records a schedule configuration change. Ported from
 	// DeepSeek Harness schedule/change.
 	ScheduleChange Type = "schedule.change"
+	// ScheduleCreate records an in-conversation schedule creation.
+	ScheduleCreate Type = "schedule.create"
+	// ScheduleUpdate records an in-conversation schedule update.
+	ScheduleUpdate Type = "schedule.update"
+	// ScheduleDelete records an in-conversation schedule deletion.
+	ScheduleDelete Type = "schedule.delete"
+	// ScheduleDue records that an in-conversation schedule reminder was triggered.
+	ScheduleDue Type = "schedule.due"
 	// SessionTitle records a log-backed session title. Ported from DeepSeek
 	// Harness session/title.
 	SessionTitle Type = "session.title"
@@ -166,6 +174,7 @@ func (t Type) Known() bool {
 		CompactionStart, CompactionPrune, CompactionEnd, CompactionSummary,
 		SessionEndSeed, TodoWrite, RequestHeader, HookInvoked, HookResult,
 		FeedbackRecord, GoalChange, PermissionPreset, SandboxMode, ScheduleChange,
+		ScheduleCreate, ScheduleUpdate, ScheduleDelete, ScheduleDue,
 		SessionTitle, SessionTitleLLMRequest, SubagentDescriptor, AgentPresetSelected,
 		AgentInboxSpliced, CommandRun, CommandDone,
 		ToolWorkflowAgentStart, ToolWorkflowAgentEnd,
