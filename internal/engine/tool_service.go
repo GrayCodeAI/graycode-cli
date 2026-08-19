@@ -488,20 +488,26 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 	if containerExecutor != nil && containerExecutor.Running() {
 		toolCtx = tool.WithContainerExecutor(toolCtx, containerExecutor)
 	}
-	toolCtx, cancel := context.WithTimeout(toolCtx, toolTimeout(tc.Name))
 	t := override
 	if t == nil && s.registry != nil {
 		var ok bool
 		t, ok = s.registry.Get(tc.Name)
 		if !ok {
-			cancel()
 			return finishDenied("error", fmt.Sprintf("Error: unknown tool: %s", tc.Name))
 		}
 	}
 	if t == nil {
-		cancel()
 		return finishDenied("error", "Error: tool is unavailable")
 	}
+	// Tool-declared timeout policy (DSH tool-declared-budget parity): the
+	// tool's own declared budget wins; tools that don't declare one keep the
+	// name-based fallback. Zero-config — declaring tools opt in by
+	// implementing tool.TimeoutProvider.
+	timeout := toolTimeout(tc.Name)
+	if declared := tool.TimeoutOf(t); declared > 0 {
+		timeout = declared
+	}
+	toolCtx, cancel := context.WithTimeout(toolCtx, timeout)
 	var output string
 	var execErr error
 	if rpp, ok := t.(tool.RetryPolicyProvider); ok {
@@ -509,12 +515,22 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 	} else {
 		output, execErr = tool.RetryExecutor(toolCtx, t, inputJSON, tool.DefaultRetryPolicy())
 	}
+	// Only a deadline this call imposed on the execution context is labelled
+	// TOOL_TIMEOUT; a DeadlineExceeded the tool produced on its own (while the
+	// outer budget was still live) keeps the generic error vocabulary.
+	timedOut := errors.Is(execErr, context.DeadlineExceeded) && toolCtx.Err() == context.DeadlineExceeded
 	cancel()
 	result.output, result.err, result.isErr, result.span = output, execErr, execErr != nil, span
 	if result.isErr {
 		// Preserve any partial output the tool produced before failing so the
-		// LLM can see what happened, then append the error.
-		result.output = output + "\n\nError: " + execErr.Error()
+		// LLM can see what happened, then append the error. A deadline that
+		// won surfaces the structured TOOL_TIMEOUT vocabulary so the model sees
+		// how long it waited instead of a raw "context deadline exceeded".
+		if timedOut {
+			result.output = output + "\n\nError: tool call timed out after " + timeout.String() + " (code TOOL_TIMEOUT)"
+		} else {
+			result.output = output + "\n\nError: " + execErr.Error()
+		}
 	}
 	return result
 }

@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
 
@@ -121,6 +122,26 @@ type PathProtector interface {
 // don't implement it get tool.DefaultRetryPolicy (2 retries, 200ms→2s).
 type RetryPolicyProvider interface {
 	RetryPolicy() RetryPolicy
+}
+
+// TimeoutProvider can be implemented by tools to declare their execution
+// budget. Tools that don't implement it get the engine's name-based fallback
+// (engine.toolTimeout). Declaring a budget is zero-config: the policy reads it
+// from the tool's own declaration at dispatch (DSH tool-declared timeout
+// policy parity) instead of from a name lookup table.
+type TimeoutProvider interface {
+	// Timeout returns the maximum wall-clock duration one call may run for.
+	// Returning 0 means "no declaration — use the fallback".
+	Timeout() time.Duration
+}
+
+// TimeoutOf returns the tool-declared execution budget, or 0 when the tool
+// does not declare one. ExecuteOne prefers this over the name-based fallback.
+func TimeoutOf(t Tool) time.Duration {
+	if tp, ok := t.(TimeoutProvider); ok {
+		return tp.Timeout()
+	}
+	return 0
 }
 
 // CodeSearchResult is returned by CodeSearchFn.
