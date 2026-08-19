@@ -93,11 +93,11 @@ func (s *Session) AddUserWithAttachment(content, imageBase64, mediaType string) 
 	if persist == nil {
 		return false
 	}
-	persist.SetRawMessages(append(persist.RawMessages(), types.EyrieMessage{
+	persist.AppendUserJournaled(types.EyrieMessage{
 		Role:    "user",
 		Content: content,
 		Images:  []string{"data:" + mediaType + ";base64," + imageBase64},
-	}))
+	})
 
 	if persist.Graph() != nil {
 		parentID := ""

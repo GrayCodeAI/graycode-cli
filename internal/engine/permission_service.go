@@ -8,10 +8,12 @@ import (
 	"sync"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/safety"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 	"github.com/GrayCodeAI/hawk/internal/governance"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/spec"
 )
 
 // PermissionService is the Session's view of the safety/approval layer.
@@ -50,6 +52,8 @@ type PermissionService struct {
 	approval *ApprovalGate
 	// askUserFn is the fallback interactive approval callback.
 	askUserFn func(question string) (string, error)
+	// journal logs durable spec-workflow facts when non-nil.
+	journal *eventlog.Log
 	// log is the session logger.
 	log *logger.Logger
 }
@@ -222,7 +226,17 @@ func (s *PermissionService) ApplyPolicySnapshot(snapshot safety.PolicySnapshot) 
 // via the Session.CheckApproval method (which has the full state). The
 // service's own CheckApproval is a no-op when s.approval is nil so
 // callers can use it as the canonical entry point.
-func (s *PermissionService) CheckApproval(_ context.Context, toolName string, args map[string]interface{}) (bool, string) {
+func (s *PermissionService) CheckApproval(ctx context.Context, toolName string, args map[string]interface{}) (bool, string) {
+	if s == nil {
+		return false, "permission service is unavailable"
+	}
+	asked := false
+	allowed, msg := s.checkApprovalGate(ctx, toolName, args, &asked)
+	s.appendApprovalFact(toolName, args, allowed, msg, asked)
+	return allowed, msg
+}
+
+func (s *PermissionService) checkApprovalGate(ctx context.Context, toolName string, args map[string]interface{}, asked *bool) (bool, string) {
 	g := s.approval
 	if g == nil || !g.Enabled {
 		return true, ""
@@ -245,6 +259,36 @@ func (s *PermissionService) CheckApproval(_ context.Context, toolName string, ar
 		Category: cat,
 		Summary:  approvalSummary(toolName, args),
 		Args:     args,
+	}
+	if asked != nil {
+		*asked = true
+	}
+	askedReq := eventlog.ApprovalAskedFact{
+		Tool:     req.ToolName,
+		Category: string(cat),
+		Question: "Approve high-risk action [" + string(cat) + "]: " + req.Summary + "?",
+	}
+	if s.journal != nil {
+		s.journal.AppendApprovalAsked(askedReq)
+	}
+	if g.Waterfall != nil {
+		resp, denyMsg := g.Waterfall.Decide(ctx, req)
+		switch resp {
+		case ApprovalApproveForSession:
+			g.sessionApprove(cat)
+			return true, ""
+		case ApprovalApproveForN:
+			n := req.N
+			if n <= 0 {
+				n = 5
+			}
+			g.nApprove(cat, n)
+			return true, ""
+		case ApprovalApprove:
+			return true, ""
+		default:
+			return false, denyMsg
+		}
 	}
 	if g.ConfirmFn != nil {
 		switch g.ConfirmFn(req) {
@@ -288,6 +332,39 @@ func (s *PermissionService) CheckApproval(_ context.Context, toolName string, ar
 		}
 	}
 	return false, fmt.Sprintf("High-risk action requires approval but no confirmation handler is configured (%q).", cat)
+}
+
+func (s *PermissionService) appendApprovalFact(toolName string, args map[string]interface{}, allowed bool, msg string, asked bool) {
+	if s == nil || s.journal == nil {
+		return
+	}
+	category := ""
+	risky := false
+	if g := s.approval; g != nil {
+		if cat, r := g.classifyAction(toolName, args); r {
+			category = string(cat)
+			risky = true
+		}
+	}
+	tool := canonicalToolName(toolName)
+	s.journal.AppendPermission(eventlog.PermissionFact{
+		Tool:     tool,
+		Category: category,
+		Allowed:  allowed,
+		Message:  msg,
+	})
+	if asked {
+		s.journal.AppendApprovalDecided(eventlog.ApprovalDecidedFact{
+			Tool:     tool,
+			Category: category,
+			Allowed:  allowed,
+			Message:  msg,
+		})
+		s.journal.AppendApprovalPolicy(eventlog.ApprovalPolicyFact{
+			Category: category,
+			Covered:  risky,
+		})
+	}
 }
 
 // SetMaxTurns caps the agent loop's turn count.
@@ -384,9 +461,13 @@ func (s *PermissionService) SetSandboxMode(mode sandbox.Mode) {
 		return
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.perm.SandboxMode = mode
 	s.perm.Revision++
+	s.mu.Unlock()
+	// Emit sandbox.mode lifecycle event (DSH sandbox.mode seam).
+	if j := s.journal; j != nil {
+		j.AppendSandboxMode(string(mode))
+	}
 }
 
 // SandboxMode returns the active sandbox policy.
@@ -519,6 +600,17 @@ func (s *PermissionService) AdvanceSpecStage(toolName string) {
 		return
 	}
 	s.perm.AdvanceSpecStage(toolName)
+	if s.journal != nil {
+		stage := spec.StringFromStageEnum(int(s.perm.Stage))
+		s.journal.AppendSpec(stage, s.perm.SpecSlug)
+	}
+}
+
+// SetJournal attaches the append-only event spine used for durable spec facts.
+func (s *PermissionService) SetJournal(j *eventlog.Log) {
+	if s != nil {
+		s.journal = j
+	}
 }
 
 // ResetSpec clears the active spec workflow.

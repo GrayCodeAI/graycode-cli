@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -41,6 +42,7 @@ type ToolService struct {
 	deps              toolExecutionDeps
 	metrics           *metrics.Registry
 	auditLog          *securitylog.Log
+	pipeline          *tool.Pipeline
 }
 
 func (s *ToolService) SetAgentSpawnFn(fn tool.AgentSpawnFn) {
@@ -79,6 +81,28 @@ type toolExecutionDeps struct {
 // NewToolService constructs a ToolService with the given registry.
 func NewToolService(registry *tool.Registry) *ToolService {
 	return &ToolService{registry: registry}
+}
+
+// Pipeline returns the tool interception pipeline (waterfall over the pre/post stages).
+// Never nil: it is materialized on first access so callers can register before the
+// service graph is fully wired. An empty pipeline is a strict pass-through.
+func (s *ToolService) Pipeline() *tool.Pipeline {
+	if s == nil {
+		return nil
+	}
+	if s.pipeline == nil {
+		s.pipeline = tool.NewPipeline()
+	}
+	return s.pipeline
+}
+
+// SetPipeline replaces the tool interception pipeline. New code should prefer
+// s.Pipeline().Register(...) so registrations never clobber each other; SetPipeline
+// exists for tests and for composition roots that build the pipeline wholesale.
+func (s *ToolService) SetPipeline(p *tool.Pipeline) {
+	s.executionConfigMu.Lock()
+	s.pipeline = p
+	s.executionConfigMu.Unlock()
 }
 
 // WithExecutionDeps binds the extracted service graph used by ExecuteOne.
@@ -319,6 +343,22 @@ func (s *ToolService) ExecuteAll(ctx context.Context, calls []types.ToolCall, ch
 	return results
 }
 
+// runPreStage executes the StagePreExecute interceptors. It returns nil when the
+// pipeline passes or is empty, and the interceptor's error when it short-circuits.
+func (s *ToolService) runPreStage(ctx context.Context, tc types.ToolCall, override tool.Tool) error {
+	if s == nil || s.pipeline == nil {
+		return nil
+	}
+	return s.pipeline.Run(tool.StagePreExecute, ctx, tool.ToolRequest{Call: tc, Tool: override}, nil)
+}
+
+func bool2tag(isErr bool) string {
+	if isErr {
+		return "pipeline_error"
+	}
+	return "pipeline_stop"
+}
+
 // ExecuteOne performs the service-owned tool invocation: event
 // emission, container readiness, permission/approval, tracing, tool context,
 // lookup, timeout, retry, and raw execution. PostProcess and CompleteResult
@@ -356,7 +396,23 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 	if !granted {
 		return finishDenied("denied", denyMsg)
 	}
-	// Audit: record permitted tool execution in the security event log.
+	// Tool pipeline (stage pre): the deepseek-harness tools/pre-execute
+	// waterfall. An empty pipeline is a strict pass-through; once registered,
+	// the first interceptor to short-circuit stops the call before approval and
+	// execution. Runs after the permission engine, which can only loosen — never
+	// gate — an instrumented interceptor decision, preserving fail-closed ordering.
+	if err := s.runPreStage(ctx, tc, override); err != nil {
+		var sc *tool.ShortCircuit
+		if errors.As(err, &sc) {
+			msg, isErr := sc.ToolError()
+			if msg != "" {
+				return finishDenied(bool2tag(isErr), msg)
+			}
+			// Silent short-circuit: no model-visible message. Stop the call
+			// without surfacing an error.
+		}
+		return finishDenied("pipeline_error", err.Error())
+	}
 	if s.auditLog != nil {
 		_, _ = s.auditLog.Append(
 			securitylog.SeverityInfo,
@@ -614,6 +670,27 @@ func (s *ToolService) PostProcess(ctx context.Context, result toolExecResult, tu
 		}
 	}
 	output = s.NormalizeOutput(output, canonical, result.tc.ID, contextWindow)
+	// Tool pipeline (stage post): the deepseek-harness tools/post-execute
+	// waterfall. Registered interceptors observe and may replace the normalized
+	// result before the lifecycle hooks below. An empty pipeline is a strict
+	// pass-through.
+	if s.pipeline != nil {
+		post := &tool.ToolResult{
+			Request: tool.ToolRequest{Call: result.tc, Tool: result.tool},
+			Output:  output,
+			IsError: isErr,
+		}
+		if runErr := s.pipeline.Run(tool.StagePostExecute, ctx, post.Request, post); runErr != nil {
+			var sc *tool.ShortCircuit
+			if errors.As(runErr, &sc) {
+				if msg, scErr := sc.ToolError(); msg != "" {
+					output, isErr = msg, scErr
+				}
+			}
+		} else {
+			output, isErr = post.Output, post.IsError
+		}
+	}
 	if life != nil && life.Pipeline() != nil {
 		var execErr error
 		if isErr {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/engine/ctxmgr"
 	"github.com/GrayCodeAI/hawk/internal/engine/token"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -191,6 +192,9 @@ type SessionSummary struct {
 // Constructor
 // ---------------------------------------------------------------------------
 
+// Constructor
+// ---------------------------------------------------------------------------
+
 // NewIntegrationPipeline initializes all subsystems and returns a ready-to-use
 // pipeline orchestrator.
 func NewIntegrationPipeline() *IntegrationPipeline {
@@ -265,6 +269,16 @@ func newDefaultBudgetAllocator() *BudgetAllocator {
 	ba.Register("tools", 1000, 32000, 3, true)
 	ba.Register("history", 2000, 48000, 4, true)
 	return ba
+}
+
+// SetJournal attaches an eventlog spine to the pipeline's FeedbackCollector
+// so explicit feedback is journaled as feedback.record events (Phase 3:
+// feedback seam). Nil-safe; a nil journal is a no-op.
+func (p *IntegrationPipeline) SetJournal(j *eventlog.Log) {
+	if p == nil || p.FeedbackCollector == nil {
+		return
+	}
+	p.FeedbackCollector.SetJournal(j)
 }
 
 // ---------------------------------------------------------------------------

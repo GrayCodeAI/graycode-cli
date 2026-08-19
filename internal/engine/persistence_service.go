@@ -4,6 +4,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -36,6 +37,14 @@ type PersistenceService struct {
 	contextWindowCached int
 	// graph is Hawk's product-owned conversation graph (for branching).
 	graph *session.ConversationGraph
+	// journal is the append-only session event spine. It is attached by the
+	// composition root; nil means journaling is disabled (pure in-memory mode).
+	journal *eventlog.Log
+	// writeBehind buffers journal events and flushes them in batches via a
+	// configured write function, porting DSH's SessionWriteBehind pattern.
+	// Nil means write-behind batching is disabled (events are only durable
+	// at explicit Save calls).
+	writeBehind *session.WriteBehind
 	// steering is the per-iteration user-guidance queue.
 	steering *SteeringQueue
 	// logger.
@@ -152,9 +161,7 @@ func (s *PersistenceService) SetSteering(sq *SteeringQueue) { s.steering = sq }
 
 // AddAssistant appends an assistant message.
 func (s *PersistenceService) AddAssistant(content string) {
-	s.mu.Lock()
-	s.messages = append(s.messages, types.EyrieMessage{Role: "assistant", Content: content})
-	s.mu.Unlock()
+	s.AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: content})
 }
 
 // SetMessages replaces the transcript.
@@ -187,12 +194,7 @@ func (s *PersistenceService) ApplyCompaction(keep []types.EyrieMessage, snapshot
 
 // AddUser appends a user message. Safe on a nil receiver.
 func (s *PersistenceService) AddUser(content string) {
-	if s == nil {
-		return
-	}
-	s.mu.Lock()
-	s.messages = append(s.messages, types.EyrieMessage{Role: "user", Content: content})
-	s.mu.Unlock()
+	s.AppendUserJournaled(types.EyrieMessage{Role: "user", Content: content})
 }
 
 // AddUserWithImage appends a user message with an inline image.
@@ -205,13 +207,11 @@ func (s *PersistenceService) AddUserWithImage(content, imageBase64, imageType st
 		return
 	}
 	dataURL := "data:" + imageType + ";base64," + imageBase64
-	s.mu.Lock()
-	s.messages = append(s.messages, types.EyrieMessage{
+	s.AppendUserJournaled(types.EyrieMessage{
 		Role:    "user",
 		Content: content,
 		Images:  []string{dataURL},
 	})
-	s.mu.Unlock()
 }
 
 // AppendSystemContext appends a string to the system prompt.
@@ -230,6 +230,11 @@ func (s *PersistenceService) AppendSystemContext(content string) {
 		s.system += "\n\n" + content
 	}
 	s.mu.Unlock()
+	// Emit context.injected so the model-visible surface is reconstructible
+	// from the log alone (DSH context.injected seam).
+	if j := s.Journal(); j != nil {
+		j.AppendContextInjected(content)
+	}
 }
 
 // ReplaceSystemContextSection replaces a section of the system prompt

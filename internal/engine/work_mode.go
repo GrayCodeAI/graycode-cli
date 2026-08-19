@@ -75,6 +75,8 @@ func ParseWorkMode(s string) (WorkMode, error) {
 }
 
 // SetWorkMode applies tool visibility, bash policy, and stores the mode.
+// When a journal is wired, emits plan.mode events to track the transition,
+// matching DSH's plan/mode event (last-write-wins on replay).
 func (s *Session) SetWorkMode(mode WorkMode) error {
 	if s == nil {
 		return fmt.Errorf("session is nil")
@@ -84,8 +86,15 @@ func (s *Session) SetWorkMode(mode WorkMode) error {
 		return err
 	}
 	s.mu.Lock()
+	oldMode := s.workMode
 	s.workMode = mode
 	s.mu.Unlock()
+
+	// Emit plan.mode journal event — only when the mode actually changes.
+	active := mode == WorkModePlan
+	if j := s.persist.Journal(); j != nil && active != (oldMode == WorkModePlan) {
+		j.AppendPlanMode(active)
+	}
 
 	reg := (*tool.Registry)(nil)
 	if s.Tools() != nil {

@@ -73,6 +73,15 @@ type ApprovalGate struct {
 	// If both are nil the action is denied (fail-closed).
 	ConfirmFn func(req ApprovalRequest) ApprovalResponse
 
+	// Waterfall, when non-nil, is an ordered, synchronous decider chain that runs
+	// first and may produce the final decision. It is the deepseek-harness
+	// approval/request waterfall: the first decider that answers wins, abstainers
+	// delegate, and an all-abstain chain denies (fail-closed). When Waterfall is
+	// set, the legacy ConfirmFn / AskUserFn path is used only if Waterfall is nil,
+	// keeping the existing single-answerer behavior byte-identical until callers
+	// opt in.
+	Waterfall *ApprovalWaterfall
+
 	// sessionApprovals caches categories the human approved for the full session.
 	// nApprovals caches categories approved for the next N calls (ApprovalApproveForN).
 	// Both maps and their checks are guarded by a single approvalMu so that

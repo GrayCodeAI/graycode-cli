@@ -22,6 +22,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
 	"github.com/GrayCodeAI/hawk/internal/netutil"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/observability/otellog"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/securitylog"
 	"github.com/GrayCodeAI/hawk/internal/storage"
@@ -86,6 +87,27 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	telemetryProviders, telemetryErr := oteltrace.InitTelemetry(oteltrace.DefaultTelemetryConfig())
 	if telemetryErr != nil {
 		fmt.Fprintln(os.Stderr, "warning: telemetry initialization failed:", telemetryErr)
+	}
+	if telemetryProviders != nil && telemetryErr == nil && telemetryProviders.IsEnabled() {
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = telemetryProviders.Shutdown(shutdownCtx)
+		}()
+	}
+
+	// OTLP log-record export (DSH session-telemetry-otel port). Opt-in like
+	// tracing; failures are non-fatal.
+	logBackend, logBackendErr := otellog.NewBackend(otellog.DefaultConfig())
+	if logBackendErr != nil {
+		fmt.Fprintln(os.Stderr, "warning: telemetry log backend initialization failed:", logBackendErr)
+	}
+	if logBackend != nil && logBackend.Sharing() != otellog.SharingDisabled {
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = logBackend.Shutdown(shutdownCtx)
+		}()
 	}
 
 	// Set up file-backed logging for the daemon. Logs go to

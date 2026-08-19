@@ -3,6 +3,7 @@ package engine
 import (
 	"path/filepath"
 
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -137,6 +138,10 @@ func rawToSessionMessages(raw []types.EyrieMessage) []session.Message {
 	return session.FromRuntimeMessages(raw)
 }
 
+// recordCompaction emits the durable compaction lifecycle trail: start →
+// prune (message count) → summary (if available) → end, plus the legacy
+// session.compacted event for backward compat. Ported from DSH's
+// compaction.start / compaction.prune / compaction.summary / compaction.end.
 func (s *Session) recordCompaction(strategy string, tokensBefore, tokensAfter int, manual bool) {
 	if s == nil || strategy == "" {
 		return
@@ -147,4 +152,30 @@ func (s *Session) recordCompaction(strategy string, tokensBefore, tokensAfter in
 		TokensAfter:  tokensAfter,
 		Manual:       manual,
 	})
+	if j := s.Persistence().Journal(); j != nil {
+		j.AppendCompactionStart(strategy)
+		// Emit compaction.prune with the message count delta if available.
+		// recordCompaction is called after the pass completes, so both
+		// markers are appended here as the durable trail of the lifecycle.
+		msgDelta := s.lastCompactionMsgDelta
+		if msgDelta > 0 {
+			j.AppendCompactionPrune(strategy, msgDelta)
+		}
+		// Emit compaction.summary if a summary text was recorded during compaction.
+		if s.lastCompactionSummary != "" {
+			j.AppendCompactionSummary(s.lastCompactionSummary)
+		}
+		j.AppendCompactionEnd(eventlog.CompactionEndFact{
+			Strategy:     strategy,
+			TokensBefore: tokensBefore,
+			TokensAfter:  tokensAfter,
+		})
+		// Legacy session.compacted event retained for backward compat.
+		j.AppendCompaction(eventlog.CompactionFact{
+			Strategy:     strategy,
+			TokensBefore: tokensBefore,
+			TokensAfter:  tokensAfter,
+			Manual:       manual,
+		})
+	}
 }

@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync/atomic"
@@ -112,6 +113,79 @@ var (
 	_ tool.Tool = orderedReadTool{}
 	_ tool.Tool = (*countedReadTool)(nil)
 )
+
+func TestExecuteOne_PreStageShortCircuitsBeforeExecution(t *testing.T) {
+	executed := false
+	read := &countingExecTool{ran: &executed}
+	sess := NewSession("test", "test", "system", tool.NewRegistry(read))
+	sess.PermSvc().SetAutonomy(AutonomyYOLO)
+
+	// Register a pre-execute interceptor that denies before the raw tool ever
+	// runs, proving the StagePreExecute waterfall is in the ExecuteOne path.
+	sess.Tools().Pipeline().Register(tool.StagePreExecute, tool.InterceptFn(func(ctx context.Context, req tool.ToolRequest, res *tool.ToolResult, next func() error) error {
+		return tool.ShortCircuitDeny("blocked by test policy")
+	}))
+
+	ch := make(chan StreamEvent, 4)
+	result := sess.Tools().ExecuteOne(context.Background(), types.ToolCall{ID: "r1", Name: "Read", Arguments: map[string]interface{}{"id": 1}}, nil, ch, 0, "test")
+
+	if executed {
+		t.Fatal("tool executed despite pre-execute short-circuit")
+	}
+	if !result.isErr {
+		t.Fatal("short-circuited result should be an error")
+	}
+	if !strings.Contains(result.output, "blocked by test policy") {
+		t.Fatalf("result output = %q, want pipeline deny message", result.output)
+	}
+}
+
+type countingExecTool struct {
+	ran *bool
+}
+
+func (t *countingExecTool) Name() string        { return "Read" }
+func (t *countingExecTool) Description() string { return "counts executions" }
+func (t *countingExecTool) Parameters() map[string]interface{} {
+	return map[string]interface{}{"type": "object", "properties": map[string]interface{}{}}
+}
+
+func (t *countingExecTool) Execute(ctx context.Context, _ json.RawMessage) (string, error) {
+	*t.ran = true
+	return "should-not-run", nil
+}
+
+func TestExecuteOne_EmptyPipelineStillExecutes(t *testing.T) {
+	executed := false
+	read := &countingExecTool{ran: &executed}
+	sess := NewSession("test", "test", "system", tool.NewRegistry(read))
+	sess.PermSvc().SetAutonomy(AutonomyYOLO)
+
+	// No interceptor registered: empty pipeline is a strict pass-through.
+	ch := make(chan StreamEvent, 4)
+	_ = sess.Tools().ExecuteOne(context.Background(), types.ToolCall{ID: "r1", Name: "Read", Arguments: map[string]interface{}{"id": 1}}, nil, ch, 0, "test")
+	if !executed {
+		t.Fatal("tool did not execute with an empty pipeline")
+	}
+}
+
+func TestExecuteOne_PreStageErrorIsDistinct(t *testing.T) {
+	executed := false
+	read := &countingExecTool{ran: &executed}
+	sess := NewSession("test", "test", "system", tool.NewRegistry(read))
+	sess.PermSvc().SetAutonomy(AutonomyYOLO)
+	sess.Tools().Pipeline().Register(tool.StagePreExecute, tool.InterceptFn(func(ctx context.Context, req tool.ToolRequest, res *tool.ToolResult, next func() error) error {
+		return errors.New("pipeline infra failure")
+	}))
+	ch := make(chan StreamEvent, 4)
+	result := sess.Tools().ExecuteOne(context.Background(), types.ToolCall{ID: "r1", Name: "Read", Arguments: map[string]interface{}{"id": 1}}, nil, ch, 0, "test")
+	if executed {
+		t.Fatal("tool executed despite pre-execute non-ShortCircuit error")
+	}
+	if !result.isErr {
+		t.Fatal("expected error result on non-ShortCircuit pipeline error")
+	}
+}
 
 type contextCaptureTool struct{ ctx *tool.ToolContext }
 

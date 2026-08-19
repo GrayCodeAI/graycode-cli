@@ -169,6 +169,7 @@ func optionalTools() []tool.Tool {
 		tool.ReviveTool{},
 		tool.MCPLanguageServerTool{},
 		tool.SQLTool{},
+		tool.JobsTool{},
 	}
 }
 

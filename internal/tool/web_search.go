@@ -34,7 +34,7 @@ func (WebSearchTool) Name() string      { return "WebSearch" }
 func (WebSearchTool) RiskLevel() string { return "low" }
 func (WebSearchTool) Aliases() []string { return []string{"web_search"} }
 func (WebSearchTool) Description() string {
-	return "Search the web and return structured results. Supports Brave Search, SearXNG, and DuckDuckGo backends."
+	return "Search the web and return structured results. Supports Brave Search, SearXNG, DeepSeek, Exa, Perplexity, and DuckDuckGo backends."
 }
 
 func (WebSearchTool) Parameters() map[string]interface{} {
@@ -159,7 +159,9 @@ func (t WebSearchTool) Execute(ctx context.Context, input json.RawMessage) (stri
 }
 
 // searchOne runs a single query through the provider cascade
-// (Brave → SearXNG → DuckDuckGo) and returns formatted results.
+// (Brave → SearXNG → DeepSeek → Exa → Perplexity → DuckDuckGo) and returns
+// formatted results. Structured providers are preferred; DuckDuckGo is the
+// final scrape-based fallback.
 func (WebSearchTool) searchOne(ctx context.Context, query string, numResults int) (string, error) {
 	var results []searchResult
 	var err error
@@ -181,10 +183,37 @@ func (WebSearchTool) searchOne(ctx context.Context, query string, numResults int
 		if err == nil {
 			return formatSearchResults(query, results), nil
 		}
-		// Fall through to DuckDuckGo on error
+		// Fall through to the next provider on error
 	}
 
-	// 3. DuckDuckGo (fallback)
+	// 3. DeepSeek native web search (Anthropic-compatible Messages API)
+	deepseek := newDeepseekSearchClient()
+	if deepseek.available() {
+		results, err = deepseek.search(ctx, query, numResults)
+		if err == nil {
+			return formatSearchResults(query, results), nil
+		}
+	}
+
+	// 4. Exa Search
+	exa := newExaSearchClient()
+	if exa.available() {
+		results, err = exa.search(ctx, query, numResults)
+		if err == nil {
+			return formatSearchResults(query, results), nil
+		}
+	}
+
+	// 5. Perplexity Search
+	perplexity := newPerplexitySearchClient()
+	if perplexity.available() {
+		results, err = perplexity.search(ctx, query, numResults)
+		if err == nil {
+			return formatSearchResults(query, results), nil
+		}
+	}
+
+	// 6. DuckDuckGo (final fallback)
 	results, err = duckDuckGoSearch(ctx, query, numResults)
 	if err != nil {
 		return "", fmt.Errorf("all search providers failed: %w", err)

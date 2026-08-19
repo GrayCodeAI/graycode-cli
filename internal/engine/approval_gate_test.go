@@ -218,3 +218,50 @@ func TestApprovalGate_SQLWriteCategory(t *testing.T) {
 		})
 	}
 }
+
+func TestApprovalGate_WaterfallDispatch(t *testing.T) {
+	t.Run("waterfall answers", func(t *testing.T) {
+		confirmCalled := false
+		s := NewSession("test", "m", "", nil)
+		s.PermSvc().SetAutonomy(AutonomyFull)
+		wf := NewApprovalWaterfall()
+		wf.Add(func(_ context.Context, req ApprovalRequest) (ApprovalResponse, bool) {
+			if req.ToolName != "Bash" {
+				t.Fatalf("waterfall received wrong tool name: %s", req.ToolName)
+			}
+			return ApprovalApprove, true
+		})
+		s.SetApproval(&ApprovalGate{
+			Enabled:   true,
+			Waterfall: wf,
+			ConfirmFn: func(req ApprovalRequest) ApprovalResponse {
+				confirmCalled = true
+				return ApprovalReject
+			},
+		})
+		ok, _ := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "rm -rf x"})
+		if !ok {
+			t.Fatal("waterfall approve should allow the action")
+		}
+		if confirmCalled {
+			t.Fatal("ConfirmFn should not run after waterfall answers")
+		}
+	})
+
+	t.Run("empty waterfall fail-closed", func(t *testing.T) {
+		s := NewSession("test", "m", "", nil)
+		s.PermSvc().SetAutonomy(AutonomyFull)
+		s.SetApproval(&ApprovalGate{
+			Enabled:   true,
+			Waterfall: NewApprovalWaterfall(), // no deciders -> deny
+			ConfirmFn: func(req ApprovalRequest) ApprovalResponse { return ApprovalApprove },
+		})
+		ok, msg := s.CheckApproval(context.Background(), "Bash", map[string]interface{}{"command": "curl http://example.com"})
+		if ok {
+			t.Fatal("empty waterfall must fail closed")
+		}
+		if msg == "" {
+			t.Fatal("expected deny message")
+		}
+	})
+}

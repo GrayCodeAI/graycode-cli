@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 )
 
 // Feedback represents explicit user feedback on an interaction.
@@ -30,7 +32,11 @@ type FeedbackCollector struct {
 	Entries         []Feedback       `json:"entries"`
 	ImplicitSignals []ImplicitSignal `json:"implicit_signals"`
 	Dir             string           `json:"dir"`
-	mu              sync.RWMutex
+	// journal is an optional eventlog spine for emitting feedback.record events.
+	// When nil, feedback is still stored locally but not journaled. Set via
+	// SetJournal after construction (Phase 3: feedback seam).
+	journal *eventlog.Log
+	mu      sync.RWMutex
 }
 
 // ImplicitSignal represents an inferred satisfaction signal from user behavior.
@@ -67,6 +73,15 @@ func NewFeedbackCollector(dir string) *FeedbackCollector {
 	}
 }
 
+// SetJournal attaches an eventlog spine so explicit feedback is journaled as
+// feedback.record events (Phase 3: feedback seam). Nil-safe and optional —
+// when no journal is attached, feedback is still stored locally.
+func (fc *FeedbackCollector) SetJournal(j *eventlog.Log) {
+	fc.mu.Lock()
+	defer fc.mu.Unlock()
+	fc.journal = j
+}
+
 // RecordExplicit records explicit user feedback with a rating and optional comment.
 // Rating must be between 1 and 5. Category must be one of: quality, speed, accuracy, helpfulness.
 func (fc *FeedbackCollector) RecordExplicit(rating int, comment, category, sessionID, taskType string) error {
@@ -90,6 +105,20 @@ func (fc *FeedbackCollector) RecordExplicit(rating int, comment, category, sessi
 		TaskType:  taskType,
 	}
 	fc.Entries = append(fc.Entries, fb)
+
+	// Emit feedback.record to the journal (DSH feedback.record seam).
+	thumb := "down"
+	if rating >= 4 {
+		thumb = "up"
+	}
+	if fc.journal != nil {
+		fc.journal.AppendFeedbackRecord(eventlog.FeedbackFact{
+			Category: category,
+			Detail:   comment,
+			Thumb:    thumb,
+		})
+	}
+
 	return nil
 }
 

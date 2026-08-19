@@ -6,6 +6,8 @@ import (
 	"math/rand/v2"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 )
 
 type ScheduleKind string
@@ -74,6 +76,41 @@ type Engine struct {
 	runs          []RunRecord
 	// inFlightWG tracks in-flight job goroutines so Stop() can drain them.
 	inFlightWG sync.WaitGroup
+	// journal is optional; when set, job lifecycle changes emit schedule.change
+	// events (DSH schedule.change seam).
+	journal *eventlog.Log
+}
+
+// SetJournal attaches the append-only event spine for schedule.change emission.
+// Nil-safe; calling with nil is a no-op.
+func (e *Engine) SetJournal(j *eventlog.Log) {
+	if e == nil {
+		return
+	}
+	e.journal = j
+}
+
+// scheduleString renders a job's schedule as a descriptive string for logging.
+func scheduleString(job *Job) string {
+	switch job.Schedule.Kind {
+	case ScheduleEvery:
+		return "every " + job.Schedule.Every.String()
+	case ScheduleAt:
+		if job.Schedule.At != nil {
+			return "at " + job.Schedule.At.Format(time.RFC3339)
+		}
+		return "at <none>"
+	default:
+		return "unknown"
+	}
+}
+
+// emitScheduleChange emits a schedule.change event if a journal is attached.
+func (e *Engine) emitScheduleChange(job *Job, action string) {
+	if e == nil || e.journal == nil || job == nil {
+		return
+	}
+	e.journal.AppendScheduleChange(job.Name + " (" + action + ") " + scheduleString(job))
 }
 
 func NewEngine(handler JobHandler, maxConcurrent int) *Engine {
@@ -99,23 +136,32 @@ func (e *Engine) AddJob(job *Job) error {
 	job.CreatedAt = time.Now()
 	e.computeNextRun(job)
 	e.jobs[job.ID] = job
+	e.emitScheduleChange(job, "added")
 	return nil
 }
 
 func (e *Engine) RemoveJob(id string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	delete(e.jobs, id)
+	if job, ok := e.jobs[id]; ok {
+		e.emitScheduleChange(job, "removed")
+		delete(e.jobs, id)
+	}
 }
 
 func (e *Engine) EnableJob(id string, enabled bool) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if job, ok := e.jobs[id]; ok {
+		action := "disabled"
+		if enabled {
+			action = "enabled"
+		}
 		job.Enabled = enabled
 		if enabled {
 			e.computeNextRun(job)
 		}
+		e.emitScheduleChange(job, action)
 	}
 }
 

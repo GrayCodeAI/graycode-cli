@@ -764,6 +764,15 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 	if saved != nil {
 		sess.LoadMessages(hawksession.ToRuntimeMessages(saved.Messages))
+		if err := sess.ReplayJournal(saved.Events); err != nil {
+			slog.Error("replay session event journal failed", "err", err, "session_id", sessionID)
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "session event journal replay failed"})
+			return
+		}
+		// Mark the end of the seeded (resumed) event sequence. Events before
+		// this marker came from the seed; events after are live (DSH
+		// session-endseed seam).
+		sess.Persistence().Journal().AppendSessionEndSeed()
 	}
 
 	// Set autonomy, capped by server-side policy. The daemon is
@@ -1055,6 +1064,14 @@ func persistDaemonSession(id string, req ChatRequest, sess *engine.Session, prev
 		createdAt = previous.CreatedAt
 		name = previous.Name
 	}
+	if name == "" {
+		name = sess.JournalTitle()
+	}
+	// Emit the computed title as a journal event so the event spine
+	// records how the session was named (DSH session.title seam, Phase 3).
+	if j := sess.Persistence().Journal(); j != nil {
+		j.AppendSessionTitle(name)
+	}
 	return hawksession.Save(&hawksession.Session{
 		ID:        id,
 		Model:     sess.Model(),
@@ -1063,6 +1080,7 @@ func persistDaemonSession(id string, req ChatRequest, sess *engine.Session, prev
 		CWD:       req.CWD,
 		Name:      name,
 		Messages:  hawksession.FromRuntimeMessages(sess.RawMessages()),
+		Events:    sess.JournalWire(),
 		CreatedAt: createdAt,
 	})
 }

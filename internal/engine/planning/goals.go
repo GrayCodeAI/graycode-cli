@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 )
 
 // GoalStatus represents the current state of a goal.
@@ -51,6 +53,18 @@ type GoalTracker struct {
 	ActiveGoal *Goal
 	mu         sync.RWMutex
 	History    []GoalEvent
+	// journal is optional; when set, AddGoal/CompleteGoal/FailGoal emit
+	// goal.change events (DSH goal.change seam).
+	journal *eventlog.Log
+}
+
+// SetJournal attaches the append-only event spine for goal.change emission.
+// Nil-safe; calling with nil is a no-op.
+func (gt *GoalTracker) SetJournal(j *eventlog.Log) {
+	if gt == nil {
+		return
+	}
+	gt.journal = j
 }
 
 // GoalOption is a functional option for configuring a new goal.
@@ -124,6 +138,9 @@ func (gt *GoalTracker) AddGoal(description string, opts ...GoalOption) *Goal {
 		Message:   fmt.Sprintf("Goal created: %s", description),
 		Timestamp: time.Now(),
 	})
+	if gt.journal != nil {
+		gt.journal.AppendGoalChange(description, true)
+	}
 
 	return g
 }
@@ -161,6 +178,9 @@ func (gt *GoalTracker) StartGoal(id string) error {
 		Message:   fmt.Sprintf("Goal started: %s", g.Description),
 		Timestamp: time.Now(),
 	})
+	if gt.journal != nil {
+		gt.journal.AppendGoalChange(g.Description, true)
+	}
 
 	return nil
 }
@@ -191,6 +211,9 @@ func (gt *GoalTracker) CompleteGoal(id string) error {
 		Message:   fmt.Sprintf("Goal completed: %s", g.Description),
 		Timestamp: now,
 	})
+	if gt.journal != nil {
+		gt.journal.AppendGoalChange(g.Description, false)
+	}
 
 	// Check if this goal is a sub-goal and update parent progress
 	if g.ParentID != "" {
@@ -258,6 +281,9 @@ func (gt *GoalTracker) FailGoal(id string, reason string) error {
 		Message:   fmt.Sprintf("Goal failed: %s — %s", g.Description, reason),
 		Timestamp: time.Now(),
 	})
+	if gt.journal != nil {
+		gt.journal.AppendGoalChange(g.Description, false)
+	}
 
 	return nil
 }

@@ -17,6 +17,7 @@ import (
 // toolExecResult holds the output of a single tool execution.
 type toolExecResult struct {
 	tc     types.ToolCall
+	tool   tool.Tool
 	output string
 	isErr  bool
 	err    error
@@ -261,7 +262,7 @@ func (s *Session) executeSingleToolWithTool(ctx context.Context, tc types.ToolCa
 			}
 		}
 	}
-	processed := s.Tools().PostProcess(ctx, toolExecResult{tc: tc, output: output, isErr: isErr, err: execErr, span: core.span}, turnCount, intentText, s.ContextWindowSize())
+	processed := s.Tools().PostProcess(ctx, toolExecResult{tc: tc, tool: override, output: output, isErr: isErr, err: execErr, span: core.span}, turnCount, intentText, s.ContextWindowSize())
 	return s.Tools().CompleteResult(ctx, processed, ch)
 }
 

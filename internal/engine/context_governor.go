@@ -136,7 +136,10 @@ func (s *Session) ManageContextBeforeTurn(ctx context.Context) (strategy string,
 
 	if len(s.Persistence().RawMessagesView()) > maxContextMessages {
 		before := EstimateTokens(s.Persistence().RawMessagesView())
+		beforeMsgs := len(s.Persistence().RawMessagesView())
 		s.smartCompact(ctx)
+		s.lastCompactionMsgDelta = beforeMsgs - len(s.Persistence().RawMessagesView())
+		s.lastCompactionSummary = "" // smartCompact may set it via the summary path
 		s.recordCompaction("smart_message_cap", before, EstimateTokens(s.Persistence().RawMessagesView()), false)
 		return "smart_message_cap", true
 	}
@@ -146,7 +149,10 @@ func (s *Session) ManageContextBeforeTurn(ctx context.Context) (strategy string,
 	budget := ctxmgr.NewContextBudget(window)
 	if budget.ShouldCompact(convTokens) {
 		before := EstimateTokens(s.Persistence().RawMessagesView())
+		beforeMsgs := len(s.Persistence().RawMessagesView())
 		s.smartCompact(ctx)
+		s.lastCompactionMsgDelta = beforeMsgs - len(s.Persistence().RawMessagesView())
+		s.lastCompactionSummary = ""
 		s.recordCompaction("smart_budget", before, EstimateTokens(s.Persistence().RawMessagesView()), false)
 		return "smart_budget", true
 	}
@@ -161,6 +167,7 @@ func (s *Session) CompactConversation(ctx context.Context) (strategy string, tok
 	}
 	s.Persistence().SetRawMessages(ctxmgr.CollapseRepeatedMessages(s.Persistence().RawMessages()))
 	s.EnsureAutoCompactor()
+	beforeMsgs := len(s.Persistence().RawMessages())
 	tokensBefore = EstimateTokens(s.Persistence().RawMessages())
 	strategy, err = s.Persistence().AutoCompactor().RunCompaction(ctx, s)
 	if err != nil {
@@ -168,6 +175,7 @@ func (s *Session) CompactConversation(ctx context.Context) (strategy string, tok
 		strategy = "smart_fallback"
 	}
 	tokensAfter = EstimateTokens(s.Persistence().RawMessages())
+	s.lastCompactionMsgDelta = beforeMsgs - len(s.Persistence().RawMessages())
 	s.recordCompaction(strategy, tokensBefore, tokensAfter, true)
 	return strategy, tokensBefore, tokensAfter, nil
 }

@@ -369,6 +369,37 @@ func (r *Registry) Register(t Tool) error {
 	if _, exists := r.tools[t.Name()]; exists {
 		return fmt.Errorf("tool %q already registered", t.Name())
 	}
+	r.addLocked(t)
+	return nil
+}
+
+// Unregister removes the tool registered under name (primary or alias) and all of
+// its aliases. It returns false when no such tool exists. Callers this way get a
+// manual disposer equivalent for the mutating surfaces that predate the
+// disposer-returning interception seams and do not have to change their Register
+// signatures.
+func (r *Registry) Unregister(name string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	found := r.tools[name]
+	if found == nil {
+		return false
+	}
+	for n, t := range r.tools {
+		if t == found {
+			delete(r.tools, n)
+		}
+	}
+	for i, t := range r.primary {
+		if t == found {
+			r.primary = append(r.primary[:i], r.primary[i+1:]...)
+			break
+		}
+	}
+	return true
+}
+
+func (r *Registry) addLocked(t Tool) {
 	r.tools[t.Name()] = t
 	r.primary = append(r.primary, t)
 	if aliased, ok := t.(AliasedTool); ok {
@@ -378,5 +409,4 @@ func (r *Registry) Register(t Tool) error {
 			}
 		}
 	}
-	return nil
 }

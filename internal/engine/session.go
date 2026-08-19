@@ -11,6 +11,8 @@ import (
 	"time"
 
 	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+	"github.com/GrayCodeAI/hawk/internal/engine/planning"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
@@ -72,6 +74,7 @@ type Session struct {
 	life    *LifecycleService
 	memory  *MemoryService
 	persist *PersistenceService
+	goals   *planning.GoalTracker // optional goal tracker; emits goal.change lifecycle events
 	tools   *ToolService
 	// learnFn persists structured lessons produced by failure reflection to a
 	// cross-session store (e.g. the chat client's SelfImprover). It is a
@@ -117,6 +120,14 @@ type Session struct {
 	//   Tracer         -> legacy field; oteltrace.NewTracer() for new code
 	// Backtrack and limits are owned by LifecycleService.
 
+	// lastCompactionMsgDelta captures the message count pruned by the most
+	// recent compaction pass, emitted as compaction.prune in recordCompaction.
+	// Set by callers that know the before/after bounds (e.g. smartCompact).
+	lastCompactionMsgDelta int
+	// lastCompactionSummary captures the summary text produced by the most
+	// recent LLM-based compaction pass, emitted as compaction.summary.
+	lastCompactionSummary string
+
 	// Control plane (product modes) — orthogonal to SpecStage and shellmode.
 	workMode  WorkMode
 	isolation IsolationProfile
@@ -161,9 +172,31 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.life = NewLifecycleService(log)
 	s.memory = NewMemoryService(log)
 	s.persist = NewPersistenceService(log)
+	s.persist.SetJournal(eventlog.New(nil))
+	s.perms.SetJournal(s.persist.Journal())
+	s.life.Pipeline().SetJournal(s.persist.Journal())
+	// Wire goal.Change events: the planning GoalTracker emits goal.change
+	// lifecycle events when goals are added/completed/failed (DSH goal.change seam).
+	goalTracker := planning.NewGoalTracker()
+	goalTracker.SetJournal(s.persist.Journal())
+	s.goals = goalTracker
+	// Emit the initial request header so the event spine records the durable
+	// system prompt + tool surface (DSH request.header seam).
+	if j := s.persist.Journal(); j != nil {
+		toolNames := []string{}
+		if registry != nil {
+			toolNames = registry.ModelVisibleNames()
+		}
+		j.AppendRequestHeader(eventlog.RequestHeaderFact{
+			System: systemPrompt,
+			Tools:  toolNames,
+			Reason: eventlog.RequestHeaderInitial,
+		})
+	}
 	s.persist.SetAutoCompactThresholdPct(DefaultAutoCompactThresholdPct)
 	s.persist.SetSystem(systemPrompt)
 	s.tools = NewToolService(registry).WithMetrics(s.llm.Metrics()).WithTracer(oteltrace.NewTracer())
+	s.tools.SetPipeline(DefaultToolPipeline())
 	s.tools.WithExecutionDeps(toolExecutionDeps{
 		permissions: s.perms,
 		chat:        s.llm,
@@ -276,6 +309,11 @@ func (s *Session) SubSession(model, systemPrompt string, registry *tool.Registry
 	s.mu.RLock()
 	sub.learnFn = s.learnFn
 	s.mu.RUnlock()
+	// WireSubagent: propagate journal to sub-session's GoalTracker so
+	// goal.change events on sub-agent forks also record into the spine.
+	if j := s.persist.Journal(); j != nil && sub.goals != nil {
+		sub.goals.SetJournal(j)
+	}
 	return sub
 }
 
@@ -389,6 +427,7 @@ func (s *Session) Persistence() *PersistenceService {
 	// lazy service materialization for that compatibility case, but there is no
 	// second transcript or system-prompt state to import.
 	s.persist = NewPersistenceService(s.Logger())
+	s.persist.SetJournal(eventlog.New(nil))
 	return s.persist
 }
 
@@ -459,6 +498,15 @@ func (s *Session) SubServices() SubServices {
 		Persistence: s.persist,
 		Tools:       s.tools,
 	}
+}
+
+// Goals returns the session's embedded GoalTracker for lifecycle goal management.
+// Returns nil if no goal tracker is configured.
+func (s *Session) Goals() *planning.GoalTracker {
+	if s == nil {
+		return nil
+	}
+	return s.goals
 }
 
 // SetModel updates the active model for subsequent requests.
@@ -794,6 +842,56 @@ func (s *Session) ContextWindowCachedValue() int {
 		return s.persist.ContextWindowCached()
 	}
 	return 0
+}
+
+// JournalTitle returns the deterministic, provider-free session title derived from the
+// journal's model-visible messages. Callers that persist a session can store it on
+// session.Session.Name when no explicit human-provided title exists (Phase 3 title seam).
+func (s *Session) JournalTitle() string {
+	if s == nil || s.Persistence() == nil {
+		return ""
+	}
+	return s.Persistence().JournalTitle()
+}
+
+// JournalWire exports the session's append-only event spine for durable persistence.
+// It returns nil when no journal is attached, so callers that persist the session
+// can write the version-0 messages-only shape with no changes.
+func (s *Session) JournalWire() []eventlog.WireEvent {
+	if s == nil {
+		return nil
+	}
+	p := s.Persistence()
+	if p == nil || p.Journal() == nil {
+		return nil
+	}
+	wire, err := eventlog.MarshalWire(p.Journal().Snapshot())
+	if err != nil {
+		slog.Warn("marshal event journal", "error", err)
+		return nil
+	}
+	return wire
+}
+
+// ReplayJournal rebuilds the append-only event spine from a persisted wire record and
+// attaches it to persistence. The live transcript is not touched: this only restores
+// the log so future appends continue the sequence and new projections stay faithful.
+// A record that fails validation is returned as an error and leaves the journal
+// untouched. A nil or empty record is a no-op (version-0 sessions).
+func (s *Session) ReplayJournal(wire []eventlog.WireEvent) error {
+	if s == nil || len(wire) == 0 {
+		return nil
+	}
+	log, err := eventlog.Rehydrate(wire, nil)
+	if err != nil {
+		return err
+	}
+	p := s.Persistence()
+	if p == nil {
+		return fmt.Errorf("session: cannot attach journal without persistence")
+	}
+	p.SetJournal(log)
+	return nil
 }
 
 // CostValue returns the session's cost accumulator (a pointer

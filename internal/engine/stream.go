@@ -13,6 +13,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
 	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
@@ -160,6 +161,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	}()
 
 	// Session start hook
+	if j := s.Persistence().Journal(); j != nil {
+		j.AppendHookInvoked(string(hooks.EventSessionStart))
+	}
 	hooks.ExecuteAsync(ctx, hooks.EventSessionStart, map[string]interface{}{
 		"provider": s.ChatLLM().Provider(),
 		"model":    s.ChatLLM().Model(),
@@ -215,10 +219,22 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	loopDet := NewLoopDetector(10, DoomLoopThreshold) // 10-step window, 3 repeats = doom loop
 
 	for {
+		// Close the boundary of the previous turn before evaluating whether to
+		// start another. Doing this first keeps the guard-condition exit path
+		// from leaving the prior turn unclosed.
+		if j := s.Persistence().Journal(); j != nil && turnCount > 0 {
+			j.AppendStepEnd(turnCount, 1)
+			j.AppendTurnEnd(turnCount, "completed")
+		}
 		if !s.checkGuardConditions(ctx, ch, turnCount, snowball, loopDet) {
 			return
 		}
 		turnCount++
+
+		if j := s.Persistence().Journal(); j != nil {
+			j.AppendTurnStart(turnCount)
+			j.AppendStepStart(turnCount, 1)
+		}
 
 		if s.LifecycleSvc().Limits() != nil {
 			s.LifecycleSvc().Limits().RecordTurn()
@@ -261,7 +277,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				// Cache hit: short-circuit the LLM call
 				if preResult.CacheHit && preResult.CachedResponse != "" {
 					emit(StreamEvent{Type: "content", Content: preResult.CachedResponse})
-					s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse}))
+					s.Persistence().AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse})
 					emit(StreamEvent{Type: "done"})
 					return
 				}
@@ -282,11 +298,21 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Pre-query hook
-		_ = hooks.Execute(ctx, hooks.EventPreQuery, map[string]interface{}{
+		if j := s.Persistence().Journal(); j != nil {
+			j.AppendHookInvoked(string(hooks.EventPreQuery))
+		}
+		preErr := hooks.Execute(ctx, hooks.EventPreQuery, map[string]interface{}{
 			"provider": s.ChatLLM().Provider(),
 			"model":    s.ChatLLM().Model(),
 			"messages": len(s.Persistence().RawMessages()),
 		})
+		if j := s.Persistence().Journal(); j != nil {
+			hookErr := ""
+			if preErr != nil {
+				hookErr = preErr.Error()
+			}
+			j.AppendHookResult(string(hooks.EventPreQuery), hookErr)
+		}
 
 		s.Logger().Info("stream query", map[string]interface{}{
 			"provider": s.ChatLLM().Provider(),
@@ -434,6 +460,10 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		for streamAttempt := 0; streamAttempt <= maxStreamRetries; streamAttempt++ {
 			streamErr = nil
 			sawThinking = false
+			// Emit stream block-start lifecycle event (DSH block-start seam).
+			if j := s.Persistence().Journal(); j != nil {
+				j.AppendStreamBlockStart(turnCount, streamAttempt+1)
+			}
 		eventLoop:
 			for {
 				select {
@@ -460,15 +490,31 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						}
 					case "content":
 						textContent.WriteString(ev.Content)
+						if j := s.Persistence().Journal(); j != nil {
+							j.AppendAssistantChunk(turnCount, 1, ev.Content)
+						}
 						ch <- StreamEvent{Type: "content", Content: ev.Content}
 					case "thinking":
 						if strings.TrimSpace(ev.Thinking) != "" {
 							sawThinking = true
+							if j := s.Persistence().Journal(); j != nil {
+								j.AppendAssistantThinkingChunk(turnCount, 1, ev.Thinking)
+							}
 						}
 						ch <- StreamEvent{Type: "thinking", Content: ev.Thinking}
 					case "tool_call":
 						if ev.ToolCall != nil {
 							toolCalls = append(toolCalls, *ev.ToolCall)
+							// Emit incremental tool-call delta (DSH tool-call-delta seam).
+							if j := s.Persistence().Journal(); j != nil {
+								var deltaArgs string
+								if raw, ok := ev.ToolCall.Arguments["arguments"]; ok {
+									if str, ok := raw.(string); ok {
+										deltaArgs = str
+									}
+								}
+								j.AppendToolCallDelta(turnCount, 1, ev.ToolCall.Name, deltaArgs)
+							}
 						}
 					case "usage":
 						if ev.Usage != nil {
@@ -538,6 +584,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				"reason":  retryReason,
 				"error":   streamErr.Error(),
 			})
+			// Emit llm.retry / llm.retry.started lifecycle events (DSH seam).
+			if j := s.Persistence().Journal(); j != nil {
+				j.AppendLLMRetry(streamAttempt+1, retryReason)
+				j.AppendLLMRetryStarted(streamAttempt+1, retryReason)
+			}
 			retryTimer := time.NewTimer(streamRetryDelay(streamErr, streamAttempt))
 			select {
 			case <-retryTimer.C:
@@ -569,6 +620,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			usageLedger.reset()
 			streamErr = nil
 		}
+		// Emit stream block-end + finish lifecycle events (DSH block-end/finish seam).
+		if j := s.Persistence().Journal(); j != nil {
+			j.AppendStreamBlockEnd(turnCount, 1)
+			j.AppendStreamFinish(turnCount, 1, stopReason)
+		}
 		if streamErr != nil {
 			emit(StreamEvent{Type: "error", Content: streamErr.Error()})
 			return
@@ -593,6 +649,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				progress = 1.0
 			}
 			snowball.RecordTurn(lastUsage.PromptTokens+lastUsage.CompletionTokens, progress)
+			// Emit request.context: durable model route metadata at the
+			// request boundary (DSH seam — provider, model, context window).
+			if j := s.Persistence().Journal(); j != nil {
+				j.AppendRequestContext(resolvedProvider, resolvedModel, s.ContextWindowSize())
+			}
 			s.recordEyrieOperationObservation(
 				resolvedProvider,
 				resolvedModel,
@@ -639,6 +700,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Post-query hook
+		if j := s.Persistence().Journal(); j != nil {
+			j.AppendHookInvoked(string(hooks.EventPostQuery))
+		}
 		hooks.ExecuteAsync(ctx, hooks.EventPostQuery, map[string]interface{}{
 			"provider": resolvedProvider,
 			"model":    resolvedModel,
@@ -658,13 +722,18 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// change behavior while they migrate to the facade.
 		if !managesResilience && stopReason == "max_tokens" && len(toolCalls) == 0 && recoveryCount < maxRecoveryRetries {
 			recoveryCount++
-			s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: textContent.String()}))
-			s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "user", Content: "Continue from where you left off."}))
+			s.Persistence().AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: textContent.String()})
+			s.Persistence().AppendUserJournaled(types.EyrieMessage{Role: "user", Content: "Continue from where you left off."})
 			continue
 		}
 
 		// No tool calls — done
 		if len(toolCalls) == 0 {
+			// This is the end of the stream; close the active boundaries.
+			if j := s.Persistence().Journal(); j != nil {
+				j.AppendStepEnd(turnCount, 1)
+				j.AppendTurnEnd(turnCount, "completed")
+			}
 			// Integration pipeline: post-response (format, score, redact, cache, learn)
 			if s.LifecycleSvc().Pipeline() != nil && textContent.Len() > 0 {
 				postResult := s.LifecycleSvc().Pipeline().PostResponse(textContent.String(), s.Persistence().RawMessages())
@@ -677,7 +746,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}
 			}
 			if textContent.Len() > 0 {
-				s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{Role: "assistant", Content: textContent.String()}))
+				s.Persistence().AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: textContent.String()})
 				// Auto-remember corrections and learnings. Best-effort
 				// fire-and-forget: the memory backend's Remember does not yet
 				// accept a context, so this goroutine cannot be cancelled mid-call.
@@ -780,6 +849,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				s.LifecycleSvc().Pipeline().EndSession(context.WithoutCancel(ctx), ctx.Err() == nil, taskGoal)
 			}
 			// Session end hook
+			if j := s.Persistence().Journal(); j != nil {
+				j.AppendHookInvoked(string(hooks.EventSessionEnd))
+			}
 			hooks.ExecuteAsync(context.WithoutCancel(ctx), hooks.EventSessionEnd, map[string]interface{}{
 				"provider": s.ChatLLM().Provider(),
 				"model":    s.ChatLLM().Model(),
@@ -822,7 +894,64 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			s.LifecycleSvc().Backtrack().RecordDecision(turnCount, strings.Join(toolNames, ", "), nil, s.Persistence().RawMessages())
 		}
 
+		// Emit command.run events for Bash tool calls before execution (DSH
+		// command.run seam), then command.done after results return.
+		// Also emit code.dispatch.start for code-execution Bash commands
+		// (python, node, go run, etc.) — DSH code.dispatch.start seam.
+		if j := s.Persistence().Journal(); j != nil {
+			for _, tc := range toolCalls {
+				cn := canonicalToolName(tc.Name)
+				if cn == "Bash" {
+					cmd := extractBashCommand(tc.Arguments)
+					j.AppendCommandRun(cmd)
+					if lang := detectCodeLanguage(cmd); lang != "" {
+						j.AppendToolCodeDispatchStart(lang)
+					}
+				}
+				if cn == "WebSearch" {
+					j.AppendWebDeepSeekSearch(extractWebSearchQuery(tc.Arguments))
+				}
+			}
+		}
+
 		results := s.Tools().ExecuteAll(ctx, toolCalls, ch, turnCount, textContent.String())
+
+		// Emit command.done events for Bash tool calls after execution (DSH
+		// command.done seam). command.run fires before execution; command.done
+		// fires after all tools complete.
+		if j := s.Persistence().Journal(); j != nil {
+			for _, r := range results {
+				if canonicalToolName(r.tc.Name) == "Bash" {
+					cmd := extractBashCommand(r.tc.Arguments)
+					exitCode := 0
+					if r.isErr {
+						exitCode = 1
+					}
+					errMsg := ""
+					if r.err != nil {
+						errMsg = r.err.Error()
+					}
+					j.AppendCommandDone(cmd, exitCode, errMsg)
+					// Emit code.dispatch (not just start) after execution
+					// for code-execution Bash commands — DSH code.dispatch seam.
+					if lang := detectCodeLanguage(cmd); lang != "" {
+						j.AppendToolCodeDispatch(lang)
+					}
+				}
+			}
+		}
+
+		// Emit todo.write events for TodoWrite tool calls (DSH todo.write seam).
+		if j := s.Persistence().Journal(); j != nil {
+			for _, tc := range toolCalls {
+				if canonicalToolName(tc.Name) == "TodoWrite" {
+					items := extractTodoWriteItems(tc.Arguments)
+					if len(items) > 0 {
+						j.AppendTodoWrite(items)
+					}
+				}
+			}
+		}
 
 		// Auto-snapshot after write operations for granular undo
 		if s.Tools().Snapshots() != nil && len(toolCalls) > 0 {
@@ -848,11 +977,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if assistContent == "" && len(toolCalls) > 0 {
 			assistContent = " " // non-empty to satisfy APIs that reject empty content
 		}
-		s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{
+		s.Persistence().AppendAssistantJournaled(types.EyrieMessage{
 			Role:    "assistant",
 			Content: assistContent,
 			ToolUse: toolCalls,
-		}))
+		})
 		// Append tool results as proper tool_result messages. Tool output is
 		// redacted before it is appended so secrets never reach the model;
 		// the user-facing stream events already carried the raw output.
@@ -877,17 +1006,26 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					msg.Images = []string{imgURI}
 				}
 			}
-			s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), msg))
+			s.Persistence().AppendUserJournaled(msg)
 		}
 
 		// --- STEERING: Inject user guidance between tool batches ---
+		steerCount := 0
 		if s.Persistence().Steering() != nil && s.Persistence().Steering().HasPending() {
 			for _, steer := range s.Persistence().Steering().Drain() {
-				s.Persistence().SetRawMessages(append(s.Persistence().RawMessages(), types.EyrieMessage{
+				s.Persistence().AppendUserJournaled(types.EyrieMessage{
 					Role:    "user",
 					Content: "[User guidance during execution]: " + steer.Content,
-				}))
+				})
 				emit(StreamEvent{Type: "content", Content: "\n[Steering received: " + steer.Content + "]\n"})
+				steerCount++
+			}
+		}
+		// Emit agent.inbox.splice when steering messages are spliced into the
+		// conversation mid-execution (DSH agent.inbox.splice seam).
+		if steerCount > 0 {
+			if j := s.Persistence().Journal(); j != nil {
+				j.AppendAgentInboxSpliced(steerCount, 0)
 			}
 		}
 
@@ -1011,4 +1149,117 @@ func extractDataURI(s string) string {
 		return rest
 	}
 	return rest[:endIdx]
+}
+
+// extractBashCommand pulls the "command" argument from a Bash tool call's
+// arguments map, defaulting to empty string when absent or non-string.
+func extractBashCommand(args map[string]interface{}) string {
+	if args == nil {
+		return ""
+	}
+	if c, ok := args["command"]; ok {
+		if s, ok := c.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+// extractWebSearchQuery pulls the "query" argument from a WebSearch tool call's
+// arguments map, defaulting to empty string when absent or non-string.
+func extractWebSearchQuery(args map[string]interface{}) string {
+	if args == nil {
+		return ""
+	}
+	if q, ok := args["query"]; ok {
+		if s, ok := q.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+// extractTodoWriteItems pulls the "todos" array from a TodoWrite tool call's
+// arguments and converts them into eventlog TodoItem values.
+func extractTodoWriteItems(args map[string]interface{}) []eventlog.TodoItem {
+	if args == nil {
+		return nil
+	}
+	raw, ok := args["todos"]
+	if !ok {
+		return nil
+	}
+	arr, ok := raw.([]interface{})
+	if !ok {
+		return nil
+	}
+	var items []eventlog.TodoItem
+	for _, v := range arr {
+		m, ok := v.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		content, _ := m["content"].(string)
+		if content == "" {
+			if t, ok := m["task"].(string); ok {
+				content = t
+			}
+		}
+		status, _ := m["status"].(string)
+		items = append(items, eventlog.TodoItem{Content: content, Status: status})
+	}
+	return items
+}
+
+// detectCodeLanguage inspects a Bash command and returns the script language
+// if it looks like a code-execution invocation (e.g. python3, node, go run).
+// Returns empty string for non-code commands.
+func detectCodeLanguage(cmd string) string {
+	if cmd == "" {
+		return ""
+	}
+	// Take only the first shell token to avoid matching comments or strings.
+	rest := cmd
+	if idx := strings.IndexAny(cmd, " \t"); idx >= 0 {
+		rest = cmd[:idx]
+	}
+	base := strings.TrimSpace(rest)
+	// Strip common path prefixes and suffixes.
+	if dirIdx := strings.LastIndex(base, "/"); dirIdx >= 0 {
+		base = base[dirIdx+1:]
+	}
+	if strings.HasSuffix(base, ".sh") || strings.HasSuffix(base, ".bash") {
+		return "bash"
+	}
+	switch base {
+	case "python", "python3", "python2", "py":
+		return "python"
+	case "node", "nodejs", "npm", "npx":
+		return "javascript"
+	case "ruby":
+		return "ruby"
+	case "go":
+		// "go run" / "go test" are code dispatch; plain "go build" is not.
+		if strings.Contains(strings.ToLower(cmd), "go run") || strings.Contains(strings.ToLower(cmd), "go test") {
+			return "go"
+		}
+		return ""
+	case "perl":
+		return "perl"
+	case "php":
+		return "php"
+	case "rustc":
+		return "rust"
+	case "cargo":
+		// Only cargo run/test are code dispatch; cargo build/bench/clippy are not.
+		lower := strings.ToLower(cmd)
+		if strings.Contains(lower, "run") || strings.Contains(lower, "test") {
+			return "rust"
+		}
+		return ""
+	case "javac", "java":
+		return "java"
+	default:
+		return ""
+	}
 }
