@@ -230,6 +230,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			return
 		}
 		s.EnsureSandboxPolicyStatement()
+		s.EnsureSkillCatalogStatement()
 		turnCount++
 
 		if j := s.Persistence().Journal(); j != nil {

@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
 )
 
 type SkillTool struct{}
@@ -29,7 +28,7 @@ func (SkillTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (SkillTool) Execute(_ context.Context, input json.RawMessage) (string, error) {
+func (SkillTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		Skill string `json:"skill"`
 	}
@@ -38,81 +37,53 @@ func (SkillTool) Execute(_ context.Context, input json.RawMessage) (string, erro
 			return "", err
 		}
 	}
-	skills := discoverSkills()
+
+	cwd, _ := os.Getwd()
 	if p.Skill == "" {
-		if len(skills) == 0 {
+		allSkills, err := plugin.DefaultRegistry.List(ctx, cwd)
+		if err != nil {
+			return "", err
+		}
+		var modelSkills []plugin.SkillEntry
+		for _, s := range allSkills {
+			if s.Invocation.IsModelInvocable() {
+				modelSkills = append(modelSkills, s)
+			}
+		}
+
+		if len(modelSkills) == 0 {
 			return "No skills found in Hawk user state, .agents/skills, or .codex/skills.", nil
 		}
-		names := make([]string, 0, len(skills))
-		for name := range skills {
-			names = append(names, name)
+		names := make([]string, 0, len(modelSkills))
+		for _, s := range modelSkills {
+			names = append(names, s.Name)
 		}
 		sort.Strings(names)
 		return "Available skills:\n" + strings.Join(names, "\n"), nil
 	}
-	path, ok := skills[p.Skill]
-	if !ok {
-		return "", fmt.Errorf("skill %q not found", p.Skill)
-	}
-	data, err := os.ReadFile(path) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
+
+	entry, err := plugin.DefaultRegistry.Get(ctx, cwd, p.Skill)
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("# Skill: %s\nSource: %s\n\n%s", p.Skill, path, string(data)), nil
-}
-
-func discoverSkills() map[string]string {
-	roots := skillRoots()
-	out := make(map[string]string)
-	for _, root := range roots {
-		entries, err := os.ReadDir(root)
-		if err != nil {
-			continue
-		}
-		for _, entry := range entries {
-			path := filepath.Join(root, entry.Name())
-			if entry.IsDir() {
-				for _, filename := range []string{"SKILL.md", "skill.md", entry.Name() + ".md"} {
-					candidate := filepath.Join(path, filename)
-					if fileExists(candidate) {
-						out[entry.Name()] = candidate
-						break
-					}
-				}
-				continue
-			}
-			if strings.EqualFold(filepath.Ext(entry.Name()), ".md") {
-				name := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
-				out[name] = path
-			}
-		}
+	if !entry.Invocation.IsModelInvocable() {
+		return "", fmt.Errorf("skill %q is not invocable by the model (policy restricted)", p.Skill)
 	}
-	return out
-}
 
-func skillRoots() []string {
-	var roots []string
-	roots = append(roots, filepath.Join(storage.StateDir(), "skills"))
-	if cwd, err := os.Getwd(); err == nil {
-		roots = append(
-			roots,
-			filepath.Join(cwd, ".agents", "skills"),
-			filepath.Join(cwd, ".claude", "skills"),
-			filepath.Join(cwd, ".codex", "skills"),
-		)
+	// Canonical rendering (port of renderSkillContent)
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("# Skill: %s", entry.Name))
+	if entry.Provider != "" {
+		sb.WriteString(fmt.Sprintf(" (Provider: %s)", entry.Provider))
 	}
-	if home, err := os.UserHomeDir(); err == nil {
-		roots = append(
-			roots,
-			filepath.Join(home, ".agents", "skills"),
-			filepath.Join(home, ".claude", "skills"),
-			filepath.Join(home, ".codex", "skills"),
-		)
+	sb.WriteString("\n")
+	if entry.ResourceBase != "" {
+		sb.WriteString(fmt.Sprintf("Resource Base: %s\n", entry.ResourceBase))
 	}
-	return roots
-}
-
-func fileExists(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && !info.IsDir()
+	if entry.Path != "" {
+		sb.WriteString(fmt.Sprintf("Source: %s\n", entry.Path))
+	}
+	sb.WriteString("\n")
+	sb.WriteString(entry.Content)
+	return sb.String(), nil
 }

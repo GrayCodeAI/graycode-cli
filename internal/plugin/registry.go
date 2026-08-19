@@ -18,20 +18,54 @@ import (
 
 const defaultIndexURL = "https://raw.githubusercontent.com/GrayCodeAI/hawk-community-skills/main/registry.json"
 
+// SkillInvocationPolicy controls which callers may invoke a skill.
+type SkillInvocationPolicy struct {
+	ModelInvocable *bool `json:"model_invocable,omitempty"`
+	UserInvocable  *bool `json:"user_invocable,omitempty"`
+}
+
+// IsModelInvocable returns true unless ModelInvocable is explicitly false.
+func (p SkillInvocationPolicy) IsModelInvocable() bool {
+	if p.ModelInvocable == nil {
+		return true
+	}
+	return *p.ModelInvocable
+}
+
+// IsUserInvocable returns true unless UserInvocable is explicitly false.
+func (p SkillInvocationPolicy) IsUserInvocable() bool {
+	if p.UserInvocable == nil {
+		return true
+	}
+	return *p.UserInvocable
+}
+
+// NewInvocationPolicy returns an explicit invocation policy.
+func NewInvocationPolicy(modelInvocable, userInvocable bool) SkillInvocationPolicy {
+	return SkillInvocationPolicy{
+		ModelInvocable: &modelInvocable,
+		UserInvocable:  &userInvocable,
+	}
+}
+
 // SkillEntry is a single skill in the registry index.
 type SkillEntry struct {
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Author      string   `json:"author"`
-	Repo        string   `json:"repo"`
-	Path        string   `json:"path"`
-	Category    string   `json:"category"`
-	Tags        []string `json:"tags"`
-	Version     string   `json:"version"`
-	License     string   `json:"license"`
-	Agents      []string `json:"agents"`
-	Installs    int      `json:"installs"`
-	UpdatedAt   string   `json:"updated_at"`
+	Name         string                `json:"name"`
+	Description  string                `json:"description"`
+	Author       string                `json:"author,omitempty"`
+	Repo         string                `json:"repo,omitempty"`
+	Path         string                `json:"path,omitempty"`
+	Category     string                `json:"category,omitempty"`
+	Tags         []string              `json:"tags,omitempty"`
+	Version      string                `json:"version,omitempty"`
+	License      string                `json:"license,omitempty"`
+	Agents       []string              `json:"agents,omitempty"`
+	Installs     int                   `json:"installs,omitempty"`
+	UpdatedAt    string                `json:"updated_at,omitempty"`
+	Invocation   SkillInvocationPolicy `json:"invocation"`
+	Provider     string                `json:"provider,omitempty"`
+	Content      string                `json:"content,omitempty"`
+	ResourceBase string                `json:"resource_base,omitempty"`
 }
 
 // SkillIndex is the full registry index.

@@ -19,6 +19,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
@@ -132,6 +133,10 @@ type Session struct {
 	// lastSandboxStatement tracks the most recent sandbox policy statement
 	// emitted into the transcript (DSH sandbox:policy).
 	lastSandboxStatement string
+
+	// lastSkillCatalogDigest tracks the most recent skill catalog digest
+	// emitted into the transcript (DSH tool-skill catalog digest).
+	lastSkillCatalogDigest string
 
 	// Control plane (product modes) — orthogonal to SpecStage and shellmode.
 	workMode  WorkMode
@@ -967,6 +972,72 @@ func (s *Session) EnsureSandboxPolicyStatement() string {
 		s.lastSandboxStatement = stmt
 		s.mu.Unlock()
 		return stmt
+	}
+	return ""
+}
+
+// EnsureSkillCatalogStatement computes the current digest over model-invocable skills
+// and emits a durable catalog message (or tombstone) on digest change. Unchanged requests add nothing.
+func (s *Session) EnsureSkillCatalogStatement() string {
+	if s == nil || s.tools == nil || s.tools.Registry() == nil {
+		return ""
+	}
+	_, hasSkillTool := s.tools.Registry().Get("Skill")
+	if !hasSkillTool {
+		_, hasSkillTool = s.tools.Registry().Get("skill")
+	}
+	if !hasSkillTool {
+		return ""
+	}
+
+	cwd := s.WorkingDir()
+	allSkills, err := plugin.DefaultRegistry.List(context.Background(), cwd)
+	if err != nil {
+		return ""
+	}
+	var invocable []plugin.SkillEntry
+	for _, sk := range allSkills {
+		if sk.Invocation.IsModelInvocable() {
+			invocable = append(invocable, sk)
+		}
+	}
+
+	digest := plugin.ComputeSkillDigest(invocable)
+
+	s.mu.Lock()
+	last := s.lastSkillCatalogDigest
+	s.mu.Unlock()
+
+	// Initial scan of raw messages to recover last digest if recovering session
+	if last == "" {
+		if p := s.Persistence(); p != nil {
+			for _, m := range p.RawMessages() {
+				if strings.HasPrefix(m.Content, "Available skills (digest: ") {
+					if idx := strings.Index(m.Content, "):"); idx > 0 {
+						prefix := "Available skills (digest: "
+						last = m.Content[len(prefix):idx]
+						s.mu.Lock()
+						s.lastSkillCatalogDigest = last
+						s.mu.Unlock()
+					}
+				}
+			}
+		}
+	}
+
+	if digest == "empty" && last == "" {
+		return ""
+	}
+
+	if digest != last {
+		msg := plugin.RenderSkillCatalogMessage(invocable, digest)
+		if p := s.Persistence(); p != nil {
+			p.AppendUserJournaled(types.EyrieMessage{Role: "user", Content: msg})
+		}
+		s.mu.Lock()
+		s.lastSkillCatalogDigest = digest
+		s.mu.Unlock()
+		return msg
 	}
 	return ""
 }
