@@ -276,6 +276,9 @@ func decodePayload(w WireEvent) (any, error) {
 		if err := json.Unmarshal(w.Data, &p); err != nil {
 			return nil, err
 		}
+		if !p.Valid() {
+			return nil, fmt.Errorf("eventlog: invalid sandbox mode %q (source %q)", p.Mode, p.Source)
+		}
 		return p, nil
 	case ScheduleChange:
 		var p ScheduleChangeFact

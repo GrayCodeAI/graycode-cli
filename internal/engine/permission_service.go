@@ -470,14 +470,23 @@ func (s *PermissionService) SetSandboxMode(mode sandbox.Mode) {
 	}
 }
 
-// SandboxMode returns the active sandbox policy.
+// SandboxMode returns the active sandbox policy. If the session has folded
+// sandbox.mode events in its journal, the folded override takes precedence.
 func (s *PermissionService) SandboxMode() sandbox.Mode {
 	if s == nil || s.perm == nil {
 		return sandbox.Mode("")
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.perm.SandboxMode
+	if s.journal != nil {
+		if mode, ok := sandbox.OverrideOf(s.journal); ok && mode != "" {
+			return mode
+		}
+	}
+	if s.perm.SandboxMode != "" {
+		return s.perm.SandboxMode
+	}
+	return sandbox.ModeWorkspace
 }
 
 // DryRun reports whether the kill switch is active.

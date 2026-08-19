@@ -30,6 +30,13 @@ func Validate(events []Event) error {
 				}
 			}
 		}
+		if ev.Type == SandboxMode {
+			if f, ok := ev.Data.(SandboxModeFact); ok {
+				if !f.Valid() {
+					return fmt.Errorf("eventlog: invalid sandbox mode %q (source %q) at index %d", f.Mode, f.Source, i)
+				}
+			}
+		}
 		// DSH invariant: surface-eligible events must carry a surfaceOp marker;
 		// non-surface events must not. A log without markers is treated as
 		// all-append (backward compatible with version-1 logs written before
