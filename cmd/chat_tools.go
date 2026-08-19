@@ -52,6 +52,7 @@ func essentialTools() []tool.Tool {
 		tool.WebSearchTool{},
 		tool.ToolSearchTool{},
 		tool.SkillTool{},
+		tool.SessionQueryTool{},
 		tool.AgentTool{},
 		tool.AskUserQuestionTool{},
 		tool.TodoWriteTool{},
