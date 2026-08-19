@@ -14,6 +14,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/gitworktree"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -198,6 +199,19 @@ func (s *Session) spawnSubAgent(ctx context.Context, norm agentcontracts.Normali
 	// prevents parent mutations from changing an in-flight child and prevents
 	// child defaults from silently widening the parent's permissions.
 	sub.PermSvc().ApplyPolicySnapshot(s.PermSvc().PolicySnapshot())
+	// DSH 2.4: Inherit delegated sandbox policy from parent at delegation boundary.
+	sandbox.InheritDelegatedPolicy(s, sub)
+	// DSH 2.4: Pin child approval policy to never (deny interactive asks deterministically).
+	sub.PermSvc().SetAskUserFn(func(question string) (string, error) {
+		return "", fmt.Errorf("subagent cannot prompt user for interactive input")
+	})
+	sub.SetPermissionFn(func(req PermissionRequest) {
+		if req.Response != nil {
+			req.Response <- false
+		}
+	})
+	// DSH 2.4: Append model-facing delegation statement.
+	sub.AppendSystemContext(sandbox.FormatDelegationStatement())
 	if s.LifecycleSvc() != nil {
 		s.LifecycleSvc().Limits().SetMaxTurns(maxTurns)
 	}

@@ -10,6 +10,7 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -59,12 +60,23 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 		})
 		sess := engine.NewHawkSession(ctx, selection, provider, model, systemPrompt, registry)
 
+		// DSH 2.4: Inherit delegated sandbox policy from parent if configured.
+		if cfg.ParentSession != nil {
+			sandbox.InheritDelegatedPolicy(cfg.ParentSession, sess)
+		}
+		// DSH 2.4: Model-facing delegation statement informing worker of fixed scope.
+		sess.AppendSystemContext(sandbox.FormatDelegationStatement())
+
 		// Configure for autonomous operation
 		level := engine.AutonomyLevel(cfg.AutonomyLevel)
 		if level < engine.AutonomyFull {
 			level = engine.AutonomyFull
 		}
 		sess.PermSvc().SetAutonomy(level)
+		// DSH 2.4: Pin child approval policy to never (deny interactive asks deterministically).
+		sess.PermSvc().SetAskUserFn(func(question string) (string, error) {
+			return "", fmt.Errorf("delegated worker cannot prompt user for interactive input")
+		})
 		if setErr := sess.SetMaxTurns(30); setErr != nil {
 			return nil, fmt.Errorf("set max turns: %w", setErr)
 		}

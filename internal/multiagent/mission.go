@@ -50,6 +50,10 @@ type Config struct {
 	// responds. Never serialized — wired at run time from Mission.ApprovalGate.
 	ApprovalGate *MissionApprovalGate `json:"-"`
 
+	// ParentSession, when non-nil, carries the parent session/journal for
+	// delegated policy inheritance (DSH 2.4). Never serialized.
+	ParentSession any `json:"-"`
+
 	// Staged pipeline configuration (oh-my-claudecode-style team workflow).
 	PRDModel          string `json:"prd_model,omitempty"`
 	FixModel          string `json:"fix_model,omitempty"`

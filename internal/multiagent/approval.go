@@ -112,6 +112,14 @@ func NewMissionApprovalGate(onRequest func(req *ApprovalRequest)) *MissionApprov
 	}
 }
 
+// DenyAllGate returns an approval gate that deterministically rejects any
+// tool call matching an approval requirement without waiting on interactive input.
+func DenyAllGate() *MissionApprovalGate {
+	return NewMissionApprovalGate(func(req *ApprovalRequest) {
+		_ = req.Respond(ResponseReject)
+	})
+}
+
 // Check consults the gate for a pending tool call. If the gate is enabled and
 // the tool matches a risky category, it calls OnRequest and blocks until the
 // operator responds. Returns an error if the call is rejected or the context
