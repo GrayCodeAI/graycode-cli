@@ -131,11 +131,11 @@ func TestProjectPermissionsEmpty(t *testing.T) {
 
 func TestProjectPermissionsSandboxMode(t *testing.T) {
 	events := []Event{
-		{Type: SandboxMode, Seq: 1, At: time.Now().UTC(), Data: SandboxModeFact{Mode: "read-only"}},
+		{Type: SandboxMode, Seq: 1, At: time.Now().UTC(), Data: SandboxModeFact{Mode: "strict"}},
 	}
 	ps := ProjectPermissions(events)
-	if ps.CurrentValue != "read-only" {
-		t.Errorf("expected 'read-only', got %q", ps.CurrentValue)
+	if ps.CurrentValue != "strict" {
+		t.Errorf("expected 'strict', got %q", ps.CurrentValue)
 	}
 }
 

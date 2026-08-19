@@ -185,3 +185,55 @@ func TestNewEventTypesValidate(t *testing.T) {
 		t.Fatalf("Validate: %v", err)
 	}
 }
+
+func TestSandboxModeFact_ClosedVocabulary(t *testing.T) {
+	// Valid modes and sources
+	validModes := []string{"strict", "workspace", "off"}
+	validSources := []SandboxModeSource{"", SandboxModeSourceUser, SandboxModeSourceDelegation}
+
+	for _, m := range validModes {
+		for _, s := range validSources {
+			fact := SandboxModeFact{Mode: m, Source: s}
+			if !fact.Valid() {
+				t.Errorf("expected fact %+v to be valid", fact)
+			}
+		}
+	}
+
+	// Invalid modes
+	invalidModes := []string{"", "read-only", "workspace-write", "danger-full-access", "admin", "custom"}
+	for _, m := range invalidModes {
+		fact := SandboxModeFact{Mode: m, Source: SandboxModeSourceUser}
+		if fact.Valid() {
+			t.Errorf("expected invalid mode %q to fail validation", m)
+		}
+	}
+
+	// Invalid sources
+	invalidSources := []SandboxModeSource{"other", "admin", "cli", "system"}
+	for _, s := range invalidSources {
+		fact := SandboxModeFact{Mode: "strict", Source: s}
+		if fact.Valid() {
+			t.Errorf("expected invalid source %q to fail validation", s)
+		}
+	}
+
+	// Validate rejects invalid SandboxMode fact
+	invalidEvents := []Event{
+		{Type: SandboxMode, Seq: 1, At: time.Now(), Data: SandboxModeFact{Mode: "invalid-mode"}},
+	}
+	if err := Validate(invalidEvents); err == nil {
+		t.Errorf("expected Validate to reject invalid sandbox mode")
+	}
+
+	// DecodeWire rejects invalid SandboxMode
+	wire := []WireEvent{
+		{
+			Type: SandboxMode, Seq: 1, At: time.Now(),
+			Data: []byte(`{"mode":"invalid","source":"user"}`),
+		},
+	}
+	if _, err := DecodeWire(wire); err == nil {
+		t.Errorf("expected DecodeWire to reject invalid sandbox mode")
+	}
+}
