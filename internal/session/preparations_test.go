@@ -98,7 +98,8 @@ func TestPreparationsReserveAndRelease(t *testing.T) {
 	}
 
 	var commitCount atomic.Int32
-	reservation, err := p.Reserve("reserve-test",
+	reservation, err := p.Reserve(
+		"reserve-test",
 		func() (*PreparedSource, error) {
 			return src, nil
 		},

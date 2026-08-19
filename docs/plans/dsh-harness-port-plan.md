@@ -178,7 +178,7 @@ Highest-value remaining work, in order:
     messages are spliced mid-execution.
 17. Persistence repair/fork — Delivered: `ForkAtEvent` truncates event spine +
     messages at a sequence boundary with seed marker; `RepairJournal` validates
-    + truncates corrupt spines on disk via raw JSONL scan.
+    and truncates corrupt spines on disk via raw JSONL scan.
 18. Compaction prune/summary lifecycle — Delivered: `compaction.prune` (message
     count delta) and `compaction.summary` (if LLM-produced) emitted from
     `recordCompaction` in `context_compaction.go`, alongside the existing
@@ -215,7 +215,7 @@ Highest-value remaining work, in order:
 27. Session header DSH parity — Delivered: `Meta` extended with
     `ParentSession`, `SeedLength`, `Origin`, `DelegationDepth`, `AgentPreset`.
 28. Format version enforcement — Delivered: `SessionFormatVersion = 1`
-    + `ErrForeignFormatVersion`. `Validate` refuses foreign versions.
+    and `ErrForeignFormatVersion`. `Validate` refuses foreign versions.
 29. Surface operations — Delivered: `WireEvent.SurfaceOp` + `SourceEventSeqs`
     fields. `AppendSurface` appends surface-eligible events with
     `surface_op: "append"`. `IsSurfaceEligible()` classifies the 3 message
