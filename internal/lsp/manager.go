@@ -44,20 +44,22 @@ type ManagedClient struct {
 
 // LSPManager manages a pool of language server connections.
 type LSPManager struct {
-	mu         sync.RWMutex
-	clients    map[string]*ManagedClient // keyed by language
-	config     *LSPConfig
-	closed     atomic.Bool
-	stopReaper context.CancelFunc
+	mu             sync.RWMutex
+	clients        map[string]*ManagedClient // keyed by language
+	config         *LSPConfig
+	closed         atomic.Bool
+	stopReaper     context.CancelFunc
+	workspaceQueue *WorkspaceQueue
 }
 
 // NewManager creates an LSPManager with the given config.
 func NewManager(cfg *LSPConfig) *LSPManager {
 	ctx, cancel := context.WithCancel(context.Background())
 	m := &LSPManager{
-		clients:    make(map[string]*ManagedClient),
-		config:     cfg,
-		stopReaper: cancel,
+		clients:        make(map[string]*ManagedClient),
+		config:         cfg,
+		stopReaper:     cancel,
+		workspaceQueue: NewWorkspaceQueue(),
 	}
 	go m.reaper(ctx)
 	return m

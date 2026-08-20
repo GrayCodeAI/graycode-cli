@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Client represents an LSP client connection.
@@ -67,6 +67,7 @@ func (m *ServerManager) Start(name, command string, args ...string) error {
 
 	ctx := context.Background()
 	cmd := exec.CommandContext(ctx, command, args...) // #nosec G204 -- command comes from the configured LSP definition
+	prepareCmdSysProcAttr(cmd)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return err
@@ -87,9 +88,9 @@ func (m *ServerManager) Start(name, command string, args ...string) error {
 	}
 	m.servers[name] = c
 
-	// Send initialize request with correct processId
+	// Send initialize request with correct processId (null per DSH spec)
 	_, _ = c.Request("initialize", map[string]interface{}{
-		"processId":    os.Getpid(),
+		"processId":    nil,
 		"rootUri":      "file://.",
 		"capabilities": map[string]interface{}{},
 	})
@@ -116,7 +117,12 @@ func (m *ServerManager) Stop(name string) error {
 	c.Notify("exit", nil)
 
 	_ = c.stdin.Close()
-	_ = c.cmd.Process.Kill()
+	if c.cmd != nil {
+		_ = KillProcessTree(c.cmd)
+		if c.cmd.Process != nil {
+			WaitForProcessQuiescence(c.cmd.Process.Pid, 2*time.Second)
+		}
+	}
 	return nil
 }
 
