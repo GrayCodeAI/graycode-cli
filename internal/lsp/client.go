@@ -92,6 +92,9 @@ type LSPClient struct {
 func NewLSPClient(ctx context.Context, lang string, cfg ServerConfig) (*LSPClient, error) {
 	args := cfg.Args
 	cmd := exec.CommandContext(ctx, cfg.Command, args...) // #nosec G204 -- cfg comes from trusted LSP server config (built-in defaults or user/project lsp.json), not external input
+	cmd.Env = ScrubEnvironment(nil, cfg.Env)
+	prepareCmdSysProcAttr(cmd)
+
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, fmt.Errorf("lsp: stdin pipe: %w", err)
@@ -120,7 +123,7 @@ func NewLSPClient(ctx context.Context, lang string, cfg ServerConfig) (*LSPClien
 	defer cancel()
 
 	_, err = c.call(initCtx, "initialize", map[string]interface{}{
-		"processId": cmd.Process.Pid,
+		"processId": nil,
 		"capabilities": map[string]interface{}{
 			"textDocument": map[string]interface{}{
 				"definition":         map[string]interface{}{"dynamicRegistration": false},
@@ -132,7 +135,7 @@ func NewLSPClient(ctx context.Context, lang string, cfg ServerConfig) (*LSPClien
 		},
 	})
 	if err != nil {
-		_ = cmd.Process.Kill()
+		_ = KillProcessTree(cmd)
 		return nil, fmt.Errorf("lsp: initialize %s: %w", lang, err)
 	}
 
@@ -290,6 +293,27 @@ func (c *LSPClient) notify(method string, params interface{}) error {
 	return err
 }
 
+// DidOpen notifies the language server that a document was opened with initial text.
+func (c *LSPClient) DidOpen(ctx context.Context, uri, languageID string, version int, text string) error {
+	return c.notify("textDocument/didOpen", map[string]interface{}{
+		"textDocument": map[string]interface{}{
+			"uri":        uri,
+			"languageId": languageID,
+			"version":    version,
+			"text":       text,
+		},
+	})
+}
+
+// DidClose notifies the language server that a document was closed.
+func (c *LSPClient) DidClose(ctx context.Context, uri string) error {
+	return c.notify("textDocument/didClose", map[string]interface{}{
+		"textDocument": map[string]interface{}{
+			"uri": uri,
+		},
+	})
+}
+
 // Close shuts down the language server.
 func (c *LSPClient) Close() error {
 	if c.closed.Swap(true) {
@@ -297,10 +321,16 @@ func (c *LSPClient) Close() error {
 	}
 	_ = c.notify("shutdown", nil)
 	_ = c.notify("exit", nil)
-	if c.cmd.Process != nil {
-		_ = c.cmd.Process.Kill()
+	if c.stdin != nil {
+		_ = c.stdin.Close()
 	}
-	return c.cmd.Wait()
+	if c.cmd != nil {
+		_ = KillProcessTree(c.cmd)
+		if c.cmd.Process != nil {
+			WaitForProcessQuiescence(c.cmd.Process.Pid, 2*time.Second)
+		}
+	}
+	return nil
 }
 
 // Language returns the language this client serves.

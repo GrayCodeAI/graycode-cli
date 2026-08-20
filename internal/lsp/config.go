@@ -16,9 +16,10 @@ import (
 
 // ServerConfig defines how to launch a language server for a given language.
 type ServerConfig struct {
-	Command    string   `json:"command"`
-	Args       []string `json:"args,omitempty"`
-	Extensions []string `json:"extensions"`
+	Command    string            `json:"command"`
+	Args       []string          `json:"args,omitempty"`
+	Extensions []string          `json:"extensions"`
+	Env        map[string]string `json:"env,omitempty"`
 }
 
 // LSPConfig holds all configured language servers.

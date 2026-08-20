@@ -73,13 +73,12 @@ func (t *LSPDiagnosticsTool) Execute(ctx context.Context, input json.RawMessage)
 	if err != nil {
 		return "", err
 	}
-	uri := "file://" + absPath
 	lang, _, ok := t.Manager.Config().ServerForFile(absPath)
 	if !ok {
 		return fmt.Sprintf("No LSP server configured for %s", filepath.Ext(absPath)), nil
 	}
 	var diagnostics []lsp.Diagnostic
-	err = t.Manager.Execute(ctx, lang, true, func(c *lsp.LSPClient) error {
+	err = t.Manager.ExecuteTransient(ctx, filepath.Dir(absPath), absPath, lang, true, func(c *lsp.LSPClient, uri string) error {
 		var derr error
 		diagnostics, derr = c.Diagnostics(ctx, uri)
 		return derr
@@ -133,14 +132,16 @@ func (t *LSPGotoDefinitionTool) Execute(ctx context.Context, input json.RawMessa
 	if err := json.Unmarshal(input, &args); err != nil {
 		return "", err
 	}
-	absPath, _ := filepath.Abs(args.Path)
-	uri := "file://" + absPath
+	absPath, err := filepath.Abs(args.Path)
+	if err != nil {
+		return "", err
+	}
 	lang, _, ok := t.Manager.Config().ServerForFile(absPath)
 	if !ok {
 		return fmt.Sprintf("No LSP server configured for %s", filepath.Ext(absPath)), nil
 	}
 	var locations []lsp.Location
-	err := t.Manager.Execute(ctx, lang, true, func(c *lsp.LSPClient) error {
+	err = t.Manager.ExecuteTransient(ctx, filepath.Dir(absPath), absPath, lang, true, func(c *lsp.LSPClient, uri string) error {
 		var derr error
 		locations, derr = c.GotoDefinition(ctx, uri, args.Line-1, args.Character)
 		return derr
@@ -189,14 +190,16 @@ func (t *LSPFindReferencesTool) Execute(ctx context.Context, input json.RawMessa
 	if err := json.Unmarshal(input, &args); err != nil {
 		return "", err
 	}
-	absPath, _ := filepath.Abs(args.Path)
-	uri := "file://" + absPath
+	absPath, err := filepath.Abs(args.Path)
+	if err != nil {
+		return "", err
+	}
 	lang, _, ok := t.Manager.Config().ServerForFile(absPath)
 	if !ok {
 		return fmt.Sprintf("No LSP server configured for %s", filepath.Ext(absPath)), nil
 	}
 	var locations []lsp.Location
-	err := t.Manager.Execute(ctx, lang, true, func(c *lsp.LSPClient) error {
+	err = t.Manager.ExecuteTransient(ctx, filepath.Dir(absPath), absPath, lang, true, func(c *lsp.LSPClient, uri string) error {
 		var derr error
 		locations, derr = c.FindReferences(ctx, uri, args.Line-1, args.Character)
 		return derr
@@ -241,14 +244,16 @@ func (t *LSPSymbolsTool) Execute(ctx context.Context, input json.RawMessage) (st
 	if err := json.Unmarshal(input, &args); err != nil {
 		return "", err
 	}
-	absPath, _ := filepath.Abs(args.Path)
-	uri := "file://" + absPath
+	absPath, err := filepath.Abs(args.Path)
+	if err != nil {
+		return "", err
+	}
 	lang, _, ok := t.Manager.Config().ServerForFile(absPath)
 	if !ok {
 		return fmt.Sprintf("No LSP server configured for %s", filepath.Ext(absPath)), nil
 	}
 	var symbols []lsp.SymbolInformation
-	err := t.Manager.Execute(ctx, lang, true, func(c *lsp.LSPClient) error {
+	err = t.Manager.ExecuteTransient(ctx, filepath.Dir(absPath), absPath, lang, true, func(c *lsp.LSPClient, uri string) error {
 		var derr error
 		symbols, derr = c.DocumentSymbol(ctx, uri)
 		return derr
@@ -298,14 +303,16 @@ func (t *LSPPrepareRenameTool) Execute(ctx context.Context, input json.RawMessag
 	if err := json.Unmarshal(input, &args); err != nil {
 		return "", err
 	}
-	absPath, _ := filepath.Abs(args.Path)
-	uri := "file://" + absPath
+	absPath, err := filepath.Abs(args.Path)
+	if err != nil {
+		return "", err
+	}
 	lang, _, ok := t.Manager.Config().ServerForFile(absPath)
 	if !ok {
 		return fmt.Sprintf("No LSP server configured for %s", filepath.Ext(absPath)), nil
 	}
 	var rng *lsp.Range
-	err := t.Manager.Execute(ctx, lang, true, func(c *lsp.LSPClient) error {
+	err = t.Manager.ExecuteTransient(ctx, filepath.Dir(absPath), absPath, lang, true, func(c *lsp.LSPClient, uri string) error {
 		var derr error
 		rng, derr = c.PrepareRename(ctx, uri, args.Line-1, args.Character)
 		return derr
@@ -352,14 +359,16 @@ func (t *LSPRenameTool) Execute(ctx context.Context, input json.RawMessage) (str
 	if err := json.Unmarshal(input, &args); err != nil {
 		return "", err
 	}
-	absPath, _ := filepath.Abs(args.Path)
-	uri := "file://" + absPath
+	absPath, err := filepath.Abs(args.Path)
+	if err != nil {
+		return "", err
+	}
 	lang, _, ok := t.Manager.Config().ServerForFile(absPath)
 	if !ok {
 		return fmt.Sprintf("No LSP server configured for %s", filepath.Ext(absPath)), nil
 	}
 	var edit *lsp.WorkspaceEdit
-	err := t.Manager.Execute(ctx, lang, false, func(c *lsp.LSPClient) error {
+	err = t.Manager.ExecuteTransient(ctx, filepath.Dir(absPath), absPath, lang, false, func(c *lsp.LSPClient, uri string) error {
 		var derr error
 		edit, derr = c.Rename(ctx, uri, args.Line-1, args.Character, args.NewName)
 		return derr
