@@ -42,9 +42,31 @@ func SelectSandbox(level IsolationLevel, projectDir string) SandboxSelection {
 		return selectMacOS(level)
 	case "linux":
 		return selectLinux(level)
+	case "windows":
+		return selectWindows(level)
 	default:
 		return SandboxSelection{Backend: "none", Reason: "unsupported platform: " + runtime.GOOS}
 	}
+}
+
+func selectWindows(level IsolationLevel) SandboxSelection {
+	switch level {
+	case IsolationMaximum, IsolationContainer:
+		if dockerAvailable() {
+			return SandboxSelection{Backend: "docker", Reason: "container isolation via Docker"}
+		}
+	}
+
+	if WindowsACLAvailable() {
+		return SandboxSelection{
+			Backend: "windows_acl",
+			Reason:  "Windows native Access Control Entries (zero overhead)",
+		}
+	}
+	if dockerAvailable() {
+		return SandboxSelection{Backend: "docker", Reason: "Docker container (fallback)"}
+	}
+	return SandboxSelection{Backend: "none", Reason: "no sandbox backend available"}
 }
 
 func selectMacOS(level IsolationLevel) SandboxSelection {

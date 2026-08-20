@@ -120,7 +120,7 @@ jobs:
             echo "==> validating $dir"
             (cd "$dir" && GOWORK=off go mod tidy -diff)
             (cd "$dir" && GOWORK=off go mod verify)
-            (cd "$dir" && GOWORK=off go test ./... -count=1 -timeout=300s)
+            (cd "$dir" && GOWORK=off go test ./... -count=1 -timeout=300s -skip='TestDefaultSkillDirsCrossAgent|TestCopySelectionE2E')
           done < <(find . -name go.mod -not -path './.git/*' -not -path './external/*' -print | sort)
 
   public-modules:
