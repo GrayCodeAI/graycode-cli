@@ -197,6 +197,23 @@ func (s *PersistenceService) AddUser(content string) {
 	s.AppendUserJournaled(types.EyrieMessage{Role: "user", Content: content})
 }
 
+// AddMessage appends a message with the specified role and content.
+func (s *PersistenceService) AddMessage(role, content string) {
+	if s == nil {
+		return
+	}
+	switch strings.ToLower(role) {
+	case "assistant":
+		s.AddAssistant(content)
+	case "user":
+		s.AddUser(content)
+	default:
+		s.mu.Lock()
+		s.messages = append(s.messages, types.EyrieMessage{Role: role, Content: content})
+		s.mu.Unlock()
+	}
+}
+
 // AddUserWithImage appends a user message with an inline image.
 // The image is stored as a data URL ("data:<imageType>;base64,<base64>")
 // so the LLM-side eyrie client can decode it from the message body

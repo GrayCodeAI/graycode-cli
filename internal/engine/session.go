@@ -142,6 +142,12 @@ type Session struct {
 	// scheduleManager coordinates session-log-backed schedule timers.
 	scheduleManager *schedule.Manager
 
+	// promptQueue manages FIFO priority turns and steering turns.
+	promptQueue *PromptQueue
+
+	// announcements manages in-session broadcasts and notices.
+	announcements *AnnouncementFeed
+
 	// Control plane (product modes) — orthogonal to SpecStage and shellmode.
 	workMode  WorkMode
 	isolation IsolationProfile
@@ -239,7 +245,29 @@ func NewSessionWithClient(chat ChatClient, provider, model, systemPrompt string,
 	s.life.SetAgentsAccumulator(agentsAccum)
 	s.life.SetLintLoop(NewLintLoop())
 	s.life.SetTestLoop(NewTestLoop())
+	s.promptQueue = NewPromptQueue()
+	s.announcements = NewAnnouncementFeed()
 	return s
+}
+
+// PromptQueue returns the session's prompt turn queue.
+func (s *Session) PromptQueue() *PromptQueue {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.promptQueue == nil {
+		return nil
+	}
+	return s.promptQueue
+}
+
+// Announcements returns the session's announcement feed.
+func (s *Session) Announcements() *AnnouncementFeed {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.announcements == nil {
+		return nil
+	}
+	return s.announcements
 }
 
 // ReattachTransport swaps the LLM client after deployment routing or provider.json changes.
