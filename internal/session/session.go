@@ -48,13 +48,15 @@ type ToolResult = contracts.ToolResult
 
 // Session is a persisted conversation.
 type Session struct {
-	ID       string    `json:"id"`
-	Model    string    `json:"model"`
-	Provider string    `json:"provider"`
-	Agent    string    `json:"agent,omitempty"`
-	CWD      string    `json:"cwd,omitempty"`
-	Name     string    `json:"name,omitempty"`
-	Messages []Message `json:"messages"`
+	ID              string    `json:"id"`
+	ParentSessionID string    `json:"parent_session_id,omitempty"`
+	DelegationDepth int       `json:"delegation_depth,omitempty"`
+	Model           string    `json:"model"`
+	Provider        string    `json:"provider"`
+	Agent           string    `json:"agent,omitempty"`
+	CWD             string    `json:"cwd,omitempty"`
+	Name            string    `json:"name,omitempty"`
+	Messages        []Message `json:"messages"`
 	// Events carries the append-only event spine for version-1 sessions. Version-0
 	// sessions leave it unset and keep the byte-compatible messages-only shape.
 	Events    []eventlog.WireEvent `json:"events,omitempty"`
@@ -145,6 +147,13 @@ func saveWithCompression(s *Session, compress bool) error {
 		"name":       s.Name,
 		"created_at": s.CreatedAt.Format(time.RFC3339),
 		"updated_at": s.UpdatedAt.Format(time.RFC3339),
+	}
+	if s.ParentSessionID != "" {
+		meta["parent_session_id"] = s.ParentSessionID
+		meta["parent_session"] = s.ParentSessionID
+	}
+	if s.DelegationDepth > 0 {
+		meta["delegation_depth"] = s.DelegationDepth
 	}
 	if len(s.Events) > 0 {
 		meta["format_version"] = SessionFormatVersion
@@ -401,6 +410,16 @@ func RecoverFromWAL(sessionID string) (*Session, error) {
 	s.Provider = asString(meta["provider"])
 	s.Agent = asString(meta["agent"])
 	s.CWD = asString(meta["cwd"])
+	if p := asString(meta["parent_session_id"]); p != "" {
+		s.ParentSessionID = p
+	} else if p := asString(meta["parent_session"]); p != "" {
+		s.ParentSessionID = p
+	}
+	if d, ok := meta["delegation_depth"].(float64); ok {
+		s.DelegationDepth = int(d)
+	} else if d, ok := meta["delegation_depth"].(int); ok {
+		s.DelegationDepth = d
+	}
 	if v, ok := meta["created_at"].(string); ok {
 		s.CreatedAt, _ = time.Parse(time.RFC3339, v)
 	}
@@ -599,6 +618,16 @@ func loadJSONLFile(path, id string) (*Session, error) {
 		s.Agent = asString(meta["agent"])
 		s.CWD = asString(meta["cwd"])
 		s.Name = asString(meta["name"])
+		if p := asString(meta["parent_session_id"]); p != "" {
+			s.ParentSessionID = p
+		} else if p := asString(meta["parent_session"]); p != "" {
+			s.ParentSessionID = p
+		}
+		if d, ok := meta["delegation_depth"].(float64); ok {
+			s.DelegationDepth = int(d)
+		} else if d, ok := meta["delegation_depth"].(int); ok {
+			s.DelegationDepth = d
+		}
 		if v, ok := meta["created_at"].(string); ok {
 			s.CreatedAt, _ = time.Parse(time.RFC3339, v)
 		}
