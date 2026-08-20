@@ -51,6 +51,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/chromedp/cdproto v0.0.0-20260714215040-dc233986426f // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
+	github.com/creack/pty v1.1.24 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
