@@ -21,6 +21,7 @@ require (
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/chromedp/chromedp v0.16.0
+	github.com/creack/pty v1.1.24
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/gofrs/flock v0.13.0
 	github.com/google/uuid v1.6.0
