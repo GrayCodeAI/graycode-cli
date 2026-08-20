@@ -54,6 +54,7 @@ type Terminal struct {
 	buf      bytes.Buffer
 	closed   bool
 	alive    bool
+	readDone bool
 	exitCode int
 }
 
@@ -75,8 +76,7 @@ func (t *Terminal) Send(input string, enter bool) error {
 	return err
 }
 
-// Read reads up to maxBytes from the buffered terminal output.
-// If timeout > 0, it blocks until new output is available or the timeout expires.
+// Read reads pending output bytes from the terminal with a bounded wait timeout.
 func (t *Terminal) Read(maxBytes int, timeout time.Duration) (string, bool, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -86,7 +86,7 @@ func (t *Terminal) Read(maxBytes int, timeout time.Duration) (string, bool, erro
 	}
 
 	// If no data and timeout specified, wait on cond
-	if t.buf.Len() == 0 && timeout > 0 && t.alive {
+	if t.buf.Len() == 0 && timeout > 0 && !t.closed && !t.readDone {
 		timer := time.AfterFunc(timeout, func() {
 			t.mu.Lock()
 			t.cond.Broadcast()
@@ -94,7 +94,7 @@ func (t *Terminal) Read(maxBytes int, timeout time.Duration) (string, bool, erro
 		})
 		defer timer.Stop()
 
-		for t.buf.Len() == 0 && t.alive && !t.closed {
+		for t.buf.Len() == 0 && !t.closed && !t.readDone {
 			t.cond.Wait()
 			break
 		}
@@ -275,6 +275,10 @@ func (s *Store) Create(ctx context.Context, sessionID, cwd, command string, rows
 				t.mu.Unlock()
 			}
 			if rErr != nil {
+				t.mu.Lock()
+				t.readDone = true
+				t.cond.Broadcast()
+				t.mu.Unlock()
 				break
 			}
 		}

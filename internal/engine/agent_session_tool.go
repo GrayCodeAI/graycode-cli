@@ -15,6 +15,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -247,8 +248,13 @@ func (s *Session) spawnSubAgent(ctx context.Context, norm agentcontracts.Normali
 		prompt = fmt.Sprintf("Working directory: %s\n\n%s", workDir, prompt)
 	}
 	if norm.ResumeFrom != "" {
-		// True transcript resume lands with taskruntime persistence; surface the id.
-		prompt = fmt.Sprintf("Resume prior subagent %s.\n\n%s", norm.ResumeFrom, prompt)
+		if priorSession, loadErr := session.Load(norm.ResumeFrom); loadErr == nil && priorSession != nil {
+			for _, m := range priorSession.Messages {
+				sub.Persistence().AddMessage(m.Role, m.Content)
+			}
+		} else {
+			prompt = fmt.Sprintf("Resume prior subagent %s.\n\n%s", norm.ResumeFrom, prompt)
+		}
 	}
 	sub.AddUser(prompt)
 

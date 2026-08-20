@@ -26,10 +26,18 @@ func TestTerminal_LifecycleAndRead(t *testing.T) {
 		t.Errorf("expected branded terminal ID (terminal-<N>), got %s", term.ID)
 	}
 
-	// Read output
-	out, _, err := term.Read(1024, 2*time.Second)
-	if err != nil {
-		t.Fatalf("Read failed: %v", err)
+	// Read output with polling
+	var out string
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		chunk, _, rErr := term.Read(1024, 200*time.Millisecond)
+		if rErr != nil {
+			t.Fatalf("Read failed: %v", rErr)
+		}
+		out += chunk
+		if strings.Contains(out, "hello_hawk") {
+			break
+		}
 	}
 	if !strings.Contains(out, "hello_hawk") {
 		t.Errorf("expected output to contain hello_hawk, got %q", out)
