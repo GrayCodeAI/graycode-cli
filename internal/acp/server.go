@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/session"
 )
 
 // ProtocolVersion is the ACP protocol version this server implements.
@@ -160,7 +161,8 @@ func (s *Server) handle(ctx context.Context, msg rpcMessage) {
 		s.reply(msg.ID, map[string]any{
 			"protocolVersion": ProtocolVersion,
 			"agentCapabilities": map[string]any{
-				"loadSession": false,
+				"loadSession":  true,
+				"listSessions": true,
 				"promptCapabilities": map[string]any{
 					"image": false,
 					"audio": false,
@@ -178,6 +180,10 @@ func (s *Server) handle(ctx context.Context, msg rpcMessage) {
 		})
 	case "session/new":
 		s.handleSessionNew(msg)
+	case "session/load":
+		s.handleSessionLoad(msg)
+	case "session/list":
+		s.handleSessionList(msg)
 	case "session/setMode":
 		s.handleSetMode(msg)
 	case "session/setIsolation":
@@ -313,6 +319,90 @@ func (s *Server) handleSessionNew(msg rpcMessage) {
 			"isolation":  sess.Isolation().String(),
 			"autoCommit": sess.AutoCommit(),
 		},
+	})
+}
+
+type loadSessionParams struct {
+	SessionID string `json:"sessionId"`
+}
+
+func (s *Server) handleSessionLoad(msg rpcMessage) {
+	var p loadSessionParams
+	if err := json.Unmarshal(msg.Params, &p); err != nil || p.SessionID == "" {
+		s.writeError(msg.ID, errCodeInvalidParams, "invalid or missing sessionId")
+		return
+	}
+
+	// 1. Load persisted session
+	persisted, err := session.Load(p.SessionID)
+	if err != nil {
+		s.writeError(msg.ID, errCodeInvalidParams, fmt.Sprintf("session %q not found: %v", p.SessionID, err))
+		return
+	}
+
+	// 2. Build new engine session
+	sess, err := s.factory()
+	if err != nil {
+		s.writeError(msg.ID, errCodeInternal, "failed to construct session: "+err.Error())
+		return
+	}
+
+	// 3. Populate messages
+	for _, m := range persisted.Messages {
+		sess.Persistence().AddMessage(m.Role, m.Content)
+	}
+
+	// 4. Register in active sessions
+	s.mu.Lock()
+	if len(s.sessions) >= maxACPSessions {
+		s.evictOldestLocked()
+	}
+	s.sessions[p.SessionID] = &acpSession{sess: sess}
+	s.order = append(s.order, p.SessionID)
+	s.mu.Unlock()
+
+	// Route tool-permission prompts to the client for this session.
+	sess.SetPermissionFn(s.permissionFnFor(p.SessionID))
+	_ = sess.SetWorkMode(engine.WorkModeAct)
+
+	s.reply(msg.ID, map[string]any{
+		"sessionId": p.SessionID,
+		"model":     persisted.Model,
+		"modes": map[string]any{
+			"availableModes": []string{"plan", "act", "review"},
+			"currentModeId":  string(sess.WorkMode()),
+		},
+		"messageCount": len(persisted.Messages),
+		"status":       "ready",
+	})
+}
+
+func (s *Server) handleSessionList(msg rpcMessage) {
+	list, err := session.List()
+	if err != nil {
+		s.writeError(msg.ID, errCodeInternal, "failed to list sessions: "+err.Error())
+		return
+	}
+
+	type sessionSummary struct {
+		ID        string `json:"id"`
+		Preview   string `json:"preview,omitempty"`
+		CWD       string `json:"cwd,omitempty"`
+		UpdatedAt string `json:"updatedAt,omitempty"`
+	}
+
+	summaries := make([]sessionSummary, 0, len(list))
+	for _, e := range list {
+		summaries = append(summaries, sessionSummary{
+			ID:        e.ID,
+			Preview:   e.Preview,
+			CWD:       e.CWD,
+			UpdatedAt: e.UpdatedAt.Format(time.RFC3339),
+		})
+	}
+
+	s.reply(msg.ID, map[string]any{
+		"sessions": summaries,
 	})
 }
 
