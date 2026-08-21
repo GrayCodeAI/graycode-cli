@@ -82,6 +82,24 @@ func CanonicalEvent(s string) string {
 		return string(EventStop)
 	case "user_prompt_submit", "userpromptsubmit":
 		return string(EventUserPromptSubmit)
+	case "user_prompt_queued", "userpromptqueued":
+		return string(EventUserPromptQueued)
+	case "turn_started", "turnstarted":
+		return string(EventTurnStarted)
+	case "post_tool_failure", "posttoolfailure":
+		return string(EventPostToolFailure)
+	case "permission_result", "permissionresult":
+		return string(EventPermissionResult)
+	case "session_heartbeat", "sessionheartbeat":
+		return string(EventSessionHeartbeat)
+	case "task_started", "taskstarted":
+		return string(EventSubagentTask)
+	case "stop_failure", "stopfailure":
+		return string(EventStopFailure)
+	case "interrupt":
+		return string(EventInterrupt)
+	case "notification":
+		return string(EventNotification)
 	default:
 		return s
 	}

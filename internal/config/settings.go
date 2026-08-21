@@ -379,6 +379,9 @@ func MergeSettings(base, override Settings) Settings {
 			if override.ModelRoles.Planner != "" {
 				base.ModelRoles.Planner = override.ModelRoles.Planner
 			}
+			if override.ModelRoles.Explorer != "" {
+				base.ModelRoles.Explorer = override.ModelRoles.Explorer
+			}
 			if override.ModelRoles.Coder != "" {
 				base.ModelRoles.Coder = override.ModelRoles.Coder
 			}

@@ -21,6 +21,30 @@ repositories and should remain authoritative.
 
 ## Adopted Work
 
+### 5. Kimi Code workflow parity
+
+The Kimi Code comparison confirmed that Hawk already provides native equivalents
+for most of its useful workflow ideas. The remaining gaps were addressed without
+adding a second agent runtime:
+
+- Subagent model selection now has distinct `planner` and `explorer` roles.
+  Explorers default to the economical model, while explicit per-spawn model
+  overrides remain authoritative.
+- Hook configuration accepts Kimi-compatible lifecycle names including
+  `UserPromptQueued`, `TurnStarted`, `PostToolFailure`, `PermissionResult`,
+  `SessionHeartbeat`, `TaskStarted`, `StopFailure`, `Interrupt`, and
+  `Notification`.
+- Hawk's existing permission engine already supports ordered allow/deny rules
+  such as `Bash(git status*)` and `Write(*.env)`, pre-tool denial hooks, scoped
+  policy snapshots, and destructive-command hard blocks.
+- Hawk's existing goal tracker already provides durable objective state,
+  dependencies, progress, token budgets, continuation prompts, and lifecycle
+  events. A second `GOAL.md` state machine would duplicate this implementation.
+
+The comparison also found no reason to adopt Kimi Code's two-engine split or
+replace Hawk's stronger Yaad memory, Tok token controls, Trace replay, Sight
+review, Inspect auditing, or Eyrie provider runtime.
+
 ### 1. Skill metadata interoperability
 
 Hawk's smart-skill parser accepts both hyphenated and community-schema
