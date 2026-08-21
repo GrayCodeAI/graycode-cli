@@ -23,6 +23,14 @@ const (
 	FormatHTML ExportFormat = "html"
 	// FormatReplay exports as JSONL for reproducible replay.
 	FormatReplay ExportFormat = "replay"
+	// FormatClaude imports from Claude Code JSONL.
+	FormatClaude ExportFormat = "claude"
+	// FormatAider imports from Aider chat history.
+	FormatAider ExportFormat = "aider"
+	// FormatCursor imports from Cursor JSON logs.
+	FormatCursor ExportFormat = "cursor"
+	// FormatOpenAI imports/exports standard OpenAI Chat JSON.
+	FormatOpenAI ExportFormat = "openai"
 )
 
 // SessionExporter configures how sessions are exported.
@@ -91,6 +99,8 @@ func (e *SessionExporter) Export(session *ExportedSession, format ExportFormat) 
 		return ExportHTML(sess), nil
 	case FormatReplay:
 		return ExportReplay(sess), nil
+	case FormatOpenAI:
+		return formatOpenAI(sess)
 	default:
 		return "", fmt.Errorf("unsupported export format: %s", string(format))
 	}
@@ -341,6 +351,14 @@ func Import(data string, format ExportFormat) (*ExportedSession, error) {
 		return importJSON(data)
 	case FormatReplay:
 		return importReplay(data)
+	case FormatClaude:
+		return ImportFromClaude(data)
+	case FormatAider:
+		return ImportFromAider(data)
+	case FormatCursor:
+		return ImportFromCursor(data)
+	case FormatOpenAI:
+		return ImportFromOpenAI(data)
 	default:
 		return nil, fmt.Errorf("import not supported for format: %s", string(format))
 	}
@@ -524,6 +542,203 @@ func ImportFromAider(historyData string) (*ExportedSession, error) {
 	session.Stats = CalculateStats(session.Messages)
 
 	return session, nil
+}
+
+type cursorMsg struct {
+	Speaker   string `json:"speaker"` // "human" | "ai" | "system" | "user" | "assistant"
+	Text      string `json:"text"`
+	BubbleID  string `json:"bubbleId,omitempty"`
+	Timestamp int64  `json:"timestamp,omitempty"` // Unix ms
+	ModelType string `json:"modelType,omitempty"`
+}
+
+type cursorJSON struct {
+	ConversationID string      `json:"conversationId,omitempty"`
+	Model          string      `json:"model,omitempty"`
+	Messages       []cursorMsg `json:"messages,omitempty"`
+}
+
+// ImportFromCursor imports a session from Cursor's chat export JSON format.
+func ImportFromCursor(data string) (*ExportedSession, error) {
+	trimmed := strings.TrimSpace(data)
+	if trimmed == "" {
+		return nil, fmt.Errorf("empty cursor session data")
+	}
+
+	session := &ExportedSession{
+		Provider: "cursor",
+		Messages: make([]ExportedMessage, 0),
+		Metadata: map[string]string{"source": "cursor"},
+	}
+
+	// Try object with "messages" field
+	var cj cursorJSON
+	if err := json.Unmarshal([]byte(trimmed), &cj); err == nil && len(cj.Messages) > 0 {
+		session.ID = cj.ConversationID
+		session.Model = cj.Model
+		for _, m := range cj.Messages {
+			role := normalizeCursorRole(m.Speaker)
+			if role == "" || strings.TrimSpace(m.Text) == "" {
+				continue
+			}
+			var ts time.Time
+			if m.Timestamp > 0 {
+				ts = time.UnixMilli(m.Timestamp)
+			}
+			session.Messages = append(session.Messages, ExportedMessage{
+				Role:      role,
+				Content:   m.Text,
+				Timestamp: ts,
+			})
+		}
+	} else {
+		// Try array of cursorMsg
+		var msgs []cursorMsg
+		if err := json.Unmarshal([]byte(trimmed), &msgs); err == nil && len(msgs) > 0 {
+			for _, m := range msgs {
+				role := normalizeCursorRole(m.Speaker)
+				if role == "" || strings.TrimSpace(m.Text) == "" {
+					continue
+				}
+				var ts time.Time
+				if m.Timestamp > 0 {
+					ts = time.UnixMilli(m.Timestamp)
+				}
+				session.Messages = append(session.Messages, ExportedMessage{
+					Role:      role,
+					Content:   m.Text,
+					Timestamp: ts,
+				})
+			}
+		} else {
+			return nil, fmt.Errorf("failed to parse cursor session JSON")
+		}
+	}
+
+	if len(session.Messages) == 0 {
+		return nil, fmt.Errorf("no valid messages found in cursor session")
+	}
+
+	session.CreatedAt = session.Messages[0].Timestamp
+	session.Stats = CalculateStats(session.Messages)
+	return session, nil
+}
+
+func normalizeCursorRole(speaker string) string {
+	switch strings.ToLower(strings.TrimSpace(speaker)) {
+	case "human", "user":
+		return "user"
+	case "ai", "assistant", "bot":
+		return "assistant"
+	case "system":
+		return "system"
+	default:
+		return "user"
+	}
+}
+
+type openAIChatJSON struct {
+	Model    string      `json:"model,omitempty"`
+	Messages []openAIMsg `json:"messages"`
+}
+
+type openAIMsg struct {
+	Role       string           `json:"role"`
+	Content    string           `json:"content"`
+	Name       string           `json:"name,omitempty"`
+	ToolCalls  []openAIToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string           `json:"tool_call_id,omitempty"`
+}
+
+type openAIToolCall struct {
+	ID       string `json:"id"`
+	Type     string `json:"type"`
+	Function struct {
+		Name      string `json:"name"`
+		Arguments string `json:"arguments"`
+	} `json:"function"`
+}
+
+// ImportFromOpenAI imports a session from standard OpenAI Chat Completions JSON.
+func ImportFromOpenAI(data string) (*ExportedSession, error) {
+	trimmed := strings.TrimSpace(data)
+	if trimmed == "" {
+		return nil, fmt.Errorf("empty openai session data")
+	}
+
+	session := &ExportedSession{
+		Provider: "openai",
+		Messages: make([]ExportedMessage, 0),
+		Metadata: map[string]string{"source": "openai"},
+	}
+
+	var chatJSON openAIChatJSON
+	if err := json.Unmarshal([]byte(trimmed), &chatJSON); err == nil && len(chatJSON.Messages) > 0 {
+		session.Model = chatJSON.Model
+		for _, m := range chatJSON.Messages {
+			msg := ExportedMessage{
+				Role:    m.Role,
+				Content: m.Content,
+			}
+			if len(m.ToolCalls) > 0 {
+				msg.ToolName = m.ToolCalls[0].Function.Name
+			}
+			if m.Role == "tool" {
+				msg.ToolResult = m.Content
+			}
+			session.Messages = append(session.Messages, msg)
+		}
+	} else {
+		var rawMsgs []openAIMsg
+		if err := json.Unmarshal([]byte(trimmed), &rawMsgs); err == nil && len(rawMsgs) > 0 {
+			for _, m := range rawMsgs {
+				msg := ExportedMessage{
+					Role:    m.Role,
+					Content: m.Content,
+				}
+				if len(m.ToolCalls) > 0 {
+					msg.ToolName = m.ToolCalls[0].Function.Name
+				}
+				if m.Role == "tool" {
+					msg.ToolResult = m.Content
+				}
+				session.Messages = append(session.Messages, msg)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to parse openai session JSON")
+		}
+	}
+
+	if len(session.Messages) == 0 {
+		return nil, fmt.Errorf("no valid messages found in openai session")
+	}
+
+	session.Stats = CalculateStats(session.Messages)
+	return session, nil
+}
+
+func formatOpenAI(session *ExportedSession) (string, error) {
+	if session == nil {
+		return "", fmt.Errorf("session is nil")
+	}
+
+	out := openAIChatJSON{
+		Model:    session.Model,
+		Messages: make([]openAIMsg, 0, len(session.Messages)),
+	}
+
+	for _, m := range session.Messages {
+		out.Messages = append(out.Messages, openAIMsg{
+			Role:    m.Role,
+			Content: m.Content,
+		})
+	}
+
+	data, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to format OpenAI JSON: %w", err)
+	}
+	return string(data), nil
 }
 
 // secretPatterns defines regex patterns for sensitive data detection.

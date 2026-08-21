@@ -557,3 +557,74 @@ func TestExportNilSession(t *testing.T) {
 		t.Error("Expected error for nil session")
 	}
 }
+
+func TestImportFromCursorFormat(t *testing.T) {
+	cursorJSON := `{
+		"conversationId": "cursor-sess-1",
+		"model": "gpt-4o",
+		"messages": [
+			{"speaker": "human", "text": "How do I implement JWT auth in Go?", "timestamp": 1700000000000},
+			{"speaker": "ai", "text": "Here is how you use golang-jwt to verify tokens...", "timestamp": 1700000001000}
+		]
+	}`
+
+	sess, err := Import(cursorJSON, FormatCursor)
+	if err != nil {
+		t.Fatalf("Import(FormatCursor) failed: %v", err)
+	}
+
+	if sess.ID != "cursor-sess-1" {
+		t.Errorf("got ID %q, want cursor-sess-1", sess.ID)
+	}
+	if sess.Provider != "cursor" {
+		t.Errorf("got provider %q, want cursor", sess.Provider)
+	}
+	if len(sess.Messages) != 2 {
+		t.Fatalf("got %d messages, want 2", len(sess.Messages))
+	}
+	if sess.Messages[0].Role != "user" || !strings.Contains(sess.Messages[0].Content, "JWT auth") {
+		t.Errorf("message[0] = %+v", sess.Messages[0])
+	}
+	if sess.Messages[1].Role != "assistant" || !strings.Contains(sess.Messages[1].Content, "golang-jwt") {
+		t.Errorf("message[1] = %+v", sess.Messages[1])
+	}
+}
+
+func TestImportFromOpenAIFormat(t *testing.T) {
+	openAIJSON := `{
+		"model": "gpt-4o-mini",
+		"messages": [
+			{"role": "system", "content": "You are a helpful assistant."},
+			{"role": "user", "content": "Explain goroutines in 1 sentence."},
+			{"role": "assistant", "content": "Goroutines are lightweight threads managed by the Go runtime."}
+		]
+	}`
+
+	sess, err := Import(openAIJSON, FormatOpenAI)
+	if err != nil {
+		t.Fatalf("Import(FormatOpenAI) failed: %v", err)
+	}
+
+	if sess.Model != "gpt-4o-mini" {
+		t.Errorf("got Model %q, want gpt-4o-mini", sess.Model)
+	}
+	if sess.Provider != "openai" {
+		t.Errorf("got Provider %q, want openai", sess.Provider)
+	}
+	if len(sess.Messages) != 3 {
+		t.Fatalf("got %d messages, want 3", len(sess.Messages))
+	}
+	if sess.Messages[1].Role != "user" || sess.Messages[1].Content != "Explain goroutines in 1 sentence." {
+		t.Errorf("message[1] = %+v", sess.Messages[1])
+	}
+
+	// Test Export to OpenAI format
+	exporter := NewSessionExporter()
+	out, err := exporter.Export(sess, FormatOpenAI)
+	if err != nil {
+		t.Fatalf("Export(FormatOpenAI) failed: %v", err)
+	}
+	if !strings.Contains(out, "gpt-4o-mini") || !strings.Contains(out, "lightweight threads") {
+		t.Errorf("Export(FormatOpenAI) output = %s", out)
+	}
+}
