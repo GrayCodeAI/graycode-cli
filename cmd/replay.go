@@ -12,9 +12,10 @@ import (
 )
 
 var (
-	replayJSON   bool
-	replayFrames bool
-	replayGolden string
+	replayJSON      bool
+	replayFrames    bool
+	replayGolden    string
+	replayFramesDir string
 )
 
 var replayCmd = &cobra.Command{
@@ -28,7 +29,10 @@ terminal grid and prints the final visible snapshot.
 Flags:
   --json        emit a JSON summary of the tape (header + frame list).
   --frames      print a snapshot after every stdout/resize frame.
-  --golden FILE write the final snapshot to FILE instead of printing it.`,
+  --golden FILE write the final snapshot to FILE instead of printing it.
+  --frames-dir DIR
+                export per-frame artifacts (frames/NNNN.json + NNNN.grid.txt)
+                plus manifest.json into DIR (fx replay --frames-dir parity).`,
 	Args: cobra.ExactArgs(1),
 	RunE: runReplay,
 }
@@ -37,6 +41,7 @@ func init() {
 	replayCmd.Flags().BoolVar(&replayJSON, "json", false, "emit JSON summary")
 	replayCmd.Flags().BoolVar(&replayFrames, "frames", false, "print a snapshot per frame")
 	replayCmd.Flags().StringVar(&replayGolden, "golden", "", "write final snapshot to file")
+	replayCmd.Flags().StringVar(&replayFramesDir, "frames-dir", "", "write per-frame artifacts (frames/NNNN.json + NNNN.grid.txt) and manifest.json to DIR")
 	rootCmd.AddCommand(replayCmd)
 }
 
@@ -67,6 +72,12 @@ func runReplay(cmd *cobra.Command, args []string) error {
 	t, err := tape.Parse(data)
 	if err != nil {
 		return fmt.Errorf("replay: bad tape %s: %w", path, err)
+	}
+
+	if replayFramesDir != "" {
+		if _, err := tape.ExportFramesDir(replayFramesDir, t); err != nil {
+			return fmt.Errorf("replay: --frames-dir %s: %w", replayFramesDir, err)
+		}
 	}
 
 	if replayJSON {

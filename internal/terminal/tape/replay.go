@@ -2,6 +2,7 @@ package tape
 
 import (
 	"strings"
+	"unicode/utf8"
 )
 
 // Grid is a focused virtual terminal for fxtape replay: a scrollback of text
@@ -17,6 +18,10 @@ type Grid struct {
 	col   int // current cursor column (0-based)
 	Cols  int
 	Rows  int
+
+	// cursorVisible tracks DECTCEM cursor visibility (CSI ?25h shows, ?25l
+	// hides), reported by the per-frame artifact writer for parity with fx.
+	cursorVisible bool
 }
 
 // NewGrid builds an empty grid with the given terminal size.
@@ -27,9 +32,19 @@ func NewGrid(cols, rows int) *Grid {
 	if rows < 1 {
 		rows = 1
 	}
-	g := &Grid{Cols: cols, Rows: rows, lines: [][]rune{{}}}
+	g := &Grid{Cols: cols, Rows: rows, lines: [][]rune{{}}, cursorVisible: true}
 	return g
 }
+
+// CursorRow returns the current 0-based cursor row.
+func (g *Grid) CursorRow() int { return g.row }
+
+// CursorCol returns the current 0-based cursor column.
+func (g *Grid) CursorCol() int { return g.col }
+
+// CursorVisible reports whether the cursor is shown (DECTCEM: CSI ?25h shows,
+// CSI ?25l hides). It defaults to shown.
+func (g *Grid) CursorVisible() bool { return g.cursorVisible }
 
 func (g *Grid) ensureRow() {
 	for g.row >= len(g.lines) {
@@ -82,7 +97,16 @@ func (g *Grid) Feed(b []byte) {
 			i = g.parseEscape(b, i)
 		default:
 			if c >= 0x20 {
-				g.put(rune(c))
+				if c < 0x80 {
+					g.put(rune(c))
+				} else {
+					// Decode a multi-byte UTF-8 sequence (prompts use ❯ │ ─,
+					// which occupy >1 byte) instead of storing each byte as a
+					// rune. Malformed sequences degrade to RuneError.
+					r, size := utf8.DecodeRune(b[i:])
+					g.put(r)
+					i += size - 1
+				}
 			}
 		}
 	}
@@ -147,7 +171,12 @@ func (g *Grid) parseCSI(b []byte, j int) int {
 			if len(params) == 0 {
 				params = []int{0}
 			}
-			if !private {
+			if private {
+				// DECTCEM cursor visibility: CSI ?25h shows, CSI ?25l hides.
+				if (c == 'h' || c == 'l') && len(params) == 1 && params[0] == 25 {
+					g.cursorVisible = c == 'h'
+				}
+			} else {
 				g.applyCSI(params, c)
 			}
 			return k
