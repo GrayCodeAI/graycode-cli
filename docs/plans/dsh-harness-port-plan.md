@@ -222,20 +222,19 @@ Highest-value remaining work, in order:
     types. `Validate` enforces surface-op placement invariant.
 30. `request/context` payload fix — Delivered: changed from
     `{messages, tokens}` to DSH's `{provider, model, contextWindow}`.
-31. Consider ACP protocol — `packages/acp` (Agent Communication Protocol) for
-    inter-agent communication.
+31. ACP protocol — Delivered: `internal/acp/server.go` + `client.go` (initialize,
+    session/new/load/list, setMode/setIsolation, prompt, cancel, permission),
+    `internal/eventlog/acp_codec.go` (`TurnEndToStopReason`), and ACP content
+    admission (`internal/acp/content.go`, `content_test.go`).
 
 ## Remaining (future PRs)
-
-- Consider ACP protocol — `packages/acp` (Agent Communication Protocol) for
-  inter-agent communication.
 
 All 44 DSH event types are now wired at call sites with full StreamChunk union support,
 surface operations, ignorable markers, format version enforcement, and session
 header parity. The port is functionally complete. Remaining optional depth:
 - ~~DSH `surface.ts` `SurfaceManager`/`SurfaceReplacePlan` (live correction protocol — replacement operations).~~ Delivered: `internal/eventlog/surface.go` — `FoldSurface` (complete replay → surface nodes + replacement history) and an incremental `SurfaceManager` (bound to a `*Log`, with `Nodes`/`ReplaceGeneration`/`ValidateNext` atomic pre-flight), mirroring DSH's surface provenance, replacement-range, contiguity, and tool-result-rewrite invariants.
+- ~~Zstd compression in persistence (DSH `session-persistence-jsonl/src/zstd.ts`).~~ Delivered: `internal/eventlog/zstdz/zstd.go` + `internal/session/session.go` (`.jsonl.zstd` saves) — see Phase 9.
 - DSH `packages/llm/llm/src/assembler.ts` (response normalization — covered by Eyrie facade).
-- Zstd compression in persistence (DSH `session-persistence-jsonl/src/zstd.ts`) — optional physical encoding layer.
 
 This matrix is the honest anchor: the skeleton is ported; the deep fidelity is
 the actual remaining work.
@@ -387,6 +386,33 @@ Delivered on this branch on top of Phase 11:
 - `internal/engine/persistence_service.go` — `writeBehind` field added
 - `internal/engine/journal.go` — `SetWriteBehind()`/`WriteBehind()`/`FlushWriteBehind()`
   methods + imports for session package
+
+## Phase 13 — ACP content admission
+
+Ported from DSH `packages/acp/acp/src/content.ts` so the ACP server admits
+real inline multimodal content:
+
+- `internal/acp/content.go` — Go-native admission module:
+  - `AcpContentBlock` (wire shape: `type`/`text`/`mimeType`/`data`/`name`/`uri`),
+    `ContentBlock` (durable core content with `*attachment.Ref`), and
+    `ContentError{Kind,Msg,Err}` with `FailureInvalid`/`FailureInternal`.
+  - `AdmitAcpPrompt(ctx, store, prompt, imageEnabled, signal)` — validates all
+    blocks first (rejects audio/resource/unknown as invalid; rejects images
+    when `imageEnabled` is false, base64 is non-canonical, or mimeType is
+    non-raster), persists the image batch atomically via `store.SaveImages`,
+    reconstructs ordered content, and rejects empty prompts.
+  - `decodeImage`/`imageMediaType`/`resourceLinkText`/`checkAborted`,
+    `SupportsAcpImagePrompts`, `AssistantBlockToAcp`.
+- `internal/acp/server.go` — wired into the server:
+  - `Server.store` + `imageCapable` fields; `SetAttachmentStore(store, modelSupportsImage)`.
+  - `initialize` advertises `promptCapabilities.image` truthfully from `imageCapable`.
+  - `handlePrompt` runs `AdmitAcpPrompt` before queuing any user message (so
+    no late message races a persisted image), maps `failure-invalid`→invalid-params
+    / `failure-internal`→internal-error, coalesces consecutive text into one
+    `AddUser`, and attaches images via `session.AddUserWithAttachment`.
+- `internal/acp/content_test.go` — 13 admission tests + 3 server integration
+  tests (capability advertisement, inline image admission end-to-end, and
+  rejection of unadvertised images).
 
 ## Latest DSH clone check
 
