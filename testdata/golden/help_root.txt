@@ -54,6 +54,7 @@ Available Commands:
   help         Help about any command
   history      Search and browse command history
   init         Interactive onboarding wizard for first-time setup
+  issue        Draft or publish a GitHub issue (fx issue parity)
   learn        Manage lessons learned across sessions
   manpage      Generate man page in roff format
   mcp          Show MCP configuration; run or register hawk as an MCP server
