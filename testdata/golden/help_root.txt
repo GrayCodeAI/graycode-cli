@@ -87,6 +87,7 @@ Available Commands:
   trace-report Write a private diagnostic trace report (fx /trace parity)
   trust        Manage folder trust for project automation
   update       Check for hawk updates
+  usage        Show local LLM token usage and spend (fx usage parity)
   verify       Run local self-verification (security log, governance policy)
   version      Print hawk version
 

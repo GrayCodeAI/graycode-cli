@@ -8,6 +8,7 @@ import (
 
 	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/hawk/internal/usage"
 
 	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 )
@@ -91,6 +92,17 @@ func (s *Session) recordStreamUsage(ch chan<- StreamEvent, prompt, completion in
 			Kept:         true,
 		})
 	}
+
+	// Record this generation in the persistent usage ledger (fx `usage` parity).
+	_ = usage.Append(usage.Record{
+		CreatedAtMS:  apiStart.UnixMilli(),
+		Model:        model,
+		Provider:     provider,
+		InputTokens:  prompt,
+		OutputTokens: completion,
+		TotalCost:    requestCost,
+	})
+
 	s.recordTokUsageBudgetObservation(
 		prompt+completion,
 		requestCost,
