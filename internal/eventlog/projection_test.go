@@ -156,3 +156,52 @@ func TestProjectMessagesFullSurface(t *testing.T) {
 		t.Errorf("msg 4: got %+v, want Content=more context", got[4])
 	}
 }
+
+// TestProjectMessagesSurfaceReplaceShadowing verifies that a surface `replace`
+// op splices its replacement in at the replaced position and shadows the
+// replaced nodes out of the projected history — DSH deriveMessages parity.
+func TestProjectMessagesSurfaceReplaceShadowing(t *testing.T) {
+	l := New(nil)
+	// A compact prior history: user turn + assistant reply.
+	oldUser := userMsg(t, l, "old turn")
+	asstSeq := assistantMsg(t, l, "old reply", "call-1")
+
+	// Replace the whole prior surface (oldUser+asst) with a fresh user recap.
+	l.AppendSurface(UserMessage, Message{Role: "user", Content: "[recap]"}, "replace", oldUser, asstSeq, []uint64{oldUser, asstSeq})
+
+	// A new turn after the replacement.
+	userMsg(t, l, "follow-up")
+
+	got := ProjectMessages(l.Snapshot())
+	if len(got) != 2 {
+		t.Fatalf("projected %d messages, want 2 (replacement + follow-up): %+v", len(got), got)
+	}
+	// The replacement splices in at the replaced position (head), not the tail;
+	// the shadowed old turn/reply are absent.
+	if got[0].Content != "[recap]" {
+		t.Errorf("msg 0: got %+v, want replacement spliced at head", got[0])
+	}
+	if got[1].Content != "follow-up" {
+		t.Errorf("msg 1: got %+v, want follow-up at tail", got[1])
+	}
+}
+
+// TestProjectMessagesSurfaceReplaceMidSurface verifies a replacement of a
+// single interior node keeps its surface neighbors in the correct order.
+func TestProjectMessagesSurfaceReplaceMidSurface(t *testing.T) {
+	l := New(nil)
+	userMsg(t, l, "a")
+	b := userMsg(t, l, "b")
+	userMsg(t, l, "c")
+
+	// Replace interior node b with a rewritten reword.
+	l.AppendSurface(UserMessage, Message{Role: "user", Content: "B2"}, "replace", b, b, []uint64{b})
+
+	got := ProjectMessages(l.Snapshot())
+	if len(got) != 3 {
+		t.Fatalf("projected %d messages, want 3: %+v", len(got), got)
+	}
+	if got[0].Content != "a" || got[1].Content != "B2" || got[2].Content != "c" {
+		t.Fatalf("interior replacement out of order: %+v", got)
+	}
+}

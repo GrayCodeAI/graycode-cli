@@ -2,8 +2,10 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -12,6 +14,8 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/governance"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
+	"github.com/GrayCodeAI/hawk/internal/permissions/stableid"
+	"github.com/GrayCodeAI/hawk/internal/permissions/turnrecovery"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/spec"
 )
@@ -56,6 +60,20 @@ type PermissionService struct {
 	journal *eventlog.Log
 	// log is the session logger.
 	log *logger.Logger
+	// recovery, when enabled, is the per-session opaque request-token
+	// registry (ports fx TurnPermissionRecovery). When nil (the default)
+	// the approval gate behaves exactly as before; when set, a denied
+	// high-risk action returns an opaque permission_request_id and a later
+	// identical call is denied again rather than re-prompted, unless the
+	// exact token is escalted via EscalatePermission (single-use).
+	recovery *turnrecovery.Recovery
+	// exact, when configured, is the session's persisted store of exact,
+	// stable-id permission rules (ports fx session_permission_state). Rules
+	// here are addressable by a stable, monotonically increasing id (they
+	// survive workspace changes) and can be remembered, listed, and revoked
+	// by that id. When nil (the default) nothing changes; when set, callers
+	// can RememberExact/RevokeExact/ListExact.
+	exact *permissions.StableRuleStore
 }
 
 // NewPermissionService constructs a PermissionService with a fresh
@@ -236,6 +254,119 @@ func (s *PermissionService) CheckApproval(ctx context.Context, toolName string, 
 	return allowed, msg
 }
 
+// EnableTurnRecovery activates the opaque request-token escalation layer
+// (ports fx's TurnPermissionRecovery). When enabled, a denied high-risk
+// action returns an opaque permission_request_id; a later identical call is
+// denied again instead of being re-prompted, and only the exact token
+// presented via EscalatePermission can re-open it — and then only once.
+func (s *PermissionService) EnableTurnRecovery() {
+	if s == nil {
+		return
+	}
+	if s.recovery == nil {
+		s.recovery = turnrecovery.New()
+	}
+}
+
+// SetExactRuleStore installs a persisted exact, stable-id rule store (ports
+// fx session_permission_state). Nil (the default) leaves the service
+// unchanged.
+func (s *PermissionService) SetExactRuleStore(store *permissions.StableRuleStore) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.exact = store
+	s.mu.Unlock()
+}
+
+// ExactRuleStore returns the configured exact stable-id rule store, or nil.
+func (s *PermissionService) ExactRuleStore() *permissions.StableRuleStore {
+	if s == nil {
+		return nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.exact
+}
+
+// RememberExact records an exact stable-id permission rule and returns its
+// stable id. ok is false when the identity is invalid, the store is full, or
+// no store is configured (fx invalid/full outcomes). The surviving id is
+// stable across workspace changes and can be used with RevokeExact.
+func (s *PermissionService) RememberExact(kind stableid.Kind, canonical, displayIdent string, decision stableid.Decision) (uint64, bool) {
+	st := s.ExactRuleStore()
+	if st == nil {
+		return 0, false
+	}
+	return st.Remember(kind, canonical, displayIdent, decision)
+}
+
+// RevokeExact removes the exact rule with the given stable id. false when no
+// such rule exists (fx stale outcome).
+func (s *PermissionService) RevokeExact(id uint64) bool {
+	st := s.ExactRuleStore()
+	if st == nil {
+		return false
+	}
+	return st.Revoke(id)
+}
+
+// ListExact returns the configured exact rules ordered by stable id.
+func (s *PermissionService) ListExact() []stableid.RuleSnap {
+	st := s.ExactRuleStore()
+	if st == nil {
+		return nil
+	}
+	return st.List()
+}
+
+// EscalatePermission re-opens a previously denied high-risk action by
+// presenting the exact opaque permission_request_id returned in the denial.
+// Generic text can never authorize; only the exact current-turn token binds,
+// and the grant is consumed once at the next identical call's execution.
+// Returns false when the id is not a pending denial or is not 64 hex digits.
+func (s *PermissionService) EscalatePermission(requestID string) bool {
+	if s == nil || s.recovery == nil || len(requestID) != 64 {
+		return false
+	}
+	var id turnrecovery.ID
+	for i := range 32 {
+		v, err := strconv.ParseUint(requestID[i*2:i*2+2], 16, 8)
+		if err != nil {
+			return false
+		}
+		id[i] = byte(v)
+	}
+	if _, ok := s.recovery.DeniedCall(id); !ok {
+		return false
+	}
+	return s.recovery.RememberApproval(id, turnrecovery.Approval{
+		Authority:     "escalation",
+		HumanApproval: true,
+	})
+}
+
+// denyHighRiskAction registers a denied high-risk call in the recovery
+// registry (when enabled) and appends its opaque token to the message.
+func (s *PermissionService) denyHighRiskAction(cat ApprovalCategory, toolName string, args map[string]interface{}, baseMsg string) string {
+	if s == nil || s.recovery == nil {
+		return baseMsg
+	}
+	id, _ := s.recovery.RememberAutoDenial(".", approvalRecoveryCall(toolName, args))
+	return baseMsg + " permission_request_id: " + id.Hash()
+}
+
+// approvalRecoveryCall builds the exact tool-call identity for the recovery
+// registry. args is marshaled deterministically (json.Marshal sorts map keys).
+func approvalRecoveryCall(toolName string, args map[string]interface{}) turnrecovery.ToolCall {
+	b, err := json.Marshal(args)
+	if err != nil {
+		b = []byte("{}")
+	}
+	return turnrecovery.ToolCall{Name: toolName, ArgumentsJSON: string(b)}
+}
+
 func (s *PermissionService) checkApprovalGate(ctx context.Context, toolName string, args map[string]interface{}, asked *bool) (bool, string) {
 	g := s.approval
 	if g == nil || !g.Enabled {
@@ -253,6 +384,23 @@ func (s *PermissionService) checkApprovalGate(ctx context.Context, toolName stri
 	// high-risk tool calls cannot double-spend a session or N-count approval.
 	if g.tryConsumeApproval(cat) {
 		return true, ""
+	}
+	// Opaque request-token escalation (fx TurnPermissionRecovery). When the
+	// recovery registry is enabled, a denied action is bound to an opaque
+	// permission_request_id; only presenting that exact id (EscalatePermission)
+	// can re-open the action, and then only once. This prevents a model from
+	// re-invoking an identical call to re-enter the prompt after a denial.
+	if s.recovery != nil {
+		call := approvalRecoveryCall(toolName, args)
+		// Live single-use revalidation: the exact call was escalated, consume it now.
+		if appr, ok := s.recovery.TakeApproval(call); ok && appr.HumanApproval {
+			return true, ""
+		}
+		// A still-pending, unapproved denial is denied again — no re-prompt.
+		if s.recovery.PreservedOutcome(".", call) {
+			id, _ := s.recovery.RememberAutoDenial(".", call)
+			return false, "Action denied by human approval gate (" + string(cat) + "). permission_request_id: " + id.Hash()
+		}
 	}
 	req := ApprovalRequest{
 		ToolName: canonicalToolName(toolName),
@@ -287,7 +435,7 @@ func (s *PermissionService) checkApprovalGate(ctx context.Context, toolName stri
 		case ApprovalApprove:
 			return true, ""
 		default:
-			return false, denyMsg
+			return false, s.denyHighRiskAction(cat, toolName, args, denyMsg)
 		}
 	}
 	if g.ConfirmFn != nil {
@@ -306,13 +454,13 @@ func (s *PermissionService) checkApprovalGate(ctx context.Context, toolName stri
 		case ApprovalApprove:
 			return true, ""
 		default:
-			return false, "Action denied by human approval gate (" + string(cat) + ")."
+			return false, s.denyHighRiskAction(cat, toolName, args, "Action denied by human approval gate ("+string(cat)+").")
 		}
 	}
 	if s.askUserFn != nil {
 		ans, err := s.askUserFn("Approve high-risk action [" + string(cat) + "]: " + req.Summary + "? (yes/no/session/N)")
 		if err != nil {
-			return false, "Action denied by human approval gate (" + string(cat) + ")."
+			return false, s.denyHighRiskAction(cat, toolName, args, "Action denied by human approval gate ("+string(cat)+").")
 		}
 		lower := strings.ToLower(strings.TrimSpace(ans))
 		switch lower {
@@ -328,7 +476,7 @@ func (s *PermissionService) checkApprovalGate(ctx context.Context, toolName stri
 			if isAffirmative(ans) {
 				return true, ""
 			}
-			return false, "Action denied by human approval gate (" + string(cat) + ")."
+			return false, s.denyHighRiskAction(cat, toolName, args, "Action denied by human approval gate ("+string(cat)+").")
 		}
 	}
 	return false, fmt.Sprintf("High-risk action requires approval but no confirmation handler is configured (%q).", cat)

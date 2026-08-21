@@ -850,6 +850,24 @@ func (s *Session) SetApproval(a *ApprovalGate) {
 	}
 }
 
+// EnableTurnRecovery activates the opaque request-token escalation layer on
+// the permission service (see PermissionService.EnableTurnRecovery).
+func (s *Session) EnableTurnRecovery() {
+	if s.perms != nil {
+		s.perms.EnableTurnRecovery()
+	}
+}
+
+// EscalatePermission re-opens a previously denied high-risk action by
+// presenting the exact opaque permission_request_id (single-use). Delegate to
+// the permission service.
+func (s *Session) EscalatePermission(requestID string) bool {
+	if s.perms == nil {
+		return false
+	}
+	return s.perms.EscalatePermission(requestID)
+}
+
 // SetConversationGraph attaches Hawk's product-owned conversation graph and
 // seeds it from an already-resumed linear transcript when the graph is new.
 func (s *Session) SetConversationGraph(graph *session.ConversationGraph) {

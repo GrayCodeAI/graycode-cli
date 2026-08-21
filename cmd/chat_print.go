@@ -306,6 +306,14 @@ func runRepl() error {
 		return err
 	}
 
+	if recordPath != "" {
+		restoreRec, recErr := startRecording(recordPath)
+		if recErr != nil {
+			return fmt.Errorf("record: %w", recErr)
+		}
+		defer restoreRec()
+	}
+
 	ctx := context.Background()
 	var countdown bool
 	if timeout > 0 {
@@ -350,7 +358,7 @@ func runRepl() error {
 				continue
 			}
 			if output != "" {
-				_, _ = fmt.Fprintln(os.Stdout, output)
+				_, _ = fmt.Fprintln(replOut, output)
 			}
 			continue
 		}
@@ -369,7 +377,7 @@ func runRepl() error {
 			switch ev.Type {
 			case "content":
 				if outputFormat == "text" {
-					fmt.Print(ev.Content)
+					_, _ = fmt.Fprint(replOut, ev.Content)
 				} else if outputFormat == "stream-json" {
 					writePrintEvent(sessionID, "content", ev.Content, "")
 				}

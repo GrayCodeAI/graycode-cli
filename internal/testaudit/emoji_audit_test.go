@@ -45,6 +45,11 @@ var emojiAuditPathExempt = []string{
 	// as fixture data for parser tests; the emoji are part of the
 	// captured external tool output, not hawk's own rendering.
 	"/internal/tool/test_fixtures.go",
+	// framesdir.go matches the literal "❯" prompt glyph inside replayed fx
+	// snapshots to classify input rows when exporting frame artifacts. The
+	// glyph is fx's own prompt character embedded in captured output, not
+	// hawk's rendering, so it is recognised rather than produced.
+	"/internal/terminal/tape/",
 }
 
 // isEmojiOrDingbat reports whether r is a glyph that should never appear
