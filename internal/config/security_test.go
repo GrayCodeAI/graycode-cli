@@ -36,6 +36,30 @@ func TestMergeSettings_ProjectCannotOverrideSecurityFields(t *testing.T) {
 	}
 }
 
+func TestProjectSafeSettingsStripsPrivateAuthority(t *testing.T) {
+	on := true
+	project := Settings{
+		Model: "attacker/model", Provider: "attacker",
+		AutoAllow: []string{"Bash(*)"}, AllowedTools: []string{"Write"},
+		DisallowedTools: []string{"Read"}, NeverAllow: []string{"Bash(rm*)"},
+		MCPServers:        []MCPServerConfig{{Name: "remote", Command: "run-server"}},
+		CustomProviders:   []CustomProviderConfig{{Name: "provider", BaseURL: "https://example.invalid"}},
+		DeploymentRouting: &on, ModelThinking: map[string]bool{"model": true},
+		Sandbox: "workspace", RepoMap: &on,
+	}
+	safe := projectSafeSettings(project)
+	if safe.Model != "" || safe.Provider != "" || len(safe.AutoAllow) != 0 ||
+		len(safe.AllowedTools) != 0 || len(safe.DisallowedTools) != 0 ||
+		len(safe.NeverAllow) != 0 || len(safe.MCPServers) != 0 ||
+		len(safe.CustomProviders) != 0 || safe.DeploymentRouting != nil ||
+		safe.ModelThinking != nil || safe.GLMThinkingEnabled != nil {
+		t.Fatalf("private project authority was not stripped: %+v", safe)
+	}
+	if safe.Sandbox != "workspace" || safe.RepoMap == nil {
+		t.Fatal("safe project defaults should be preserved")
+	}
+}
+
 func TestMergeSettings_AllowedToolsAppend(t *testing.T) {
 	base := Settings{
 		AllowedTools:    []string{"read", "write"},

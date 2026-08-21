@@ -36,6 +36,9 @@ func TestStoreRememberRevokeList(t *testing.T) {
 	if !s.Revoke(id) {
 		t.Fatal("revoke failed for existing id")
 	}
+	if err := s.Load(); err != nil {
+		t.Fatalf("reload after revoke: %v", err)
+	}
 	if len(s.List()) != 0 {
 		t.Fatalf("expected empty list after revoke, got %d", len(s.List()))
 	}

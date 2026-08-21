@@ -23,6 +23,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/attachment"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	statussnapshot "github.com/GrayCodeAI/hawk/internal/status"
 )
 
 // ProtocolVersion is the ACP protocol version this server implements.
@@ -290,12 +291,20 @@ func (s *Server) handleStatus(msg rpcMessage) {
 		s.writeError(msg.ID, errCodeInvalidParams, "unknown sessionId")
 		return
 	}
+	snapshot := statussnapshot.New()
+	snapshot.SessionID = p.SessionID
+	snapshot.Workspace = statussnapshot.Workspace()
+	snapshot.Provider = as.sess.Provider()
+	snapshot.Model = as.sess.Model()
+	snapshot.Permission.SandboxMode = as.sess.Isolation().String()
+	snapshot.Permission.SecretRedacted = true
 	s.reply(msg.ID, map[string]any{
 		"sessionId":  p.SessionID,
 		"workMode":   string(as.sess.WorkMode()),
 		"isolation":  as.sess.Isolation().String(),
 		"autoCommit": as.sess.AutoCommit(),
 		"messages":   as.sess.MessageCount(),
+		"snapshot":   snapshot,
 	})
 }
 

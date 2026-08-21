@@ -61,6 +61,7 @@ Available Commands:
   mission      Run a multi-agent mission (parallel feature execution)
   models       Deployment-aware model catalog (via eyrie)
   path         Developer path readiness (setup, security, sandbox, ecosystem)
+  permissions  List and manage exact permission rules
   plan         Create and manage structured development plans
   plugin       Manage plugins
   pr           AI-powered pull request workflow
@@ -80,6 +81,7 @@ Available Commands:
   skills       Manage skills (list, search, install, remove, audit, info, trending)
   snapshot     Manage file snapshots (undo any change)
   stats        Show usage statistics and cost analytics
+  status       Show a redacted runtime status snapshot
   tape         Inspect and checkpoint recorded terminal captures (fxtape)
   taste        Manage taste profile (learned coding style preferences)
   tools        List built-in tools
