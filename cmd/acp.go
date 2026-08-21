@@ -4,12 +4,15 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/GrayCodeAI/hawk/internal/acp"
+	"github.com/GrayCodeAI/hawk/internal/attachment"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -43,5 +46,14 @@ func runACP(cmd *cobra.Command, _ []string) error {
 	defer stop()
 
 	srv := acp.NewServer(factory)
+
+	// Mount a durable attachment store for inline image admission, gated on
+	// the resolved active model's vision support. When no deployment (or a
+	// non-vision model) is configured, image capability stays false and the
+	// server rejects image prompts rather than advertising support.
+	store := attachment.NewFSStore(filepath.Join(storage.StateDir(), "attachments"))
+	effectiveModel, _ := effectiveModelAndProvider(settings)
+	srv.SetAttachmentStore(store, engine.ModelSupportsVision(effectiveModel))
+
 	return srv.ServeStdio(ctx)
 }

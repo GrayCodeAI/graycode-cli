@@ -410,6 +410,11 @@ real inline multimodal content:
     no late message races a persisted image), maps `failure-invalid`→invalid-params
     / `failure-internal`→internal-error, coalesces consecutive text into one
     `AddUser`, and attaches images via `session.AddUserWithAttachment`.
+- `cmd/acp.go` — production wiring: mounts an `attachment.NewFSStore` under
+  `storage.StateDir()/attachments` and calls `srv.SetAttachmentStore(store,
+  engine.ModelSupportsVision(effectiveModel))`. With no configured deployment
+  (or a non-vision model) the gate resolves false, so `image` is advertised
+  truthfully and image prompts are rejected rather than silently dropped.
 - `internal/acp/content_test.go` — 13 admission tests + 3 server integration
   tests (capability advertisement, inline image admission end-to-end, and
   rejection of unadvertised images).
