@@ -33,8 +33,9 @@ type AuditFinding struct {
 
 // AuditResult is the result of scanning one or more skill files.
 type AuditResult struct {
-	Findings []AuditFinding
-	Files    int
+	Findings   []AuditFinding
+	Files      int
+	Validation []SkillValidationFinding
 }
 
 // dangerousRanges defines Unicode ranges that are dangerous in skill files.
@@ -118,6 +119,7 @@ func AuditSkillDir(dir string) AuditResult {
 		result.Findings = append(result.Findings, findings...)
 		return nil
 	})
+	result.Validation = ValidateSkillDir(dir)
 	return result
 }
 
@@ -129,18 +131,19 @@ func AuditAllSkills() AuditResult {
 		r := AuditSkillDir(dir)
 		combined.Files += r.Files
 		combined.Findings = append(combined.Findings, r.Findings...)
+		combined.Validation = append(combined.Validation, r.Validation...)
 	}
 	return combined
 }
 
 // FormatAuditResult formats audit findings for display.
 func FormatAuditResult(r AuditResult) string {
-	if len(r.Findings) == 0 {
+	if len(r.Findings) == 0 && len(r.Validation) == 0 {
 		return fmt.Sprintf("Scanned %d file(s). No security issues found. "+icons.CheckBold(), r.Files)
 	}
 
 	var b strings.Builder
-	_, _ = fmt.Fprintf(&b, "Scanned %d file(s). Found %d issue(s):\n\n", r.Files, len(r.Findings))
+	_, _ = fmt.Fprintf(&b, "Scanned %d file(s). Found %d issue(s):\n\n", r.Files, len(r.Findings)+len(r.Validation))
 
 	critical, warning, info := 0, 0, 0
 	for _, f := range r.Findings {
@@ -156,6 +159,9 @@ func FormatAuditResult(r AuditResult) string {
 	}
 
 	b.WriteString("\n")
+	for _, f := range r.Validation {
+		_, _ = fmt.Fprintf(&b, "  [%s] %s — %s\n", f.Severity, f.Path, f.Message)
+	}
 	if critical > 0 {
 		_, _ = fmt.Fprintf(&b, icons.Alert()+" %d CRITICAL finding(s) — these skills may contain hidden malicious content.\n", critical)
 	}

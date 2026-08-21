@@ -56,6 +56,46 @@ Review all API endpoints and check for naming consistency.
 	}
 }
 
+func TestParseSmartSkill_AcceptsCommunitySnakeCaseMetadata(t *testing.T) {
+	t.Parallel()
+	skill := parseSmartSkill(`---
+name: community-skill
+description: Uses community metadata names
+auto_invoke: true
+allowed_tools: Read Write
+chain_after: [security-review]
+chain_before: [test-review]
+chain_conflicts: [unsafe-mode]
+chain_enhances: [go-review]
+source_repo: example/repo
+source_ref: main
+source_installed_at: 2026-08-21T00:00:00Z
+---
+body
+`)
+	if !skill.AutoInvoke {
+		t.Fatal("expected auto_invoke to enable auto invocation")
+	}
+	if skill.AllowedTools != "Read Write" {
+		t.Errorf("allowed tools = %q", skill.AllowedTools)
+	}
+	if len(skill.Chain.After) != 1 || skill.Chain.After[0] != "security-review" {
+		t.Errorf("chain after = %#v", skill.Chain.After)
+	}
+	if len(skill.Chain.Before) != 1 || skill.Chain.Before[0] != "test-review" {
+		t.Errorf("chain before = %#v", skill.Chain.Before)
+	}
+	if len(skill.Chain.Conflicts) != 1 || skill.Chain.Conflicts[0] != "unsafe-mode" {
+		t.Errorf("chain conflicts = %#v", skill.Chain.Conflicts)
+	}
+	if len(skill.Chain.Enhances) != 1 || skill.Chain.Enhances[0] != "go-review" {
+		t.Errorf("chain enhances = %#v", skill.Chain.Enhances)
+	}
+	if skill.Source.Repo != "example/repo" || skill.Source.Ref != "main" {
+		t.Errorf("source = %#v", skill.Source)
+	}
+}
+
 func TestMatchSkillsByPath(t *testing.T) {
 	skills := []SmartSkill{
 		{Name: "api-review", Paths: []string{"src/api/*.go"}},

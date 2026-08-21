@@ -127,13 +127,13 @@ func parseSmartSkill(content string) SmartSkill {
 			skill.Name = val
 		case "description":
 			skill.Description = val
-		case "auto-invoke":
+		case "auto-invoke", "auto_invoke":
 			skill.AutoInvoke = val == "true"
 		case "paths":
 			skill.Paths = parseYAMLStringArray(val)
 		case "compatibility":
 			skill.Compatibility = val
-		case "allowed-tools":
+		case "allowed-tools", "allowed_tools":
 			skill.AllowedTools = val
 		case "version":
 			skill.Version = val
@@ -147,21 +147,21 @@ func parseSmartSkill(content string) SmartSkill {
 			skill.Tags = parseYAMLStringArray(val)
 		case "agents":
 			skill.Agents = parseYAMLStringArray(val)
-		case "source-repo":
+		case "source-repo", "source_repo":
 			skill.Source.Repo = val
-		case "source-installed-at":
+		case "source-installed-at", "source_installed_at":
 			skill.Source.InstalledAt = val
-		case "source-ref":
+		case "source-ref", "source_ref":
 			skill.Source.Ref = val
 		case "invoke":
 			skill.Invoke = val
-		case "chain-after":
+		case "chain-after", "chain_after":
 			skill.Chain.After = parseYAMLStringArray(val)
-		case "chain-before":
+		case "chain-before", "chain_before":
 			skill.Chain.Before = parseYAMLStringArray(val)
-		case "chain-conflicts":
+		case "chain-conflicts", "chain_conflicts":
 			skill.Chain.Conflicts = parseYAMLStringArray(val)
-		case "chain-enhances":
+		case "chain-enhances", "chain_enhances":
 			skill.Chain.Enhances = parseYAMLStringArray(val)
 		}
 	}

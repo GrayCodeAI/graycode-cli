@@ -161,7 +161,7 @@ var skillsAuditCmd = &cobra.Command{
 				if err != nil {
 					return err
 				}
-				r := plugin.AuditResult{Findings: findings, Files: 1}
+				r := plugin.AuditResult{Findings: findings, Validation: plugin.ValidateSkillFile(target), Files: 1}
 				if jsonOut {
 					data, _ := json.MarshalIndent(r, "", "  ")
 					fmt.Println(string(data))
@@ -172,7 +172,7 @@ var skillsAuditCmd = &cobra.Command{
 			}
 			if _, path, ok := plugin.InstalledSkillInfo(target); ok {
 				findings, _ := plugin.AuditSkillFile(path)
-				r := plugin.AuditResult{Findings: findings, Files: 1}
+				r := plugin.AuditResult{Findings: findings, Validation: plugin.ValidateSkillFile(path), Files: 1}
 				if jsonOut {
 					data, _ := json.MarshalIndent(r, "", "  ")
 					fmt.Println(string(data))

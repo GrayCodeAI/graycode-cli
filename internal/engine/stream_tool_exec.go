@@ -14,6 +14,33 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 )
 
+// ToolState describes the lifecycle phase of one tool call.
+type ToolState string
+
+const (
+	ToolStateValidating     ToolState = "validating"
+	ToolStatePermissionWait ToolState = "permission_pending"
+	ToolStateExecuting      ToolState = "executing"
+	ToolStateCompleted      ToolState = "completed"
+	ToolStateFailed         ToolState = "failed"
+	ToolStateCancelled      ToolState = "cancelled"
+	ToolStateTimedOut       ToolState = "timed_out"
+)
+
+// ToolTerminalReason explains why a tool call reached a terminal state.
+type ToolTerminalReason string
+
+const (
+	ToolReasonCompleted       ToolTerminalReason = "completed"
+	ToolReasonPermission      ToolTerminalReason = "permission_denied"
+	ToolReasonApproval        ToolTerminalReason = "approval_denied"
+	ToolReasonUnknown         ToolTerminalReason = "unknown_tool"
+	ToolReasonTimeout         ToolTerminalReason = "timeout"
+	ToolReasonCancelled       ToolTerminalReason = "cancelled"
+	ToolReasonExecutionError  ToolTerminalReason = "execution_error"
+	ToolReasonPipelineFailure ToolTerminalReason = "pipeline_failure"
+)
+
 // toolExecResult holds the output of a single tool execution.
 type toolExecResult struct {
 	tc     types.ToolCall
@@ -22,6 +49,8 @@ type toolExecResult struct {
 	isErr  bool
 	err    error
 	span   *oteltrace.Span
+	state  ToolState
+	reason ToolTerminalReason
 }
 
 // filePathArgKeys is the list of argument names that are conventionally

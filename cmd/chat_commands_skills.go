@@ -237,13 +237,13 @@ func (m *chatModel) handleSkillsCommand(parts []string, text string) (tea.Model,
 						m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 						return m, nil
 					}
-					r := plugin.AuditResult{Findings: findings, Files: 1}
+					r := plugin.AuditResult{Findings: findings, Validation: plugin.ValidateSkillFile(target), Files: 1}
 					m.messages = append(m.messages, displayMsg{role: "system", content: plugin.FormatAuditResult(r)})
 					return m, nil
 				}
 				if _, path, ok := plugin.InstalledSkillInfo(target); ok {
 					findings, _ := plugin.AuditSkillFile(path)
-					r := plugin.AuditResult{Findings: findings, Files: 1}
+					r := plugin.AuditResult{Findings: findings, Validation: plugin.ValidateSkillFile(path), Files: 1}
 					m.messages = append(m.messages, displayMsg{role: "system", content: plugin.FormatAuditResult(r)})
 					return m, nil
 				}
