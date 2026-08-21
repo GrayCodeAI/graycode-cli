@@ -233,7 +233,7 @@ Highest-value remaining work, in order:
 All 44 DSH event types are now wired at call sites with full StreamChunk union support,
 surface operations, ignorable markers, format version enforcement, and session
 header parity. The port is functionally complete. Remaining optional depth:
-- DSH `surface.ts` `SurfaceManager`/`SurfaceReplacePlan` (live correction protocol — replacement operations).
+- ~~DSH `surface.ts` `SurfaceManager`/`SurfaceReplacePlan` (live correction protocol — replacement operations).~~ Delivered: `internal/eventlog/surface.go` — `FoldSurface` (complete replay → surface nodes + replacement history) and an incremental `SurfaceManager` (bound to a `*Log`, with `Nodes`/`ReplaceGeneration`/`ValidateNext` atomic pre-flight), mirroring DSH's surface provenance, replacement-range, contiguity, and tool-result-rewrite invariants.
 - DSH `packages/llm/llm/src/assembler.ts` (response normalization — covered by Eyrie facade).
 - Zstd compression in persistence (DSH `session-persistence-jsonl/src/zstd.ts`) — optional physical encoding layer.
 
