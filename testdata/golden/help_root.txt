@@ -27,64 +27,66 @@ Examples:
   hawk path
 
 Available Commands:
-  acp         Run hawk as an Agent Client Protocol (ACP) server
-  agent       Manage custom agent personas
-  attach      Attach to a running background session
-  audit       Analyze past sessions for wasteful patterns
-  bg          Run a session in the background
-  bug-report  Print a redacted diagnostic report for bug reports
-  checkpoint  Save and restore named session checkpoints
-  cloud       Manage optional Hawk Cloud synchronization
-  completion  Generate shell completion script
-  config      Show or update settings
-  context     Export project context as a single document for use in any LLM
-  cost        [Experimental] Analyze and optimize LLM API spend
-  credentials Manage secure API key storage (macOS Keychain / Linux secret service)
-  daemon      Manage the hawk background server
-  doctor      Run local diagnostics
-  ecosystem   Show eyrie, yaad, and tok integration status
-  eval        Evaluate model performance on coding benchmarks
-  exec        Execute a single command non-interactively
-  features    List and manage feature flags
-  feedback    Submit feedback about hawk
-  fingerprint Generate a repository fingerprint (languages, deps, git info)
-  governance  Inspect and validate the governance policy ceiling
-  graph       Inspect Hawk's portable execution graph
-  harness     Audit workspace AI agent harness, work loop dimensions, and generation reports
-  help        Help about any command
-  history     Search and browse command history
-  init        Interactive onboarding wizard for first-time setup
-  learn       Manage lessons learned across sessions
-  manpage     Generate man page in roff format
-  mcp         Show MCP configuration; run or register hawk as an MCP server
-  mission     Run a multi-agent mission (parallel feature execution)
-  models      Deployment-aware model catalog (via eyrie)
-  path        Developer path readiness (setup, security, sandbox, ecosystem)
-  plan        Create and manage structured development plans
-  plugin      Manage plugins
-  pr          AI-powered pull request workflow
-  preflight   Check local readiness; use --live to verify the selected provider
-  recover     Scan for interrupted sessions and resume
-  research    Autonomous research loop (Karpathy autoresearch pattern)
-  resume      Restore a named session checkpoint and resume it
-  review      Continuous AI code review on commits
-  rules       Detect, import, and export AI coding rules between tool formats
-  sandbox     View, apply, or discard pending diff sandbox changes
-  schema      Output JSON schema for hawk settings.json
-  search      Search across saved sessions
-  securitylog Inspect the tamper-evident security event log
-  sessions    List saved sessions
-  setup       Run first-time setup again
-  skills      Manage skills (list, search, install, remove, audit, info, trending)
-  snapshot    Manage file snapshots (undo any change)
-  stats       Show usage statistics and cost analytics
-  taste       Manage taste profile (learned coding style preferences)
-  tools       List built-in tools
-  trace       Git-native session capture for AI coding agents
-  trust       Manage folder trust for project automation
-  update      Check for hawk updates
-  verify      Run local self-verification (security log, governance policy)
-  version     Print hawk version
+  acp          Run hawk as an Agent Client Protocol (ACP) server
+  agent        Manage custom agent personas
+  attach       Attach to a running background session
+  audit        Analyze past sessions for wasteful patterns
+  bg           Run a session in the background
+  bug-report   Print a redacted diagnostic report for bug reports
+  checkpoint   Save and restore named session checkpoints
+  cloud        Manage optional Hawk Cloud synchronization
+  completion   Generate shell completion script
+  config       Show or update settings
+  context      Export project context as a single document for use in any LLM
+  cost         [Experimental] Analyze and optimize LLM API spend
+  credentials  Manage secure API key storage (macOS Keychain / Linux secret service)
+  daemon       Manage the hawk background server
+  doctor       Run local diagnostics
+  ecosystem    Show eyrie, yaad, and tok integration status
+  eval         Evaluate model performance on coding benchmarks
+  exec         Execute a single command non-interactively
+  features     List and manage feature flags
+  feedback     Submit feedback about hawk
+  fingerprint  Generate a repository fingerprint (languages, deps, git info)
+  governance   Inspect and validate the governance policy ceiling
+  graph        Inspect Hawk's portable execution graph
+  harness      Audit workspace AI agent harness, work loop dimensions, and generation reports
+  help         Help about any command
+  history      Search and browse command history
+  init         Interactive onboarding wizard for first-time setup
+  learn        Manage lessons learned across sessions
+  manpage      Generate man page in roff format
+  mcp          Show MCP configuration; run or register hawk as an MCP server
+  mission      Run a multi-agent mission (parallel feature execution)
+  models       Deployment-aware model catalog (via eyrie)
+  path         Developer path readiness (setup, security, sandbox, ecosystem)
+  plan         Create and manage structured development plans
+  plugin       Manage plugins
+  pr           AI-powered pull request workflow
+  preflight    Check local readiness; use --live to verify the selected provider
+  recover      Scan for interrupted sessions and resume
+  replay       Replay a recorded terminal capture (fxtape)
+  research     Autonomous research loop (Karpathy autoresearch pattern)
+  resume       Restore a named session checkpoint and resume it
+  review       Continuous AI code review on commits
+  rules        Detect, import, and export AI coding rules between tool formats
+  sandbox      View, apply, or discard pending diff sandbox changes
+  schema       Output JSON schema for hawk settings.json
+  search       Search across saved sessions
+  securitylog  Inspect the tamper-evident security event log
+  sessions     List saved sessions
+  setup        Run first-time setup again
+  skills       Manage skills (list, search, install, remove, audit, info, trending)
+  snapshot     Manage file snapshots (undo any change)
+  stats        Show usage statistics and cost analytics
+  taste        Manage taste profile (learned coding style preferences)
+  tools        List built-in tools
+  trace        Git-native session capture for AI coding agents
+  trace-report Write a private diagnostic trace report (fx /trace parity)
+  trust        Manage folder trust for project automation
+  update       Check for hawk updates
+  verify       Run local self-verification (security log, governance policy)
+  version      Print hawk version
 
 Flags:
       --add-dir stringArray                additional directories to include in session context
