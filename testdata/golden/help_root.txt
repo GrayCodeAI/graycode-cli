@@ -79,6 +79,7 @@ Available Commands:
   skills       Manage skills (list, search, install, remove, audit, info, trending)
   snapshot     Manage file snapshots (undo any change)
   stats        Show usage statistics and cost analytics
+  tape         Inspect and checkpoint recorded terminal captures (fxtape)
   taste        Manage taste profile (learned coding style preferences)
   tools        List built-in tools
   trace        Git-native session capture for AI coding agents
