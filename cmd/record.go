@@ -3,8 +3,6 @@ package cmd
 import (
 	"io"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/GrayCodeAI/hawk/internal/terminal/tape"
 )
@@ -35,18 +33,10 @@ func startRecording(path string) (func(), error) {
 	}
 	prev := replOut
 	replOut = rec
-
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGWINCH)
-	go func() {
-		for range sigCh {
-			nw, nh := TermSize()
-			_ = rec.Resize(uint16(nw), uint16(nh))
-		}
-	}()
+	stopResize := watchTerminalResize(rec)
 
 	return func() {
-		signal.Stop(sigCh)
+		stopResize()
 		replOut = prev
 		_ = rec.Close()
 		_ = f.Close()
