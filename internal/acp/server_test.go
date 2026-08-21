@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -128,6 +129,102 @@ func TestACP_ParseError(t *testing.T) {
 	msgs := runServer(t, testFactory, []string{`{not valid json`})
 	if len(msgs) != 1 || msgs[0].Error == nil || msgs[0].Error.Code != errCodeParseError {
 		t.Fatalf("expected parse error, got %+v", msgs)
+	}
+}
+
+func TestACP_SessionLoad(t *testing.T) {
+	tempDir := t.TempDir()
+	t.Setenv("HAWK_SESSIONS_DIR", tempDir)
+
+	// Create and persist a session
+	sessID := "acp-load-test-1"
+	prior := &session.Session{
+		ID:    sessID,
+		Model: "mock-model",
+		Name:  "Test Session 1",
+		Messages: []session.Message{
+			{Role: "user", Content: "Hello from prior session"},
+			{Role: "assistant", Content: "Hello! How can I help you?"},
+		},
+	}
+	if err := session.Save(prior); err != nil {
+		t.Fatalf("session.Save failed: %v", err)
+	}
+
+	lines := []string{
+		`{"jsonrpc":"2.0","id":1,"method":"session/load","params":{"sessionId":"` + sessID + `"}}`,
+	}
+	msgs := runServer(t, testFactory, lines)
+
+	if len(msgs) != 1 {
+		t.Fatalf("expected 1 response, got %d", len(msgs))
+	}
+	if msgs[0].Error != nil {
+		t.Fatalf("unexpected rpc error: %+v", msgs[0].Error)
+	}
+
+	var r struct {
+		SessionID    string `json:"sessionId"`
+		Model        string `json:"model"`
+		MessageCount int    `json:"messageCount"`
+		Status       string `json:"status"`
+	}
+	if err := json.Unmarshal(msgs[0].Result, &r); err != nil {
+		t.Fatalf("failed to unmarshal load result: %v", err)
+	}
+	if r.SessionID != sessID {
+		t.Errorf("got sessionId %q, want %q", r.SessionID, sessID)
+	}
+	if r.MessageCount != 2 {
+		t.Errorf("got messageCount %d, want 2", r.MessageCount)
+	}
+	if r.Status != "ready" {
+		t.Errorf("got status %q, want ready", r.Status)
+	}
+}
+
+func TestACP_SessionList(t *testing.T) {
+	tempDir := t.TempDir()
+	t.Setenv("HAWK_SESSIONS_DIR", tempDir)
+
+	prior := &session.Session{
+		ID:    "acp-list-test-1",
+		Model: "mock-model",
+		Name:  "List Test Session",
+		Messages: []session.Message{
+			{Role: "user", Content: "First prompt"},
+		},
+	}
+	if err := session.Save(prior); err != nil {
+		t.Fatalf("session.Save failed: %v", err)
+	}
+
+	lines := []string{
+		`{"jsonrpc":"2.0","id":1,"method":"session/list","params":{}}`,
+	}
+	msgs := runServer(t, testFactory, lines)
+
+	if len(msgs) != 1 {
+		t.Fatalf("expected 1 response, got %d", len(msgs))
+	}
+	if msgs[0].Error != nil {
+		t.Fatalf("unexpected rpc error: %+v", msgs[0].Error)
+	}
+
+	var r struct {
+		Sessions []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"sessions"`
+	}
+	if err := json.Unmarshal(msgs[0].Result, &r); err != nil {
+		t.Fatalf("failed to unmarshal list result: %v", err)
+	}
+	if len(r.Sessions) == 0 {
+		t.Fatalf("expected at least 1 session in list")
+	}
+	if r.Sessions[0].ID != "acp-list-test-1" {
+		t.Errorf("got session ID %q, want acp-list-test-1", r.Sessions[0].ID)
 	}
 }
 

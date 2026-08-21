@@ -218,6 +218,61 @@ func (c *Client) NewSession(ctx context.Context, cwd string) (string, error) {
 	return out.SessionID, nil
 }
 
+// LoadSessionResult contains the response from loading a persisted session.
+type LoadSessionResult struct {
+	SessionID    string `json:"sessionId"`
+	Model        string `json:"model,omitempty"`
+	MessageCount int    `json:"messageCount"`
+	Status       string `json:"status"`
+}
+
+// SessionSummary represents a session entry returned by ListSessions.
+type SessionSummary struct {
+	ID        string `json:"id"`
+	Preview   string `json:"preview,omitempty"`
+	CWD       string `json:"cwd,omitempty"`
+	UpdatedAt string `json:"updatedAt,omitempty"`
+}
+
+// LoadSession opens an existing persisted session on the ACP server.
+func (c *Client) LoadSession(ctx context.Context, sessionID string) (*LoadSessionResult, error) {
+	params := map[string]any{
+		"sessionId": sessionID,
+	}
+	res, err := c.call(ctx, "session/load", params)
+	if err != nil {
+		return nil, err
+	}
+	if res.Error != nil {
+		return nil, fmt.Errorf("rpc error (%d): %s", res.Error.Code, res.Error.Message)
+	}
+
+	var out LoadSessionResult
+	if err := json.Unmarshal(res.Result, &out); err != nil {
+		return nil, fmt.Errorf("unmarshal session/load result: %w", err)
+	}
+	return &out, nil
+}
+
+// ListSessions queries the ACP server for available sessions.
+func (c *Client) ListSessions(ctx context.Context) ([]SessionSummary, error) {
+	res, err := c.call(ctx, "session/list", map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	if res.Error != nil {
+		return nil, fmt.Errorf("rpc error (%d): %s", res.Error.Code, res.Error.Message)
+	}
+
+	var out struct {
+		Sessions []SessionSummary `json:"sessions"`
+	}
+	if err := json.Unmarshal(res.Result, &out); err != nil {
+		return nil, fmt.Errorf("unmarshal session/list result: %w", err)
+	}
+	return out.Sessions, nil
+}
+
 // Prompt submits a prompt to an active ACP session and awaits the response.
 func (c *Client) Prompt(ctx context.Context, sessionID, prompt string) (*PromptResult, error) {
 	params := map[string]any{
