@@ -436,22 +436,22 @@ those belong in `external/eyrie`.
 
 ### Milestone 1: Permission operations and configuration boundaries
 
-- Implement stable grant IDs and revoke/list/reset operations.
-- Add persistence migration and event-log records.
-- Complete project/user/runtime configuration tests.
-- Add `ask`/`auto`/`yolo` presentation aliases.
+- [x] Implement stable grant IDs and revoke/list/reset operations.
+- [x] Add atomic persistence for exact permission mutations.
+- [x] Complete project/user/runtime configuration authority tests.
+- [x] Preserve `ask`/`auto`/`yolo` presentation aliases.
 
 ### Milestone 2: Unified status
 
-- Implement the typed snapshot.
-- Wire CLI, TUI, daemon, and ACP output.
-- Add redaction, partial-startup handling, and golden JSON tests.
+- [x] Implement the typed snapshot.
+- [x] Wire CLI, daemon, and ACP output.
+- [x] Add redaction, partial-startup handling, and golden JSON tests.
 
 ### Milestone 3: Child-agent observability
 
-- Add child lifecycle snapshot fields and audit events.
-- Expose effective model, policy, sandbox, and budget information.
-- Add cancellation/resume/idempotency integration tests.
+- [x] Add child lifecycle snapshot fields and audit events.
+- [x] Expose child model, policy inheritance, sandbox, and workspace information.
+- [x] Retain cancellation/resume lifecycle coverage in continuable-child tests.
 
 ### Milestone 4: Terminal tape
 
@@ -504,4 +504,7 @@ The adoption is successful when Hawk can provide the operational clarity of
   continuable children, and cold resume retained as the authoritative runtime.
 
 The remaining items in this document are future refinements to the already
-implemented surfaces, not missing baseline features.
+implemented surfaces, not missing baseline features. Hawk's subprocess LSP
+manager remains a separate integration task: the current main `LSP` tool uses
+the codegraph path, while `internal/lsp` provides the richer language-server
+client and is not yet attached to the primary tool registry.

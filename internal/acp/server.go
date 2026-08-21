@@ -298,6 +298,22 @@ func (s *Server) handleStatus(msg rpcMessage) {
 	snapshot.Model = as.sess.Model()
 	snapshot.Permission.SandboxMode = as.sess.Isolation().String()
 	snapshot.Permission.SecretRedacted = true
+	if entries, err := session.List(); err == nil {
+		for _, entry := range entries {
+			child, loadErr := session.Load(entry.ID)
+			if loadErr != nil || child == nil || child.ParentSessionID != p.SessionID {
+				continue
+			}
+			state := "persisted"
+			if child.UpdatedAt.After(time.Now().Add(-5 * time.Minute)) {
+				state = "active"
+			}
+			snapshot.Subagents = append(snapshot.Subagents, statussnapshot.SubagentStatus{
+				ID: child.ID, ParentID: child.ParentSessionID, State: state,
+				Model: child.Model, Mode: child.Name, Workspace: child.CWD,
+			})
+		}
+	}
 	s.reply(msg.ID, map[string]any{
 		"sessionId":  p.SessionID,
 		"workMode":   string(as.sess.WorkMode()),
