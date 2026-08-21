@@ -120,6 +120,7 @@ Flags:
       --prompt string                      send a single prompt and exit (legacy alias for --print)
       --provider string                    LLM provider (anthropic, openai, gemini, etc.)
   -q, --quiet                              suppress non-essential output (spinners, progress, decoration); machine-parseable output only
+      --record string                      record interactive REPL output to an fxtape file (fx --record parity)
       --recover                            scan for interrupted sessions and offer to resume
       --refresh-catalog                    refresh the eyrie model catalog before starting
       --repl                               start interactive REPL mode (like aider) for multi-turn conversation without TUI
