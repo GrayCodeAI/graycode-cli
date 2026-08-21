@@ -14,6 +14,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/governance"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/permissions"
+	"github.com/GrayCodeAI/hawk/internal/permissions/stableid"
 	"github.com/GrayCodeAI/hawk/internal/permissions/turnrecovery"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/spec"
@@ -66,6 +67,13 @@ type PermissionService struct {
 	// identical call is denied again rather than re-prompted, unless the
 	// exact token is escalted via EscalatePermission (single-use).
 	recovery *turnrecovery.Recovery
+	// exact, when configured, is the session's persisted store of exact,
+	// stable-id permission rules (ports fx session_permission_state). Rules
+	// here are addressable by a stable, monotonically increasing id (they
+	// survive workspace changes) and can be remembered, listed, and revoked
+	// by that id. When nil (the default) nothing changes; when set, callers
+	// can RememberExact/RevokeExact/ListExact.
+	exact *permissions.StableRuleStore
 }
 
 // NewPermissionService constructs a PermissionService with a fresh
@@ -258,6 +266,59 @@ func (s *PermissionService) EnableTurnRecovery() {
 	if s.recovery == nil {
 		s.recovery = turnrecovery.New()
 	}
+}
+
+// SetExactRuleStore installs a persisted exact, stable-id rule store (ports
+// fx session_permission_state). Nil (the default) leaves the service
+// unchanged.
+func (s *PermissionService) SetExactRuleStore(store *permissions.StableRuleStore) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.exact = store
+	s.mu.Unlock()
+}
+
+// ExactRuleStore returns the configured exact stable-id rule store, or nil.
+func (s *PermissionService) ExactRuleStore() *permissions.StableRuleStore {
+	if s == nil {
+		return nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.exact
+}
+
+// RememberExact records an exact stable-id permission rule and returns its
+// stable id. ok is false when the identity is invalid, the store is full, or
+// no store is configured (fx invalid/full outcomes). The surviving id is
+// stable across workspace changes and can be used with RevokeExact.
+func (s *PermissionService) RememberExact(kind stableid.Kind, canonical, displayIdent string, decision stableid.Decision) (uint64, bool) {
+	st := s.ExactRuleStore()
+	if st == nil {
+		return 0, false
+	}
+	return st.Remember(kind, canonical, displayIdent, decision)
+}
+
+// RevokeExact removes the exact rule with the given stable id. false when no
+// such rule exists (fx stale outcome).
+func (s *PermissionService) RevokeExact(id uint64) bool {
+	st := s.ExactRuleStore()
+	if st == nil {
+		return false
+	}
+	return st.Revoke(id)
+}
+
+// ListExact returns the configured exact rules ordered by stable id.
+func (s *PermissionService) ListExact() []stableid.RuleSnap {
+	st := s.ExactRuleStore()
+	if st == nil {
+		return nil
+	}
+	return st.List()
 }
 
 // EscalatePermission re-opens a previously denied high-risk action by
