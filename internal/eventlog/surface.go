@@ -86,7 +86,10 @@ func surfaceOpOf(ev Event) (*SurfaceOp, error) {
 		return nil, nil
 	}
 	if ev.SurfaceOp == nil {
-		return nil, fmt.Errorf("eventlog: session event %q is surface-eligible and requires a surfaceOp marker", ev.Type)
+		// Unmarked surface-eligible events are treated as appends, matching
+		// Validate's backward-compatibility seam for version-1 logs written
+		// before the surfaceOp invariant was enforced.
+		return &SurfaceOp{Op: SurfaceOpAppend}, nil
 	}
 	op := ev.SurfaceOp
 	if op.Op != SurfaceOpAppend && op.Op != SurfaceOpReplace {

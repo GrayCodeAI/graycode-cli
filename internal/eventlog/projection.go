@@ -1,6 +1,9 @@
 package eventlog
 
-import "time"
+import (
+	"sort"
+	"time"
+)
 
 // ProjectMessages folds the append-only events into the model-visible message
 // surface. This ports DeepSeek Harness's deriveMessages() surface semantics:
@@ -10,12 +13,140 @@ import "time"
 // skipped (they exist only to host usage data) — matching DSH's
 // deriveEventMessage which returns null for content-less assistant/message.
 //
+// Projection is surface-driven: the model-visible order and membership come
+// from the canonical surface fold (FoldSurface), so a surface `replace`
+// operation splices its replacement in at the replaced position and shadows its
+// replaced nodes out of the history — DSH deriveMessages parity. Non-surface
+// producing events (request headers, context injection, compaction facts) are
+// injected at the surface position their log position implies.
+//
 // Projection is defined over the in-memory Event.Data values (where Data is
 // already a typed Message). Consumers that load a persisted record must decode the
 // raw payloads back to Message before projecting; see the owning product package.
 func ProjectMessages(events []Event) []Message {
+	fold, err := FoldSurface(events)
+	if err != nil {
+		// A log that cannot be surface-folded (e.g. non-contiguous or
+		// malformed surface metadata) degrades to raw-order projection so the
+		// call never fails on a defensible history.
+		return projectMessagesRaw(events)
+	}
+
+	// Surface nodes in model-visible order; position of each live eligible seq.
+	active := make(map[uint64]bool, len(fold.Nodes))
+	pos := make(map[uint64]float64, len(fold.Nodes))
+	for i, seq := range fold.Nodes {
+		active[seq] = true
+		pos[seq] = float64(i)
+	}
+
+	// Collect ordered projection items. Each item carries a sort position so
+	// that surface nodes (integer positions in fold order) interleave with
+	// system-producing events (half-step between the surface nodes the
+	// event's log position implies) and compaction prunes.
+	type item struct {
+		p     float64
+		seq   uint64
+		order int // stable sort tiebreaker by raw index
+		sys   string
+		drop  int
+		ev    Event
+	}
+	items := make([]item, 0, len(events))
+
+	// sysPos returns the surface position a non-surface event lands at: just
+	// before the first surface node sequenced after it.
+	sysPos := func(seq uint64) float64 {
+		n := 0.0
+		for _, node := range fold.Nodes {
+			if node < seq {
+				n++
+			}
+		}
+		return n - 0.5
+	}
+
+	for i, ev := range events {
+		switch ev.Type {
+		case UserMessage, AssistantMsg, ToolResult:
+			if active[ev.Seq] {
+				items = append(items, item{p: pos[ev.Seq], seq: ev.Seq, order: i, ev: ev})
+			}
+		case RequestHeader:
+			if f, ok := ev.Data.(RequestHeaderFact); ok && f.System != "" {
+				items = append(items, item{p: sysPos(ev.Seq), seq: ev.Seq, order: i, sys: f.System})
+			}
+		case ContextInjected:
+			if f, ok := ev.Data.(ContextInjectedFact); ok && f.Content != "" {
+				items = append(items, item{p: sysPos(ev.Seq), seq: ev.Seq, order: i, sys: f.Content})
+			}
+		case CompactionPrune:
+			if f, ok := ev.Data.(CompactionPruneFact); ok && f.Messages > 0 {
+				items = append(items, item{p: sysPos(ev.Seq), seq: ev.Seq, order: i, drop: f.Messages})
+			}
+		case CompactionSummary:
+			if f, ok := ev.Data.(CompactionSummaryFact); ok && f.Summary != "" {
+				items = append(items, item{p: sysPos(ev.Seq), seq: ev.Seq, order: i, sys: f.Summary})
+			}
+		}
+	}
+
+	sort.SliceStable(items, func(a, b int) bool {
+		if items[a].p != items[b].p {
+			return items[a].p < items[b].p
+		}
+		return items[a].order < items[b].order
+	})
+
 	var out []Message
-	inCompaction := false
+	for _, it := range items {
+		switch {
+		case it.ev.Type == UserMessage || it.ev.Type == AssistantMsg || it.ev.Type == ToolResult:
+			if m, ok := projectEligible(it.ev); ok {
+				out = append(out, m)
+			}
+		case it.sys != "":
+			out = append(out, Message{Role: "system", Content: it.sys})
+		case it.drop > 0:
+			drop := it.drop
+			if drop > len(out) {
+				drop = len(out)
+			}
+			out = out[:len(out)-drop]
+		}
+	}
+	return out
+}
+
+// projectEligible projects a single surface-eligible event's model-visible
+// Message, skipping content-less assistant messages (DSH deriveEventMessage
+// parity). It reports whether a message should be projected at all.
+func projectEligible(ev Event) (Message, bool) {
+	switch ev.Type {
+	case UserMessage, ToolResult:
+		if m, ok := ev.Data.(Message); ok {
+			return m, true
+		}
+	case AssistantMsg:
+		if m, ok := ev.Data.(Message); ok {
+			// Skip empty-content assistant messages: they exist only to host
+			// usage/finish data and must not inject a content-less assistant
+			// turn into the provider transcript.
+			if m.Content == "" && m.Thinking == "" && len(m.ToolUse) == 0 && len(m.Images) == 0 && len(m.ContentParts) == 0 {
+				return Message{}, false
+			}
+			return m, true
+		}
+	}
+	return Message{}, false
+}
+
+// projectMessagesRaw projects the log in raw append order, ignoring surface
+// op shadowing. It is the fallback used when a history cannot be
+// surface-folded, and the historical behavior for append-only logs.
+func projectMessagesRaw(events []Event) []Message {
+	var out []Message
+	var inCompaction bool
 	for _, ev := range events {
 		switch ev.Type {
 		case UserMessage:
@@ -24,10 +155,6 @@ func ProjectMessages(events []Event) []Message {
 			}
 		case AssistantMsg:
 			if m, ok := ev.Data.(Message); ok {
-				// Skip empty-content assistant messages: they exist only
-				// to host usage/finish data and must not inject a content-less
-				// assistant turn into the provider transcript. (DSH seam:
-				// deriveEventMessage returns null for these.)
 				if m.Content == "" && m.Thinking == "" && len(m.ToolUse) == 0 && len(m.Images) == 0 && len(m.ContentParts) == 0 {
 					continue
 				}
@@ -39,23 +166,16 @@ func ProjectMessages(events []Event) []Message {
 			}
 		case RequestHeader:
 			if f, ok := ev.Data.(RequestHeaderFact); ok && f.System != "" {
-				out = append(out, Message{
-					Role:    "system",
-					Content: f.System,
-				})
+				out = append(out, Message{Role: "system", Content: f.System})
 			}
 		case ContextInjected:
 			if f, ok := ev.Data.(ContextInjectedFact); ok && f.Content != "" {
-				out = append(out, Message{
-					Role:    "system",
-					Content: f.Content,
-				})
+				out = append(out, Message{Role: "system", Content: f.Content})
 			}
 		case CompactionStart:
 			inCompaction = true
 		case CompactionPrune:
 			if f, ok := ev.Data.(CompactionPruneFact); ok && f.Messages > 0 {
-				// Drop the last f.Messages model-visible entries that were pruned.
 				drop := f.Messages
 				if drop > len(out) {
 					drop = len(out)
@@ -64,10 +184,7 @@ func ProjectMessages(events []Event) []Message {
 			}
 		case CompactionSummary:
 			if f, ok := ev.Data.(CompactionSummaryFact); ok && f.Summary != "" {
-				out = append(out, Message{
-					Role:    "system",
-					Content: f.Summary,
-				})
+				out = append(out, Message{Role: "system", Content: f.Summary})
 			}
 		case CompactionEnd:
 			inCompaction = false
