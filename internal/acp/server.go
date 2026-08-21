@@ -12,6 +12,7 @@ package acp
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/attachment"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/session"
 )
@@ -56,6 +58,13 @@ type rpcError struct {
 type Server struct {
 	factory SessionFactory
 
+	// store is the durable attachment service for inline image admission.
+	// When nil, image prompt content is rejected as not advertised.
+	store attachment.Store
+	// imageCapable reports whether the deployment can admit inline image
+	// prompts (store mounted and the model route supports image input).
+	imageCapable bool
+
 	mu       sync.Mutex
 	sessions map[string]*acpSession
 	// order tracks session creation order for FIFO eviction when the session
@@ -90,6 +99,14 @@ func NewServer(factory SessionFactory) *Server {
 		sessions: make(map[string]*acpSession),
 		pending:  make(map[int]chan rpcMessage),
 	}
+}
+
+// SetAttachmentStore mounts the durable attachment service used for inline
+// image admission, and recomputes image-prompt capability from the store.
+// modelSupportsImage gates the capability on the active model route.
+func (s *Server) SetAttachmentStore(store attachment.Store, modelSupportsImage bool) {
+	s.store = store
+	s.imageCapable = SupportsAcpImagePrompts(store, modelSupportsImage)
 }
 
 // ServeStdio runs the server on stdin/stdout until ctx is cancelled or EOF.
@@ -164,7 +181,7 @@ func (s *Server) handle(ctx context.Context, msg rpcMessage) {
 				"loadSession":  true,
 				"listSessions": true,
 				"promptCapabilities": map[string]any{
-					"image": false,
+					"image": s.imageCapable,
 					"audio": false,
 				},
 			},
@@ -437,11 +454,8 @@ func (s *Server) teardown() {
 }
 
 type promptParams struct {
-	SessionID string `json:"sessionId"`
-	Prompt    []struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
-	} `json:"prompt"`
+	SessionID string            `json:"sessionId"`
+	Prompt    []AcpContentBlock `json:"prompt"`
 }
 
 func (s *Server) handlePrompt(ctx context.Context, msg rpcMessage) {
@@ -458,20 +472,58 @@ func (s *Server) handlePrompt(ctx context.Context, msg rpcMessage) {
 		return
 	}
 
-	var text string
-	for _, b := range p.Prompt {
-		if b.Type == "text" {
-			text += b.Text
-		}
-	}
-
 	turnCtx, cancel := context.WithCancel(ctx)
 	s.mu.Lock()
 	as.cancel = cancel
 	s.mu.Unlock()
 	defer cancel()
 
-	as.sess.AddUser(text)
+	// Admit the untrusted prompt into durable, ordered core content before
+	// any user message is queued. Images are validated and durably committed
+	// to the store first; the session spine is appended only after admission
+	// returns, so no late message races a persisted image.
+	content, err := AdmitAcpPrompt(turnCtx, s.store, p.Prompt, s.imageCapable, turnCtx.Done())
+	if err != nil {
+		if ce, ok := asContentError(err); ok {
+			code := errCodeInternal
+			if ce.Kind == FailureInvalid {
+				code = errCodeInvalidParams
+			}
+			s.writeError(msg.ID, code, ce.Msg)
+			return
+		}
+		s.writeError(msg.ID, errCodeInternal, "prompt admission failed: "+err.Error())
+		return
+	}
+
+	// Append admitted content to the session spine. Consecutive text blocks
+	// coalesce into a single user message (matching the text-only path);
+	// image references are re-read and attached via the engine's multimodal
+	// path, flushing pending text first so wire order is preserved.
+	var pendingText string
+	flushText := func() {
+		if pendingText == "" {
+			return
+		}
+		as.sess.AddUser(pendingText)
+		pendingText = ""
+	}
+	for _, block := range content {
+		switch {
+		case block.Type == "text":
+			pendingText += block.Text
+		case block.Type == "image" && block.Attachment != nil && s.store != nil:
+			flushText()
+			stored, rerr := s.store.ReadImage(turnCtx, *block.Attachment)
+			if rerr != nil {
+				s.writeError(msg.ID, errCodeInternal, "prompt image unavailable: "+rerr.Error())
+				return
+			}
+			as.sess.AddUserWithAttachment("", base64.StdEncoding.EncodeToString(stored.Data), string(stored.Ref.MediaType))
+		}
+	}
+	flushText()
+
 	events, err := as.sess.Stream(turnCtx)
 	if err != nil {
 		s.writeError(msg.ID, errCodeInternal, "stream failed: "+err.Error())
