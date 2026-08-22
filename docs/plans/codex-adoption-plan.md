@@ -51,19 +51,26 @@ Three codex ideas are deliberately deferred as future RFCs; see
   `permission.sandbox_backend`, so operators can confirm real kernel-level
   isolation (seatbelt on macOS, landlock/seccomp on Linux, ACL on Windows,
   docker fallbacks) instead of only the strict/workspace/off label.
+- **Batch tool** (safe core of codex Code Mode): a `Batch` tool runs a list of
+  read-only tool calls in a single turn, cutting agent round-trips for fan-out
+  research. It reuses the existing read-only allowlist and per-call schema
+  validation, so no mutation can bypass the normal tool pipeline. It delivers
+  Code Mode's primary token/round-trip benefit without embedding a script
+  runtime or adding a new execution authority boundary.
 
 ## Deliberately Deferred
 
-- **Code Mode** (`code-mode`, `code-mode-runtime`, `v8-poc`): letting the model
-  author a short script that batches many tool calls into one sandboxed
-  execution. Promising token-cost lever, but it introduces an embedded JS
-  runtime and a new execution authority boundary. Requires its own threat
-  model (script capabilities, network/file scope, output trust) before any
-  implementation. Track as a standalone RFC.
-- **Agent identity signing** (`agent-identity`): cryptographic identity for
-  agents and subagents woven into audit records. hawk's tamper-evident
-  security log covers integrity today; signed delegation chains are worth a
-  focused design once multi-org delegation exists.
+- **Full Code Mode** (`code-mode`, `code-mode-runtime`, `v8-poc`): letting the
+  model author an arbitrary script that batches tool calls into one sandboxed
+  execution, including mutation and control flow. The `Batch` tool above covers
+  the safe read-only fan-out case. Arbitrary-script execution still requires an
+  embedded runtime, capabilities model, and output-trust threat model; track as
+  a standalone RFC.
+- **Agent identity signing** (`agent-identity`): hawk already provides a
+  per-harness anonymous user identity (`internal/identity`) and a tamper-evident
+  HMAC-chained security log with session-scoped events (`internal/securitylog`).
+  Signed subagent delegation chains are worth a focused design once multi-org
+  delegation exists.
 - **Cloud tasks client** (`cloud-tasks*`): remote task queue integration.
   Hawk Cloud already provides sync/review surfaces; a queue protocol would
   duplicate that until a concrete consumer exists.

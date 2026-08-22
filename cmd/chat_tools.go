@@ -97,6 +97,7 @@ func optionalTools() []tool.Tool {
 		tool.OutlineTool{},
 		&tool.SmartReaderTool{},
 		tool.PatchTool{},
+		tool.BatchTool{},
 		tool.TransactionTool{},
 		tool.NewAutoImportTool(),
 		tool.ImportOrganizerTool{},
