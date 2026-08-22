@@ -119,7 +119,7 @@ This makes the orphaned harness operational and enables CI gating.
   / `BrowserTool`. No image-source (URL/file/data-URL) normalization helper.
 - MiniMax-Coding-Plan-MCP shows: MCP v2 tool registration + no-network test
   harness (in-process `Client` + stdio `ClientSession` asserting exact payloads)
-  + image-source normalization.
+  and image-source normalization.
 
 ### What to implement (patterns only — no vendor-locked Python)
 - Add a Go helper `internal/attachment/normalize_image_source.go` that converts

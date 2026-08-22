@@ -269,8 +269,7 @@ engine.
 |---|---|
 | `ask` | Supervised or equivalent prompt-required policy |
 | `auto` | Automatic review/approval behavior where configured |
-| `yolo` | Explicit high-autonomy mode, still subject to governance, sandbox, and
-  destructive-command hard blocks |
+| `yolo` | Explicit high-autonomy mode, still subject to governance, sandbox, and destructive-command hard blocks |
 
 These are aliases or presentation-layer modes, not a replacement for Hawk's
 autonomy tiers, governance ceiling, spec gates, and sandbox policy.
