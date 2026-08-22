@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/feature/eval"
+	"github.com/GrayCodeAI/hawk/internal/feature/evalloop"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/spf13/cobra"
 )
 
@@ -21,6 +25,8 @@ var (
 	evalTaskDir     string
 	evalListJSON    bool
 	evalResultsJSON bool
+	evalLoopPrompt  string
+	evalLoopModel   string
 )
 
 var evalCmd = &cobra.Command{
@@ -59,6 +65,12 @@ var evalCacheCmd = &cobra.Command{
 	},
 }
 
+var evalLoopCmd = &cobra.Command{
+	Use:   "loop",
+	Short: "Evaluate the agent end-to-end through its real tool loop",
+	RunE:  runEvalLoop,
+}
+
 func init() {
 	evalRunCmd.Flags().StringVar(&evalTasks, "tasks", "", "Comma-separated task IDs (default: all)")
 	evalRunCmd.Flags().StringVar(&evalModel, "model", "", "Model to evaluate")
@@ -68,11 +80,71 @@ func init() {
 	evalRunCmd.Flags().StringVar(&evalTaskDir, "task-dir", "", "Directory with YAML task definitions")
 	evalListCmd.Flags().BoolVar(&evalListJSON, "json", false, "output tasks as JSON")
 	evalResultsCmd.Flags().BoolVar(&evalResultsJSON, "json", false, "output results as JSON")
+	evalLoopCmd.Flags().StringVar(&evalLoopPrompt, "prompt", "", "Task prompt to run through the agent loop")
+	evalLoopCmd.Flags().StringVar(&evalLoopModel, "model", "", "Model to use (defaults to active model)")
 
 	evalCmd.AddCommand(evalRunCmd)
 	evalCmd.AddCommand(evalListCmd)
 	evalCmd.AddCommand(evalResultsCmd)
 	evalCmd.AddCommand(evalCacheCmd)
+	evalCmd.AddCommand(evalLoopCmd)
+}
+
+// runEvalLoop runs the agent end-to-end through its real tool loop in an
+// isolated temp directory and prints a JSON report with the transcript path.
+func runEvalLoop(cmd *cobra.Command, _ []string) error {
+	if strings.TrimSpace(evalLoopPrompt) == "" {
+		return fmt.Errorf("--prompt is required")
+	}
+	settings := hawkconfig.LoadGlobalSettings()
+	ctx := context.Background()
+
+	gw, err := hawkconfig.NewEyrieEngineForSettings(settings)
+	if err != nil {
+		return fmt.Errorf("eval loop: build engine client: %w", err)
+	}
+	model := strings.TrimSpace(evalLoopModel)
+	if model == "" {
+		model = strings.TrimSpace(hawkconfig.ActiveModel(ctx))
+	}
+	if model == "" {
+		model = strings.TrimSpace(settings.Model)
+	}
+
+	workDir, err := os.MkdirTemp("", "hawk-eval-loop-*")
+	if err != nil {
+		return fmt.Errorf("eval loop: create temp dir: %w", err)
+	}
+	defer func() { _ = os.RemoveAll(workDir) }()
+
+	cfg := evalloop.DefaultConfig()
+	runtime := evalloop.NewSessionRuntime(gw.ChatClient(), "eval", model, tool.NewRegistry(), cfg)
+	result, err := runtime.Run(ctx, workDir, evalLoopPrompt)
+	if err != nil {
+		return fmt.Errorf("eval loop: %w", err)
+	}
+
+	transcriptPath := ""
+	if len(result.Transcript) > 0 {
+		transcriptPath = filepath.Join(workDir, "transcript.json")
+		_ = os.WriteFile(transcriptPath, result.Transcript, 0o600) // #nosec G304 -- path is the isolated eval temp dir
+	}
+
+	report := map[string]any{
+		"model":           model,
+		"output":          result.Output,
+		"events":          len(result.Events),
+		"tokens_used":     result.TokensUsed,
+		"cost_usd":        result.CostUSD,
+		"duration":        result.Duration.String(),
+		"transcript_path": transcriptPath,
+	}
+	data, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return err
+	}
+	_, err = cmd.OutOrStdout().Write(append(data, '\n'))
+	return err
 }
 
 func runEval(_ *cobra.Command, _ []string) error {
