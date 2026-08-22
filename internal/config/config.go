@@ -36,12 +36,16 @@ func LoadAgentsMDFrom(start string) string {
 	}
 	for {
 		for _, name := range agentFiles {
-			data, err := os.ReadFile(filepath.Join(dir, name)) // #nosec G304 -- dir is the working directory or an ancestor of it; name is a fixed constant
+			path := filepath.Join(dir, name)
+			data, err := os.ReadFile(path) // #nosec G304 -- dir is the working directory or an ancestor of it; name is a fixed constant
 			if err == nil {
+				content := string(data)
 				if len(data) > maxAgentsMDSize {
-					return string(data[:maxAgentsMDSize]) + "\n\n[WARNING: AGENTS.md truncated to 10KB]"
+					content = content[:maxAgentsMDSize] + "\n\n[WARNING: AGENTS.md truncated to 10KB]"
 				}
-				return string(data)
+				// Expand `@path` references (bounded by the git root and strict
+				// size/depth budgets) so AGENTS.md can pull in in-repo files.
+				return expandContextReferences(content, dir, gitRoot(dir))
 			}
 		}
 		parent := filepath.Dir(dir)

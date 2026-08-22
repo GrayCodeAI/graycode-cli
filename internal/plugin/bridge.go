@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // PluginBridge wraps a shell-based bridge plugin, executing an external CLI
@@ -62,13 +64,19 @@ func (pb *PluginBridge) Run(ctx context.Context, args ...string) (string, error)
 
 	cmd := exec.CommandContext(ctx, pb.bin, fullArgs...) // #nosec G204 -- pb.bin was resolved via exec.LookPath at NewPluginBridge time; fullArgs come from the plugin's own manifest, trusted like other plugin config
 
-	// Merge extra environment variables onto the inherited environment.
+	// Merge extra environment variables onto the inherited environment,
+	// filtering disallowed override keys (PATH, LD_*, PYTHONPATH, NODE_OPTIONS,
+	// etc.) to prevent command/library hijacking via plugin manifest env.
 	if len(bridge.Env) > 0 {
 		env := os.Environ()
 		for k, v := range bridge.Env {
 			env = append(env, k+"="+v)
 		}
-		cmd.Env = env
+		sanitized := sandbox.SanitizeEnv(env)
+		cmd.Env = sanitized.Env
+		if len(sanitized.Removed) > 0 {
+			fmt.Fprintf(os.Stderr, "plugin bridge %q: filtered disallowed env overrides: %v\n", pb.bin, sanitized.Removed)
+		}
 	}
 
 	var stdout, stderr bytes.Buffer
