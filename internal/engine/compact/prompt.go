@@ -1,5 +1,12 @@
 package compact
 
+import (
+	"fmt"
+	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/types"
+)
+
 const noToolsPreamble = `CRITICAL: Respond with TEXT ONLY. Do NOT call any tools.
 
 - Do NOT use Read, Bash, Grep, Glob, Edit, Write, or ANY other tool.
@@ -67,6 +74,31 @@ const summaryTemplate = `Now provide your summary inside <summary> tags using EX
 ## Next Step
 - [based on most recent user messages, what should happen next — include direct quotes if user gave specific direction]`
 
+// incrementalUpdateTemplate instructs the model to merge the new conversation
+// into a prior summary rather than re-summarizing from scratch. This preserves
+// previously-captured context and avoids the cost of re-deriving it, while
+// folding in only the progress made since the last compaction.
+const incrementalUpdateTemplate = `A previous summary of this conversation exists (shown below in <previous-summary> tags).
+
+Update that summary in place to reflect the NEW messages that were added after it. Do NOT re-derive facts already captured. Follow these rules:
+
+1. Preserve the existing sections and their structure EXACTLY (## Goal, ## Constraints & Preferences, ## Progress, ## Files Modified, ## Key Decisions, ## Errors & Fixes, ## User Instructions, ## Next Step).
+2. Update each section only where the new messages add information:
+   - ## Goal: keep unless the user redefined the goal.
+   - ## Progress: add new Done/In Progress/Blocked entries; keep existing ones.
+   - ## Files Modified: add any newly read/created/modified files.
+   - ## Key Decisions: add new decisions; keep prior ones.
+   - ## Errors & Fixes: add newly encountered errors; keep prior ones.
+   - ## User Instructions (verbatim): append any new non-trivial user directions.
+   - ## Next Step: replace with the most recent next step.
+3. If the new messages add no information to a section, leave it unchanged (do not empty it).
+
+Provide the fully updated summary inside <summary> tags using EXACTLY this structure. Keep section order unchanged.
+
+<previous-summary>
+%s
+</previous-summary>`
+
 func BuildCompactPrompt(variant CompactVariant) string {
 	var analysis string
 	switch variant {
@@ -76,6 +108,42 @@ func BuildCompactPrompt(variant CompactVariant) string {
 		analysis = detailedAnalysisBase
 	}
 	return noToolsPreamble + analysis + "\n\n" + summaryTemplate
+}
+
+// BuildIncrementalCompactPrompt builds a prompt that merges the new
+// conversation into an existing prior summary instead of re-summarizing from
+// scratch. priorSummary is the previously generated structured summary.
+func BuildIncrementalCompactPrompt(priorSummary string) string {
+	if priorSummary == "" {
+		return BuildCompactPrompt(CompactBase)
+	}
+	return noToolsPreamble + detailedAnalysisPartial + "\n\n" +
+		fmt.Sprintf(incrementalUpdateTemplate, priorSummary)
+}
+
+// PriorSummaryPrefix is the marker prefix hawk prepends to a persisted
+// conversation summary message.
+const PriorSummaryPrefix = "[Conversation summary]"
+
+// ExtractPriorSummary extracts the previously generated summary text from the
+// first message of a conversation if one was persisted by an earlier
+// compaction. It returns "" when no prior summary is present.
+func ExtractPriorSummary(msgs []types.EyrieMessage) string {
+	for _, m := range msgs {
+		if m.Role != "user" {
+			continue
+		}
+		if strings.HasPrefix(m.Content, PriorSummaryPrefix) {
+			body := strings.TrimPrefix(m.Content, PriorSummaryPrefix)
+			body = strings.TrimSpace(body)
+			// Stop at the continuation marker that follows the summary body.
+			if idx := strings.Index(body, "[Continue from the recent messages below.]"); idx >= 0 {
+				body = body[:idx]
+			}
+			return strings.TrimSpace(body)
+		}
+	}
+	return ""
 }
 
 type CompactVariant int

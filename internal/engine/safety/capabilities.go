@@ -51,6 +51,7 @@ var toolPolicies = map[string]ToolPolicy{
 	"GitHistory":            {Name: "GitHistory", Capabilities: []Capability{CapabilityFilesystemRead, CapabilityProcessExecute}, DefaultRisk: RiskLow},
 	"Diagnostics":           {Name: "Diagnostics", Capabilities: []Capability{CapabilityFilesystemRead, CapabilityProcessExecute}, DefaultRisk: RiskMedium},
 	"ProjectVerify":         {Name: "ProjectVerify", Capabilities: []Capability{CapabilityFilesystemRead, CapabilityProcessExecute}, DefaultRisk: RiskMedium},
+	"AppVerify":             {Name: "AppVerify", Capabilities: []Capability{CapabilityFilesystemRead, CapabilityProcessExecute}, DefaultRisk: RiskMedium},
 	"DependencyAudit":       {Name: "DependencyAudit", Capabilities: []Capability{CapabilityFilesystemRead, CapabilityProcessExecute, CapabilityNetworkAccess}, DefaultRisk: RiskMedium},
 	"Git":                   {Name: "Git", Capabilities: []Capability{CapabilityProcessExecute}, DefaultRisk: RiskMedium},
 	"GitHub":                {Name: "GitHub", Capabilities: []Capability{CapabilityNetworkAccess, CapabilityProcessExecute}, DefaultRisk: RiskMedium},

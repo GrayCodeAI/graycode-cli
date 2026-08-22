@@ -121,10 +121,26 @@ func (s *Session) smartCompactBody(ctx context.Context) {
 const summaryInputRuneCap = 32_000
 
 func (s *Session) generateSummary(ctx context.Context, raw []types.EyrieMessage) string {
+	// Incremental compaction: if a prior summary was persisted by an earlier
+	// compaction, merge the NEW messages into it rather than re-summarizing the
+	// entire conversation from scratch. This preserves already-captured context
+	// and avoids the cost of re-deriving it.
+	prior := ExtractPriorSummary(raw)
+	newMsgs := raw
+	if prior != "" {
+		// Only the messages that came after the persisted summary are "new".
+		for i, m := range raw {
+			if m.Role == "user" && strings.HasPrefix(m.Content, PriorSummaryPrefix) {
+				newMsgs = raw[i+1:]
+				break
+			}
+		}
+	}
+
 	// Build a compact version of the conversation for summarization
 	// using the structured compaction prompt from compact_prompt.go
 	var summaryMsgs []types.EyrieMessage
-	compactPrompt := BuildCompactPrompt(CompactBase)
+	compactPrompt := BuildIncrementalCompactPrompt(prior)
 	summaryMsgs = append(summaryMsgs, types.EyrieMessage{
 		Role:    "user",
 		Content: compactPrompt + "\n\nConversation:\n",
@@ -132,7 +148,7 @@ func (s *Session) generateSummary(ctx context.Context, raw []types.EyrieMessage)
 
 	// Add a condensed version of messages, capped at a bounded total size
 	budget := summaryInputRuneCap
-	for _, m := range raw {
+	for _, m := range newMsgs {
 		if m.Role != "user" && m.Role != "assistant" {
 			continue
 		}
