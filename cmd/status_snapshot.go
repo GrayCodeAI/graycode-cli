@@ -8,6 +8,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/status"
 	"github.com/spf13/cobra"
 )
@@ -48,6 +49,12 @@ func buildStatusSnapshot() status.Snapshot {
 		snapshot.Provider = strings.TrimSpace(settings.Provider)
 	}
 	snapshot.Permission.SandboxMode = settings.Sandbox
+	// Resolve the native confinement backend the way execution would, so the
+	// snapshot shows the real isolation technology (seatbelt/landlock/docker…)
+	// rather than only the requested policy label.
+	if sel := sandbox.SelectSandbox(sandbox.IsolationDefault, snapshot.Workspace); sel.Backend != "" {
+		snapshot.Permission.SandboxBackend = sel.Backend
+	}
 	snapshot.Permission.EffectiveRules = len(settings.AllowedTools) + len(settings.DisallowedTools) + len(settings.AutoAllow)
 	if settings.AutonomyExplicit {
 		snapshot.Permission.AutonomyTier = fmt.Sprintf("%d", settings.Autonomy)
@@ -74,9 +81,13 @@ func buildStatusSnapshot() status.Snapshot {
 }
 
 func formatStatusSnapshot(s status.Snapshot) string {
-	return fmt.Sprintf("Hawk status\nSchema: %s\nWorkspace: %s\nGit branch: %s\nProvider: %s\nModel: %s\nAutonomy tier: %s\nSandbox: %s\nPermission rules: %d\nMCP: %d configured (%s)\nSkills: %d (%s)\nSecrets redacted: %t\n",
+	backend := ""
+	if s.Permission.SandboxBackend != "" {
+		backend = " (" + s.Permission.SandboxBackend + ")"
+	}
+	return fmt.Sprintf("Hawk status\nSchema: %s\nWorkspace: %s\nGit branch: %s\nProvider: %s\nModel: %s\nAutonomy tier: %s\nSandbox: %s%s\nPermission rules: %d\nMCP: %d configured (%s)\nSkills: %d (%s)\nSecrets redacted: %t\n",
 		s.SchemaVersion, s.Workspace, s.GitBranch, s.Provider, s.Model,
-		s.Permission.AutonomyTier, s.Permission.SandboxMode,
+		s.Permission.AutonomyTier, s.Permission.SandboxMode, backend,
 		s.Permission.EffectiveRules, s.MCP.Configured, s.MCP.State,
 		s.Skills.Configured, s.Skills.State, s.Permission.SecretRedacted)
 }

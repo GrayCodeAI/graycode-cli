@@ -36,6 +36,7 @@ type PermissionStatus struct {
 	Mode           string `json:"mode,omitempty"`
 	AutonomyTier   string `json:"autonomy_tier,omitempty"`
 	SandboxMode    string `json:"sandbox_mode,omitempty"`
+	SandboxBackend string `json:"sandbox_backend,omitempty"`
 	EffectiveRules int    `json:"effective_rules,omitempty"`
 	SecretRedacted bool   `json:"secret_values_redacted"`
 }
