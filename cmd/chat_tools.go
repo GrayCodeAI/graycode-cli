@@ -7,6 +7,7 @@ import (
 	"time"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/lsp"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
@@ -70,7 +71,6 @@ func essentialTools() []tool.Tool {
 		tool.WaitTasksTool{},
 		tool.KillTaskTool{},
 		tool.MonitorTool{},
-		tool.LSPTool{},
 		tool.MultiEditTool{},
 		tool.BrowserTool{},
 		tool.ScreenshotTool{},
@@ -297,6 +297,7 @@ func defaultRegistry(settings hawkconfig.Settings) (*tool.Registry, error) {
 	if err != nil {
 		return nil, err
 	}
+	filtered = append(filtered, tool.LSPTool{Manager: lsp.NewManagerFromProject(".")})
 	registry := tool.NewRegistry(filtered...)
 	// Lazy model surface: only essential tools are sent to the LLM.
 	// Optional tools register for Get/ToolSearch and promote via select:.
