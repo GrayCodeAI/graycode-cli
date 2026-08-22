@@ -26,6 +26,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 	snapshot.Sessions = status.ComponentStatus{Active: active, State: "available"}
 	snapshot.Warnings = []string{}
 	snapshot.MCP.State = "not_loaded"
+	snapshot.Skills.State = "discovery_deferred"
 	snapshot.Hooks.State = "process_local"
 	snapshot.Trace.State = "available"
 	writeJSON(w, http.StatusOK, snapshot)

@@ -23,6 +23,7 @@ type Snapshot struct {
 	Subagents     []SubagentStatus `json:"active_subagents,omitempty"`
 	Sessions      ComponentStatus  `json:"sessions"`
 	MCP           ComponentStatus  `json:"mcp"`
+	Skills        ComponentStatus  `json:"skills"`
 	Hooks         ComponentStatus  `json:"hooks"`
 	Recovery      string           `json:"session_recovery_state,omitempty"`
 	ActiveGoal    string           `json:"active_goal,omitempty"`

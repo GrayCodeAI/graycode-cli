@@ -11,6 +11,8 @@ func TestSnapshotJSONIsRedactedAndVersioned(t *testing.T) {
 	s.Model = "provider/model"
 	s.Permission.Mode = "ask"
 	s.Permission.EffectiveRules = 2
+	s.MCP = ComponentStatus{Configured: 1, State: "not_loaded"}
+	s.Skills = ComponentStatus{Configured: 2, State: "available"}
 	b, err := s.JSON()
 	if err != nil {
 		t.Fatal(err)
@@ -27,5 +29,8 @@ func TestSnapshotJSONIsRedactedAndVersioned(t *testing.T) {
 	}
 	if decoded.Model != s.Model || decoded.Permission.Mode != "ask" {
 		t.Fatalf("unexpected decoded snapshot: %+v", decoded)
+	}
+	if decoded.MCP.Configured != 1 || decoded.Skills.Configured != 2 {
+		t.Fatalf("extension status was not preserved: %+v", decoded)
 	}
 }

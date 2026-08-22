@@ -462,8 +462,9 @@ those belong in `external/eyrie`.
 
 ### Milestone 5: Host integration and trust UX
 
-- Stabilize daemon/ACP status and session contracts.
-- Improve MCP and skill trust presentation.
+- [x] Stabilize daemon/ACP status and session contracts.
+- [x] Add redacted MCP and skill status to the shared snapshot.
+- [x] Preserve project trust warnings without starting project integrations.
 - Evaluate a Go SDK only after real consumers require it.
 
 ## Deliberately Rejected

@@ -7,6 +7,7 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/status"
 	"github.com/spf13/cobra"
 )
@@ -59,14 +60,25 @@ func buildStatusSnapshot() status.Snapshot {
 			snapshot.Permission.Mode = "auto"
 		}
 	}
+	snapshot.MCP.Configured = len(settings.MCPServers)
+	snapshot.MCP.State = "not_loaded"
+	snapshot.Skills.State = "discovery_deferred"
+	if entries, err := plugin.DefaultRegistry.List(context.Background(), snapshot.Workspace); err == nil {
+		snapshot.Skills.Configured = len(entries)
+		snapshot.Skills.State = "available"
+	}
+	if engine.ProjectTrust(snapshot.Workspace).Blocked {
+		snapshot.Warnings = append(snapshot.Warnings, "project automation is blocked until this folder is trusted")
+	}
 	return snapshot
 }
 
 func formatStatusSnapshot(s status.Snapshot) string {
-	return fmt.Sprintf("Hawk status\nSchema: %s\nWorkspace: %s\nGit branch: %s\nProvider: %s\nModel: %s\nAutonomy tier: %s\nSandbox: %s\nPermission rules: %d\nSecrets redacted: %t\n",
+	return fmt.Sprintf("Hawk status\nSchema: %s\nWorkspace: %s\nGit branch: %s\nProvider: %s\nModel: %s\nAutonomy tier: %s\nSandbox: %s\nPermission rules: %d\nMCP: %d configured (%s)\nSkills: %d (%s)\nSecrets redacted: %t\n",
 		s.SchemaVersion, s.Workspace, s.GitBranch, s.Provider, s.Model,
 		s.Permission.AutonomyTier, s.Permission.SandboxMode,
-		s.Permission.EffectiveRules, s.Permission.SecretRedacted)
+		s.Permission.EffectiveRules, s.MCP.Configured, s.MCP.State,
+		s.Skills.Configured, s.Skills.State, s.Permission.SecretRedacted)
 }
 
 func init() {

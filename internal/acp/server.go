@@ -298,6 +298,8 @@ func (s *Server) handleStatus(msg rpcMessage) {
 	snapshot.Model = as.sess.Model()
 	snapshot.Permission.SandboxMode = as.sess.Isolation().String()
 	snapshot.Permission.SecretRedacted = true
+	snapshot.MCP.State = "client_supplied"
+	snapshot.Skills.State = "session_visible"
 	if entries, err := session.List(); err == nil {
 		for _, entry := range entries {
 			child, loadErr := session.Load(entry.ID)
