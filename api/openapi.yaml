@@ -694,6 +694,68 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /v1/sessions/{id}/lease:
+    post:
+      operationId: acquireSessionLease
+      tags: [sessions]
+      summary: Acquire a single-owner lease on a session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lease acquired
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                  fence:
+                    type: string
+        "400":
+          description: Invalid session id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: releaseSessionLease
+      tags: [sessions]
+      summary: Release a session lease (requires the current fence)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: fence
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lease released
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                  released:
+                    type: string
+        "409":
+          description: Lease owned by another fence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /v1/sessions/{id}/graph:
     get:
       operationId: getSessionGraph

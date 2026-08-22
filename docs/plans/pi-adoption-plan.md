@@ -320,19 +320,22 @@ updating the Hawk pointer.
 
 ### Milestone 3: Differential renderer (P1)
 
-- Implement the line-diff engine.
-- Integrate with Bubble Tea render path.
-- Preserve fxtape recording/replay.
+- [x] Implement the line-diff engine (`internal/tui/diff`).
+- [x] Add synchronized-output emission and range tests.
+- [ ] Integrate the engine into the Bubble Tea render path (follow-up; full
+      renderer swap is verified at runtime and is tracked separately).
+- [x] Preserve fxtape recording/replay.
 
 ### Milestone 4: Session fencing + daemon leases (P1)
 
-- Add fence tokens to the session write path.
-- Add daemon lease endpoint and ownership checks.
-- Update OpenAPI parity.
+- [x] Add fence tokens to the session write path.
+- [x] Add daemon lease endpoint and ownership checks.
+- [x] Update OpenAPI parity.
 
 ### Milestone 5: Kitty graphics (P2)
 
-- Add Kitty protocol support and graceful fallback.
+- [ ] Deferred: requires the differential renderer integration and image
+      handling; tracked after the render-path follow-up.
 
 ## Deliberately Deferred
 

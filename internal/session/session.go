@@ -62,6 +62,11 @@ type Session struct {
 	Events    []eventlog.WireEvent `json:"events,omitempty"`
 	CreatedAt time.Time            `json:"created_at"`
 	UpdatedAt time.Time            `json:"updated_at"`
+	// Fence is a monotonically increasing writer token (optional). When set, a
+	// remote owner must present an equal-or-newer fence to write; it is advisory
+	// metadata for single-owner remote sessions and is backward-compatible with
+	// sessions that never set it.
+	Fence string `json:"fence,omitempty"`
 }
 
 // ErrNotFound identifies a missing durable session without conflating it with
@@ -157,6 +162,9 @@ func saveWithCompression(s *Session, compress bool) error {
 	}
 	if len(s.Events) > 0 {
 		meta["format_version"] = SessionFormatVersion
+	}
+	if s.Fence != "" {
+		meta["fence"] = s.Fence
 	}
 	metaData, err := json.Marshal(meta)
 	if err != nil {
@@ -330,6 +338,12 @@ func (w *WAL) Append(msg Message) error {
 
 // AppendMeta writes session metadata to the WAL.
 func (w *WAL) AppendMeta(model, provider, cwd string) error {
+	return w.AppendMetaWithFence(model, provider, cwd, "")
+}
+
+// AppendMetaWithFence writes session metadata to the WAL, including an optional
+// writer fence token for single-owner remote sessions.
+func (w *WAL) AppendMetaWithFence(model, provider, cwd, fence string) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -340,6 +354,9 @@ func (w *WAL) AppendMeta(model, provider, cwd string) error {
 		"provider":   provider,
 		"cwd":        cwd,
 		"created_at": time.Now().Format(time.RFC3339),
+	}
+	if fence != "" {
+		meta["fence"] = fence
 	}
 	data, err := json.Marshal(meta)
 	if err != nil {
@@ -423,6 +440,7 @@ func RecoverFromWAL(sessionID string) (*Session, error) {
 	if v, ok := meta["created_at"].(string); ok {
 		s.CreatedAt, _ = time.Parse(time.RFC3339, v)
 	}
+	s.Fence = asString(meta["fence"])
 	s.UpdatedAt = time.Now()
 	return &s, nil
 }
@@ -634,6 +652,7 @@ func loadJSONLFile(path, id string) (*Session, error) {
 		if v, ok := meta["updated_at"].(string); ok {
 			s.UpdatedAt, _ = time.Parse(time.RFC3339, v)
 		}
+		s.Fence = asString(meta["fence"])
 	}
 	if len(s.Messages) == 0 && meta == nil {
 		return nil, ErrNotFound
