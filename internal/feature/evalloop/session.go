@@ -70,6 +70,8 @@ func (r *SessionRuntime) Run(ctx context.Context, workDir, prompt string) (Resul
 		}
 	}
 	result.Duration = time.Since(start)
+	result.Model = r.Model
+	result.Provider = r.Provider
 
 	// Snapshot the transcript for offline replay of failing runs.
 	if msgs := sess.Persistence().RawMessages(); msgs != nil {
@@ -77,6 +79,12 @@ func (r *SessionRuntime) Run(ctx context.Context, workDir, prompt string) (Resul
 			result.Transcript = data
 		}
 	}
+
+	// Reproducibility hash over the fixed inputs and the transcript.
+	result.ReproHash = ReproHashOf(Inputs{
+		Model: r.Model, Provider: r.Provider, Prompt: prompt,
+		ConfigVersion: evalConfigVersion,
+	}, result.Transcript)
 
 	// Report usage/cost when the backend exposes it via the session cost model.
 	cost := sess.CostValue()
@@ -86,3 +94,7 @@ func (r *SessionRuntime) Run(ctx context.Context, workDir, prompt string) (Resul
 	}
 	return result, nil
 }
+
+// evalConfigVersion is bumped whenever loop limits or system-prompt semantics
+// change, so reproducibility hashes are invalidated across versions.
+const evalConfigVersion = 1

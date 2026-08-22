@@ -27,6 +27,7 @@ var (
 	evalResultsJSON bool
 	evalLoopPrompt  string
 	evalLoopModel   string
+	evalLoopReport  bool
 )
 
 var evalCmd = &cobra.Command{
@@ -82,6 +83,7 @@ func init() {
 	evalResultsCmd.Flags().BoolVar(&evalResultsJSON, "json", false, "output results as JSON")
 	evalLoopCmd.Flags().StringVar(&evalLoopPrompt, "prompt", "", "Task prompt to run through the agent loop")
 	evalLoopCmd.Flags().StringVar(&evalLoopModel, "model", "", "Model to use (defaults to active model)")
+	evalLoopCmd.Flags().BoolVar(&evalLoopReport, "report", false, "print the comparative/reproducibility report")
 
 	evalCmd.AddCommand(evalRunCmd)
 	evalCmd.AddCommand(evalListCmd)
@@ -138,6 +140,13 @@ func runEvalLoop(cmd *cobra.Command, _ []string) error {
 		"cost_usd":        result.CostUSD,
 		"duration":        result.Duration.String(),
 		"transcript_path": transcriptPath,
+		"repro_hash":      result.ReproHash,
+	}
+	if evalLoopReport {
+		cmp := evalloop.Compare([]evalloop.Result{result})
+		if _, err := fmt.Fprintln(cmd.OutOrStdout(), evalloop.FormatComparison(cmp)); err != nil {
+			return err
+		}
 	}
 	data, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
