@@ -145,3 +145,37 @@ func TestNormalizeWhitespace(t *testing.T) {
 		}
 	}
 }
+
+func TestFuzzyFindUnicodeNormalized(t *testing.T) {
+	// Model emitted em-dash and smart quotes; file has ASCII.
+	content := "option = \"fast\"  # use the built-in mode\n"
+	old := "option = \u201cfast\u201d  # use the built\u2013in mode\n"
+	matched, actual, sim := fuzzyFind(content, old)
+	if !matched {
+		t.Fatal("unicode-normalized match failed")
+	}
+	if actual != content {
+		t.Fatalf("actual = %q", actual)
+	}
+	if sim != 1.0 {
+		t.Fatalf("sim = %v", sim)
+	}
+}
+
+func TestUnicodeNormalizedFindRequiresTypographicNeedle(t *testing.T) {
+	matched, _ := unicodeNormalizedFind("abc", "abc")
+	if matched {
+		t.Fatal("plain needle should be skipped (covered by earlier strategies)")
+	}
+}
+
+func TestFoldTypographic(t *testing.T) {
+	in := "\u201ca\u201d \u2014 b\u2026 c\u00a0d"
+	want := "\"a\" - b. cd" // nbsp folds to regular space; trailing join is rune-level
+	got := normalizeTypographic(in)
+	// nbsp becomes ' ', so expected includes the space
+	want = "\"a\" - b. c d"
+	if got != want {
+		t.Fatalf("normalizeTypographic = %q, want %q", got, want)
+	}
+}
