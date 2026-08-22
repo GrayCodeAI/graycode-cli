@@ -452,6 +452,8 @@ func (s *Server) routes() {
 	s.handle("GET /v1/sessions", s.auth(s.rate(s.handleListSessions, s.apiLimiter)))
 	s.handle("GET /v1/sessions/{id}", s.auth(s.rate(s.handleGetSession, s.apiLimiter)))
 	s.handle("GET /v1/sessions/{id}/messages", s.auth(s.rate(s.handleGetMessages, s.apiLimiter)))
+	s.handle("POST /v1/sessions/{id}/lease", s.auth(s.rate(s.handleAcquireLease, s.apiLimiter)))
+	s.handle("DELETE /v1/sessions/{id}/lease", s.auth(s.rate(s.handleReleaseLease, s.apiLimiter)))
 	s.handle("GET /v1/sessions/{id}/graph", s.auth(s.rate(s.handleGetSessionGraph, s.apiLimiter)))
 	s.handle("DELETE /v1/sessions/{id}", s.auth(s.rate(s.handleDeleteSession, s.apiLimiter)))
 	s.handle("GET /v1/stats", s.auth(s.rate(s.handleStats, s.apiLimiter)))
