@@ -19,8 +19,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-
-	"golang.org/x/sys/unix"
 )
 
 // maxWorkers bounds the copy worker pool. macOS defaults to a low soft
@@ -156,20 +154,11 @@ func copyFileCoW(src, dst string) (int64, error) {
 }
 
 // tryCloneFile attempts a filesystem-level clone; returns cloned=false when
-// unsupported (caller falls back). APFS clonefile is supported on darwin;
-// other platforms take the byte-copy fallback, which stays correct everywhere.
+// unsupported (caller falls back to a byte copy, which stays correct
+// everywhere). The per-platform implementations live in clone_darwin.go and
+// clone_other.go.
 func tryCloneFile(src, dst string) (int64, bool) {
-	if runtime.GOOS != "darwin" {
-		return 0, false
-	}
-	if err := unix.Clonefile(src, dst, 0); err != nil {
-		return 0, false
-	}
-	info, err := os.Stat(src)
-	if err != nil {
-		return 0, false
-	}
-	return info.Size(), true
+	return tryCloneFilePlatform(src, dst)
 }
 
 // SupportsCloneFile reports whether a quick probe clone succeeds on the
