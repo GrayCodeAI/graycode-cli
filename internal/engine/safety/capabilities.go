@@ -52,6 +52,7 @@ var toolPolicies = map[string]ToolPolicy{
 	"Diagnostics":           {Name: "Diagnostics", Capabilities: []Capability{CapabilityFilesystemRead, CapabilityProcessExecute}, DefaultRisk: RiskMedium},
 	"ProjectVerify":         {Name: "ProjectVerify", Capabilities: []Capability{CapabilityFilesystemRead, CapabilityProcessExecute}, DefaultRisk: RiskMedium},
 	"AppVerify":             {Name: "AppVerify", Capabilities: []Capability{CapabilityFilesystemRead, CapabilityProcessExecute}, DefaultRisk: RiskMedium},
+	"GenerateMedia":         {Name: "GenerateMedia", Capabilities: []Capability{CapabilityNetworkAccess, CapabilityFilesystemWrite}, DefaultRisk: RiskMedium},
 	"DependencyAudit":       {Name: "DependencyAudit", Capabilities: []Capability{CapabilityFilesystemRead, CapabilityProcessExecute, CapabilityNetworkAccess}, DefaultRisk: RiskMedium},
 	"Git":                   {Name: "Git", Capabilities: []Capability{CapabilityProcessExecute}, DefaultRisk: RiskMedium},
 	"GitHub":                {Name: "GitHub", Capabilities: []Capability{CapabilityNetworkAccess, CapabilityProcessExecute}, DefaultRisk: RiskMedium},

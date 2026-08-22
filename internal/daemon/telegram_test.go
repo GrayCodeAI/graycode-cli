@@ -155,3 +155,33 @@ func jsonResp(body string) *http.Response {
 		Header:     http.Header{"Content-Type": []string{"application/json"}},
 	}
 }
+
+func TestTelegramSafeFileName(t *testing.T) {
+	if got := safeFileName("AAabcdef0123456789xyz", "audio/ogg"); got != "AAabcdef01234567.ogg" {
+		t.Fatalf("safeFileName = %q", got)
+	}
+	if got := safeFileName("f", "audio/mpeg"); got != "f.mp3" {
+		t.Fatalf("safeFileName short id = %q", got)
+	}
+}
+
+func TestTelegramVoiceWithoutTranscriberFallsBackToText(t *testing.T) {
+	hawk := newIPv4TelegramServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, ChatResponse{Response: "hawk-reply"})
+	}))
+	defer hawk.Close()
+
+	// No STT transcriber installed: a voice message must fall back to the
+	// existing text path (transcribeAudio returns "" with no reply).
+	tg := newTelegramGatewayFromConfig(TelegramConfig{Token: "tok", AllowList: []string{"user"}}, hawk.URL, "k")
+	tg.handleMessage(context.Background(), &TelegramMessage{
+		Text: "hello",
+		Chat: struct {
+			ID int64 `json:"id"`
+		}{ID: 1},
+		From: struct {
+			Username string `json:"username"`
+		}{Username: "user"},
+		Voice: &telegramAudio{FileID: "fid", MimeType: "audio/ogg"},
+	})
+}
