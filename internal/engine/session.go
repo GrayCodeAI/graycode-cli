@@ -1187,7 +1187,10 @@ type StreamEvent struct {
 	Content  string
 	ToolName string
 	ToolID   string
-	Usage    *StreamUsage // usage data for this event
+	// ToolState and ToolReason are populated for tool lifecycle events.
+	ToolState  ToolState
+	ToolReason ToolTerminalReason
+	Usage      *StreamUsage // usage data for this event
 	// Compaction metadata (Type == "compact")
 	TokensBefore int
 	TokensAfter  int

@@ -155,6 +155,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 	// keeping the agent loop independent of backend-specific state.
 	defer func() {
 		success := ctx.Err() == nil
+		if !success {
+			// Interrupted mid-turn (Esc/cancel): drop any dangling partial
+			// assistant tool_use or orphaned tool_result so the transcript
+			// stays valid for the next provider call.
+			s.Persistence().TrimIncompleteTurn()
+		}
 		messages := s.Persistence().Messages()
 		s.LifecycleSvc().Finalize(ctx, messages, success, time.Since(sessionStart), s.CostValue().TotalUSD())
 		s.MemorySvc().Finalize(messages, success)

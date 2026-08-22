@@ -23,6 +23,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/attachment"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	statussnapshot "github.com/GrayCodeAI/hawk/internal/status"
 )
 
 // ProtocolVersion is the ACP protocol version this server implements.
@@ -290,12 +291,38 @@ func (s *Server) handleStatus(msg rpcMessage) {
 		s.writeError(msg.ID, errCodeInvalidParams, "unknown sessionId")
 		return
 	}
+	snapshot := statussnapshot.New()
+	snapshot.SessionID = p.SessionID
+	snapshot.Workspace = statussnapshot.Workspace()
+	snapshot.Provider = as.sess.Provider()
+	snapshot.Model = as.sess.Model()
+	snapshot.Permission.SandboxMode = as.sess.Isolation().String()
+	snapshot.Permission.SecretRedacted = true
+	snapshot.MCP.State = "client_supplied"
+	snapshot.Skills.State = "session_visible"
+	if entries, err := session.List(); err == nil {
+		for _, entry := range entries {
+			child, loadErr := session.Load(entry.ID)
+			if loadErr != nil || child == nil || child.ParentSessionID != p.SessionID {
+				continue
+			}
+			state := "persisted"
+			if child.UpdatedAt.After(time.Now().Add(-5 * time.Minute)) {
+				state = "active"
+			}
+			snapshot.Subagents = append(snapshot.Subagents, statussnapshot.SubagentStatus{
+				ID: child.ID, ParentID: child.ParentSessionID, State: state,
+				Model: child.Model, Mode: child.Name, Workspace: child.CWD,
+			})
+		}
+	}
 	s.reply(msg.ID, map[string]any{
 		"sessionId":  p.SessionID,
 		"workMode":   string(as.sess.WorkMode()),
 		"isolation":  as.sess.Isolation().String(),
 		"autoCommit": as.sess.AutoCommit(),
 		"messages":   as.sess.MessageCount(),
+		"snapshot":   snapshot,
 	})
 }
 

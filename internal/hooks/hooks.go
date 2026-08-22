@@ -25,18 +25,27 @@ func allowProjectHookDir(dir string) error {
 type EventType string
 
 const (
-	EventPreQuery      EventType = "pre_query"
-	EventPostQuery     EventType = "post_query"
-	EventPreTool       EventType = "pre_tool"
-	EventPostTool      EventType = "post_tool"
-	EventPreCompact    EventType = "pre_compact"
-	EventPostCompact   EventType = "post_compact"
-	EventFileChanged   EventType = "file_changed"
-	EventSessionStart  EventType = "session_start"
-	EventSessionEnd    EventType = "session_end"
-	EventPermissionAsk EventType = "permission_ask"
-	EventError         EventType = "error"
-	EventTestResult    EventType = "test_result"
+	EventPreQuery         EventType = "pre_query"
+	EventPostQuery        EventType = "post_query"
+	EventPreTool          EventType = "pre_tool"
+	EventPostTool         EventType = "post_tool"
+	EventPreCompact       EventType = "pre_compact"
+	EventPostCompact      EventType = "post_compact"
+	EventFileChanged      EventType = "file_changed"
+	EventSessionStart     EventType = "session_start"
+	EventSessionEnd       EventType = "session_end"
+	EventPermissionAsk    EventType = "permission_ask"
+	EventError            EventType = "error"
+	EventTestResult       EventType = "test_result"
+	EventUserPromptQueued EventType = "user_prompt_queued"
+	EventTurnStarted      EventType = "turn_started"
+	EventPostToolFailure  EventType = "post_tool_failure"
+	EventPermissionResult EventType = "permission_result"
+	EventSessionHeartbeat EventType = "session_heartbeat"
+	EventSubagentTask     EventType = "task_started"
+	EventStopFailure      EventType = "stop_failure"
+	EventInterrupt        EventType = "interrupt"
+	EventNotification     EventType = "notification"
 )
 
 // EventEnvelope provides structured, typed metadata for hook events.
@@ -296,7 +305,7 @@ func parseCommandHook(path string) (*CommandHook, error) {
 }
 
 func registerCommandHook(ch *CommandHook) {
-	eventType := EventType(ch.Event)
+	eventType := EventType(CanonicalEvent(ch.Event))
 	h := Hook{
 		Name:     ch.Name,
 		Event:    eventType,

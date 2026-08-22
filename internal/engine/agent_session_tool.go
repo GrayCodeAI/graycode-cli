@@ -293,9 +293,9 @@ func (s *Session) resolveSubAgentModel(mode SubAgentMode) string {
 	}
 	switch mode {
 	case SubAgentExplore:
-		return s.LifecycleSvc().Cascade().SelectModel("summarize", current, "")
+		return s.LifecycleSvc().Cascade().SelectModel("summarize", current, s.LifecycleSvc().Cascade().Roles.Explorer)
 	case SubAgentPlan:
-		return s.LifecycleSvc().Cascade().SelectModel("summarize", current, "")
+		return s.LifecycleSvc().Cascade().SelectModel("planning", current, s.LifecycleSvc().Cascade().Roles.Planner)
 	case SubAgentGeneral:
 		return s.LifecycleSvc().Cascade().SelectModel("implement", current, "")
 	default:

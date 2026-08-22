@@ -164,6 +164,107 @@ func (s *PersistenceService) AddAssistant(content string) {
 	s.AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: content})
 }
 
+// TrimIncompleteTurn removes a trailing partial turn so the transcript stays
+// valid for the next provider call after an interruption (Esc/cancel).
+//
+// A cancelled agent loop can stop between appending the assistant message
+// carrying ToolUse blocks and appending the matching tool_result messages.
+// Sending such a transcript back to an API that requires every tool_use to be
+// answered by a tool_result fails the request. This drops:
+//
+//   - a trailing tool_result-carrying user message whose ToolUseID has no
+//     matching assistant ToolUse block, and
+//   - a trailing assistant message whose ToolUse blocks have no results yet.
+//
+// It adopts the cancellation-with-history-consistency-cleanup pattern from
+// MiniMax-AI/Mini-Agent's _cleanup_incomplete_messages. Safe on a nil receiver;
+// it is a no-op when the transcript already ends in a complete turn.
+func (s *PersistenceService) TrimIncompleteTurn() {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// If the latest assistant tool-use turn has only partial results, remove
+	// the assistant message and every result belonging to that incomplete turn.
+	for i := len(s.messages) - 1; i >= 0; i-- {
+		if s.messages[i].Role == "assistant" && len(s.messages[i].ToolUse) > 0 {
+			if !hasResultsForAllToolUses(s.messages[i+1:], s.messages[i].ToolUse) {
+				s.messages = s.messages[:i]
+			}
+			break
+		}
+	}
+
+	for len(s.messages) > 0 {
+		last := s.messages[len(s.messages)-1]
+		switch {
+		case len(last.ToolResults) > 0:
+			// Trailing tool results with no owning assistant tool_use: drop.
+			if !hasOwnersForToolResults(s.messages[:len(s.messages)-1], last.ToolResults) {
+				s.messages = s.messages[:len(s.messages)-1]
+				continue
+			}
+			return // results have an owner — turn is complete
+		case len(last.ToolUse) > 0:
+			// Assistant issued calls that were never executed: drop them.
+			s.messages = s.messages[:len(s.messages)-1]
+			continue
+		default:
+			return // plain message — nothing dangling
+		}
+	}
+}
+
+// lastAssistantToolUseIDs returns the tool-use IDs from the most recent
+// assistant message carrying ToolUse blocks, or nil if none exists in msgs.
+func lastAssistantToolUseIDs(msgs []types.EyrieMessage) map[string]bool {
+	for i := len(msgs) - 1; i >= 0; i-- {
+		if msgs[i].Role == "assistant" && len(msgs[i].ToolUse) > 0 {
+			ids := make(map[string]bool, len(msgs[i].ToolUse))
+			for _, tc := range msgs[i].ToolUse {
+				ids[tc.ID] = true
+			}
+			return ids
+		}
+	}
+	return nil
+}
+
+func hasOwnersForToolResults(msgs []types.EyrieMessage, results []types.ToolResult) bool {
+	owners := lastAssistantToolUseIDs(msgs)
+	if len(owners) == 0 {
+		return false
+	}
+	for _, result := range results {
+		if !owners[result.ToolUseID] {
+			return false
+		}
+	}
+	return true
+}
+
+// hasResultsForAllToolUses reports whether every tool-use ID has at least one
+// matching tool_result anywhere in msgs.
+func hasResultsForAllToolUses(msgs []types.EyrieMessage, uses []types.ToolCall) bool {
+	if len(uses) == 0 {
+		return true
+	}
+	seen := make(map[string]bool, len(uses))
+	for _, m := range msgs {
+		for _, tr := range m.ToolResults {
+			seen[tr.ToolUseID] = true
+		}
+	}
+	for _, tc := range uses {
+		if !seen[tc.ID] {
+			return false
+		}
+	}
+	return true
+}
+
 // SetMessages replaces the transcript.
 func (s *PersistenceService) SetMessages(msgs []types.EyrieMessage) {
 	s.mu.Lock()

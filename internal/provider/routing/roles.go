@@ -12,6 +12,7 @@ type Role string
 
 const (
 	RolePlanner  Role = "planner"
+	RoleExplorer Role = "explorer"
 	RoleCoder    Role = "coder"
 	RoleReviewer Role = "reviewer"
 	RoleCommit   Role = "commit"
@@ -19,6 +20,7 @@ const (
 
 type ModelRoles struct {
 	Planner  string `json:"planner,omitempty"`
+	Explorer string `json:"explorer,omitempty"`
 	Coder    string `json:"coder,omitempty"`
 	Reviewer string `json:"reviewer,omitempty"`
 	Commit   string `json:"commit,omitempty"`
@@ -33,7 +35,7 @@ func DefaultRoles(primaryModel string) ModelRoles {
 	if provider := gateway.ProviderForModel(ctx, primaryModel); provider != "" {
 		commit = gateway.PreferredModel(ctx, provider, gateway.ModelClassEconomical, primaryModel)
 	}
-	return ModelRoles{Planner: primaryModel, Coder: primaryModel, Reviewer: primaryModel, Commit: commit}
+	return ModelRoles{Planner: primaryModel, Explorer: commit, Coder: primaryModel, Reviewer: primaryModel, Commit: commit}
 }
 
 func (r ModelRoles) ModelForRole(role Role) string {
@@ -41,6 +43,8 @@ func (r ModelRoles) ModelForRole(role Role) string {
 	switch role {
 	case RolePlanner:
 		model = r.Planner
+	case RoleExplorer:
+		model = r.Explorer
 	case RoleCoder:
 		model = r.Coder
 	case RoleReviewer:

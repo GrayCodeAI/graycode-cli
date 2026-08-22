@@ -43,6 +43,7 @@ func TestDefaultRolesWithUnknownPrimary(t *testing.T) {
 func TestModelForRole(t *testing.T) {
 	roles := ModelRoles{
 		Planner:  "planner-model",
+		Explorer: "explorer-model",
 		Coder:    "coder-model",
 		Reviewer: "reviewer-model",
 		Commit:   "commit-model",
@@ -53,6 +54,7 @@ func TestModelForRole(t *testing.T) {
 		expected string
 	}{
 		{RolePlanner, "planner-model"},
+		{RoleExplorer, "explorer-model"},
 		{RoleCoder, "coder-model"},
 		{RoleReviewer, "reviewer-model"},
 		{RoleCommit, "commit-model"},

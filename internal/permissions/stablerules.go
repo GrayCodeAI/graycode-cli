@@ -162,6 +162,9 @@ func (s *StableRuleStore) Remember(kind stableid.Kind, canonical, displayIdentit
 	}
 	s.state = next
 	rule, _ := stableid.RuleForKey(s.state, key)
+	if err := s.saveState(); err != nil {
+		return 0, false
+	}
 	return rule.ID, true
 }
 
@@ -184,7 +187,64 @@ func (s *StableRuleStore) Revoke(id uint64) bool {
 		return false
 	}
 	s.state = next
+	if err := s.saveState(); err != nil {
+		return false
+	}
 	return true
+}
+
+// Reset removes every exact rule from the store and advances the generation.
+// The next rule receives a fresh ID, so old IDs cannot accidentally address a
+// rule created after a reset.
+func (s *StableRuleStore) Reset() bool {
+	if s == nil {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.state.Rules) == 0 {
+		return false
+	}
+	next := stableid.NewState()
+	next.NextGeneration = s.state.NextGeneration + 1
+	if next.NextGeneration == 0 {
+		return false
+	}
+	s.state = next
+	if err := s.saveState(); err != nil {
+		return false
+	}
+	return true
+}
+
+// saveState writes a state snapshot while the caller owns the mutation lock.
+// It intentionally uses the same atomic file protocol as Save without
+// reacquiring the store lock.
+func (s *StableRuleStore) saveState() error {
+	file := stableRuleFile{NextGeneration: s.state.NextGeneration}
+	for _, r := range s.state.Rules {
+		file.Rules = append(file.Rules, ruleDoc{
+			ID: r.ID, Kind: int(r.Key.Kind), Canonical: r.Key.Canonical,
+			DisplayIdentity: r.DisplayIdentity, Decision: int(r.Decision), Generation: r.Generation,
+		})
+	}
+	data, err := json.MarshalIndent(file, "", "  ")
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(s.path)
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return err
+	}
+	tmp := s.path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o600); err != nil { // #nosec G306 -- rule store is user-owned policy data
+		return err
+	}
+	if err := os.Rename(tmp, s.path); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	return nil
 }
 
 // List returns all exact rules ordered by stable id.

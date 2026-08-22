@@ -232,13 +232,34 @@ func LoadGlobalSettings() Settings {
 func LoadSettings() Settings {
 	s := LoadGlobalSettings()
 	if project := findProjectSettings(); project != nil {
-		s = MergeSettings(s, *project)
+		// Project settings provide repository-safe defaults only. Private
+		// authority stays in the user profile or explicit runtime overrides.
+		s = MergeSettings(s, projectSafeSettings(*project))
 	}
 	migrateStoredModelProvider(&s)
 	if s.PolicySchemaVersion == 0 {
 		s.PolicySchemaVersion = CurrentPolicySchemaVersion
 	}
 	return s
+}
+
+// projectSafeSettings strips fields that could grant private authority when
+// loaded from a repository. Project configuration may influence bounded,
+// repository-local behavior but cannot select credentials, grant permissions,
+// or register external providers and integrations.
+func projectSafeSettings(project Settings) Settings {
+	project.Model = ""
+	project.Provider = ""
+	project.AutoAllow = nil
+	project.AllowedTools = nil
+	project.DisallowedTools = nil
+	project.NeverAllow = nil
+	project.MCPServers = nil
+	project.CustomProviders = nil
+	project.DeploymentRouting = nil
+	project.ModelThinking = nil
+	project.GLMThinkingEnabled = nil
+	return project
 }
 
 // findProjectSettings walks up from the current working directory looking for
@@ -378,6 +399,9 @@ func MergeSettings(base, override Settings) Settings {
 		} else {
 			if override.ModelRoles.Planner != "" {
 				base.ModelRoles.Planner = override.ModelRoles.Planner
+			}
+			if override.ModelRoles.Explorer != "" {
+				base.ModelRoles.Explorer = override.ModelRoles.Explorer
 			}
 			if override.ModelRoles.Coder != "" {
 				base.ModelRoles.Coder = override.ModelRoles.Coder

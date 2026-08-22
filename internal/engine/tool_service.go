@@ -364,12 +364,12 @@ func bool2tag(isErr bool) string {
 // lookup, timeout, retry, and raw execution. PostProcess and CompleteResult
 // own the remaining result lifecycle.
 func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, override tool.Tool, ch chan<- StreamEvent, turn int, intent string) toolExecResult {
-	result := toolExecResult{tc: tc}
-	ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID}
+	result := toolExecResult{tc: tc, state: ToolStateValidating}
+	ch <- StreamEvent{Type: "tool_use", ToolName: tc.Name, ToolID: tc.ID, ToolState: ToolStateValidating}
 	containerExecutor, containerRequired := s.containerState()
 	if containerRequired && (containerExecutor == nil || !containerExecutor.Running()) {
 		msg := "Container not ready — tools are disabled until the sandbox is running."
-		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg}
+		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg, ToolState: ToolStateFailed, ToolReason: ToolReasonExecutionError}
 		result.output, result.isErr, result.err = msg, true, fmt.Errorf("%s", msg)
 		return result
 	}
@@ -378,17 +378,31 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 		_, span = oteltrace.StartToolSpan(ctx, s.tracer, tc.Name, tc.ID)
 	}
 	finishDenied := func(tag string, msg string) toolExecResult {
-		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg}
+		ch <- StreamEvent{Type: "tool_result", ToolName: tc.Name, Content: msg, ToolState: ToolStateFailed, ToolReason: result.reason}
 		if span != nil {
 			span.SetTag(tag, "true")
 			span.Finish()
 		}
 		result.output, result.isErr, result.err, result.span = msg, true, fmt.Errorf("%s", msg), nil
+		result.state = ToolStateFailed
+		switch tag {
+		case "denied":
+			result.reason = ToolReasonPermission
+		case "approval_denied":
+			result.reason = ToolReasonApproval
+		case "error":
+			result.reason = ToolReasonUnknown
+		case "pipeline_error":
+			result.reason = ToolReasonPipelineFailure
+		default:
+			result.reason = ToolReasonExecutionError
+		}
 		return result
 	}
 	if s.deps.permissions == nil {
 		return finishDenied("denied", "permission service is unavailable")
 	}
+	result.state = ToolStatePermissionWait
 	granted, denyMsg := s.deps.permissions.CheckTool(ctx, ToolCallInfo{Name: tc.Name, ID: tc.ID, Args: tc.Arguments})
 	if s.deps.recordPolicy != nil {
 		s.deps.recordPolicy(tc, "permission", granted, denyMsg)
@@ -499,6 +513,7 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 	if t == nil {
 		return finishDenied("error", "Error: tool is unavailable")
 	}
+	result.state = ToolStateExecuting
 	// Tool-declared timeout policy (DSH tool-declared-budget parity): the
 	// tool's own declared budget wins; tools that don't declare one keep the
 	// name-based fallback. Zero-config — declaring tools opt in by
@@ -521,7 +536,18 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 	timedOut := errors.Is(execErr, context.DeadlineExceeded) && toolCtx.Err() == context.DeadlineExceeded
 	cancel()
 	result.output, result.err, result.isErr, result.span = output, execErr, execErr != nil, span
+	result.state = ToolStateCompleted
+	result.reason = ToolReasonCompleted
 	if result.isErr {
+		result.state = ToolStateFailed
+		result.reason = ToolReasonExecutionError
+		if timedOut {
+			result.state = ToolStateTimedOut
+			result.reason = ToolReasonTimeout
+		} else if errors.Is(execErr, context.Canceled) {
+			result.state = ToolStateCancelled
+			result.reason = ToolReasonCancelled
+		}
 		// Preserve any partial output the tool produced before failing so the
 		// LLM can see what happened, then append the error. A deadline that
 		// won surfaces the structured TOOL_TIMEOUT vocabulary so the model sees
@@ -725,6 +751,10 @@ func (s *ToolService) PostProcess(ctx context.Context, result toolExecResult, tu
 		}
 	}
 	result.output, result.isErr = output, isErr
+	if isErr && result.reason == ToolReasonCompleted {
+		result.state = ToolStateFailed
+		result.reason = ToolReasonExecutionError
+	}
 	return result
 }
 
@@ -762,7 +792,13 @@ func (s *ToolService) CompleteResult(ctx context.Context, result toolExecResult,
 	if s.deps.redactOutput != nil {
 		output = s.deps.redactOutput(output)
 	}
-	ch <- StreamEvent{Type: "tool_result", ToolName: result.tc.Name, Content: output}
+	ch <- StreamEvent{
+		Type:       "tool_result",
+		ToolName:   result.tc.Name,
+		Content:    output,
+		ToolState:  result.state,
+		ToolReason: result.reason,
+	}
 	if result.span != nil {
 		if isErr {
 			result.span.SetTag("error", "true")

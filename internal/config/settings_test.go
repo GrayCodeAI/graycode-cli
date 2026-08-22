@@ -121,8 +121,9 @@ func TestMergeSettings_ModelRolesOverride(t *testing.T) {
 	base := Settings{}
 	override := Settings{
 		ModelRoles: &routing.ModelRoles{
-			Planner: "claude-opus",
-			Coder:   "claude-sonnet",
+			Planner:  "claude-opus",
+			Explorer: "claude-haiku",
+			Coder:    "claude-sonnet",
 		},
 	}
 	merged := MergeSettings(base, override)
@@ -131,6 +132,9 @@ func TestMergeSettings_ModelRolesOverride(t *testing.T) {
 	}
 	if merged.ModelRoles.Planner != "claude-opus" {
 		t.Errorf("expected planner 'claude-opus', got %q", merged.ModelRoles.Planner)
+	}
+	if merged.ModelRoles.Explorer != "claude-haiku" {
+		t.Errorf("expected explorer 'claude-haiku', got %q", merged.ModelRoles.Explorer)
 	}
 }
 

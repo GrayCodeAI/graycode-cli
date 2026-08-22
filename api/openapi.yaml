@@ -435,6 +435,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /v1/status:
+    get:
+      operationId: statusSnapshot
+      tags: [system]
+      summary: Get a redacted daemon status snapshot
+      responses:
+        "200":
+          description: Current daemon status
+          content:
+            application/json:
+              schema:
+                type: object
+
   /v1/ready:
     get:
       operationId: readinessProbe

@@ -4,20 +4,24 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/codegraph"
+	"github.com/GrayCodeAI/hawk/internal/lsp"
 )
 
-type LSPTool struct{}
+type LSPTool struct {
+	Manager *lsp.LSPManager
+}
 
 func (LSPTool) Name() string      { return "LSP" }
 func (LSPTool) Aliases() []string { return []string{"lsp"} }
 func (LSPTool) Description() string {
-	return "Get code intelligence: diagnostics, definitions, references. Uses codegraph for go-to-definition and find-references."
+	return "Get code intelligence through configured language servers, with codegraph and local-tool fallbacks."
 }
 
 func (LSPTool) Parameters() map[string]interface{} {
@@ -35,7 +39,7 @@ func (LSPTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (LSPTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
+func (t LSPTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
 	var p struct {
 		Action string `json:"action"`
 		Path   string `json:"path"`
@@ -52,6 +56,11 @@ func (LSPTool) Execute(ctx context.Context, input json.RawMessage) (string, erro
 	if root == "" {
 		root = "."
 	}
+	if t.Manager != nil {
+		if result, ok := t.executeLanguageServer(ctx, p.Action, p.Path, p.Line, p.Column); ok {
+			return result, nil
+		}
+	}
 
 	switch p.Action {
 	case "diagnostics":
@@ -65,6 +74,97 @@ func (LSPTool) Execute(ctx context.Context, input json.RawMessage) (string, erro
 	default:
 		return "", fmt.Errorf("unknown LSP action: %s", p.Action)
 	}
+}
+
+func (t LSPTool) executeLanguageServer(ctx context.Context, action, path string, line, column int) (string, bool) {
+	lang, _, ok := t.Manager.Config().ServerForFile(path)
+	if !ok || path == "" {
+		return "", false
+	}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", false
+	}
+	text, err := os.ReadFile(absPath) // #nosec G304 -- workspace path supplied to the LSP tool
+	if err != nil {
+		return "", false
+	}
+	if line < 1 {
+		line = 1
+	}
+	if column < 1 {
+		column = 1
+	}
+	uri := (&url.URL{Scheme: "file", Path: filepath.ToSlash(absPath)}).String()
+	var result string
+	err = t.Manager.Execute(ctx, lang, action != "rename", func(client *lsp.LSPClient) error {
+		if err := client.DidOpen(ctx, uri, lang, 1, string(text)); err != nil {
+			return err
+		}
+		defer func() { _ = client.DidClose(context.Background(), uri) }()
+		var err error
+		switch action {
+		case "diagnostics":
+			var items []lsp.Diagnostic
+			items, err = client.Diagnostics(ctx, uri)
+			result = formatServerDiagnostics(items)
+		case "definition":
+			var locations []lsp.Location
+			locations, err = client.GotoDefinition(ctx, uri, line-1, column-1)
+			result = formatServerLocations("Definitions", locations)
+		case "references":
+			var locations []lsp.Location
+			locations, err = client.FindReferences(ctx, uri, line-1, column-1)
+			result = formatServerLocations("References", locations)
+		case "symbols":
+			var symbols []lsp.SymbolInformation
+			symbols, err = client.DocumentSymbol(ctx, uri)
+			result = formatServerSymbols(symbols)
+		default:
+			return fmt.Errorf("unsupported language-server action %q", action)
+		}
+		return err
+	})
+	if err != nil {
+		return "", false
+	}
+	return result, true
+}
+
+func formatServerDiagnostics(items []lsp.Diagnostic) string {
+	if len(items) == 0 {
+		return "No diagnostics found."
+	}
+	var b strings.Builder
+	b.WriteString("## Diagnostics\n\n")
+	for _, item := range items {
+		fmt.Fprintf(&b, "- %s:%d:%d [%d] %s\n", item.Source, item.Range.Start.Line+1, item.Range.Start.Character+1, item.Severity, item.Message)
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func formatServerLocations(title string, locations []lsp.Location) string {
+	if len(locations) == 0 {
+		return "No " + strings.ToLower(title) + " found."
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "## %s\n\n", title)
+	for _, location := range locations {
+		fmt.Fprintf(&b, "- %s:%d:%d\n", strings.TrimPrefix(location.URI, "file://"), location.Range.Start.Line+1, location.Range.Start.Character+1)
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func formatServerSymbols(symbols []lsp.SymbolInformation) string {
+	if len(symbols) == 0 {
+		return "No symbols found."
+	}
+	var b strings.Builder
+	b.WriteString("## Symbols\n\n")
+	for _, symbol := range symbols {
+		fmt.Fprintf(&b, "- %s at %d:%d\n", symbol.Name, symbol.Location.Range.Start.Line+1, symbol.Location.Range.Start.Character+1)
+	}
+	return strings.TrimRight(b.String(), "\n")
 }
 
 // lspDefinition finds where a symbol is defined using codegraph.
