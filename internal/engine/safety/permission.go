@@ -321,6 +321,8 @@ func canonicalToolName(name string) string {
 		return "ProjectVerify"
 	case "app_verify", "appverify", "verify_app":
 		return "AppVerify"
+	case "generate_media", "generatemedia", "media":
+		return "GenerateMedia"
 	case "dependency_audit", "dependencyaudit", "deps":
 		return "DependencyAudit"
 	case "git_history", "githistory", "git-history":

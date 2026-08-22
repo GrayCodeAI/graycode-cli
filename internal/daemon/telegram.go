@@ -10,8 +10,12 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/stt"
 )
 
 // TelegramGateway connects hawk to a Telegram bot.
@@ -46,6 +50,19 @@ type TelegramMessage struct {
 	From struct {
 		Username string `json:"username"`
 	} `json:"from"`
+	// Voice is set for Telegram voice notes; Audio for audio-file attachments.
+	// When either is present and an STT transcriber is installed, the audio is
+	// transcribed and the text is replaced with the transcript so the agent
+	// can answer it.
+	Voice *telegramAudio `json:"voice,omitempty"`
+	Audio *telegramAudio `json:"audio,omitempty"`
+}
+
+// telegramAudio describes a Telegram voice/audio attachment.
+type telegramAudio struct {
+	FileID   string `json:"file_id"`
+	Duration int    `json:"duration"`
+	MimeType string `json:"mime_type"`
 }
 
 // NewTelegramGateway creates a gateway with the given bot token. The authorizer
@@ -182,8 +199,22 @@ func (tg *TelegramGateway) handleMessage(ctx context.Context, msg *TelegramMessa
 		return
 	}
 
+	// Transcribe voice/audio attachments when an STT backend is installed.
+	prompt := msg.Text
+	if audio := msg.Voice; audio != nil {
+		prompt = tg.transcribeAudio(ctx, msg.Chat.ID, audio)
+		if prompt == "" {
+			return // error already replied
+		}
+	} else if audio := msg.Audio; audio != nil {
+		prompt = tg.transcribeAudio(ctx, msg.Chat.ID, audio)
+		if prompt == "" {
+			return
+		}
+	}
+
 	// Forward to hawk daemon
-	response, err := tg.forwardToHawk(ctx, msg.Text)
+	response, err := tg.forwardToHawk(ctx, prompt)
 	if err != nil {
 		response = fmt.Sprintf("Error: %v", err)
 	}
@@ -194,6 +225,83 @@ func (tg *TelegramGateway) handleMessage(ctx context.Context, msg *TelegramMessa
 	}
 
 	tg.reply(ctx, msg.Chat.ID, response)
+}
+
+// transcribeAudio downloads a Telegram voice/audio attachment, transcribes it
+// via the installed STT engine, and returns the transcript prefixed with
+// a marker. On any error it replies to the user with the problem and returns "".
+func (tg *TelegramGateway) transcribeAudio(ctx context.Context, chatID int64, a *telegramAudio) string {
+	if !stt.Enabled() {
+		return ""
+	}
+
+	// Resolve file_id to a download URL via Telegram's bot API.
+	filePath, err := tg.getAudioFilePath(ctx, a.FileID)
+	if err != nil {
+		tg.reply(ctx, chatID, fmt.Sprintf("Audio resolve failed: %v", err))
+		return ""
+	}
+	downloadURL := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", tg.Token, filePath)
+
+	localPath, err := stt.DownloadAttachment(ctx, tg.client, downloadURL, "", safeFileName(a.FileID, a.MimeType))
+	if err != nil {
+		tg.reply(ctx, chatID, fmt.Sprintf("Audio download failed: %v", err))
+		return ""
+	}
+	defer func() {
+		// Clean up the temp dir containing the downloaded file.
+		_ = os.RemoveAll(filepath.Dir(localPath))
+	}()
+
+	text, err := stt.Transcribe(ctx, localPath, "")
+	if err != nil {
+		tg.reply(ctx, chatID, fmt.Sprintf("Transcription failed: %v", err))
+		return ""
+	}
+	return "[Voice transcript] " + text
+}
+
+// getAudioFilePath resolves a Telegram file_id to a file path on the bot API
+// server so the message can be downloaded via the file URL.
+func (tg *TelegramGateway) getAudioFilePath(ctx context.Context, fileID string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		"https://api.telegram.org/bot"+tg.Token+"/getFile?file_id="+url.QueryEscape(fileID), nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := tg.client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
+	if err != nil {
+		return "", err
+	}
+	var result struct {
+		OK     bool `json:"ok"`
+		Result struct {
+			FilePath string `json:"file_path"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", err
+	}
+	if !result.OK {
+		return "", fmt.Errorf("telegram getFile returned not OK")
+	}
+	return result.Result.FilePath, nil
+}
+
+// safeFileName builds a human-readable filename for a downloaded Telegram audio
+// file using the file_id prefix and the MIME-suggested extension.
+func safeFileName(fileID, mimeType string) string {
+	ext := stt.ExtensionForMedia(fileID, mimeType)
+	prefix := fileID
+	if len(prefix) > 16 {
+		prefix = prefix[:16]
+	}
+	return prefix + ext
 }
 
 // reply sends text and logs (rather than swallows) any delivery failure.
