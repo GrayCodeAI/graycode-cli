@@ -357,10 +357,27 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// memory service boundary.
 		if len(s.Persistence().RawMessages()) > 0 {
 			lastMsg := s.Persistence().RawMessages()[len(s.Persistence().RawMessages())-1].Content
-			if remembered := s.MemorySvc().RecallContext(ctx, lastMsg, 3000); remembered != "" {
+			recall := func() string {
+				return s.MemorySvc().RecallContext(ctx, lastMsg, 3000)
+			}
+			if incrementalContextEnabled() {
+				if s.incremental == nil {
+					if mi, err := newMemoryIncremental(recall); err == nil {
+						s.incremental = mi
+					}
+				}
+				if s.incremental != nil {
+					if content, changed := s.incremental.prepare(); changed && content != "" {
+						s.ReplaceSystemContextSection("## Relevant Memories\n", content)
+					}
+					goto memoryDone
+				}
+			}
+			if remembered := recall(); remembered != "" {
 				s.ReplaceSystemContextSection("## Relevant Memories\n", remembered)
 			}
 		}
+	memoryDone:
 
 		// Payload tiering: classify the latest user request once per turn.
 		// Early conversational turns get a minimal system prompt and no tool

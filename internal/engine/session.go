@@ -79,6 +79,10 @@ type Session struct {
 	persist *PersistenceService
 	goals   *planning.GoalTracker // optional goal tracker; emits goal.change lifecycle events
 	tools   *ToolService
+	// incremental is the opt-in incremental system-context reconciler for
+	// dynamic sections (e.g. memories). Nil unless HAWK_INCREMENTAL_CONTEXT=1.
+	// See incremental.go.
+	incremental *memoryIncremental
 	// learnFn persists structured lessons produced by failure reflection to a
 	// cross-session store (e.g. the chat client's SelfImprover). It is a
 	// callback so the engine stays decoupled from storage; nil disables it.
