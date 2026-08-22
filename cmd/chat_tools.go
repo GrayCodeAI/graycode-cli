@@ -106,6 +106,7 @@ func optionalTools() []tool.Tool {
 		tool.DebuggerTool{},
 		tool.DevEnvTool{},
 		tool.ProjectVerifyTool{},
+		tool.AppVerifyTool{},
 		tool.DependencyAuditTool{},
 		tool.GitHubTool{},
 		&tool.PRGeneratorTool{},

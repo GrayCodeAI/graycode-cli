@@ -38,7 +38,19 @@ func NewCompactionTrigger(windowSize int) *CompactionTrigger {
 
 func BuildCompactPrompt(variant CompactVariant) string { return compact.BuildCompactPrompt(variant) }
 func FormatCompactSummary(raw string) string           { return compact.FormatCompactSummary(raw) }
-func IsCompactableTool(name string) bool               { return compact.IsCompactableTool(name) }
+func BuildIncrementalCompactPrompt(priorSummary string) string {
+	return compact.BuildIncrementalCompactPrompt(priorSummary)
+}
+
+func ExtractPriorSummary(msgs []types.EyrieMessage) string {
+	return compact.ExtractPriorSummary(msgs)
+}
+
+// PriorSummaryPrefix is the marker prefix hawk prepends to a persisted
+// conversation summary message.
+const PriorSummaryPrefix = compact.PriorSummaryPrefix
+
+func IsCompactableTool(name string) bool { return compact.IsCompactableTool(name) }
 func AdjustIndexToPreserveAPIInvariants(msgs []types.EyrieMessage, startIdx int) int {
 	return compact.AdjustIndexToPreserveAPIInvariants(msgs, startIdx)
 }
