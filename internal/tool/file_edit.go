@@ -149,12 +149,75 @@ func fuzzyFind(content, oldStr string) (bool, string, float64) {
 		return true, actual, 1.0
 	}
 
-	// Strategy 3: Levenshtein-based similarity matching on contiguous line blocks
+	// Strategy 3: Unicode-normalized matching (typographic characters).
+	// Models frequently emit em-dashes for hyphens, smart quotes for straight
+	// quotes, and non-breaking spaces; folding them back to ASCII recovers
+	// exact matches that would otherwise fall through to fuzzy similarity.
+	if matched, actual := unicodeNormalizedFind(content, oldStr); matched {
+		return true, actual, 1.0
+	}
+
+	// Strategy 4: Levenshtein-based similarity matching on contiguous line blocks
 	if matched, actual, sim := levenshteinBlockFind(content, oldStr, 0.90); matched {
 		return true, actual, sim
 	}
 
 	return false, "", 0
+}
+
+// foldTypographic maps common typographic characters to their ASCII
+// equivalents: dashes, quotes, ellipsis, and non-breaking spaces.
+func foldTypographic(r rune) rune {
+	switch r {
+	case '—', '–', '‑':
+		return '-'
+	case '‘', '’', '‚', 'ʼ':
+		return '\''
+	case '“', '”', '„':
+		return '"'
+	case '…':
+		return '.'
+	case ' ': // U+00A0 non-breaking space
+		return ' '
+	default:
+		return r
+	}
+}
+
+// normalizeTypographic folds typographic characters to ASCII in s.
+func normalizeTypographic(s string) string {
+	return strings.Map(foldTypographic, s)
+}
+
+// unicodeNormalizedFind matches oldStr against content after folding
+// typographic characters to their ASCII equivalents on both sides. The match
+// must be unique in the folded domain.
+func unicodeNormalizedFind(content, oldStr string) (bool, string) {
+	foldedOld := normalizeTypographic(oldStr)
+	if foldedOld == oldStr {
+		// No typographic difference in the needle; earlier exact strategies
+		// already cover this case.
+		return false, ""
+	}
+	foldedContent := normalizeTypographic(content)
+	idx := strings.Index(foldedContent, foldedOld)
+	if idx == -1 {
+		return false, ""
+	}
+	if strings.Count(foldedContent, foldedOld) != 1 {
+		return false, ""
+	}
+
+	// The fold is 1:1 per rune (every input rune maps to exactly one output
+	// rune), so rune offsets in foldedContent map directly to rune offsets in
+	// content. Convert rune offsets to byte offsets.
+	contentRunes := []rune(content)
+	startRune := len([]rune(foldedContent[:idx]))
+	endRune := startRune + len([]rune(foldedOld))
+	if endRune > len(contentRunes) {
+		return false, ""
+	}
+	return true, string(contentRunes[startRune:endRune])
 }
 
 // normalizeWhitespace collapses runs of spaces and tabs into a single space.

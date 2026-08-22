@@ -2,9 +2,12 @@ package engine
 
 import (
 	"context"
+	"log/slog"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/engine/compact"
 	"github.com/GrayCodeAI/hawk/internal/engine/token"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
@@ -95,6 +98,16 @@ func (s *Session) smartCompactBody(ctx context.Context) {
 	fileBlock := files.FormatForSummary()
 	if fileBlock != "" {
 		summary += "\n\n" + fileBlock
+	}
+
+	// Persist the verbatim compacted turns as a retrievable transcript
+	// segment before they leave the live context. Best-effort: a persistence
+	// failure must never block or corrupt compaction itself.
+	if sessionID := s.executionGraphSessionID(); sessionID != "" && len(compactedMsgs) > 0 {
+		detail, _ := compact.ParseCompactionDetail(os.Getenv("HAWK_COMPACTION_SEGMENT_DETAIL"))
+		if _, err := compact.WriteCompactionSegment(sessionID, compactedMsgs, detail); err != nil {
+			slog.Debug("compaction segment persistence skipped", "error", err)
+		}
 	}
 
 	tail := raw[len(raw)-keepEnd:]
