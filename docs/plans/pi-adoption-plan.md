@@ -334,8 +334,10 @@ updating the Hawk pointer.
 
 ### Milestone 5: Kitty graphics (P2)
 
-- [ ] Deferred: requires the differential renderer integration and image
-      handling; tracked after the render-path follow-up.
+- [x] Add the Kitty graphics library (`internal/tui/kitty`): capability-response
+      parsing and chunked frame encoding with round-trip tests.
+- [ ] Render-loop integration (wiring encoded frames into the terminal
+      renderer) remains a follow-up.
 
 ## Deliberately Deferred
 
