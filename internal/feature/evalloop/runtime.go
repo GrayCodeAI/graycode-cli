@@ -22,6 +22,9 @@ type Event struct {
 
 // Result is the outcome of one agent-runtime evaluation.
 type Result struct {
+	// Model and Provider identify the backend that produced this run.
+	Model    string `json:"model,omitempty"`
+	Provider string `json:"provider,omitempty"`
 	// Output is the concatenated assistant output produced by the loop.
 	Output string `json:"output"`
 	// Events are the normalized loop events in order.
@@ -34,6 +37,10 @@ type Result struct {
 	Transcript []byte `json:"-"`
 	// Duration is the wall-clock time of the run.
 	Duration time.Duration `json:"duration"`
+	// ReproHash is a deterministic SHA-256 over the run inputs (model,
+	// provider, prompt, config version) and the transcript, enabling identical
+	// runs to be compared or cached.
+	ReproHash string `json:"repro_hash,omitempty"`
 }
 
 // Runtime executes one agent-runtime evaluation.
