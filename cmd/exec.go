@@ -20,6 +20,7 @@ import (
 	cloud "github.com/GrayCodeAI/hawk/internal/platform/cloud"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	"github.com/spf13/cobra"
 )
 
@@ -856,9 +857,9 @@ func fanoutSummaryLines(attempts []fanoutAttempt) string {
 func printFanoutReport(attempts []fanoutAttempt) {
 	fmt.Fprintln(os.Stderr, "\n=== fan-out comparison (worktrees kept for inspection) ===")
 	for _, a := range attempts {
-		status := "✅ ok"
+		status := icons.Check() + " ok"
 		if !a.OK {
-			status = "❌ failed"
+			status = icons.Close() + " failed"
 			if a.Error != "" {
 				status += " — " + a.Error
 			}

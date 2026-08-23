@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func withEnv(t *testing.T, kv map[string]string) {
@@ -76,8 +78,8 @@ func TestSendTelegram(t *testing.T) {
 	// possible (host is fixed), so this test only exercises renderText formatting used by it.
 	c := Completion{Title: "t", Body: strings.Repeat("b", 1000), OK: true, Branch: "br"}
 	text := renderText(c)
-	if !strings.HasPrefix(text, "✅ t") {
-		t.Fatalf("text = %q", text)
+	if !strings.HasPrefix(text, icons.Check()) {
+		t.Fatalf("success marker missing: %q", text)
 	}
 	if !strings.Contains(text, "branch: br") {
 		t.Fatalf("branch missing: %q", text)
@@ -90,7 +92,8 @@ func TestSendTelegram(t *testing.T) {
 }
 
 func TestRenderTextFailureMarker(t *testing.T) {
-	if !strings.HasPrefix(renderText(Completion{Title: "f", OK: false}), "❌") {
-		t.Fatal("failure marker missing")
+	got := renderText(Completion{Title: "f", OK: false})
+	if !strings.HasPrefix(got, icons.Close()) {
+		t.Fatalf("failure marker missing: %q", got)
 	}
 }

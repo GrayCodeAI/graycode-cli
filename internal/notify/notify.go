@@ -14,6 +14,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 var httpClient = &http.Client{Timeout: 10 * time.Second}
@@ -114,9 +116,9 @@ func sendTelegram(token, chatID, text string) error {
 }
 
 func renderText(c Completion) string {
-	status := "✅"
+	status := icons.Check()
 	if !c.OK {
-		status = "❌"
+		status = icons.Close()
 	}
 	out := status + " " + c.Title
 	if c.Body != "" {
