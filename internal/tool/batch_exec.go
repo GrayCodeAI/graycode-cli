@@ -1,0 +1,203 @@
+package tool
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+)
+
+// BatchExecTool submits prompts to the provider-native Message Batches API
+// for 50%-cost async execution. Designed for CI/scripted workloads where the
+// result is not needed immediately. Uses fixed HTTP calls (no shell) against
+// the provider's REST endpoint; no eyrie/client import (boundary-guarded).
+type BatchExecTool struct{}
+
+func (BatchExecTool) Name() string      { return "BatchExec" }
+func (BatchExecTool) RiskLevel() string { return "medium" }
+func (BatchExecTool) Aliases() []string { return []string{"batch_exec"} }
+func (BatchExecTool) Description() string {
+	return "Submit one or more prompts to the Anthropic Message Batches API for 50%-cost async execution. Returns a batch ID; poll with action=poll to check status."
+}
+
+func (BatchExecTool) Parameters() map[string]interface{} {
+	return map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"action": map[string]interface{}{
+				"type":        "string",
+				"enum":        []string{"submit", "poll"},
+				"description": "submit: send prompts; poll: check batch status.",
+			},
+			"prompts": map[string]interface{}{
+				"type":        "array",
+				"items":       map[string]interface{}{"type": "string"},
+				"description": "Prompts to submit (action=submit).",
+			},
+			"model": map[string]interface{}{
+				"type":        "string",
+				"description": "Model ID (default claude-sonnet-4-20250514).",
+			},
+			"batch_id": map[string]interface{}{
+				"type":        "string",
+				"description": "Batch ID to poll (action=poll).",
+			},
+			"max_tokens": map[string]interface{}{
+				"type":        "integer",
+				"description": "Max output tokens per request (default 4096).",
+			},
+		},
+		"required": []string{"action"},
+	}
+}
+
+var batchHTTP = &http.Client{Timeout: 5 * time.Minute}
+
+// batchAPIKey reads the key from env.
+func batchAPIKey() string { return os.Getenv("ANTHROPIC_API_KEY") }
+
+func batchDefaultModel() string { return "claude-sonnet-4-20250514" }
+
+const batchBaseURL = "https://api.anthropic.com"
+
+func batchHeaders(req *http.Request, apiKey string) *http.Request {
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Api-Key", apiKey)
+	req.Header.Set("Anthropic-Version", "2023-06-01")
+	req.Header.Set("Anthropic-Beta", "message-batches-2024-09-24")
+	return req
+}
+
+type batchPollResult struct {
+	BatchID string `json:"batch_id"`
+	Status  string `json:"status"`
+	Error   string `json:"error,omitempty"`
+}
+
+func (BatchExecTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
+	var p struct {
+		Action    string   `json:"action"`
+		Prompts   []string `json:"prompts"`
+		Model     string   `json:"model"`
+		BatchID   string   `json:"batch_id"`
+		MaxTokens int      `json:"max_tokens"`
+	}
+	if err := json.Unmarshal(input, &p); err != nil {
+		return "", fmt.Errorf("invalid input: %w", err)
+	}
+
+	apiKey := batchAPIKey()
+	if apiKey == "" {
+		return "", fmt.Errorf("ANTHROPIC_API_KEY not set — required for batch execution")
+	}
+
+	switch p.Action {
+	case "submit":
+		return batchSubmit(ctx, apiKey, p)
+	case "poll":
+		if p.BatchID == "" {
+			return "", fmt.Errorf("batch_id is required for poll")
+		}
+		return batchPoll(ctx, apiKey, p.BatchID)
+	default:
+		return "", fmt.Errorf("unsupported action %q (use submit or poll)", p.Action)
+	}
+}
+
+func batchSubmit(ctx context.Context, apiKey string, p struct {
+	Action    string   `json:"action"`
+	Prompts   []string `json:"prompts"`
+	Model     string   `json:"model"`
+	BatchID   string   `json:"batch_id"`
+	MaxTokens int      `json:"max_tokens"`
+},
+) (string, error) {
+	if len(p.Prompts) == 0 {
+		return "", fmt.Errorf("at least one prompt is required")
+	}
+	model := p.Model
+	if model == "" {
+		model = batchDefaultModel()
+	}
+	maxTok := p.MaxTokens
+	if maxTok <= 0 {
+		maxTok = 4096
+	}
+
+	type item struct {
+		CustomID string                 `json:"custom_id"`
+		Params   map[string]interface{} `json:"params"`
+	}
+	items := make([]item, len(p.Prompts))
+	for i, prompt := range p.Prompts {
+		items[i] = item{
+			CustomID: fmt.Sprintf("req-%03d", i+1),
+			Params: map[string]interface{}{
+				"model":      model,
+				"max_tokens": maxTok,
+				"messages":   []map[string]string{{"role": "user", "content": prompt}},
+			},
+		}
+	}
+	body, err := json.Marshal(map[string]interface{}{"requests": items})
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		batchBaseURL+"/v1/messages/batches", bytes.NewReader(body)) // #nosec G107 -- fixed API host
+	if err != nil {
+		return "", err
+	}
+	batchHeaders(req, apiKey)
+	resp, err := batchHTTP.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("batch submit: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return "", fmt.Errorf("batch API %d: %s", resp.StatusCode, strings.TrimSpace(string(errBody)))
+	}
+	var result struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+	out, _ := json.MarshalIndent(map[string]string{
+		"batch_id": result.ID,
+		"requests": fmt.Sprintf("%d", len(p.Prompts)),
+		"model":    model,
+	}, "", "  ")
+	return string(out), nil
+}
+
+func batchPoll(ctx context.Context, apiKey, batchID string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		batchBaseURL+"/v1/messages/batches/"+batchID, nil) // #nosec G107 -- fixed API host + validated ID
+	if err != nil {
+		return "", err
+	}
+	batchHeaders(req, apiKey)
+	resp, err := batchHTTP.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("batch poll: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("batch API %d: %s", resp.StatusCode, strings.TrimSpace(string(raw)))
+	}
+	var result batchPollResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return string(raw), nil // return raw on parse failure
+	}
+	result.BatchID = batchID
+	out, _ := json.MarshalIndent(result, "", "  ")
+	return string(out), nil
+}

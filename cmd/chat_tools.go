@@ -172,6 +172,7 @@ func optionalTools() []tool.Tool {
 		tool.CodeSearchTool{},
 		tool.CodeMatchTool{},
 		tool.FuzzyFindTool{},
+		tool.BatchExecTool{},
 		tool.ToolsetTool{},
 		tool.CoreMemoryAppendTool{},
 		tool.CoreMemoryReplaceTool{},

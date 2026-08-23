@@ -319,6 +319,8 @@ func canonicalToolName(name string) string {
 		return "CodeMatch"
 	case "fuzzy_find", "fuzzyfind", "ffind":
 		return "FuzzyFind"
+	case "batch_exec", "batchexec":
+		return "BatchExec"
 	case "toolset":
 		return "Toolset"
 	case "tool_health", "toolhealth", "tools_health":
