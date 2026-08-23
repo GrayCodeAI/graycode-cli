@@ -448,6 +448,46 @@ paths:
               schema:
                 type: object
 
+  /v1/agent/status:
+    get:
+      operationId: agentLiveStatus
+      tags: [system]
+      summary: Live per-agent status for external mission-control dashboards
+      description: |
+        Returns machine-readable live state (working/idle/stale) for every
+        active agent session, derived from daemon ground truth: an in-flight
+        generation means working; recency of last use distinguishes idle from
+        stale. Designed for supervisors such as terminal mission-control
+        dashboards to poll.
+      responses:
+        "200":
+          description: Live agent statuses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  generated_at:
+                    type: string
+                  agents:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        session_id:
+                          type: string
+                        agent:
+                          type: string
+                        state:
+                          type: string
+                          enum: [working, idle, stale]
+                        turns:
+                          type: integer
+                        cwd:
+                          type: string
+                        last_used:
+                          type: string
+
   /v1/ready:
     get:
       operationId: readinessProbe

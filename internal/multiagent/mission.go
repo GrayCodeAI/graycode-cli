@@ -30,6 +30,12 @@ type Mission struct {
 	// When nil the gate is a no-op and all tool calls proceed automatically.
 	ApprovalGate *MissionApprovalGate `json:"-"`
 
+	// pathLedger records which files each completed feature touched so
+	// overlapping changes between parallel branches surface before merge
+	// (Luvus-style file-path reservation / dependent-task coordination).
+	// Nil until first use; guarded by mu.
+	pathLedger *PathReservationLedger
+
 	mu sync.Mutex
 }
 
@@ -288,6 +294,18 @@ func (m *Mission) runFeatureSet(ctx context.Context, workerFn WorkerFunc, missio
 			} else {
 				feat.Status = FeatureCompleted
 				feat.Handoff = handoff
+				// Record this branch's touched files in the path reservation
+				// ledger so cross-branch overlaps surface before merge
+				// (Luvus-style dependent-task coordination).
+				if len(handoff.FilesChanged) > 0 {
+					if m.pathLedger == nil {
+						m.pathLedger = NewPathReservationLedger()
+					}
+					// Best-effort: a conflict means another parallel branch in
+					// this wave already claimed one of these files, which is
+					// exactly the signal DetectOverlaps reports at merge time.
+					_ = m.pathLedger.Reserve(feat.ID, feat.ID, handoff.FilesChanged)
+				}
 			}
 			feat.CompletedAt = time.Now()
 			m.mu.Unlock()
@@ -534,6 +552,23 @@ func (m *Mission) Summary() string {
 	}
 	return fmt.Sprintf("Mission %s [%s]: %d/%d features completed, %d failed (%s)",
 		m.ID, status, completed, len(m.Features), failed, duration)
+}
+
+// DetectOverlaps forecasts merge conflicts by comparing the changed-file sets
+// of every completed feature's handoff. Deterministic ordering. Call after a
+// wave completes (or before merging branches) to sequence dependent tasks or
+// flag conflicts early.
+func (m *Mission) DetectOverlaps() []Overlap {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	handoffs := map[string][]string{}
+	for i := range m.Features {
+		f := &m.Features[i]
+		if f.Status == FeatureCompleted && f.Handoff != nil && len(f.Handoff.FilesChanged) > 0 {
+			handoffs[f.ID] = f.Handoff.FilesChanged
+		}
+	}
+	return DetectFileOverlaps(handoffs)
 }
 
 func (m *Mission) createDir() (string, error) {
