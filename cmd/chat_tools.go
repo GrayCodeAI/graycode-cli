@@ -171,6 +171,7 @@ func optionalTools() []tool.Tool {
 		tool.DiagnosticsTool{},
 		tool.CodeSearchTool{},
 		tool.CodeMatchTool{},
+		tool.ToolsetTool{},
 		tool.CoreMemoryAppendTool{},
 		tool.CoreMemoryReplaceTool{},
 		tool.CoreMemoryRethinkTool{},

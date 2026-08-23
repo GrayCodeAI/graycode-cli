@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/GrayCodeAI/hawk/internal/intelligence/skillcurator"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 )
 
@@ -85,5 +86,10 @@ func (SkillTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 	}
 	sb.WriteString("\n")
 	sb.WriteString(entry.Content)
+	// Best-effort skill-usage recording for the curator (opt-in). Never
+	// interrupts skill execution.
+	if strings.EqualFold(os.Getenv("HAWK_SKILL_CURATOR"), "1") {
+		skillcurator.RecordSkillUsage(p.Skill)
+	}
 	return sb.String(), nil
 }
