@@ -207,6 +207,9 @@ func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens i
 	if outputSchema != "" {
 		opts.ResponseFormat = &types.ResponseFormat{Type: "json_schema", Schema: outputSchema}
 	}
+	// Opt-in tool-catalog compression (HAWK_TOOL_SHRINK=1): fail-open, so the
+	// returned tools equal the input whenever anything is off or drifts.
+	opts.Tools = shrinkEyrieTools(opts.Tools)
 	return opts
 }
 
