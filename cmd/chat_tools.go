@@ -170,6 +170,7 @@ func optionalTools() []tool.Tool {
 		tool.McpAuthTool{},
 		tool.DiagnosticsTool{},
 		tool.CodeSearchTool{},
+		tool.CodeMatchTool{},
 		tool.CoreMemoryAppendTool{},
 		tool.CoreMemoryReplaceTool{},
 		tool.CoreMemoryRethinkTool{},
