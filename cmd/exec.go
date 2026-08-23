@@ -15,6 +15,7 @@ import (
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
+	"github.com/GrayCodeAI/hawk/internal/notify"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	cloud "github.com/GrayCodeAI/hawk/internal/platform/cloud"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
@@ -33,6 +34,7 @@ var (
 	execTag          string
 	execWorktree     bool
 	execWorktreeName string
+	execFanout       int
 	execEphemeral    bool
 	execJSON         bool
 )
@@ -108,6 +110,7 @@ func init() {
 	execCmd.Flags().StringVarP(&execSessionID, "session-id", "s", "", "Continue an existing session")
 	execCmd.Flags().StringVar(&execTag, "tag", "", "Session tag for categorization")
 	execCmd.Flags().BoolVarP(&execWorktree, "worktree", "w", false, "Run in an isolated git worktree")
+	execCmd.Flags().IntVar(&execFanout, "fanout", 0, "Best-of-N: run the same prompt N times (2-5) in parallel-kept worktrees and print a comparison report; pick the winner to merge")
 	execCmd.Flags().StringVar(&execWorktreeName, "worktree-name", "", "Branch name for worktree (auto-generated if empty)")
 	execCmd.Flags().BoolVar(&execEphemeral, "ephemeral", false, "Skip session persistence (CI mode)")
 	execCmd.Flags().BoolVarP(&execJSON, "json", "j", false, "JSON output (alias for --output-format json)")
@@ -148,6 +151,12 @@ func runExec(_ *cobra.Command, args []string) error {
 			return derr
 		}
 		prompt = expanded
+	}
+
+	// Best-of-N fan-out: run the same prompt in N isolated worktrees and
+	// print a comparison report so the winner can be picked and merged.
+	if execFanout > 1 {
+		return runExecFanout(prompt, execFanout)
 	}
 
 	if execCWD != "" {
@@ -700,4 +709,277 @@ func randomHex(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// --- Best-of-N fan-out -------------------------------------------------------
+
+// fanoutAttempt is one best-of-N run's outcome.
+type fanoutAttempt struct {
+	Attempt    int    `json:"attempt"`
+	Branch     string `json:"branch"`
+	Worktree   string `json:"worktree"`
+	OK         bool   `json:"ok"`
+	SessionID  string `json:"session_id,omitempty"`
+	Response   string `json:"response_tail,omitempty"`
+	TokensIn   int    `json:"tokens_in,omitempty"`
+	TokensOut  int    `json:"tokens_out,omitempty"`
+	TurnsTaken int    `json:"turns_taken"`
+	Duration   string `json:"duration"`
+	Model      string `json:"model,omitempty"`
+	Error      string `json:"error,omitempty"`
+}
+
+// runExecFanout runs the same prompt in N sequentially-executed, isolated
+// worktrees and prints a comparison report. Worktrees are deliberately KEPT
+// (never cleaned up) so the user can diff branches and merge the winner —
+// quality judgment stays with the human.
+func runExecFanout(prompt string, n int) error {
+	if n > 5 {
+		n = 5 // bounded: each attempt is a full agent run
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("resolve cwd: %w", err)
+	}
+	base := getCurrentBranch(cwd)
+	start := time.Now()
+
+	attempts := make([]fanoutAttempt, 0, n)
+	anyOK := false
+	for i := 1; i <= n; i++ {
+		fmt.Fprintf(os.Stderr, "\n=== fanout attempt %d/%d ===\n", i, n)
+		att := fanoutAttempt{Attempt: i}
+
+		branch := fmt.Sprintf("hawk-exec/%d-fanout%d-%s", start.UnixMilli(), i, randomHex(4))
+		wtPath, wtErr := createExecWorktree(cwd, base, branch)
+		if wtErr != nil {
+			att.Error = fmt.Sprintf("worktree: %v", wtErr)
+			attempts = append(attempts, att)
+			continue
+		}
+		att.Branch = branch
+		att.Worktree = wtPath
+
+		origWd, wdErr := os.Getwd()
+		if wdErr != nil {
+			origWd = cwd
+		}
+		if chdirErr := os.Chdir(wtPath); chdirErr != nil {
+			att.Error = fmt.Sprintf("chdir: %v", chdirErr)
+			attempts = append(attempts, att)
+			continue
+		}
+
+		attemptStart := time.Now()
+		res, runErr := execOnceInWorktree(prompt, i)
+		if chdirErr := os.Chdir(origWd); chdirErr != nil {
+			if att.Error == "" {
+				att.Error = "restore cwd: " + chdirErr.Error()
+			}
+		}
+		if res != nil {
+			att.OK = res.ExitCode == 0 && runErr == nil
+			att.SessionID = res.SessionID
+			att.TokensIn = res.TokensIn
+			att.TokensOut = res.TokensOut
+			att.TurnsTaken = res.TurnsTaken
+			att.Duration = time.Since(attemptStart).Round(time.Millisecond).String()
+			att.Model = res.Model
+			tail := res.Response
+			if len(tail) > 400 {
+				tail = tail[:400] + "…"
+			}
+			att.Response = tail
+		}
+		if runErr != nil && att.Error == "" {
+			att.Error = runErr.Error()
+		}
+		if att.OK {
+			anyOK = true
+		}
+		attempts = append(attempts, att)
+	}
+
+	if execOutputFormat == "json" || execJSON {
+		out := map[string]interface{}{
+			"mode":     "fanout",
+			"attempts": attempts,
+			"any_ok":   anyOK,
+		}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(out); err != nil {
+			return err
+		}
+	} else {
+		printFanoutReport(attempts)
+	}
+
+	// Completion notification (Orca's "know when your agent finishes"),
+	// best-effort and only when a channel is configured.
+	title := fmt.Sprintf("Fan-out finished: %d/%d attempts succeeded", countOK(attempts), n)
+	_ = notify.SendCompletion(notify.Completion{
+		Title: title, Source: "hawk exec --fanout", OK: anyOK, Body: fanoutSummaryLines(attempts),
+	})
+
+	if !anyOK {
+		return &ExitCodeError{Code: 1}
+	}
+	return nil
+}
+
+func countOK(attempts []fanoutAttempt) int {
+	n := 0
+	for _, a := range attempts {
+		if a.OK {
+			n++
+		}
+	}
+	return n
+}
+
+func fanoutSummaryLines(attempts []fanoutAttempt) string {
+	lines := make([]string, 0, len(attempts))
+	for _, a := range attempts {
+		status := "ok"
+		if !a.OK {
+			status = "failed"
+			if a.Error != "" {
+				status += ": " + a.Error
+			}
+		}
+		lines = append(lines, fmt.Sprintf("#%d %s [%s]", a.Attempt, status, a.Branch))
+	}
+	return strings.Join(lines, "\n")
+}
+
+func printFanoutReport(attempts []fanoutAttempt) {
+	fmt.Fprintln(os.Stderr, "\n=== fan-out comparison (worktrees kept for inspection) ===")
+	for _, a := range attempts {
+		status := "✅ ok"
+		if !a.OK {
+			status = "❌ failed"
+			if a.Error != "" {
+				status += " — " + a.Error
+			}
+		}
+		fmt.Fprintf(os.Stderr, "\n#%d %s\n  branch:   %s\n  worktree: %s\n  tokens:   in=%d out=%d turns=%d\n  duration: %s\n",
+			a.Attempt, status, a.Branch, a.Worktree, a.TokensIn, a.TokensOut, a.TurnsTaken, a.Duration)
+		if a.Response != "" {
+			fmt.Fprintf(os.Stderr, "  tail:     %s\n", strings.ReplaceAll(a.Response, "\n", " "))
+		}
+		fmt.Fprintf(os.Stderr, "  compare:  git diff main...%s\n", a.Branch)
+	}
+	fmt.Fprintln(os.Stderr, "\nPick the winner, then merge its branch (e.g. git merge <branch>) and remove the rest:")
+	for _, a := range attempts {
+		if a.Branch != "" {
+			fmt.Fprintf(os.Stderr, "  git worktree remove --force %s && git branch -D %s\n", a.Worktree, a.Branch)
+		}
+	}
+}
+
+// execOnceInWorktree runs the full single-attempt pipeline (settings → system
+// prompt → registry → session → stream) inside the current working directory
+// (expected to be the attempt's worktree) and returns the structured result.
+// Stream events are captured rather than printed so N attempts do not interleave.
+func execOnceInWorktree(prompt string, attemptIdx int) (*ExecResult, error) {
+	settings := hawkconfig.LoadSettings()
+
+	systemPrompt, err := buildSystemPrompt()
+	if err != nil {
+		return nil, err
+	}
+	effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
+	if execModel != "" {
+		effectiveModel = execModel
+	}
+	if execAgent != "" {
+		agentDef, lookupErr := agents.Get(execAgent)
+		if lookupErr != nil {
+			return nil, fmt.Errorf("agent %q: %w", execAgent, lookupErr)
+		}
+		systemPrompt = agentDef.Prompt + "\n\n" + systemPrompt
+		effectiveModel = agentDef.Model
+	}
+
+	registry, err := defaultRegistry(settings)
+	if err != nil {
+		return nil, err
+	}
+	sess, cfgErr := newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error), execMaxTurns)
+	if cfgErr != nil {
+		return nil, cfgErr
+	}
+	projectDir, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("resolve project directory: %w", err)
+	}
+	container, err := attachRequiredContainer(sess, projectDir)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = container.Stop() }()
+
+	if execAutoLevel != "" {
+		sess.PermSvc().SetAutonomy(engine.ParseAutonomyLevel(execAutoLevel))
+	} else {
+		sess.PermSvc().SetAutonomy(engine.AutonomyFull)
+	}
+	sess.PermSvc().SetPermissionFn(func(req engine.PermissionRequest) {
+		cfg := engine.PresetConfig(sess.PermSvc().Autonomy())
+		allowed := !cfg.NeedsPermission(req.ToolName, false)
+		if req.Response != nil {
+			req.Response <- allowed
+		}
+	})
+
+	sess.AddUser(prompt)
+
+	ctx := context.Background()
+	var cancel context.CancelFunc
+	if timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+	events, err := sess.Stream(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("stream: %w", err)
+	}
+
+	var response strings.Builder
+	var totalIn, totalOut, turns int
+	var execErr string
+	for ev := range events {
+		switch ev.Type {
+		case "content":
+			response.WriteString(ev.Content)
+		case "usage":
+			if ev.Usage != nil {
+				totalIn += ev.Usage.PromptTokens
+				totalOut += ev.Usage.CompletionTokens
+				turns++
+			}
+		case "error":
+			execErr = ev.Content
+		}
+	}
+
+	exitCode := 0
+	if execErr != "" {
+		exitCode = 1
+	}
+	sessionID := fmt.Sprintf("exec-fanout%d-%d-%s", attemptIdx, time.Now().UnixMilli(), randomHex(4))
+	if !execEphemeral {
+		persistExecSession(sessionID, effectiveModel, effectiveProvider, prompt, response.String())
+	}
+	return &ExecResult{
+		SessionID:  sessionID,
+		Response:   response.String(),
+		ExitCode:   exitCode,
+		TokensIn:   totalIn,
+		TokensOut:  totalOut,
+		TurnsTaken: turns,
+		Duration:   time.Since(time.Now()).Round(time.Millisecond).String(),
+		Model:      effectiveModel,
+	}, nil
 }
