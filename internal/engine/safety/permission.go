@@ -315,6 +315,8 @@ func canonicalToolName(name string) string {
 		return "WebFetch"
 	case "web_search", "websearch":
 		return "WebSearch"
+	case "code_match", "codematch", "match_code":
+		return "CodeMatch"
 	case "tool_health", "toolhealth", "tools_health":
 		return "ToolHealth"
 	case "project_verify", "projectverify", "verify_project":

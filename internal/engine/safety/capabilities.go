@@ -46,6 +46,7 @@ var toolPolicies = map[string]ToolPolicy{
 	"Outline":               {Name: "Outline", Capabilities: []Capability{CapabilityFilesystemRead}, DefaultRisk: RiskLow},
 	"SmartRead":             {Name: "SmartRead", Capabilities: []Capability{CapabilityFilesystemRead}, DefaultRisk: RiskLow},
 	"CodeSearch":            {Name: "CodeSearch", Capabilities: []Capability{CapabilityFilesystemRead}, DefaultRisk: RiskLow},
+	"CodeMatch":             {Name: "CodeMatch", Capabilities: []Capability{CapabilityFilesystemRead}, DefaultRisk: RiskLow},
 	"CodeGraph":             {Name: "CodeGraph", Capabilities: []Capability{CapabilityFilesystemRead}, DefaultRisk: RiskLow},
 	"Impact":                {Name: "Impact", Capabilities: []Capability{CapabilityFilesystemRead}, DefaultRisk: RiskLow},
 	"GitHistory":            {Name: "GitHistory", Capabilities: []Capability{CapabilityFilesystemRead, CapabilityProcessExecute}, DefaultRisk: RiskLow},

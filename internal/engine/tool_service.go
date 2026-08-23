@@ -12,6 +12,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/engine/diff"
 	"github.com/GrayCodeAI/hawk/internal/hooks"
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
@@ -478,17 +479,52 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 		AskUserFn:           s.deps.askUser,
 		CommitMessageChatFn: commitChat,
 		YaadBridge:          yaad,
-		SpecSlugGet:         func() string { return s.deps.permissions.SpecSlug() },
-		SpecSlugSet:         func(slug string) { s.deps.permissions.SetSpecSlug(slug) },
-		AllowedDirectories:  s.deps.permissions.AllowedDirs(),
-		SandboxMode:         sbMode,
-		BackgroundManager:   s.EnsureBackgroundManager(),
-		ReadOnlyBash:        s.ReadOnlyBash(),
-		WorkingDir:          s.WorkingDir(),
-		AvailableTools:      available,
-		Registry:            s.registry,
-		AutoCommit:          s.AutoCommit(),
-		TaskExecutor:        s.deps.taskExec,
+		// Semantic code search backed by the yaad code-chunk index. Wiring the
+		// closures here makes CodeSearchTool functional in production (the
+		// interface was declared but never bound). Refresh rebuilds only
+		// added/changed files via content-hash staleness.
+		CodeSearchFn: func(cctx context.Context, query string, limit int) ([]tool.CodeSearchResult, error) {
+			if yaad == nil {
+				return nil, fmt.Errorf("code search unavailable: no memory bridge")
+			}
+			results, err := yaad.SearchCode(query, limit)
+			if err != nil {
+				return nil, err
+			}
+			out := make([]tool.CodeSearchResult, 0, len(results))
+			for _, r := range results {
+				out = append(out, tool.CodeSearchResult{
+					Path: r.Path, StartLine: r.StartLine, EndLine: r.EndLine,
+					Content: r.Content, Symbol: r.Symbol, Language: tool.LanguageForFile(r.Path), Score: r.Score,
+				})
+			}
+			return out, nil
+		},
+		RefreshCodeIndexFn: func(cctx context.Context) error {
+			if yaad == nil {
+				return fmt.Errorf("code index refresh unavailable: no memory bridge")
+			}
+			dir := s.WorkingDir()
+			if dir == "" {
+				return fmt.Errorf("code index refresh unavailable: no working directory")
+			}
+			if err := yaad.InitCodeIndex(); err != nil {
+				return err
+			}
+			_, _, _, err := repomap.IncrementalReindex(dir, nil, &yaadCodeIndexer{yaad})
+			return err
+		},
+		SpecSlugGet:        func() string { return s.deps.permissions.SpecSlug() },
+		SpecSlugSet:        func(slug string) { s.deps.permissions.SetSpecSlug(slug) },
+		AllowedDirectories: s.deps.permissions.AllowedDirs(),
+		SandboxMode:        sbMode,
+		BackgroundManager:  s.EnsureBackgroundManager(),
+		ReadOnlyBash:       s.ReadOnlyBash(),
+		WorkingDir:         s.WorkingDir(),
+		AvailableTools:     available,
+		Registry:           s.registry,
+		AutoCommit:         s.AutoCommit(),
+		TaskExecutor:       s.deps.taskExec,
 	})
 	// Bridge session sandbox policy onto the context so Bash/PowerShell
 	// WrapCommand actually applies. Path guards already read ToolContext.SandboxMode;
