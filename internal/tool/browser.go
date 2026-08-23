@@ -123,11 +123,12 @@ func (BrowserTool) Parameters() map[string]interface{} {
 		"properties": map[string]interface{}{
 			"action": map[string]interface{}{
 				"type":        "string",
-				"enum":        []string{"navigate", "content", "screenshot", "click", "type", "title", "location", "close"},
-				"description": "Action to perform. navigate: go to a URL (optionally waiting for a selector). content: extract page text or HTML (optionally scoped to a selector). screenshot: save a full-page PNG. click/type: interact with an element. title/location: read page metadata. close: shut down the shared browser.",
+				"enum":        []string{"navigate", "content", "screenshot", "click", "type", "title", "location", "ax_snapshot", "close"},
+				"description": "Actions. navigate/content/screenshot/title/location as named. ax_snapshot: compressed accessibility tree with uid handles (query optional); click/type then accept uid from that snapshot instead of a CSS selector. close shuts the browser down.",
 			},
 			"url":      map[string]interface{}{"type": "string", "description": "Target URL (http/https) for navigate/screenshot"},
 			"selector": map[string]interface{}{"type": "string", "description": "CSS selector for content/click/type and optional navigate wait"},
+			"uid":      map[string]interface{}{"type": "string", "description": "Element uid from the last ax_snapshot; preferred over selector for click/type"},
 			"text":     map[string]interface{}{"type": "string", "description": "Text to type (type action)"},
 			"clear":    map[string]interface{}{"type": "boolean", "description": "Clear the field before typing"},
 			"path":     map[string]interface{}{"type": "string", "description": "File path to save a screenshot to"},
@@ -146,6 +147,7 @@ type browserParams struct {
 	Action   string `json:"action"`
 	URL      string `json:"url"`
 	Selector string `json:"selector"`
+	UID      string `json:"uid"`
 	Text     string `json:"text"`
 	Clear    bool   `json:"clear"`
 	Path     string `json:"path"`
@@ -253,17 +255,41 @@ func (BrowserTool) Execute(ctx context.Context, input json.RawMessage) (string, 
 		out = fmt.Sprintf("Screenshot saved to %s (%d bytes)", dest, len(buf))
 
 	case "click":
+		if ref, ok := lookupUID(p.UID); ok {
+			if err := actByBackendID(bctx, ref.BackendDOMID, axClickJS); err != nil {
+				return "", browserErr(err)
+			}
+			out = fmt.Sprintf("Clicked %s %q via uid %s (settled:false — re-snapshot to confirm)", ref.Role, ref.Name, ref.UID)
+			break
+		}
 		if p.Selector == "" {
-			return "", fmt.Errorf("selector is required for click")
+			return "", fmt.Errorf("click requires uid (from ax_snapshot) or selector")
 		}
 		if err := chromedp.Run(bctx, chromedp.Navigate(p.URL), chromedp.Sleep(wait), chromedp.Click(p.Selector, chromedp.ByQuery)); err != nil {
 			return "", browserErr(err)
 		}
 		out = fmt.Sprintf("Clicked %s", p.Selector)
 
+	case "ax_snapshot":
+		out, err = axSnapshot(bctx, p.Text)
+		if err != nil {
+			return "", err
+		}
+
 	case "type":
+		if p.Selector == "" && p.UID == "" {
+			return "", fmt.Errorf("type requires uid (from ax_snapshot) or selector")
+		}
 		if p.Selector == "" {
-			return "", fmt.Errorf("selector is required for type")
+			ref, ok := lookupUID(p.UID)
+			if !ok {
+				return "", fmt.Errorf("unknown uid %q — take a fresh ax_snapshot", p.UID)
+			}
+			if err := actByBackendID(bctx, ref.BackendDOMID, axTypeWrapJS(p.Text)); err != nil {
+				return "", browserErr(err)
+			}
+			out = fmt.Sprintf("Typed %d characters into %s %q (uid %s)", len(p.Text), ref.Role, ref.Name, ref.UID)
+			break
 		}
 		sel := p.Selector
 		actions := []chromedp.Action{chromedp.Navigate(p.URL), chromedp.Sleep(wait)}
