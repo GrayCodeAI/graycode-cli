@@ -446,6 +446,7 @@ func (s *Server) ready() (bool, string) {
 func (s *Server) routes() {
 	s.handle("GET /v1/health", s.handleHealth)
 	s.handle("GET /v1/status", s.auth(s.rate(s.handleStatus, s.apiLimiter)))
+	s.handle("GET /v1/agent/status", s.auth(s.rate(s.handleAgentStatus, s.apiLimiter)))
 	s.handle("GET /v1/ready", s.handleReady)
 	s.handle("POST /v1/chat", s.auth(s.rate(s.handleChat, s.chatLimiter)))
 	s.handle("POST /v1/cancel", s.auth(s.rate(s.handleCancel, s.apiLimiter)))
