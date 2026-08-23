@@ -85,6 +85,7 @@ Available Commands:
   tape         Inspect and checkpoint recorded terminal captures (fxtape)
   taste        Manage taste profile (learned coding style preferences)
   tools        List built-in tools
+  toolset      List or resolve composable tool groups
   trace        Git-native session capture for AI coding agents
   trace-report Write a private diagnostic trace report (fx /trace parity)
   trust        Manage folder trust for project automation

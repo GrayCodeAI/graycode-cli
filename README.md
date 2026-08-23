@@ -260,6 +260,27 @@ Define personas and eval tasks in YAML (in addition to markdown personas), inclu
 
 An optional, non-excludable org-policy rule tier (highest precedence) with HTML-comment stripping of rule files for IT-managed deployments.
 
+### Adopted Capabilities (env-gated)
+
+Features adopted from open-source agent projects. All are off by default unless explicitly enabled; see each section for details.
+
+| Feature | Flag / Command | What it does |
+|---|---|---|
+| Best-of-N fan-out | `hawk exec --fanout N` | Run the same prompt in N isolated worktrees, compare, merge winner |
+| Completion notifications | `HAWK_NOTIFY_WEBHOOK_URL` / `HAWK_NOTIFY_TELEGRAM_TOKEN` + `_CHAT_ID` | Webhook or Telegram ping when a run finishes |
+| Incremental system-context | `HAWK_INCREMENTAL_CONTEXT=1` | Reconcile dynamic sections instead of rebuilding the prompt |
+| Tool-catalog shrink | `HAWK_TOOL_SHRINK=1` | Compress the tool catalog sent on every request |
+| Compaction segments | `HAWK_COMPACTION_SEGMENT_DETAIL=verbose\|balanced\|minimal\|none` | Persist verbatim compacted turns to disk |
+| Skill curator | `hawk skills curator status/run/pin/unpin/archive` + `HAWK_SKILL_CURATOR=1` | Auto-archive cold agent-created skills (recoverable) |
+| Structural code match | `CodeMatch` tool | Tree-sitter query search over Go/Python/TS/TSX |
+| Composable toolsets | `hawk toolset [name]` + `Toolset` tool | Named tool groups (research, dev, ops, full_stack) |
+| App verification | `AppVerify` tool | Boot-smoke check with readiness polling and evidence artifacts |
+| Media generation | `GenerateMedia` tool (needs a wired engine) | Image/video generation with local persistence |
+| Git-tree file snapshots | `internal/gitsnapshot` | Content-addressed tree capture/diff/preview/restore |
+| Turn-boundary rewind | `internal/filestate` | Per-prompt before/after snapshots with durable store |
+| Path reservations | `internal/multiagent` ledger | Detect overlapping-file changes between parallel branches |
+| Live agent status | `GET /v1/agent/status` (daemon) | Machine-readable working/idle/stale per session |
+
 ## Usage
 
 ### Interactive Mode
