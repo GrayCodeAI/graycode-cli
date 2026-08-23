@@ -51,7 +51,12 @@ func maybeSpillToolOutput(output, toolName, toolID string) string {
 	}
 	preview := output
 	if len(preview) > toolOutputSpillPreview {
-		preview = preview[:toolOutputSpillPreview] + "\n... (see file for full output)"
+		preview = preview[:toolOutputSpillPreview]
+		if n := elisionNotice(output[toolOutputSpillPreview:]); n != "" {
+			preview += "\n... [" + n + "; full output in file]"
+		} else {
+			preview += "\n... (see file for full output)"
+		}
 	}
 	return fmt.Sprintf(
 		"Output saved to %s (%d bytes).\n\nPreview:\n%s\n\nUse Read (offset/limit) or Grep on this path to inspect the rest.",
@@ -63,5 +68,5 @@ func truncateToolOutput(output string, max int) string {
 	if len(output) <= max {
 		return output
 	}
-	return output[:max] + "\n... (truncated)"
+	return appendElisionMarker(output[:max], output[max:])
 }

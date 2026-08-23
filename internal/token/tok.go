@@ -4,6 +4,8 @@
 package token
 
 import (
+	"encoding/json"
+
 	tok "github.com/GrayCodeAI/tok"
 	tokgraph "github.com/GrayCodeAI/tok/runtimegraph"
 )
@@ -30,6 +32,15 @@ func Compress(text string, budget int) (string, Stats) {
 }
 
 func NewUsageTracker() *UsageTracker { return tok.NewUsageTracker() }
+
+// JSONInvariants renders verified-fact summaries for elided JSON records
+// (constants, enumerations, ranges, coverage). "" when nothing clears the
+// withhold rules.
+func JSONInvariants(dropped []json.RawMessage) string { return tok.JSONInvariants(dropped) }
+
+// LogInvariants renders the level distribution of elided log lines.
+// "" when the lines do not parse as logs.
+func LogInvariants(lines []string) string { return tok.LogInvariants(lines) }
 
 func ChunkCode(source string, opts ChunkOptions) []CodeChunk {
 	return tok.ChunkCode(source, opts)
