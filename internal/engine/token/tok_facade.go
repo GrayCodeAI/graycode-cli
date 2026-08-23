@@ -1,6 +1,10 @@
 package token
 
-import hawktoken "github.com/GrayCodeAI/hawk/internal/token"
+import (
+	"encoding/json"
+
+	hawktoken "github.com/GrayCodeAI/hawk/internal/token"
+)
 
 // Stats is the compression result consumed by Hawk's runtime observations.
 // The alias preserves the external tok schema while keeping Tok imports inside
@@ -41,3 +45,9 @@ func BuildRuntimeGraph(input RuntimeGraphInput) (*RuntimeGraphExport, error) {
 func Compress(text string, budget int) (string, Stats) {
 	return hawktoken.Compress(text, budget)
 }
+
+// JSONInvariants renders verified-fact summaries for elided JSON records.
+func JSONInvariants(dropped []json.RawMessage) string { return hawktoken.JSONInvariants(dropped) }
+
+// LogInvariants renders the level distribution of elided log lines.
+func LogInvariants(lines []string) string { return hawktoken.LogInvariants(lines) }

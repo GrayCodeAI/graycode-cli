@@ -591,27 +591,68 @@ func (s *ToolService) NormalizeOutput(output, canonicalTool, toolID string, cont
 
 // truncateOutputStructurally trims oversized tool output at a structural
 // boundary instead of a raw byte cut, so JSON-ish results keep whole lines
-// (or a valid splice point) rather than being chopped mid-object (Phase 3).
+// (or whole array elements) rather than being chopped mid-object (Phase 3).
 func truncateOutputStructurally(output string, maxChars int) string {
 	trimmed := strings.TrimLeft(output, " \t\r\n")
 	if strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[") {
-		// JSON-ish output: prefer the last newline before the cap.
+		// Pretty-printed: prefer the last newline before the cap.
 		if cut := strings.LastIndex(output[:maxChars], "\n"); cut >= 0 {
-			return output[:cut] + "\n... (truncated)"
+			return appendElisionMarker(output[:cut], output[cut:])
 		}
-		// Single-line JSON: splice at the previous element separator so the
-		// visible prefix remains well-formed up to the marker.
-		if cut := strings.LastIndex(output[:maxChars], ","); cut >= 0 {
-			return output[:cut+1] + "\n... (truncated)"
+		// Single-line JSON: splice at the last TOP-LEVEL element separator so
+		// each kept record stays complete (a naive comma search can land
+		// inside an object, orphaning half a record on both sides).
+		if cut := lastTopLevelComma(output, maxChars); cut > 0 {
+			return appendElisionMarker(output[:cut+1], output[cut+1:])
 		}
 		// No safe splice: fall back to the byte cap.
-		return output[:maxChars] + "\n... (truncated)"
+		return appendElisionMarker(output[:maxChars], output[maxChars:])
 	}
 	// Plain text: cut at the last line boundary to keep whole lines.
 	if cut := strings.LastIndex(output[:maxChars], "\n"); cut > 0 {
-		return output[:cut] + "\n... (truncated)"
+		return appendElisionMarker(output[:cut], output[cut:])
 	}
-	return output[:maxChars] + "\n... (truncated)"
+	return appendElisionMarker(output[:maxChars], output[maxChars:])
+}
+
+// lastTopLevelComma returns the index of the last comma at bracket depth 1
+// within s[:limit] of an outer array/object, or -1.
+func lastTopLevelComma(s string, limit int) int {
+	depth := 0
+	inStr := false
+	esc := false
+	last := -1
+	n := limit
+	if n > len(s) {
+		n = len(s)
+	}
+	for i := 0; i < n; i++ {
+		c := s[i]
+		if inStr {
+			switch {
+			case esc:
+				esc = false
+			case c == '\\':
+				esc = true
+			case c == '"':
+				inStr = false
+			}
+			continue
+		}
+		switch c {
+		case '"':
+			inStr = true
+		case '{', '[':
+			depth++
+		case '}', ']':
+			depth--
+		case ',':
+			if depth == 1 {
+				last = i
+			}
+		}
+	}
+	return last
 }
 
 // PostProcess applies the domain mutation/validation hooks that follow a raw
