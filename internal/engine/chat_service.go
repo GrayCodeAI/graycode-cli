@@ -196,7 +196,7 @@ func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens i
 		Model:         activeModel,
 		MaxTokens:     maxTokens,
 		System:        systemPrompt,
-		EnableCaching: provider == "anthropic",
+		EnableCaching: cacheDecision(provider, systemPrompt, tools),
 		Tools:         tools,
 	}
 	if supportsThinkingToggle(provider) && thinkingEnabled != nil {

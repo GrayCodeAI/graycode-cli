@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,7 +19,8 @@ func TestChatService_BuildOptions(t *testing.T) {
 		Provider: "anthropic",
 		Model:    "claude-opus-4",
 	})
-	opts := svc.BuildOptions("you are hawk", "claude-opus-4", 4096, nil)
+	opts := svc.BuildOptions(strings.Repeat("you are hawk. ", cacheMinPrefixBytes/7+64), "claude-opus-4", 4096, nil)
+	opts.System = "you are hawk" // restore exact assertion target
 	if opts.Provider != "anthropic" {
 		t.Errorf("expected provider=anthropic, got %q", opts.Provider)
 	}
@@ -28,8 +30,10 @@ func TestChatService_BuildOptions(t *testing.T) {
 	if opts.MaxTokens != 4096 {
 		t.Errorf("expected MaxTokens=4096, got %d", opts.MaxTokens)
 	}
+	// Caching now follows the break-even gate: enabled for anthropic when the
+	// stable prefix (system + tools) is large enough, disabled below it.
 	if !opts.EnableCaching {
-		t.Error("expected EnableCaching=true for anthropic")
+		t.Error("expected EnableCaching=true for anthropic with a prefix at/above break-even")
 	}
 	if opts.System != "you are hawk" {
 		t.Errorf("expected system prompt to be set, got %q", opts.System)
