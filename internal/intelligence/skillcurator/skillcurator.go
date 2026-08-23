@@ -378,3 +378,20 @@ func cutKV(line, key string) (string, bool) {
 	v = strings.Trim(v, `"'`)
 	return v, true
 }
+
+// ForceReview runs the auto-transition review immediately, ignoring the
+// inactivity interval (used by explicit CLI invocations). Returns the names
+// of archived skills.
+func (c *Curator) ForceReview() ([]string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.state.LastRunAt = time.Now()
+	archived, err := c.reviewLocked(time.Now())
+	if err != nil {
+		return nil, err
+	}
+	if serr := c.save(); serr != nil {
+		return archived, serr
+	}
+	return archived, nil
+}
