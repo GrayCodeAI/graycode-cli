@@ -36,7 +36,20 @@ func NewUsageTracker() *UsageTracker { return tok.NewUsageTracker() }
 // JSONInvariants renders verified-fact summaries for elided JSON records
 // (constants, enumerations, ranges, coverage). "" when nothing clears the
 // withhold rules.
+// ToolShrinkStats reports one tool's catalog reduction.
+type ToolShrinkStats = tok.ToolShrinkStats
+
 func JSONInvariants(dropped []json.RawMessage) string { return tok.JSONInvariants(dropped) }
+
+// ShrinkToolCatalog compresses an OpenAI-style function-tool catalog,
+// preserving the selection surface byte-for-byte. Fail-open: unchanged input
+// with ok=false when nothing can be safely reduced.
+func ShrinkToolCatalog(catalog string) (string, bool) { return tok.ShrinkToolCatalog(catalog) }
+
+// LintToolCatalog reports per-tool reductions without committing.
+func LintToolCatalog(catalog string) ([]tok.ToolShrinkStats, bool) {
+	return tok.LintToolCatalog(catalog)
+}
 
 // LogInvariants renders the level distribution of elided log lines.
 // "" when the lines do not parse as logs.

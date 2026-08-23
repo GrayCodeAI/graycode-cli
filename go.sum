@@ -26,8 +26,8 @@ github.com/GrayCodeAI/inspect v0.0.0-20260816041238-8556ee05ff07 h1:XQRSF6Migl5X
 github.com/GrayCodeAI/inspect v0.0.0-20260816041238-8556ee05ff07/go.mod h1:ipnOyNHbY1I6H5BlZY4RBDmFBpRnuQbshwawTqzHS/8=
 github.com/GrayCodeAI/sight v0.0.0-20260816041235-39553454cd60 h1:mXkSBokYHL83fTM9i77n8ID2gSl5fUr2bISunzCw+CI=
 github.com/GrayCodeAI/sight v0.0.0-20260816041235-39553454cd60/go.mod h1:0D2fhnfizzjywVOx/QPIdMduOtv3nZt1xrC3SBYmaF8=
-github.com/GrayCodeAI/tok v0.1.5-0.20260823020239-a1d1863f360d h1:i3V00Vjt+go8KL6bZDWNYHerlCgZZKNs5pQJumfKVHU=
-github.com/GrayCodeAI/tok v0.1.5-0.20260823020239-a1d1863f360d/go.mod h1:zHM1Ei/uHq2793uVY5mEtli4o9znAwtfdzPgSCrTjyQ=
+github.com/GrayCodeAI/tok v0.1.5-0.20260823024952-a7c4b99d37b8 h1:14bRg8NLSSJjQGc0urFz9Z9XRBm4Xlin3wEjFiBO/2k=
+github.com/GrayCodeAI/tok v0.1.5-0.20260823024952-a7c4b99d37b8/go.mod h1:zHM1Ei/uHq2793uVY5mEtli4o9znAwtfdzPgSCrTjyQ=
 github.com/GrayCodeAI/trace v0.1.4-0.20260816034253-59b437bbe8dc h1:b83/X8ETGFfu8Dn976v9ZLZJy6O1pVpInnqKc7i/TjU=
 github.com/GrayCodeAI/trace v0.1.4-0.20260816034253-59b437bbe8dc/go.mod h1:3IYIRSxM+ggLJmbzFM8undLSI0VaB7hFVkXzxRsyZaA=
 github.com/GrayCodeAI/yaad v0.2.1-0.20260816034238-42bdda93995b h1:ERRJu8E87qSA02j/9UM/3HqUNKSCYIQEnDWlQXHmix4=
