@@ -47,6 +47,7 @@ var toolPolicies = map[string]ToolPolicy{
 	"SmartRead":             {Name: "SmartRead", Capabilities: []Capability{CapabilityFilesystemRead}, DefaultRisk: RiskLow},
 	"CodeSearch":            {Name: "CodeSearch", Capabilities: []Capability{CapabilityFilesystemRead}, DefaultRisk: RiskLow},
 	"CodeMatch":             {Name: "CodeMatch", Capabilities: []Capability{CapabilityFilesystemRead}, DefaultRisk: RiskLow},
+	"FuzzyFind":             {Name: "FuzzyFind", Capabilities: []Capability{CapabilityFilesystemRead}, DefaultRisk: RiskLow},
 	"Toolset":               {Name: "Toolset", Capabilities: nil, DefaultRisk: RiskLow},
 	"CodeGraph":             {Name: "CodeGraph", Capabilities: []Capability{CapabilityFilesystemRead}, DefaultRisk: RiskLow},
 	"Impact":                {Name: "Impact", Capabilities: []Capability{CapabilityFilesystemRead}, DefaultRisk: RiskLow},
