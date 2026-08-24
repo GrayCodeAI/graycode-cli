@@ -286,6 +286,11 @@ Features adopted from open-source agent projects. All are off by default unless 
 | Live agent status | `GET /v1/agent/status` (daemon) | Machine-readable working/idle/stale per session |
 | X/Twitter search | `SearchX` tool | Live X search by forwarding a query to an xAI endpoint with server-side search; returns a cited summary. Requires `XAI_API_KEY` (or `GROK_API_KEY`) |
 | Desktop computer-use | `ComputerUse` tool | snapshot/click/type/scroll/press/screenshot via a pluggable `tool.SetComputerBackend` seam (host wires a native macOS accessibility backend) |
+| Token-cheaper file views | `Read` tool `--minify` | Read-only, comment-stripped, whitespace-dense file view (Go via `go/parser`; other languages string-aware; never touches disk) — fewer tokens per read |
+| Classified provider hints | `internal/errhint` | Buckets provider errors (Auth/RateLimit/Connectivity/ModelNotFound/ContextOverflow) into a one-line fixable next step |
+| Atomic install transactions | `internal/installtxn` | Cross-process staged install/remove with rollback (plugin/skill install paths) |
+| Stale-lock reclaim | `internal/lockutil` | Race-correct atomic reclaim of O_EXCL lock files with live-restore |
+| Test command discovery | `internal/testrunner` | Auto-detect test/verify commands (Go/npm/bun/pnpm/yarn/pytest/cargo) and parse runner output into structured results |
 
 ## Usage
 

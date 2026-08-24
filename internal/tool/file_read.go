@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/GrayCodeAI/hawk/internal/minify"
 )
 
 const maxFileSize = 10 << 20 // 10 MiB
@@ -34,6 +36,7 @@ func (FileReadTool) Schema() ToolSchema {
 			"end_line":   {Type: "integer", Description: "End line (1-based, inclusive, optional)"},
 			"offset":     {Type: "integer", Description: "Archive-compatible 1-based start line alias"},
 			"limit":      {Type: "integer", Description: "Archive-compatible number of lines to read"},
+			"minify":     {Type: "boolean", Description: "Return a token-cheaper, comment-stripped view of the file (read-only; never changes disk)"},
 		},
 		Required: []string{"path"},
 	}
@@ -54,6 +57,7 @@ func (FileReadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		EndLine   int    `json:"end_line"`
 		Offset    int    `json:"offset"`
 		Limit     int    `json:"limit"`
+		Minify    bool   `json:"minify"`
 	}
 	if err := json.Unmarshal(input, &p); err != nil {
 		return "", err
@@ -142,6 +146,25 @@ func (FileReadTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		return BinaryIndicator, nil
 	}
 	data = StripBOM(data)
+	if p.Minify {
+		// Token-cheaper read-only view: strips comments and collapses whitespace
+		// without ever changing the file. Never line-numbered, so the minified
+		// view is returned whole (ranges still respect the requested slice).
+		view := data
+		if startLine > 0 || endLine > 0 {
+			lines := strings.Split(string(data), "\n")
+			start := max(1, startLine) - 1
+			end := len(lines)
+			if endLine > 0 {
+				end = min(endLine, len(lines))
+			}
+			if start >= len(lines) {
+				return "", fmt.Errorf("start_line %d exceeds file length %d", startLine, len(lines))
+			}
+			view = []byte(strings.Join(lines[start:end], "\n"))
+		}
+		return minify.File(resolved, view).Content, nil
+	}
 	if startLine == 0 && endLine == 0 {
 		return string(data), nil
 	}
