@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -14,6 +15,7 @@ import (
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/errhint"
 	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
 	"github.com/GrayCodeAI/hawk/internal/notify"
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
@@ -321,6 +323,9 @@ func runExec(_ *cobra.Command, args []string) error {
 			execErr = ev.Content
 			if execOutputFormat == "text" {
 				_, _ = fmt.Fprintf(os.Stderr, "\nerror: %s\n", ev.Content)
+				if h := errhint.CLIHint(errors.New(ev.Content)); h != "" {
+					_, _ = fmt.Fprintf(os.Stderr, "  hint: %s\n", h)
+				}
 			}
 			if execOutputFormat == "stream-json" {
 				_ = jsonEnc.Encode(map[string]interface{}{

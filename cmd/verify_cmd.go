@@ -3,9 +3,12 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/GrayCodeAI/hawk/internal/governance"
 	"github.com/GrayCodeAI/hawk/internal/securitylog"
+	"github.com/GrayCodeAI/hawk/internal/testrunner"
 	"github.com/spf13/cobra"
 )
 
@@ -43,12 +46,74 @@ Exits non-zero on the first failed check.`,
 			cmd.Printf("[OK]   governance policy: valid (%s)\n", policyPath)
 		}
 
+		// 3. Project test/verify checks discovered from the workspace.
+		for _, c := range runWorkspaceChecks() {
+			if c.Err != nil {
+				ok = false
+				cmd.Printf("[FAIL] %s: %v\n", c.Name, c.Err)
+				continue
+			}
+			cmd.Printf("[OK]   %s: %s\n", c.Name, c.Detail)
+		}
+
 		if !ok {
 			return fmt.Errorf("verification failed — see messages above")
 		}
 		cmd.Println("verification passed")
 		return nil
 	},
+}
+
+// workspaceCheckResult is one discovered test/verify check's outcome.
+type workspaceCheckResult struct {
+	Name   string
+	Detail string
+	Err    error
+}
+
+// runWorkspaceChecks detects project test/verify commands via testrunner and
+// runs them, parsing runner output into a structured summary. It is purely
+// additive: a project without a detected runner yields no checks.
+func runWorkspaceChecks() []workspaceCheckResult {
+	checks, err := testrunner.Detect(".")
+	if err != nil {
+		return []workspaceCheckResult{{Name: "project checks", Err: fmt.Errorf("detect: %w", err)}}
+	}
+	var results []workspaceCheckResult
+	for _, c := range checks {
+		run := exec.Command(c.Command[0], c.Command[1:]...) // #nosec G204 -- discovered from project manifests
+		var stdout, stderr strings.Builder
+		run.Stdout = &stdout
+		run.Stderr = &stderr
+		runErr := run.Run()
+		summary := testrunner.ParseSummary(c, stdout.String(), stderr.String())
+		if runErr != nil && summary == nil {
+			results = append(results, workspaceCheckResult{Name: c.Name, Err: fmt.Errorf("%w: %s", runErr, strings.TrimSpace(stderr.String()))})
+			continue
+		}
+		if summary != nil {
+			detail := fmt.Sprintf("%d/%d passed (%d failed, %d skipped)", summary.Passed, summary.Total, summary.Failed, summary.Skipped)
+			for _, f := range summary.Failures {
+				if f.File != "" {
+					detail += fmt.Sprintf("\n    %s: %s (%s)", f.Name, f.Message, f.File)
+				} else {
+					detail += fmt.Sprintf("\n    %s", f.Name)
+				}
+			}
+			if runErr != nil {
+				results = append(results, workspaceCheckResult{Name: c.Name, Detail: detail, Err: fmt.Errorf("%w", runErr)})
+			} else {
+				results = append(results, workspaceCheckResult{Name: c.Name, Detail: detail})
+			}
+			continue
+		}
+		if runErr != nil {
+			results = append(results, workspaceCheckResult{Name: c.Name, Err: fmt.Errorf("%w", runErr)})
+		} else {
+			results = append(results, workspaceCheckResult{Name: c.Name, Detail: "ok"})
+		}
+	}
+	return results
 }
 
 func init() {
