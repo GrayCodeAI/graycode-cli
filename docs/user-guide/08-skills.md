@@ -143,6 +143,22 @@ hawk skills audit                           # security-scan installed skills
 
 Once installed, skills are discovered from the locations listed above.
 
+### Install-time security and the lockfile
+
+Every install runs two scans on skill content before it is written:
+
+1. **Unicode audit** — dangerous homoglyph/injection characters are
+   stripped (reported as `sanitized`).
+2. **Threat scan** — pattern scan for command injection, data
+   exfiltration, encoded payloads, and network calls, scored 0-100.
+   Content scoring below 30 is **refused**; scores in the warning band
+   install with a printed report.
+
+Each install is recorded in a `skills-lock.json` next to the installed
+skills (user or project scope), pinning the source repo, the cloned
+commit, and the SHA-256 of the installed content. Removing a skill drops
+its lock entry.
+
 ---
 
 ## Where to Go Next
