@@ -309,7 +309,7 @@ func (c *ChatService) Chat(ctx context.Context, messages []types.EyrieMessage, o
 	if client == nil {
 		return nil, errors.New("chat service: no client configured")
 	}
-	return client.Chat(ctx, messages, opts)
+	return chatWithReplay(ctx, client, messages, opts)
 }
 
 // isContextOverflow reports whether err looks like a "context too long"

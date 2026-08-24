@@ -297,6 +297,8 @@ Features adopted from open-source agent projects. All are off by default unless 
 | Relevance pruning | `internal/relevanceprune` | Token-budgeted context pruning preserving recent turns/tool calls/errors. Wired into compaction as a `relevance` strategy |
 | Tool-result clearing | `internal/engine` (`ClearOldToolResults`) | Two-tier context management: at 80% of the context window, stale tool-result content is replaced with `[output cleared]` placeholders (tool_use kept intact) before compacting — a gentler tier below compaction |
 | Approval pause timing | `internal/permissions` | Approval requests record decision timestamp + human deliberation duration (`DecisionAt`/`PauseDuration`) for approval-latency observability |
+| Graceful exhaustion | `internal/engine` (`SynthesisForExhaustion`) | When turn/token/time limits hit, one final tools-disabled LLM call synthesizes a coherent completion (accomplished/remaining/next steps) instead of a bare stop line |
+| Deterministic replay cache | `internal/replaycache` (`HAWK_REPLAY_CACHE_DIR`) | Disk-persisted SHA-256-keyed cache of completions; identical requests replay stored responses for reproducible regression runs |
 
 ## Usage
 

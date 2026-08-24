@@ -41,22 +41,32 @@ func (s *Session) checkGuardConditions(ctx context.Context, ch chan<- StreamEven
 
 	if s.LifecycleSvc().Limits() != nil {
 		if exceeded, reason := s.LifecycleSvc().Limits().IsExceeded(); exceeded {
-			ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nLimit reached: %s", reason)}
-			ch <- StreamEvent{Type: "done"}
+			s.emitExhaustion(ctx, ch, reason)
 			return false
 		}
 	}
 	if allowed, reason := s.tokUsageCanProceed(); !allowed {
-		ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nLimit reached: %s", reason)}
-		ch <- StreamEvent{Type: "done"}
+		s.emitExhaustion(ctx, ch, reason)
 		return false
 	}
 
 	if s.LifecycleSvc() != nil && s.LifecycleSvc().Limits().MaxTurns() > 0 && turnCount >= s.LifecycleSvc().Limits().MaxTurns() {
-		ch <- StreamEvent{Type: "content", Content: "Turn limit reached — stopping."}
-		ch <- StreamEvent{Type: "done"}
+		s.emitExhaustion(ctx, ch, "turn limit reached")
 		return false
 	}
 
 	return true
+}
+
+// emitExhaustion stops the loop with a graceful completion: one final
+// tools-disabled LLM call synthesizes a summary of the work (herm's graceful
+// exhaustion). Falls back to a static "limit reached" message when synthesis is
+// unavailable or fails.
+func (s *Session) emitExhaustion(ctx context.Context, ch chan<- StreamEvent, reason string) {
+	if synth := s.SynthesisForExhaustion(ctx, reason); synth != "" {
+		ch <- StreamEvent{Type: "content", Content: "\n\n" + synth}
+	} else {
+		ch <- StreamEvent{Type: "content", Content: fmt.Sprintf("\n\nLimit reached: %s", reason)}
+	}
+	ch <- StreamEvent{Type: "done"}
 }
