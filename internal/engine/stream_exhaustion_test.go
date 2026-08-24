@@ -45,16 +45,32 @@ func TestSynthesisForExhaustionCancelled(t *testing.T) {
 }
 
 func TestEmitExhaustionFallsBack(t *testing.T) {
-	// A session with no LLM should emit the static fallback message.
-	var nilSess *Session
+	// Default (opt-in off): static fallback message even with a live LLM.
+	sess := NewSessionWithClient(NewMockClientForTest(), "test", "test-model", "", nil, false)
+	sess.Persistence().SetRawMessages([]types.EyrieMessage{{Role: "user", Content: "hi"}})
 	ch := make(chan StreamEvent, 2)
-	nilSess.emitExhaustion(context.Background(), ch, "reason")
+	sess.emitExhaustion(context.Background(), ch, "reason")
 	ev := <-ch
 	if ev.Type != "content" || !strings.Contains(ev.Content, "Limit reached") {
-		t.Fatalf("expected fallback content, got %+v", ev)
+		t.Fatalf("expected fallback content by default, got %+v", ev)
 	}
 	ev2 := <-ch
 	if ev2.Type != "done" {
+		t.Fatalf("expected done event, got %+v", ev2)
+	}
+}
+
+func TestEmitExhaustionSynthesizesWhenOptedIn(t *testing.T) {
+	t.Setenv(gracefulExhaustionEnv, "1")
+	sess := NewSessionWithClient(NewMockClientForTest(), "test", "test-model", "", nil, false)
+	sess.Persistence().SetRawMessages([]types.EyrieMessage{{Role: "user", Content: "hi"}})
+	ch := make(chan StreamEvent, 2)
+	sess.emitExhaustion(context.Background(), ch, "turn limit reached")
+	ev := <-ch
+	if ev.Type != "content" || !strings.Contains(ev.Content, "mock test response") {
+		t.Fatalf("expected synthesized content when opted in, got %+v", ev)
+	}
+	if ev2 := <-ch; ev2.Type != "done" {
 		t.Fatalf("expected done event, got %+v", ev2)
 	}
 }
