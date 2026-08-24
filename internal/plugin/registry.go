@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/installtxn"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
@@ -303,7 +304,7 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 			installed = append(installed, name)
 		}
 
-		if err := os.WriteFile(filepath.Join(destDir, "SKILL.md"), []byte(content), 0o600); err != nil {
+		if err := installtxn.WriteFileAtomically(filepath.Join(destDir, "SKILL.md"), []byte(content), 0o600); err != nil {
 			continue
 		}
 	}

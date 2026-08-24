@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/errhint"
 	"github.com/GrayCodeAI/hawk/internal/hawkerr"
 )
 
@@ -39,6 +40,13 @@ func friendlyErrorMessage(err error) string {
 		msg += "\n  Check your internet connection. If you're behind a proxy, configure it with /config."
 	case hawkerr.ExitTimeout:
 		msg += "\n  The request took too long. Try again, or use /model to switch to a faster provider."
+	}
+
+	// Provider-specific one-line hint. errhint.Classify is deliberately
+	// conservative (gates on a provider-origin marker), so local errors draw no
+	// hint here.
+	if h := errhint.TUIHint(err); h != "" {
+		msg += "\n  " + h
 	}
 
 	return msg
