@@ -275,7 +275,8 @@ Features adopted from open-source agent projects. All are off by default unless 
 | Structural code match | `CodeMatch` tool | Tree-sitter query search over Go/Python/TS/TSX |
 | Composable toolsets | `hawk toolset [name]` + `Toolset` tool | Named tool groups (research, dev, ops, full_stack) |
 | App verification | `AppVerify` tool | Boot-smoke check with readiness polling and evidence artifacts |
-| Media generation | `GenerateMedia` tool (needs a wired engine) | Image/video generation with local persistence |
+| Media generation | `GenerateMedia` tool | Image/video generation with local persistence. Backend via `tool.SetMediaEngine`; an OpenAI-compatible client ships in `eyrie/client` (`ImageClient`), wired by the host (boundary-guarded — hawk routes through the eyrie facade) |
+| Voice transcription | Telegram voice notes + `stt` package | Transcribe Telegram voice/audio into the prompt. Backend via `stt.SetTranscriber`; an OpenAI-compatible client ships in `eyrie/client` (`AudioClient`), wired by the host |
 | Git-tree file snapshots | `internal/gitsnapshot` | Content-addressed tree capture/diff/preview/restore |
 | Turn-boundary rewind | `internal/filestate` | Per-prompt before/after snapshots with durable store |
 | Path reservations | `internal/multiagent` ledger | Detect overlapping-file changes between parallel branches |
