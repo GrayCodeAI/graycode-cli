@@ -284,6 +284,8 @@ Features adopted from open-source agent projects. All are off by default unless 
 | Agent family messaging | `internal/multiagent` (`FamilyMessenger`) | Direct parent/sibling/child messages with pending caps + rate limits |
 | Path reservations | `internal/multiagent` ledger | Detect overlapping-file changes between parallel branches |
 | Live agent status | `GET /v1/agent/status` (daemon) | Machine-readable working/idle/stale per session |
+| X/Twitter search | `SearchX` tool | Live X search by forwarding a query to an xAI endpoint with server-side search; returns a cited summary. Requires `XAI_API_KEY` (or `GROK_API_KEY`) |
+| Desktop computer-use | `ComputerUse` tool | snapshot/click/type/scroll/press/screenshot via a pluggable `tool.SetComputerBackend` seam (host wires a native macOS accessibility backend) |
 
 ## Usage
 

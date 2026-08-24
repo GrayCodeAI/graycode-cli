@@ -173,6 +173,8 @@ func optionalTools() []tool.Tool {
 		tool.CodeMatchTool{},
 		tool.FuzzyFindTool{},
 		tool.BatchExecTool{},
+		tool.SearchXTool{},
+		tool.ComputerUseTool{},
 		tool.ToolsetTool{},
 		tool.CoreMemoryAppendTool{},
 		tool.CoreMemoryReplaceTool{},
