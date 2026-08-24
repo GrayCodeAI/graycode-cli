@@ -20,6 +20,10 @@ type ApprovalRequest struct {
 	Status      string // "pending", "approved", "denied", "expired"
 	ExpiresAt   time.Time
 	Reason      string
+	// DecisionAt and PauseDuration record how long the human deliberated before
+	// deciding, for approval-latency observability (adopted from herm).
+	DecisionAt    time.Time
+	PauseDuration time.Duration
 }
 
 // ApprovalPolicy defines rules for how approval requests are handled.
@@ -190,6 +194,8 @@ func (wf *ApprovalWorkflow) Approve(id, reason string) error {
 			}
 			req.Status = "approved"
 			req.Reason = reason
+			req.DecisionAt = time.Now()
+			req.PauseDuration = req.DecisionAt.Sub(req.CreatedAt)
 			wf.Pending = append(wf.Pending[:i], wf.Pending[i+1:]...)
 			wf.History = append(wf.History, req)
 			return nil
@@ -210,6 +216,8 @@ func (wf *ApprovalWorkflow) Deny(id, reason string) error {
 			}
 			req.Status = "denied"
 			req.Reason = reason
+			req.DecisionAt = time.Now()
+			req.PauseDuration = req.DecisionAt.Sub(req.CreatedAt)
 			wf.Pending = append(wf.Pending[:i], wf.Pending[i+1:]...)
 			wf.History = append(wf.History, req)
 			return nil

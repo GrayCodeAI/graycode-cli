@@ -129,6 +129,11 @@ func (s *Session) ManageContextBeforeTurn(ctx context.Context) (strategy string,
 	}
 	s.Persistence().SetRawMessages(ctxmgr.CollapseRepeatedMessages(s.Persistence().RawMessages()))
 
+	// Clear tier (0.8): replace old tool-result content with a placeholder before
+	// compacting, so short-term overflow is reclaimed gently without a full
+	// compaction. Only when clearing is insufficient does compaction run.
+	s.ClearOldToolResults(ctx)
+
 	s.EnsureAutoCompactor()
 	if compactStrategy, ok := s.Persistence().AutoCompactor().AutoCompactIfNeeded(ctx, s); ok {
 		return compactStrategy, true // recordCompaction emitted inside AutoCompactIfNeeded

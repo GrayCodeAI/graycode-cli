@@ -545,3 +545,24 @@ func TestApprovalConcurrentAccess(t *testing.T) {
 		t.Errorf("expected 10 history entries, got %d", len(wf.History))
 	}
 }
+
+func TestApprovalRecordsPauseDuration(t *testing.T) {
+	wf := NewApprovalWorkflow(nil)
+	req, err := wf.RequestApproval("Bash", map[string]interface{}{"command": "make build"}, "MEDIUM")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if err := wf.Approve(req.ID, "ok"); err != nil {
+		t.Fatalf("approve error: %v", err)
+	}
+	// The request should now carry decision metadata (non-zero duration).
+	if req.Status != "approved" {
+		t.Fatalf("status = %s", req.Status)
+	}
+	if req.DecisionAt.IsZero() {
+		t.Fatal("expected DecisionAt to be set")
+	}
+	if req.PauseDuration <= 0 {
+		t.Fatalf("expected positive pause duration, got %s", req.PauseDuration)
+	}
+}
