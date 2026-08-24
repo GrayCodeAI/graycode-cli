@@ -279,6 +279,9 @@ Features adopted from open-source agent projects. All are off by default unless 
 | Voice transcription | Telegram voice notes + `stt` package | Transcribe Telegram voice/audio into the prompt. Backend via `stt.SetTranscriber`; an OpenAI-compatible client ships in `eyrie/client` (`AudioClient`), wired by the host |
 | Git-tree file snapshots | `internal/gitsnapshot` | Content-addressed tree capture/diff/preview/restore |
 | Turn-boundary rewind | `internal/filestate` | Per-prompt before/after snapshots with durable store |
+| Continual harness | `internal/intelligence/harness` | Versioned, evidence-backed refinement of supplemental prompts/memories/skills/subagents with rollback |
+| Bounded autonomous budgets | `internal/engine` (`AutonomousBudget`) | Track turns/tokens/time/continuations; report why a run stopped (budget vs gate-passed vs error) |
+| Agent family messaging | `internal/multiagent` (`FamilyMessenger`) | Direct parent/sibling/child messages with pending caps + rate limits |
 | Path reservations | `internal/multiagent` ledger | Detect overlapping-file changes between parallel branches |
 | Live agent status | `GET /v1/agent/status` (daemon) | Machine-readable working/idle/stale per session |
 
