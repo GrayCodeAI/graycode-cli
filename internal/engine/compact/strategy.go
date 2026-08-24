@@ -2,6 +2,7 @@ package compact
 
 import (
 	"strings"
+	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -20,6 +21,7 @@ type CompactConfig struct {
 	AutoCompactBuffer int
 	MaxOutputTokens   int
 	MaxFailures       int
+	Cooldown          time.Duration
 }
 
 func DefaultCompactConfig() CompactConfig {
@@ -29,6 +31,7 @@ func DefaultCompactConfig() CompactConfig {
 		AutoCompactBuffer: 13000,
 		MaxOutputTokens:   20000,
 		MaxFailures:       3,
+		Cooldown:          5 * time.Minute,
 	}
 }
 

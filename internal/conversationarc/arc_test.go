@@ -15,6 +15,13 @@ func TestNewArcInit(t *testing.T) {
 	if len(a.Goals) != 0 {
 		t.Fatal("expected no goals")
 	}
+	if !a.IsEmpty() {
+		t.Fatal("a fresh arc should be empty")
+	}
+	a.AddGoal("x")
+	if a.IsEmpty() {
+		t.Fatal("arc with a goal should not be empty")
+	}
 }
 
 func TestDetectAndAdvancePhase(t *testing.T) {

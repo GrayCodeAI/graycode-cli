@@ -11,22 +11,22 @@ import (
 	"time"
 
 	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+	"github.com/GrayCodeAI/hawk/internal/conversationarc"
 	"github.com/GrayCodeAI/hawk/internal/engine/planning"
 	"github.com/GrayCodeAI/hawk/internal/eventlog"
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
-	"github.com/GrayCodeAI/hawk/internal/types"
-
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/hawk/internal/sandbox"
 	"github.com/GrayCodeAI/hawk/internal/schedule"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/snapshot"
 	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // MemoryRecaller abstracts memory recall/remember so engine avoids importing memory directly.
@@ -79,6 +79,9 @@ type Session struct {
 	persist *PersistenceService
 	goals   *planning.GoalTracker // optional goal tracker; emits goal.change lifecycle events
 	tools   *ToolService
+	// arc is the optional durable conversation-arc sidecar (goals/decisions/
+	// milestones/phase) loaded per session. See conversationarc package.
+	arc *conversationarc.Arc
 	// incremental is the opt-in incremental system-context reconciler for
 	// dynamic sections (e.g. memories). Nil unless HAWK_INCREMENTAL_CONTEXT=1.
 	// See incremental.go.
@@ -431,6 +434,27 @@ func (s *Session) SetLearnFn(fn func(what, why, lesson, category string)) {
 	s.mu.Lock()
 	s.learnFn = fn
 	s.mu.Unlock()
+}
+
+// SetArc attaches the session's durable conversation-arc sidecar.
+func (s *Session) SetArc(a *conversationarc.Arc) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.arc = a
+	s.mu.Unlock()
+}
+
+// Arc returns the attached conversation arc, or nil when none is set.
+func (s *Session) Arc() *conversationarc.Arc {
+	if s == nil {
+		return nil
+	}
+	s.mu.RLock()
+	a := s.arc
+	s.mu.RUnlock()
+	return a
 }
 
 // Learn persists a lesson through the configured callback. Safe to call with

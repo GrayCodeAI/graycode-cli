@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/hawk/internal/smartrouting"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/engine/branching"
@@ -60,6 +61,13 @@ func (s *Session) buildTurnOptions(tc turnContext) types.ChatOptions {
 	if s.LifecycleSvc().Beliefs() != nil && s.LifecycleSvc().Beliefs().Size() > 0 {
 		if summary := s.LifecycleSvc().Beliefs().FormatForPrompt(); summary != "" {
 			opts.System += "\n\n## Agent Beliefs\n" + summary
+		}
+	}
+	// Conversation arc: durable goals/decisions/milestones/phase, injected
+	// ephemerally. Byte-stable, so unchanged arcs don't churn the prompt cache.
+	if s.Arc() != nil && !s.Arc().IsEmpty() {
+		if sum := s.Arc().Summary(); sum != "" {
+			opts.System += "\n\n## Conversation Arc\n" + sum
 		}
 	}
 	// Activity nudge: remind agent to persist learnings if idle. Injected
@@ -338,15 +346,26 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if activeModel == "" {
 			activeModel = strings.TrimSpace(s.ChatLLM().Model())
 		}
-		if s.LifecycleSvc().Cascade() != nil && s.LifecycleSvc().Cascade().Enabled {
-			lastUserMsg := ""
-			for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
-				if s.Persistence().RawMessages()[i].Role == "user" {
-					lastUserMsg = s.Persistence().RawMessages()[i].Content
-					break
-				}
+		userMsg := ""
+		for i := len(s.Persistence().RawMessages()) - 1; i >= 0; i-- {
+			if s.Persistence().RawMessages()[i].Role == "user" {
+				userMsg = s.Persistence().RawMessages()[i].Content
+				break
 			}
-			activeModel = s.LifecycleSvc().Cascade().SelectModel(lastUserMsg, activeModel, "")
+		}
+		if s.LifecycleSvc().Cascade() != nil && s.LifecycleSvc().Cascade().Enabled {
+			activeModel = s.LifecycleSvc().Cascade().SelectModel(userMsg, activeModel, "")
+		}
+		// Smart routing: cheap simple model for trivial turns, strong otherwise.
+		if sr := s.LifecycleSvc().SmartRouting(); sr != nil && sr.Enabled {
+			d := smartrouting.Route(smartrouting.Input{
+				UserText:   userMsg,
+				HasNonText: false,
+				TurnNumber: turnCount,
+			}, *sr)
+			if d.Model != "" {
+				activeModel = d.Model
+			}
 		}
 		if strings.TrimSpace(activeModel) == "" {
 			emit(StreamEvent{Type: "error", Content: "no model selected — open /config → Models and pick one"})

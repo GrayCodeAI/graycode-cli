@@ -16,6 +16,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/safewrite"
+	"github.com/GrayCodeAI/hawk/internal/smartrouting"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -58,6 +59,7 @@ type Settings struct {
 	ContainerNetwork        string                 `json:"container_network,omitempty"`          // container network mode: none, bridge, isolated
 	SpecAllowTests          bool                   `json:"spec_allow_tests,omitempty"`           // allow safe test commands during spec stage
 	ModelRoles              *routing.ModelRoles    `json:"model_roles,omitempty"`                // per-role model overrides
+	SmartRouting            *smartrouting.Config   `json:"smart_routing,omitempty"`              // cheap-simple / strong turn routing (opt-in)
 	AutoCompactThresholdPct int                    `json:"auto_compact_threshold_pct,omitempty"` // token % to trigger auto-compact (default 85)
 	Frugal                  bool                   `json:"frugal,omitempty"`                     // aggressive cost optimization: cascade to cheap models, lower max_tokens, earlier compaction
 	Attribution             *Attribution           `json:"attribution,omitempty"`

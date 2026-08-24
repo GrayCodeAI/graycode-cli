@@ -205,6 +205,13 @@ func (a *Arc) AddMilestone(description string) Milestone {
 	return m
 }
 
+// IsEmpty reports whether the arc has no tracked content worth summarizing
+// (no goals/decisions/milestones and still in the init phase). Callers use it
+// to skip injecting an empty summary.
+func (a *Arc) IsEmpty() bool {
+	return len(a.Goals) == 0 && len(a.Decisions) == 0 && len(a.Milestones) == 0 && a.CurrentPhase == PhaseInit
+}
+
 // Summary renders a model-visible, byte-stable arc summary. The volatile
 // timestamp line is normalized so an unchanged arc produces identical output
 // across turns (no prompt-cache churn).
