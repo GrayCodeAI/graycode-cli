@@ -11,6 +11,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 	"github.com/GrayCodeAI/hawk/internal/plugin"
 	"github.com/GrayCodeAI/hawk/internal/prompts"
+	"github.com/GrayCodeAI/hawk/internal/smartrouting"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
@@ -30,6 +31,8 @@ import (
 type LifecycleService struct {
 	// model selection.
 	cascade *branching.CascadeRouter
+	// smart turn routing (simple/strong per turn).
+	smartRouting *smartrouting.Config
 	// limit tracking.
 	limits *LimitTracker
 	// doom-loop / snowball / loop detection.
@@ -248,6 +251,7 @@ func (s *LifecycleService) SnapshotTurnProgress(tokens int, progress float64) {
 // to wire optional collaborators. All nil-safe.
 
 func (s *LifecycleService) SetCascade(c *branching.CascadeRouter)       { s.cascade = c }
+func (s *LifecycleService) SetSmartRouting(c *smartrouting.Config)      { s.smartRouting = c }
 func (s *LifecycleService) SetLifecycle(l *SessionLifecycle)            { s.lifecycle = l }
 func (s *LifecycleService) SetReflector(r *Reflector)                   { s.reflector = r }
 func (s *LifecycleService) SetCritic(c *Critic)                         { s.critic = c }
@@ -268,6 +272,7 @@ func (s *LifecycleService) Critic() *Critic                         { return s.c
 func (s *LifecycleService) Shadow() *branching.ShadowWorkspace      { return s.shadow }
 func (s *LifecycleService) Reflector() *Reflector                   { return s.reflector }
 func (s *LifecycleService) Cascade() *branching.CascadeRouter       { return s.cascade }
+func (s *LifecycleService) SmartRouting() *smartrouting.Config      { return s.smartRouting }
 func (s *LifecycleService) FewShotStore() *FewShotStore             { return s.fewShotStore }
 func (s *LifecycleService) AdaptivePrompt() *AdaptivePrompt         { return s.adaptivePrompt }
 func (s *LifecycleService) Activity() *memory.ActivityTracker       { return s.activity }

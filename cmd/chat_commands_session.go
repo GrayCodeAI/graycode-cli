@@ -21,6 +21,12 @@ type sessionSaveResultMsg struct {
 	err error
 }
 
+// sessionArcDir returns the per-session directory holding the conversation-arc
+// sidecar (.arc.json).
+func sessionArcDir(id string) string {
+	return filepath.Join(storage.SessionsDir(), id)
+}
+
 // saveSession persists the current session to disk.
 func (m *chatModel) saveSession() {
 	raw := m.session.RawMessages()
@@ -41,6 +47,10 @@ func (m *chatModel) saveSession() {
 	} else if err != nil {
 		m.recordWALError(err)
 	}
+	// Conversation arc sidecar (best-effort, only when it has content).
+	if arc := m.session.Arc(); arc != nil && !arc.IsEmpty() {
+		_ = arc.Save(sessionArcDir(m.sessionID))
+	}
 }
 
 // saveSessionCmd returns a background tea.Cmd that persists the session. It
@@ -60,11 +70,15 @@ func (m *chatModel) saveSessionCmd() tea.Cmd {
 	msgs := session.FromRuntimeMessages(raw)
 	createdAt := time.Now()
 	seq := m.walSeq
+	arc := m.session.Arc()
 	return func() tea.Msg {
 		err := session.Save(&session.Session{
 			ID: id, Model: modelName, Provider: provider,
 			Messages: msgs, CreatedAt: createdAt,
 		})
+		if arc != nil && !arc.IsEmpty() {
+			_ = arc.Save(sessionArcDir(id))
+		}
 		return sessionSaveResultMsg{id: id, seq: seq, err: err}
 	}
 }

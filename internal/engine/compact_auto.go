@@ -5,17 +5,19 @@ import (
 	"errors"
 	"log"
 	"sync"
+	"time"
 
+	"github.com/GrayCodeAI/hawk/internal/circuitbreaker"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // AutoCompactor orchestrates compaction with circuit breaker protection.
 type AutoCompactor struct {
-	mu                  sync.Mutex
-	registry            *StrategyRegistry
-	config              CompactConfig
-	consecutiveFailures int
-	lastStrategy        string
+	mu           sync.Mutex
+	registry     *StrategyRegistry
+	config       CompactConfig
+	breaker      *circuitbreaker.Breaker
+	lastStrategy string
 }
 
 // NewAutoCompactor creates an auto-compactor with the given config.
@@ -23,6 +25,7 @@ func NewAutoCompactor(config CompactConfig) *AutoCompactor {
 	return &AutoCompactor{
 		registry: NewStrategyRegistry(config),
 		config:   config,
+		breaker:  circuitbreaker.New(config.MaxFailures, config.Cooldown),
 	}
 }
 
@@ -35,6 +38,7 @@ func (ac *AutoCompactor) Configure(config CompactConfig) {
 	defer ac.mu.Unlock()
 	ac.config = config
 	ac.registry = NewStrategyRegistry(config)
+	ac.breaker = circuitbreaker.New(config.MaxFailures, config.Cooldown)
 }
 
 // GetAutoCompactThreshold returns the token count at which auto-compaction triggers.
@@ -51,8 +55,10 @@ func (ac *AutoCompactor) ShouldAutoCompact(sess *Session) bool {
 		return false
 	}
 
-	if ac.consecutiveFailures >= ac.config.MaxFailures {
-		log.Printf("Auto-compact paused after %d consecutive failures.", ac.consecutiveFailures)
+	// Circuit breaker: skip once the breaker is open (too many consecutive
+	// failures) until its cooldown elapses, then re-arm half-open.
+	if !ac.breaker.ShouldAllow(time.Now()).Allow {
+		log.Printf("Auto-compact paused by circuit breaker.")
 		return false
 	}
 
@@ -72,11 +78,11 @@ func (ac *AutoCompactor) AutoCompactIfNeeded(ctx context.Context, sess *Session)
 	strategy, err := ac.RunCompaction(ctx, sess)
 	if err != nil {
 		ac.mu.Lock()
-		ac.consecutiveFailures++
+		ac.breaker.RecordFailure(time.Now())
 		ac.mu.Unlock()
 		sess.Logger().Warn("auto-compact failed", map[string]any{
 			"error":    err.Error(),
-			"failures": ac.consecutiveFailures,
+			"failures": ac.breaker.ConsecutiveFailures(),
 		})
 		sess.compact(ctx)
 		tokensAfter := EstimateTokens(sess.Persistence().RawMessages())
@@ -89,7 +95,7 @@ func (ac *AutoCompactor) AutoCompactIfNeeded(ctx context.Context, sess *Session)
 		// Strategy ran but produced no reduction (e.g. LLM summary was
 		// rejected, or messages were not reduced); fall back to truncation.
 		ac.mu.Lock()
-		ac.consecutiveFailures++
+		ac.breaker.RecordFailure(time.Now())
 		ac.mu.Unlock()
 		sess.Logger().Warn("auto-compact produced no reduction, falling back to truncation", map[string]any{
 			"tokens_before": tokensBefore,
@@ -102,7 +108,7 @@ func (ac *AutoCompactor) AutoCompactIfNeeded(ctx context.Context, sess *Session)
 	}
 
 	ac.mu.Lock()
-	ac.consecutiveFailures = 0
+	ac.breaker.RecordSuccess()
 	ac.mu.Unlock()
 	sess.recordCompaction(strategy, tokensBefore, tokensAfter, false)
 	return strategy, true
@@ -160,7 +166,7 @@ func (ac *AutoCompactor) LastStrategy() string {
 func (ac *AutoCompactor) ResetFailures() {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
-	ac.consecutiveFailures = 0
+	ac.breaker.RecordSuccess()
 }
 
 // SmartCompactStrategy uses LLM to generate a conversation summary.

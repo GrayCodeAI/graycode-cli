@@ -381,6 +381,11 @@ func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings,
 	cascade.FrugalMode = settings.Frugal
 	sess.LifecycleSvc().SetCascade(cascade)
 
+	// Smart turn routing: opt-in cheap-simple / strong per-turn model choice.
+	if settings.SmartRouting != nil {
+		sess.LifecycleSvc().SetSmartRouting(settings.SmartRouting)
+	}
+
 	// Session lifecycle: self-improvement loop (learn from sessions)
 	sess.LifecycleSvc().SetLifecycle(&lifecycle.SessionLifecycle{
 		Memory: &lifecycle.EvolvingMemoryAdapter{EM: memory.NewEvolvingMemory()},

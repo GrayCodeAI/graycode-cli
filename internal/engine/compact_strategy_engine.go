@@ -19,11 +19,13 @@ type StrategyRegistry struct {
 
 func NewStrategyRegistry(config CompactConfig) *StrategyRegistry {
 	r := &StrategyRegistry{config: config}
+	target := config.ContextWindowSize - config.AutoCompactBuffer - config.MaxOutputTokens
 	r.strategies = []CompactStrategy{
 		&ProviderNativeCompactStrategy{},
 		&MicroCompactStrategy{},
 		&SessionMemoryStrategy{},
 		&SmartCompactStrategy{},
+		&RelevancePruneStrategy{TargetTokens: target},
 		&TruncateStrategy{},
 	}
 	return r

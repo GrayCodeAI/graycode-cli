@@ -41,6 +41,8 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/system/staleness"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+
+	"github.com/GrayCodeAI/hawk/internal/conversationarc"
 )
 
 // Types, styles, and model struct are in chat_model.go
@@ -172,6 +174,13 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 		return chatModel{}, err
 	}
 	startup.EndPhase("newChatModel:prepareSession")
+
+	// Conversation arc: durable per-session sidecar of goals/decisions/milestones.
+	arc, _ := conversationarc.Load(sessionArcDir(sid))
+	if arc == nil {
+		arc = conversationarc.New()
+	}
+	sess.SetArc(arc)
 
 	// Initialize conversation DAG for branching support
 	startup.MarkPhase("newChatModel:dag")

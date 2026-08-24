@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
@@ -24,7 +25,9 @@ func TestAutoCompactor_CircuitBreaker(t *testing.T) {
 	cfg.MaxOutputTokens = 100
 
 	ac := NewAutoCompactor(cfg)
-	ac.consecutiveFailures = 2
+	now := time.Now()
+	ac.breaker.RecordFailure(now)
+	ac.breaker.RecordFailure(now)
 
 	sess := NewSessionWithClient(NewMockClientForTest(), "test", "test-model", "", nil, false)
 	sess.Persistence().SetRawMessages(makeMessages(200))
