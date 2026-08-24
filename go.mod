@@ -50,7 +50,7 @@ require (
 )
 
 require (
-	github.com/GrayCodeAI/hawk-mcpkit v0.1.6-0.20260816034242-4a5ea251cd7a // indirect
+	github.com/GrayCodeAI/hawk-mcpkit v0.1.6-0.20260824172835-36265aa886ca // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1 // indirect
@@ -62,6 +62,7 @@ require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
+	github.com/mark3labs/mcp-go v0.55.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ogen-go/ogen v1.23.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
