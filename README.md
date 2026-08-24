@@ -291,6 +291,10 @@ Features adopted from open-source agent projects. All are off by default unless 
 | Atomic install transactions | `internal/installtxn` | Cross-process staged install/remove with rollback. Wired into skill install (atomic `SKILL.md` publish) |
 | Stale-lock reclaim | `internal/lockutil` | Race-correct atomic reclaim of O_EXCL lock files with live-restore (ready for O_EXCL lock sites) |
 | Test command discovery | `internal/testrunner` | Auto-detect test/verify commands (Go/npm/bun/pnpm/yarn/pytest/cargo) and parse runner output into structured results. Wired into `hawk verify` |
+| Circuit breaker | `internal/circuitbreaker` | Closed/open/half-open retry-storm protection with cooldown — generalized primitive (auto-compact style: 3 failures → cooldown → half-open probe) |
+| Smart turn routing | `internal/smartrouting` | Deterministic simple/strong turn classifier with fail-toward-strong safety (cheap model for trivial turns) |
+| Conversation arc | `internal/conversationarc` | Durable sidecar memory of goals/decisions/milestones/phase with a byte-stable model-visible summary |
+| Relevance pruning | `internal/relevanceprune` | Token-budgeted context pruning that keeps relevant history while preserving recent turns/tool calls/errors |
 
 ## Usage
 
