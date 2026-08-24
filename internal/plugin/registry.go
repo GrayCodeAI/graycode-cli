@@ -250,6 +250,13 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 		return "", fmt.Errorf("git clone failed: %w\n%s", cloneErr, string(out))
 	}
 
+	// Record the cloned HEAD so the lockfile can pin what was installed.
+	headOut, headErr := exec.CommandContext(context.Background(), "git", "-C", tmpDir, "rev-parse", "HEAD").Output() // #nosec G204 -- tmpDir is a freshly created temp directory owned by this function, not external input
+	commitSha := ""
+	if headErr == nil {
+		commitSha = strings.TrimSpace(string(headOut))
+	}
+
 	// Discover skills in the cloned repo.
 	skillsRoot := tmpDir
 	// Check for skills/ subdirectory (agentskills.io convention).
@@ -258,6 +265,13 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 	}
 
 	installed := []string{}
+	blocked := []string{}
+	sanitized := 0
+	var warnings strings.Builder
+	lock, lockErr := LoadSkillsLock(scope)
+	if lockErr != nil {
+		return "", fmt.Errorf("load skills lock: %w", lockErr)
+	}
 	entries, err := os.ReadDir(skillsRoot)
 	if err != nil {
 		return "", fmt.Errorf("read skills: %w", err)
@@ -284,10 +298,9 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 			continue
 		}
 
-		// Inject source tracking metadata.
 		content := injectSourceMetadata(string(data), repo)
 
-		// Audit-on-install: scan for dangerous content before writing.
+		// Unicode audit: sanitize dangerous characters before any further use.
 		findings := auditContent(srcSkill, string(data))
 		hasCritical := false
 		for _, f := range findings {
@@ -297,25 +310,63 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 			}
 		}
 		if hasCritical {
-			// Strip dangerous chars and warn.
 			content = StripDangerousChars(content)
-			installed = append(installed, name+" (sanitized)")
-		} else {
-			installed = append(installed, name)
+		}
+
+		// Threat scan: refuse skills whose content looks malicious.
+		scan := ScanThreats(content)
+		if scan.Blocked {
+			blocked = append(blocked, name)
+			continue
 		}
 
 		if err := installtxn.WriteFileAtomically(filepath.Join(destDir, "SKILL.md"), []byte(content), 0o600); err != nil {
 			continue
 		}
+
+		installed = append(installed, name)
+		lock.Set(name, SkillsLockEntry{
+			Source:       repo,
+			SourceType:   "github",
+			SkillPath:    strings.TrimPrefix(strings.TrimPrefix(srcSkill, tmpDir), "/"),
+			Commit:       commitSha,
+			ComputedHash: HashSkillContent([]byte(content)),
+		})
+		if hasCritical {
+			sanitized++
+		}
+		warnings.WriteString(FormatThreatScan(name, scan))
+	}
+
+	if len(installed) > 0 {
+		if err := lock.Save(scope); err != nil {
+			// Lockfile is advisory; a failed save must not roll back the install.
+			warnings.WriteString(fmt.Sprintf("warning: skills-lock.json update failed: %v\n", err))
+		}
 	}
 
 	if len(installed) == 0 {
+		if len(blocked) > 0 {
+			return "", fmt.Errorf("refused to install skill(s) from %s: security score below threshold: %s",
+				repo, strings.Join(blocked, ", "))
+		}
 		if skillName != "" {
 			return "", fmt.Errorf("skill %q not found in %s", skillName, repo)
 		}
 		return "", fmt.Errorf("no skills found in %s", repo)
 	}
-	return fmt.Sprintf("Installed %d skill(s): %s", len(installed), strings.Join(installed, ", ")), nil
+
+	msg := fmt.Sprintf("Installed %d skill(s): %s", len(installed), strings.Join(installed, ", "))
+	if sanitized > 0 {
+		msg += fmt.Sprintf(" (%d sanitized)", sanitized)
+	}
+	if warnings.Len() > 0 {
+		msg += "\nSecurity warnings:\n" + strings.TrimRight(warnings.String(), "\n")
+	}
+	if len(blocked) > 0 {
+		msg += "\nRefused (security): " + strings.Join(blocked, ", ")
+	}
+	return msg, nil
 }
 
 // Remove uninstalls a skill by name from Hawk user state.
@@ -328,6 +379,13 @@ func Remove(name string) error {
 		if _, err := os.Stat(d); err == nil {
 			_ = os.RemoveAll(d)
 			removed = true
+		}
+	}
+
+	// Drop the skill from every scope's lockfile where it is pinned.
+	for _, scope := range []string{"user", "project"} {
+		if lock, err := LoadSkillsLock(scope); err == nil && lock.Delete(name) {
+			_ = lock.Save(scope)
 		}
 	}
 	if !removed {

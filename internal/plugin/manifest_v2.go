@@ -70,9 +70,13 @@ type ManifestHook struct {
 // using the V2 manifest format. It is backward compatible with V1 manifests.
 func ParseManifestV2(pluginDir string) (*ManifestV2, error) {
 	path := filepath.Join(pluginDir, "plugin.json")
-	data, err := os.ReadFile(path) // #nosec G304 -- pluginDir is a locally installed plugin directory under a Hawk-managed plugins root, not raw external input
+	data, err := readBoundedManifestFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("read manifest: %w", err)
+		return nil, err
+	}
+
+	if dup := findDuplicateJSONKey(data); dup != "" {
+		return nil, fmt.Errorf("parse manifest: duplicate JSON key %q", dup)
 	}
 
 	var manifest ManifestV2
@@ -146,6 +150,8 @@ func (m *ManifestV2) ValidateV2() []string {
 	var issues []string
 
 	// Basic V1 validation
+
+	issues = append(issues, ValidateManifestIdentity(m.Name, m.Version)...)
 	if m.Name == "" {
 		issues = append(issues, "name is required")
 	}

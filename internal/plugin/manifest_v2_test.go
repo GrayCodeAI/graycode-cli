@@ -86,7 +86,7 @@ func TestManifestV2_IsV2(t *testing.T) {
 func TestManifestV2_ValidateV2(t *testing.T) {
 	t.Parallel()
 	valid := &ManifestV2{
-		Name: "test", Version: "1.0", Mode: "subprocess",
+		Name: "test", Version: "1.0.0", Mode: "subprocess",
 		Tools: []ManifestTool{{Name: "t", Description: "d", Command: "echo"}},
 	}
 	if err := valid.ValidateV2(); err != nil {
