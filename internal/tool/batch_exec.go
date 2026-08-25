@@ -209,7 +209,7 @@ func batchPoll(ctx context.Context, apiKey, batchID string) (string, error) {
 	}
 	var result batchPollResult
 	if err := json.Unmarshal(raw, &result); err != nil {
-		return string(raw), nil // return raw on parse failure
+		return "", fmt.Errorf("batch poll parse: %w", err)
 	}
 	result.BatchID = batchID
 	out, _ := json.MarshalIndent(result, "", "  ")

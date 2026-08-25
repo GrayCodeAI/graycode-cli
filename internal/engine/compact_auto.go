@@ -3,7 +3,6 @@ package engine
 import (
 	"context"
 	"errors"
-	"log"
 	"sync"
 	"time"
 
@@ -58,7 +57,7 @@ func (ac *AutoCompactor) ShouldAutoCompact(sess *Session) bool {
 	// Circuit breaker: skip once the breaker is open (too many consecutive
 	// failures) until its cooldown elapses, then re-arm half-open.
 	if !ac.breaker.ShouldAllow(time.Now()).Allow {
-		log.Printf("Auto-compact paused by circuit breaker.")
+		sess.Logger().Info("Auto-compact paused by circuit breaker.")
 		return false
 	}
 
