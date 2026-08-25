@@ -50,7 +50,7 @@ require (
 )
 
 require (
-	github.com/GrayCodeAI/hawk-mcpkit v0.1.6-0.20260824172835-36265aa886ca // indirect
+	github.com/GrayCodeAI/hawk-mcpkit v0.1.6-0.20260825010843-82c1c610efe3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1 // indirect
