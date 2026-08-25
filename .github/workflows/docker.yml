@@ -56,7 +56,7 @@ jobs:
       # Build a single-platform image locally first so Trivy can gate the push:
       # CRITICAL/HIGH findings fail this job before anything reaches GHCR.
       - name: Build image for scan
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           platforms: linux/amd64
@@ -87,7 +87,7 @@ jobs:
       # Second build is a cache hit (layers exported by the scan build), so it
       # only re-links and pushes the platform image.
       - name: Build and push (amd64)
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           platforms: linux/amd64
@@ -134,7 +134,7 @@ jobs:
       # Build a single-platform image locally first so Trivy can gate the push:
       # CRITICAL/HIGH findings fail this job before anything reaches GHCR.
       - name: Build image for scan
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           platforms: linux/arm64
@@ -165,7 +165,7 @@ jobs:
       # Second build is a cache hit (layers exported by the scan build), so it
       # only re-links and pushes the platform image.
       - name: Build and push (arm64)
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           platforms: linux/arm64
@@ -250,7 +250,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build sandbox image for scan
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: internal/sandbox
           file: internal/sandbox/sandbox.Dockerfile
@@ -276,7 +276,7 @@ jobs:
           exit-code: '1'
 
       - name: Build and publish public sandbox image
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: internal/sandbox
           file: internal/sandbox/sandbox.Dockerfile
