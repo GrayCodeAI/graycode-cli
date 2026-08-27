@@ -124,11 +124,11 @@ pre-push:
     boundary-ecosystem:
       run: bash scripts/check-ecosystem-boundaries.sh
 
-    external-drift:
+    release-parity:
       run: |
-        # Informational only — warns if external/ submodule pins have fallen
-        # behind the sibling dev clones, but never blocks a push.
-        bash scripts/sync-external.sh || true
+        # Informational only — warns if go.mod versions have fallen behind the
+        # sibling dev clones, but never blocks a push.
+        bash scripts/check-submodule-release-parity.sh || true
 
 # ---------------------------------------------------------------------------
 # commit-msg — validate Conventional Commits and strip AI co-author trailers.
