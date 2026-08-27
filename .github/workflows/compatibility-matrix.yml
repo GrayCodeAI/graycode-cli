@@ -34,6 +34,6 @@ jobs:
         run: make compat-check
       - name: Report 'next' matrix
         run: make compat-test
-      - name: Pin freshness vs external/ (advisory)
+      - name: Pin freshness vs sibling repos (advisory)
         run: make compat-drift
         continue-on-error: true
