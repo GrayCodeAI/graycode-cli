@@ -20,7 +20,7 @@
 //	go run ./cmd/compat-test -check-external # advisory: compare hawk's own
 //	                                         # go.mod pins for shared leaf
 //	                                         # deps against what each
-//	                                         # external/ submodule declares.
+//	                                         # sibling repo declares.
 //	                                         # Always exits 0; see drift.go.
 package main
 
@@ -52,7 +52,7 @@ func main() {
 	matrixName := flag.String("matrix", "next", "matrix entry to inspect (next, stable, ...)")
 	strict := flag.Bool("strict", false, "exit non-zero if any component lacks a pinned version")
 	path := flag.String("file", findMatrixFile(), "path to compatibility-matrix.json")
-	checkExternal := flag.Bool("check-external", false, "advisory: report pin drift against external/ submodules and exit (see drift.go)")
+	checkExternal := flag.Bool("check-external", false, "advisory: report pin drift against sibling repos and exit (see drift.go)")
 	flag.Parse()
 
 	if *path == "" {

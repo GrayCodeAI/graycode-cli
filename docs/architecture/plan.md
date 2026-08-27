@@ -151,10 +151,10 @@ services; it is not a claim that those fields have already moved.
 
 ## Dependencies
 
-- **eyrie:** LLM provider engine behind `eyrie/engine` (external submodule)
-- **yaad:** Graph-based persistent memory (external submodule)
-- **tok:** Tokenizer, compression (external submodule)
-- **hawk-core-contracts:** Shared types (external submodule)
+- **eyrie:** LLM provider engine behind `eyrie/engine` (workspace sibling)
+- **yaad:** Graph-based persistent memory (workspace sibling)
+- **tok:** Tokenizer, compression (workspace sibling)
+- **hawk-core-contracts:** Shared types (workspace sibling)
 
 ## Success Metrics
 

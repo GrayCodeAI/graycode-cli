@@ -28,7 +28,7 @@ layout:
 |-----------|---------|
 | `cmd/` | CLI entry point (Cobra) and TUI (Bubble Tea) |
 | `internal/` | Private Go packages (not importable by external repos) |
-| `external/` | Pinned ecosystem submodules (eyrie, yaad, tok, inspect, sight, trace, hawk-core-contracts) |
+| `go.work` | Resolves ecosystem siblings (eyrie, yaad, tok, inspect, sight, trace, hawk-core-contracts) |
 | `spec/` | OpenSpec schema consumed by `internal/spec` |
 | `docs/` | Architecture docs, design docs, plans |
 | `rules/` | User-defined rules |

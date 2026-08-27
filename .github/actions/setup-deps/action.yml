@@ -1,5 +1,5 @@
 name: Setup Dependencies
-description: Clone ecosystem deps with retry, setup Go, create workspace
+description: Clone ecosystem sibling repos with retry, setup Go, sync workspace
 
 inputs:
   go-version:
@@ -12,7 +12,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Checkout dependencies
+    - name: Checkout sibling dependencies
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
@@ -25,21 +25,25 @@ runs:
           done
           echo "Failed to clone $repo after 3 attempts" && return 1
         }
-        mkdir -p external
-        clone_with_retry hawk-core-contracts external/hawk-core-contracts main
-        clone_with_retry eyrie external/eyrie main
-        clone_with_retry tok external/tok main
-        clone_with_retry yaad external/yaad main
-        clone_with_retry inspect external/inspect main
-        clone_with_retry sight external/sight main
-        clone_with_retry trace external/trace main
+        ws_parent="$(cd "${GITHUB_WORKSPACE}/.." && pwd)"
+        mkdir -p "$ws_parent"
+        clone_with_retry hawk-core-contracts "$ws_parent/hawk-core-contracts" main
+        clone_with_retry eyrie "$ws_parent/eyrie" main
+        clone_with_retry tok "$ws_parent/tok" main
+        clone_with_retry yaad "$ws_parent/yaad" main
+        clone_with_retry inspect "$ws_parent/inspect" main
+        clone_with_retry sight "$ws_parent/sight" main
+        clone_with_retry trace "$ws_parent/trace" main
+        clone_with_retry hawk-mcpkit "$ws_parent/hawk-mcpkit" main
 
     - name: Set up Go
       uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
       with:
         go-version: ${{ inputs.go-version }}
 
-    - name: Create workspace
+    - name: Sync workspace
       shell: bash
       run: |
-        printf 'go 1.26.6\n\nuse .\n\nreplace (\n\tgithub.com/GrayCodeAI/hawk-core-contracts => ./external/hawk-core-contracts\n\tgithub.com/GrayCodeAI/eyrie => ./external/eyrie\n\tgithub.com/GrayCodeAI/inspect => ./external/inspect\n\tgithub.com/GrayCodeAI/sight => ./external/sight\n\tgithub.com/GrayCodeAI/tok => ./external/tok\n\tgithub.com/GrayCodeAI/trace => ./external/trace\n\tgithub.com/GrayCodeAI/yaad => ./external/yaad\n\tgithub.com/GrayCodeAI/hawk-mcpkit => ./external/hawk-mcpkit\n)\n' > go.work
+        # hawk's committed go.work references the sibling repos; ensure it is
+        # consistent with the cloned siblings.
+        go work sync

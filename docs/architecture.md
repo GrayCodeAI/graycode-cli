@@ -52,7 +52,7 @@ hawk/
 │   ├── bridge/                <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/link.svg" width="16" height="16" alt="link" /> Bridges to ecosystem services
 │   └── resilience/            <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/refresh-cw.svg" width="16" height="16" alt="refresh-cw" /> Circuit breaker, retry, rate limit
 ├── docs/                      <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/book-open.svg" width="16" height="16" alt="book-open" /> Architecture docs
-└── external/                  <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/link.svg" width="16" height="16" alt="link" /> Pinned ecosystem submodules for go.work integration
+└── (ecosystem siblings live at ../<repo> in the graycode-eco workspace; see docs/architecture/ecosystem-design.md)
 ```
 
 Legacy note: `hawk/shared/types` has been removed. Shared cross-repo severity
@@ -129,5 +129,5 @@ Tool Call → <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/i
 | `cmd/` is CLI library | Not a binary sub-directory — holds 200+ cobra command files |
 | Zero CGO | Pure Go, cross-compilable. Tree-sitter is optional |
 | `internal/` is private | Other repos should not import `internal/*` |
-| `external/` | committed ecosystem submodules used by `go.work` for reproducible local and CI integration |
+| `go.work` | Resolves the ecosystem siblings (`../<repo>`) for local and CI workspace integration |
 | `hawk-core-contracts` | Shared cross-repo severity, findings, review, verify, tools, events, and policy contracts — engines import this instead of `hawk/internal` or removed `hawk/shared/types` |

@@ -1,68 +1,37 @@
 name: Checkout ecosystem
-description: Clone graycode-eco ecosystem repos into hawk/external for hawk go.work
+description: Clone graycode-eco sibling repos into the workspace parent for hawk's go.work
 
 inputs:
   ref:
-    description: Git ref to checkout only when allow_branch_fallback is true
+    description: Git ref to checkout (falls back to main)
     required: false
     default: main
-  allow_branch_fallback:
-    description: >
-      When true, clone a branch head if the Gitlink is missing (dev-only escape hatch).
-      Default false — missing or unreachable pins fail the job so releases never
-      silently track main.
-    required: false
-    default: "false"
 
 runs:
   using: composite
   steps:
-    - name: Clone ecosystem repos
+    - name: Clone sibling repos
       shell: bash
       env:
-        # Passed via env (not ${{ }} interpolation into the script) so an
-        # attacker-controlled ref (e.g. a fork branch name) cannot inject shell.
+        # Passed via env (not ${{ }} interpolation) so an attacker-controlled
+        # ref (e.g. a fork branch name) cannot inject shell.
         INPUT_REF: ${{ inputs.ref }}
-        ALLOW_BRANCH_FALLBACK: ${{ inputs.allow_branch_fallback }}
       run: |
         set -euo pipefail
-        mkdir -p "${GITHUB_WORKSPACE}/external"
-        for repo in hawk-core-contracts eyrie inspect sight tok trace yaad; do
-          dest="${GITHUB_WORKSPACE}/external/${repo}"
+        # hawk's committed go.work references ../<repo>, so the siblings must
+        # be cloned into the parent of the checked-out workspace.
+        ws_parent="$(cd "${GITHUB_WORKSPACE}/.." && pwd)"
+        for repo in hawk-core-contracts eyrie inspect sight tok trace yaad hawk-mcpkit; do
+          dest="${ws_parent}/${repo}"
           if [ -d "$dest/.git" ]; then
             echo "$repo already present at $dest"
             continue
           fi
-          commit=$(git ls-tree HEAD "external/${repo}" | awk '{print $3}' || true)
-          if [ -n "$commit" ]; then
-            echo "Cloning $repo at submodule commit $commit"
-            # Full clone so the pinned commit is reachable even after
-            # the dependency repo's main has been rewritten past it
-            # (e.g. by a squash-merge). A depth-1 clone can't check
-            # out older commits and fails with "unable to read tree".
-            git clone "https://github.com/GrayCodeAI/${repo}.git" "$dest"
-            if ! (cd "$dest" && git checkout --quiet "$commit"); then
-              echo "::error::Pinned submodule commit $commit is not reachable in $repo"
-              echo "Refusing to test an unpinned branch head for a pinned Hawk commit."
-              exit 1
-            fi
+          if git ls-remote --heads "https://github.com/GrayCodeAI/${repo}.git" "$INPUT_REF" | grep -q .; then
+            echo "Cloning $repo at branch $INPUT_REF"
+            git clone --depth=1 --branch "$INPUT_REF" "https://github.com/GrayCodeAI/${repo}.git" "$dest"
           else
-            if [ "${ALLOW_BRANCH_FALLBACK}" != "true" ]; then
-              echo "::error::Missing Gitlink for external/${repo} at HEAD"
-              echo "Hawk requires a pinned submodule commit for every engine."
-              echo "Record the pin with: git submodule update --init external/${repo}"
-              echo "and commit the Gitlink. Branch-head fallback is disabled by default"
-              echo "(set allow_branch_fallback=true only for local experiments)."
-              exit 1
-            fi
-            ref="$INPUT_REF"
-            # Optional escape hatch: fall back to main if the branch doesn't exist.
-            if ! git ls-remote --heads "https://github.com/GrayCodeAI/${repo}.git" "$ref" | grep -q .; then
-              echo "Branch '$ref' not found on $repo, falling back to main"
-              ref="main"
-            fi
-            echo "::warning::Cloning $repo at branch head '$ref' (no Gitlink; allow_branch_fallback=true)"
-            git clone --depth=1 --branch "$ref" \
-              "https://github.com/GrayCodeAI/${repo}.git" "$dest"
+            echo "Branch '$INPUT_REF' not found on $repo, falling back to main"
+            git clone --depth=1 --branch main "https://github.com/GrayCodeAI/${repo}.git" "$dest"
           fi
         done

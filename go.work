@@ -1,14 +1,13 @@
 go 1.26.6
 
-use .
-
-replace (
-	github.com/GrayCodeAI/eyrie => ./external/eyrie
-	github.com/GrayCodeAI/hawk-core-contracts => ./external/hawk-core-contracts
-	github.com/GrayCodeAI/hawk-mcpkit => ./external/hawk-mcpkit
-	github.com/GrayCodeAI/inspect => ./external/inspect
-	github.com/GrayCodeAI/sight => ./external/sight
-	github.com/GrayCodeAI/tok => ./external/tok
-	github.com/GrayCodeAI/trace => ./external/trace
-	github.com/GrayCodeAI/yaad => ./external/yaad
+use (
+	.
+	../eyrie
+	../hawk-core-contracts
+	../hawk-mcpkit
+	../inspect
+	../sight
+	../tok
+	../trace
+	../yaad
 )

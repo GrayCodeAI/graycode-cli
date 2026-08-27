@@ -7,13 +7,6 @@ cd "$ROOT_DIR"
 pattern='github\.com/GrayCodeAI/hawk/(internal/|shared/types)'
 violations=""
 
-external_hits="$(
-  git grep -n -E "${pattern}" -- 'external/**/*.go' || true
-)"
-if [[ -n "${external_hits}" ]]; then
-  violations+="${external_hits}"$'\n'
-fi
-
 for repo in ../sight ../inspect ../tok ../trace ../yaad ../eyrie; do
   if [[ -d "${repo}" ]]; then
     repo_hits="$(

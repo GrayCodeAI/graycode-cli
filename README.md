@@ -71,7 +71,7 @@ hawk path       # verify readiness
 
 ```bash
 git clone https://github.com/GrayCodeAI/hawk && cd hawk
-make setup   # clones required support repos into external/ and syncs go.work
+make setup   # generates go.work referencing sibling support repos in the graycode-eco workspace
 go build -o hawk ./cmd/hawk
 ./hawk
 
@@ -434,15 +434,14 @@ hawk/
 ├── docs/                   # Architecture, security, integration docs
 └── testdata/               # Test fixtures
 
-External ecosystem modules (git submodules):
-├── external/
-│   ├── eyrie/              # LLM provider runtime
-│   ├── hawk-core-contracts/ # Shared cross-repo types
-│   ├── inspect/            # Security audit library
-│   ├── sight/              # Diff-based code review
-│   ├── tok/                # Tokenizer, compression, secrets scanning
-│   ├── trace/              # Session capture and replay
-│   └── yaad/               # Graph-based persistent memory
+Ecosystem sibling repos (in the graycode-eco workspace):
+├── eyrie/              # LLM provider runtime
+├── hawk-core-contracts/ # Shared cross-repo types
+├── inspect/            # Security audit library
+├── sight/              # Diff-based code review
+├── tok/                # Tokenizer, compression, secrets scanning
+├── trace/              # Session capture and replay
+└── yaad/               # Graph-based persistent memory
 ```
 
 ### Ecosystem
@@ -456,8 +455,8 @@ hawk integrates these GrayCodeAI repos in three layers:
 Local development uses:
 
 - **`go.mod` modules:** pinned requirements for the support engines and `hawk-core-contracts`
-- **External checkout + `go.work`:** clone support repos under `external/<repo>`; `go.work` maps the module paths to those local checkouts
-- **Submodules in this repo:** the same external layout is pinned under `external/` for reproducible CI and multi-repo work
+- **Workspace + `go.work`:** sibling support repos are cloned in the `graycode-eco` workspace (as `../<repo>`); `go.work` resolves the module paths to those local checkouts
+- **Module-mode builds:** standalone / Docker builds resolve the pinned `go.mod` versions from the module proxy (no workspace)
 
 Cross-repo contracts now live in **`github.com/GrayCodeAI/hawk-core-contracts`** so support repos do not depend on Hawk internals. The old `hawk/shared/types` path has been removed; use `hawk-core-contracts/types` for shared severity and finding contracts.
 

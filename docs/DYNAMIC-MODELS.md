@@ -100,9 +100,9 @@ hosts must be isolated from one another.
 2. Add Eyrie tests for cache and live discovery, credential status, selection,
    and generation/streaming.
 3. Commit and verify standalone Eyrie.
-4. Advance Hawk's `external/eyrie` submodule to that exact commit, then update
+4. Advance Hawk's `../eyrie` sibling checkout to that exact commit, then update
    Hawk's module version when the Eyrie revision is published.
-5. Verify both the clean submodule (`go.work`) and published-module
+5. Verify both the workspace (`go.work`) and published-module
    (`GOWORK=off`) build modes.
 
 Hawk changes are needed only for a new product behavior or an additive

@@ -8,9 +8,10 @@ RUN apk upgrade --no-cache && \
 
 WORKDIR /build
 
-# GrayCodeAI sibling modules are unpublished at their current code (the public proxy
-# froze v0.1.0 at old commits). Resolve them locally via a generated go.work
-# (use . + replace => ./external/<repo>), bypassing the proxy/sumdb entirely.
+# GrayCodeAI engine modules are published and pinned in go.mod at tagged or
+# commit-pseudo versions, resolved from the module proxy. The committed
+# go.work (which references sibling checkouts ../<repo>) is excluded from the
+# build context, so build in module mode (no go.work) against those pins.
 ENV GOPRIVATE=github.com/GrayCodeAI/* \
     GONOSUMDB=github.com/GrayCodeAI/* \
     GONOSUMCHECK=1
@@ -25,12 +26,9 @@ ARG BUILD_DATE=unknown
 
 COPY . .
 
-# external/<repo> are committed submodules pinned to the integrated revisions
-# (populated by `submodules: recursive` in .github/workflows/docker.yml, or
-# `git submodule update --init --recursive` for a local `docker build`). Build
-# against those pinned checkouts via a generated go.work — the committed
-# go.work/go.work.sum are excluded by .dockerignore, and the public proxy froze
-# v0.1.0 at older commits. Do NOT run 'go mod download' first.
+# Build against the engine versions pinned in go.mod via the module proxy. The
+# committed go.work/go.work.sum (sibling-checkout based) are excluded by
+# .dockerignore and must not be present for a module-mode build.
 #
 # main.Version / main.Commit / main.BuildDate are baked in from the ARGs above;
 # this is the only correct source — `git describe` would always return empty
@@ -43,10 +41,6 @@ COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     rm -f go.work go.work.sum && \
-    { echo "go 1.26.6"; echo; echo "use ."; echo; echo "replace ("; \
-      for repo in hawk-core-contracts eyrie inspect sight tok trace yaad; do \
-        echo "	github.com/GrayCodeAI/${repo} => ./external/${repo}"; \
-      done; echo ")"; } > go.work && \
     CGO_ENABLED=0 GOOS=linux go build -trimpath \
     -ldflags="-s -w \
       -X main.Version=${VERSION} \

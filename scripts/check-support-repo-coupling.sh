@@ -34,7 +34,6 @@ scan_dir() {
 }
 
 for repo in "${support_repos[@]}"; do
-  scan_dir "${repo}" "external/${repo}"
   scan_dir "${repo}" "../${repo}"
 done
 
