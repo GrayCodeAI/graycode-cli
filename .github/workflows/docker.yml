@@ -78,7 +78,6 @@ jobs:
           # non-reachable packages that Trivy reports as binary findings.
           vuln-type: os
           ignore-unfixed: true
-          trivyignores: .trivyignore
           exit-code: '1'  # Block publishing images with actionable vulnerabilities
 
       # Second build is a cache hit (layers exported by the scan build), so it
@@ -153,7 +152,6 @@ jobs:
           # non-reachable packages that Trivy reports as binary findings.
           vuln-type: os
           ignore-unfixed: true
-          trivyignores: .trivyignore
           exit-code: '1'  # Block publishing images with actionable vulnerabilities
 
       # Second build is a cache hit (layers exported by the scan build), so it
@@ -267,7 +265,6 @@ jobs:
           # reviewed separately from the runtime OS scan.
           vuln-type: os
           ignore-unfixed: true
-          trivyignores: .trivyignore
           exit-code: '1'
 
       - name: Build and publish public sandbox image

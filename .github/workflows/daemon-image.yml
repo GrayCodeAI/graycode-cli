@@ -70,7 +70,6 @@ jobs:
           # non-reachable packages that Trivy reports as binary findings.
           vuln-type: os
           ignore-unfixed: true
-          trivyignores: .trivyignore
           exit-code: '1'
 
       - name: Generate image metadata
