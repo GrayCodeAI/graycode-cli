@@ -12,7 +12,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.5
 	github.com/GrayCodeAI/eyrie v0.2.3-0.20260824022124-6057740d18c7
-	github.com/GrayCodeAI/hawk-core-contracts v0.1.13-0.20260816034142-16ebcfd5ad6e
+	github.com/GrayCodeAI/hawk-core-contracts v0.1.13
 	github.com/GrayCodeAI/inspect v0.0.0-20260816041238-8556ee05ff07
 	github.com/GrayCodeAI/sight v0.0.0-20260816041235-39553454cd60
 	github.com/GrayCodeAI/tok v0.1.5-0.20260823024952-a7c4b99d37b8
