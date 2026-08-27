@@ -59,18 +59,27 @@ jobs:
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
 
       - name: Scan daemon image with Trivy
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scan
-          format: sarif
-          output: trivy-daemon-image.sarif
-          severity: CRITICAL,HIGH
+          version: v0.70.0
+          cache: true
+      - name: Run Trivy daemon scan (sarif)
+        shell: bash
+        run: |
           # Go reachability is enforced separately by govulncheck in CI. The
           # binary also carries the full workspace module graph, including
           # non-reachable packages that Trivy reports as binary findings.
-          vuln-type: os
-          ignore-unfixed: true
-          exit-code: '1'
+          # CVE-2026-14456 (OpenSSL) is ignored via .trivyignore — the fixed
+          # libcrypto 3.5.8-r0 is not yet published in Alpine 3.23.
+          trivy image \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --ignorefile "${GITHUB_WORKSPACE}/.trivyignore" \
+            --vuln-type os \
+            --format sarif \
+            --output trivy-daemon-image.sarif \
+            --exit-code 1 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scan
 
       - name: Generate image metadata
         id: meta
