@@ -18,7 +18,7 @@
 ### Repository Structure (REQ-1, REQ-2)
 
 - [ ] Verify all internal/ packages exist and are documented
-- [ ] Verify external/ submodules are pinned correctly
+- [ ] Verify go.work sibling repos are checked out correctly
 - [ ] Verify spec/ reference repos are up to date
 - [ ] Check for orphaned or unused packages
 

@@ -1,39 +1,48 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Compare each engine Gitlink (from the superproject index) to the commit
-# resolved by the go.mod module version. Uses `git ls-tree` so the check
-# works without `git submodule update` / checkout-eyrie having populated
-# external/* working trees.
+# Workspace release parity: for each Go module hawk requires, verify that the
+# version pinned in hawk's go.mod resolves to a commit reachable from the
+# sibling repo's HEAD. This catches hawk pinning a version that the sibling
+# repo has not published / is behind on. Run from the hawk repo root with the
+# ecosystem cloned as siblings (../<repo>) in the graycode-eco workspace.
 
 repos=(hawk-core-contracts eyrie inspect sight tok trace yaad hawk-mcpkit)
 failed=0
 
-printf '%-24s %-14s %-14s %s\n' MODULE GITLINK MODULE_COMMIT STATUS
+printf '%-24s %-14s %-14s %s\n' MODULE MODULE_COMMIT SIBLING_HEAD STATUS
 for repo in "${repos[@]}"; do
   module="github.com/GrayCodeAI/${repo}"
-  gitlink=$(git ls-tree HEAD "external/${repo}" | awk '{print $3}')
-  if [[ -z "$gitlink" ]]; then
-    printf '%-24s %-14s %-14s %s\n' "$repo" missing - MISSING_GITLINK
-    failed=1
+  sibling="../${repo}"
+
+  version=$(GOWORK=off go list -m -f '{{.Version}}' "$module" 2>/dev/null || true)
+  if [[ -z "$version" ]]; then
+    printf '%-24s %-14s %-14s %s\n' "$repo" unknown - NOT_REQUIRED
     continue
   fi
 
-  version=$(GOWORK=off go list -m -f '{{.Version}}' "$module")
   metadata=$(GOWORK=off go mod download -json "${module}@${version}" 2>/dev/null || true)
   module_commit=$(printf '%s\n' "$metadata" | sed -n 's/.*"Hash": "\([0-9a-f]*\)".*/\1/p' | head -1)
-  if [[ -z "$module_commit" ]]; then
-    printf '%-24s %-14s %-14s %s\n' "$repo" "${gitlink:0:12}" unknown UNRESOLVED
+
+  if [[ ! -d "$sibling/.git" ]]; then
+    printf '%-24s %-14s %-14s %s\n' "$repo" "${module_commit:0:12}" - NO_SIBLING
     failed=1
-  elif [[ "$module_commit" == "$gitlink" ]]; then
-    printf '%-24s %-14s %-14s %s\n' "$repo" "${gitlink:0:12}" "${module_commit:0:12}" OK
+    continue
+  fi
+  sibling_head=$(git -C "$sibling" rev-parse HEAD 2>/dev/null || echo "")
+
+  if [[ -z "$module_commit" ]]; then
+    printf '%-24s %-14s %-14s %s\n' "$repo" unknown "${sibling_head:0:12}" UNRESOLVED
+    failed=1
+  elif git -C "$sibling" merge-base --is-ancestor "$module_commit" "$sibling_head" 2>/dev/null; then
+    printf '%-24s %-14s %-14s %s\n' "$repo" "${module_commit:0:12}" "${sibling_head:0:12}" OK
   else
-    printf '%-24s %-14s %-14s %s\n' "$repo" "${gitlink:0:12}" "${module_commit:0:12}" MISMATCH
+    printf '%-24s %-14s %-14s %s\n' "$repo" "${module_commit:0:12}" "${sibling_head:0:12}" AHEAD_OF_SIBLING
     failed=1
   fi
 done
 
 if ((failed)); then
-  echo "submodule/module release parity failed" >&2
+  echo "workspace/module release parity failed" >&2
   exit 1
 fi

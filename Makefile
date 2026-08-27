@@ -36,8 +36,8 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench boundaries build check-replace ci clean contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard package-boundaries-guard submodule-release-parity cover cover-new fmt help install lint lint-fix \
-        release security setup smoke path sync-external test test-10x test-live test-new test-race tidy version vet api-docs api-validate
+.PHONY: all bench boundaries build check-replace ci clean contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard package-boundaries-guard release-parity cover cover-new fmt help install lint lint-fix \
+        release security setup smoke path sync test test-10x test-live test-new test-race tidy version vet api-docs api-validate
 
 check-replace: ## Fail if go.mod has local replace directives (run before tagging)
 	@bash scripts/check-no-replace-directives.sh
@@ -132,7 +132,7 @@ package-boundaries-guard: ## Enforce AST/package-graph boundaries with file/line
 
 boundaries: contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard package-boundaries-guard ## Alias for all boundary guards (matches `make boundaries` in engine repos).
 
-submodule-release-parity: ## Verify every go.mod ecosystem version resolves to its pinned Gitlink.
+release-parity: ## Verify every go.mod ecosystem version is reachable from its sibling repo HEAD.
 	bash ./scripts/check-submodule-release-parity.sh
 
 lint: ## Run golangci-lint.
@@ -182,40 +182,18 @@ FOUNDATION_REPOS := hawk-core-contracts
 ECO_REPOS := eyrie inspect sight tok trace yaad hawk-mcpkit
 WORKSPACE_REPOS := $(FOUNDATION_REPOS) $(ECO_REPOS)
 
-setup: ## Set up local development environment (go.work + external repos).
+setup: ## Set up local development environment (workspace go.work + sibling repos).
 	@echo "=== Setting up hawk development environment ==="
-	@mkdir -p external
-	@for repo in $(WORKSPACE_REPOS); do \
-		dest="external/$$repo"; \
-		if git -C "$$dest" rev-parse --git-dir >/dev/null 2>&1; then \
-			echo "✓ $$dest already exists"; \
-		else \
-			commit=$$(git ls-tree HEAD "$$dest" 2>/dev/null | awk '{print $$3}' || true); \
-			if [ -n "$$commit" ]; then \
-				echo "Cloning $$repo at pinned commit $$commit..."; \
-				git clone "https://github.com/GrayCodeAI/$$repo.git" "$$dest" 2>/dev/null && \
-				(cd "$$dest" && git checkout --quiet "$$commit") || \
-				echo "  ⚠ Could not clone $$repo at pinned commit $$commit"; \
-			else \
-				ref=$$(git branch --show-current 2>/dev/null || echo main); \
-				if ! git ls-remote --heads "https://github.com/GrayCodeAI/$$repo.git" "$$ref" | grep -q .; then \
-					ref=main; \
-				fi; \
-				echo "Cloning $$repo at branch $$ref..."; \
-				git clone --depth=1 --branch "$$ref" "https://github.com/GrayCodeAI/$$repo.git" "$$dest" 2>/dev/null || \
-				echo "  ⚠ Could not clone $$repo (may not exist yet or no access)"; \
-			fi; \
-		fi; \
-	done
-	@echo "Generating go.work..."
+	@echo "Generating go.work (workspace model)..."
 	@echo "go 1.26.6" > go.work
 	@echo "" >> go.work
-	@echo "use ." >> go.work
-	@echo "" >> go.work
-	@echo "replace (" >> go.work
+	@echo "use (" >> go.work
+	@echo "	." >> go.work
 	@for repo in $(WORKSPACE_REPOS); do \
-		if [ -d "external/$$repo" ]; then \
-			echo "	github.com/GrayCodeAI/$$repo => ./external/$$repo" >> go.work; \
+		if [ -d "../$$repo" ]; then \
+			echo "	../$$repo" >> go.work; \
+		else \
+			echo "  ⚠ sibling repo ../$$repo not found — clone it into the graycode-eco workspace"; \
 		fi; \
 	done
 	@echo ")" >> go.work
@@ -260,26 +238,14 @@ compat-check: ## Strict validation — non-zero exit if any component lacks a ve
 compat-drift: ## Advisory: report pin drift between hawk's go.mod and external/ submodules. Never fails.
 	@go run ./cmd/compat-test -check-external -file=testdata/compatibility-matrix.json
 
-.PHONY: hooks sync-submodules sync-submodule-versions sync-clone
+.PHONY: hooks sync
 hooks: ## Install git hooks via lefthook (formatting, linting, conventional commits).
 	@command -v lefthook >/dev/null 2>&1 || (echo "install: go install github.com/evilmartians/lefthook@latest" && exit 1)
 	lefthook install
 
-sync-submodules: ## Fetch and checkout latest origin/main for all external/ submodules.
-	git submodule foreach 'git fetch origin && git checkout origin/main 2>/dev/null || git checkout origin/HEAD'
-	@echo "Submodule heads:"
-	@git submodule status
-
-sync-submodule-versions: ## After advancing submodules, bump go.mod requires to match each gitlink.
-	@chmod +x scripts/sync-submodule-versions.sh
-	@./scripts/sync-submodule-versions.sh
-
-sync-external: ## Read-only drift report: external/<repo> pin vs sibling ../<repo> HEAD.
-	@bash ./scripts/sync-external.sh
-
-sync-clone: ## Hard-reset hawk and submodules to origin/main (post history rewrite).
-	@chmod +x scripts/sync-clone.sh scripts/commit-clean.sh
-	@./scripts/sync-clone.sh
+sync: ## Sync the workspace go.work and verify sibling release parity.
+	@go work sync
+	@bash ./scripts/check-submodule-release-parity.sh
 # === Cross-platform binary targets (add after existing 'build' target) ===
 
 .PHONY: build-all build-static size-check

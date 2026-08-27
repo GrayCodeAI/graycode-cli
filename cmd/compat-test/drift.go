@@ -19,19 +19,19 @@ var trackedPins = []string{
 }
 
 // checkDrift compares hawk's own go.mod requirements for trackedPins against
-// what each external/ submodule (a locally pinned clone of a hawk dependency)
-// declares for the same modules in its own go.mod. It never fails — this is
-// advisory, printed for humans/CI logs to notice, not a build gate.
+// what each sibling repo (a peer checkout of a hawk dependency in the shared
+// workspace) declares for the same modules in its own go.mod. It never fails —
+// this is advisory, printed for humans/CI logs to notice, not a build gate.
 func checkDrift(repoRoot string) error {
 	hawkRequires, err := readRequires(filepath.Join(repoRoot, "go.mod"))
 	if err != nil {
 		return fmt.Errorf("read hawk go.mod: %w", err)
 	}
 
-	externalDir := filepath.Join(repoRoot, "external")
-	entries, err := os.ReadDir(externalDir)
+	workspaceDir := filepath.Join(repoRoot, "..")
+	entries, err := os.ReadDir(workspaceDir)
 	if err != nil {
-		return fmt.Errorf("read external/: %w", err)
+		return fmt.Errorf("read workspace (%s): %w", workspaceDir, err)
 	}
 
 	fmt.Println("Pin freshness (advisory — see docs/compatibility.md):")
@@ -40,10 +40,10 @@ func checkDrift(repoRoot string) error {
 		if !e.IsDir() {
 			continue
 		}
-		modPath := filepath.Join(externalDir, e.Name(), "go.mod")
+		modPath := filepath.Join(workspaceDir, e.Name(), "go.mod")
 		consumerRequires, err := readRequires(modPath)
 		if err != nil {
-			continue // submodule not checked out / no go.mod — skip silently
+			continue // sibling not a Go module / no go.mod — skip silently
 		}
 		for _, pin := range trackedPins {
 			hawkVer, hawkHas := hawkRequires[pin]
@@ -57,7 +57,7 @@ func checkDrift(repoRoot string) error {
 		}
 	}
 	if drifted == 0 {
-		fmt.Println("  OK — no drift between hawk's pins and external/ consumers")
+		fmt.Println("  OK — no drift between hawk's pins and sibling consumers")
 	}
 	return nil
 }

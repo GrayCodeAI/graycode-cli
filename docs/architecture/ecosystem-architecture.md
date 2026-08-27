@@ -9,7 +9,7 @@ must not be treated as interchangeable.
 
 | Repository | Visibility target | Responsibility | Dependency rule |
 | --- | --- | --- | --- |
-| `hawk` | Public | CLI, local daemon, orchestration, policy and engine composition | Integration root; pins the seven engine repositories as submodules and published Go modules |
+| `hawk` | Public | CLI, local daemon, orchestration, policy and engine composition | Integration root; resolves the seven engine repos as workspace siblings and published Go modules |
 | `eyrie` | Public | Provider engine: credentials, catalog, routing, transport and normalized streaming | Hawk consumes only its `eyrie/engine` host facade; no Hawk import |
 | `hawk-core-contracts` | Public | Shared Go domain contracts | Leaf contract module; must not import product implementations |
 | `tok` | Public | Token analysis and optimization engine | Independently releasable library and MCP server |
@@ -32,7 +32,7 @@ repository visibility; repository settings must be verified separately.
 
 | Concern | Audited current state | Target state |
 | --- | --- | --- |
-| Local engine integration | Seven Hawk submodules existed, but module and checkout versions could drift | Submodule Gitlinks and `go.mod` pseudo-versions identify the same public commits and CI verifies both modes |
+| Local engine integration | Seven Hawk submodules previously existed, but module and checkout versions could drift | Hawk's `go.work` resolves workspace siblings (`../<repo>`) and `go.mod` versions identify the same public commits; CI verifies both workspace and module modes |
 | Public releases | Release setup could fall back to a branch head | A missing pinned commit fails the release; no branch fallback |
 | Hawk daemon API | Hawk, both SDKs and their snapshots could drift | `hawk/api/openapi.yaml` is authoritative; SDK CI compares the exact contract and tests supported operations |
 | Hosted API | Cloud routes and GrayCode calls were manually coupled | `hawk-cloud/contracts/openapi.yaml` is authoritative; route and BFF reference tests reject undocumented paths |
@@ -51,7 +51,7 @@ hawk-sdk-go ───────┐
 hawk-sdk-python ───┴─ HTTP ─────> Hawk local daemon
                                       │
 hawk (integration root) ──────────────┼─ eyrie/engine
-  external/ Gitlinks + Go modules ────┼─ core-contracts
+  workspace ../siblings + Go modules ──┼─ core-contracts
                                       ├─ tok
                                       ├─ trace
                                       ├─ yaad
@@ -69,15 +69,15 @@ Source-level arrows are allowed only in the displayed direction. Hawk Cloud
 must not import GrayCode product code, engines must not import Hawk orchestration,
 and public repositories must not depend on private repositories.
 
-## Submodule policy
+## Workspace policy
 
-The seven `hawk/external/*` submodules are required for atomic integration,
-cross-repository development, reproducible CI and coordinated Hawk releases:
-`eyrie`, `hawk-core-contracts`, `inspect`, `sight`, `tok`, `trace`, and `yaad`.
-They do not replace module releases. Downstream Go consumers use published module
-versions; Hawk CI tests both the pinned workspace and `GOWORK=off` public-module
-graph. `hawk-mcpkit`, SDKs, community skills, Hawk Cloud and GrayCode are not Hawk
-submodules because they are not linked into the local engine integration graph.
+Hawk resolves the seven engine repos as independent sibling checkouts via its
+`go.work`: `eyrie`, `hawk-core-contracts`, `inspect`, `sight`, `tok`, `trace`,
+and `yaad`. They do not replace module releases. Downstream Go consumers use
+published module versions; Hawk CI tests both the workspace and `GOWORK=off`
+public-module graph. `hawk-mcpkit`, SDKs, community skills, Hawk Cloud and
+GrayCode are not workspace siblings for local engine integration because they
+are not linked into the engine dependency graph.
 
 ## Repository count decision
 
@@ -94,7 +94,7 @@ contracts repository merely to move files across a repository boundary.
 2. Every runtime route is represented by its owning OpenAPI document.
 3. Client-controlled monetary values never affect budgets, credits, invoices or the verified ledger.
 4. Protected resource existence is not disclosed before authentication and authorization.
-5. Every submodule commit used by Hawk is publicly reachable and matches the corresponding module version.
+5. Every engine commit used by Hawk is publicly reachable and matches the corresponding module version.
 6. Production Cloudflare bindings are explicit, typed and verified with a dry-run bundle.
 7. Cross-repository contract drift and forbidden imports fail CI.
 8. Hawk production code reaches provider credentials, catalogs and transport

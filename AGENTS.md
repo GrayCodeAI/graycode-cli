@@ -192,7 +192,7 @@ Legacy `hawk/shared/types` has been removed. Cross-repo severity and finding con
 ### Architecture note: provider ownership
 
 Implement provider protocols, adapters, catalog metadata, credential mappings, and
-provider contract tests in `external/eyrie` first. Hawk consumes providers only
+provider contract tests in `../eyrie` (the eyrie sibling repo) first. Hawk consumes providers only
 through Eyrie's stable engine facade; Hawk changes should be limited to host UX
 and facade integration. Concentrate AI is a pay-as-you-go gateway implemented
 with its native Responses API (`/v1/responses`) under the
@@ -243,13 +243,12 @@ This project is indexed by GitNexus as **hawk** (97743 symbols, 322940 relations
 
 <!-- gitnexus:end -->
 
-### Submodule workflow (external/ repos)
+### Workspace workflow (sibling repos)
 
-hawk depends on ecosystem repos (`eyrie`, `hawk-core-contracts`, etc.) via git submodules under `external/`. Hawk's `go.work` points to `./external/<repo>`, so changes in the submodule are automatically picked up by hawk.
+hawk depends on ecosystem repos (`eyrie`, `hawk-core-contracts`, etc.) as independent sibling repos in the `graycode-eco` workspace. Hawk's `go.work` lists them as `../<repo>`, so local changes in any sibling are automatically picked up by hawk. Each sibling is its own git repo, versioned and released independently.
 
-1. Edit + test in `hawk/external/<repo>` — run its tests, run `make test` in hawk
-2. Push from the submodule: `git push origin <branch>`
-3. Sync to the independent repo: `cd ../<repo> && git fetch origin <branch> && git checkout <branch>`
-4. PR → merge from the independent repo
-5. Pull main in the submodule: `cd ../hawk/external/<repo> && git checkout main && git pull origin main`
-6. Commit the pointer in hawk: `cd .. && git add external/<repo> && git commit -m "chore: update <repo>"`
+1. Edit + test in `../<repo>` — run its tests, run `make test` in hawk
+2. Push from the sibling: `git push origin <branch>`
+3. Open a PR in the sibling repo → merge to `main`
+4. Ensure hawk's `go.mod` pins a version that resolves to (or is an ancestor of) the sibling's `main` — run `make sync` to verify parity
+5. No pointer commits: hawk resolves the sibling via `go.work` for local dev and via the pinned `go.mod` version for standalone/module-mode builds (Docker, released consumers)

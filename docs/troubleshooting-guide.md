@@ -85,9 +85,11 @@ curl -v http://localhost:4590/v1/ready
 Check the response body for the specific failed check. Common causes:
 
 - No model configured — set `HAWK_MODEL` or provider credentials.
-- Eyrie catalog not initialized — ensure submodules are checked out:
+- Eyrie catalog not initialized — ensure the ecosystem siblings are present in
+  the graycode-eco workspace and run `make setup` in hawk (regenerates `go.work`):
   ```bash
-  git submodule update --init --recursive
+  make setup
+  go work sync
   ```
 
 ### `GET /v1/health` returns 503
