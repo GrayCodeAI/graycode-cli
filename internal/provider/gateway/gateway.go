@@ -11,8 +11,8 @@ import (
 	"log/slog"
 	"sync"
 
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/eagle/llm"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 )
 
 // Gateway is Hawk's single boundary to the Eyrie provider runtime. It embeds
