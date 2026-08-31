@@ -804,7 +804,7 @@ paths:
       description: |
         Returns Hawk's privacy-safe, read-only `hawk.graph/v1` projection.
         Prompt text, tool arguments, tool output, and verification details are
-        excluded. Explicit swift checkpoint IDs are additive to authoritative
+        excluded. Explicit Swift checkpoint IDs are additive to authoritative
         Swift session correlation performed by Hawk.
       parameters:
         - name: id
