@@ -5,7 +5,7 @@ schema_version: 1
 # records the user-facing capability. Tooling must consume this file instead of
 # carrying its own repo-name list.
 contracts:
-  eagle_version: v0.0.0-20260830103740-9d358dde4ad8
+  eagle_version: v0.0.0-20260831121050-12ea8cc11b16
   portable_graph_schema: hawk.graph/v1
   cloud_graph_schema: graycode-cloud.graph/v1
   usage_event: usage.recorded.v1
