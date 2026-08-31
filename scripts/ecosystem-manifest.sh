@@ -86,10 +86,10 @@ validate() {
       if [[ -z "${module}" ]]; then
         echo "${directory}: Go repository has no module" >&2
         failed=1
-      elif [[ ! -f "${ECO_DIR}/${directory}/go.mod" ]]; then
+      elif [[ "${flags%%:*}" == "true" && ! -f "${ECO_DIR}/${directory}/go.mod" ]]; then
         echo "${directory}: missing go.mod" >&2
         failed=1
-      else
+      elif [[ -f "${ECO_DIR}/${directory}/go.mod" ]]; then
         actual="$(awk '$1 == "module" { print $2; exit }' "${ECO_DIR}/${directory}/go.mod")"
         if [[ "${actual}" != "${module}" ]]; then
           echo "${directory}: manifest module ${module} != go.mod module ${actual}" >&2
