@@ -120,7 +120,7 @@ and lifecycle events:
 ```bash
 hawk graph export
 hawk graph export <session-id>
-hawk graph export <session-id> --trace-checkpoint abc123def456
+hawk graph export <session-id> --swift-checkpoint abc123def456
 hawk graph export --mission-dir /path/to/mission
 
 # Explicitly privacy-normalize and sync the graph for a connected cloud project
@@ -129,14 +129,14 @@ hawk cloud graph sync --mission-dir /path/to/mission
 ```
 
 The export contains metadata and hashes, not prompts, tool arguments/results,
-policy reasons, verification evidence, or runtime output. Trace remains
-available separately as `hawk trace graph export`. Persisted chat sessions
+policy reasons, verification evidence, or runtime output. Swift remains
+available separately as `hawk swift graph export`. Persisted chat sessions
 automatically append privacy-safe permission, enabled approval-gate, and
-`VerifyPlanExecution` summaries for subsequent graph exports. Yaad memory
+`VerifyPlanExecution` summaries for subsequent graph exports. Harrier memory
 subgraphs and Hawk code-index chunks actually selected for inference are also
-journaled as metadata-only knowledge nodes and linked to the session. Inspect's
+journaled as metadata-only knowledge nodes and linked to the session. Merlin's
 observed bridge path similarly journals bounded, metadata-only report/finding
-quality subgraphs. Sight exposes the same observed bridge boundary for
+quality subgraphs. Kestrel exposes the same observed bridge boundary for
 metadata-only code-review quality subgraphs. Mission runs also persist a
 portable `mission-graph.json`; the mission form is validated and synchronized
 explicitly with the `--mission-dir` variants above.
@@ -341,10 +341,10 @@ hawk exec --agent reviewer "review last commit" # Custom persona
 
 ```bash
 hawk path                   # Developer path readiness (setup + security + sandbox)
-hawk doctor                  # Full health report (eyrie + yaad + tok panel)
+hawk doctor                  # Full health report (eyrie + harrier + shrike panel)
 hawk ecosystem               # Ecosystem panel only
-hawk yaad                    # Persistent memory graph
-hawk yaad search <query>     # Search yaad memories
+hawk harrier                    # Persistent memory graph
+hawk harrier search <query>     # Search harrier memories
 hawk preflight               # Quick ready-to-chat check
 make path                    # Developer path verification
 make smoke                   # Build + quick verification script
@@ -352,9 +352,9 @@ make smoke                   # Build + quick verification script
 
 See [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md).
 
-See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, yaad, and tok connect during a chat session.
+See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, harrier, and shrike connect during a chat session, and [docs/ECOSYSTEM-WIRING.md](docs/ECOSYSTEM-WIRING.md) for the current-to-proposed architecture and all 15 repository boundaries.
 
-In the TUI: `/path`, `/ecosystem`, `/yaad`, `/yaad search <query>`, `/memory` (AGENTS.md).
+In the TUI: `/path`, `/ecosystem`, `/harrier`, `/harrier search <query>`, `/memory` (AGENTS.md).
 
 ### Daemon Mode
 
@@ -428,46 +428,54 @@ hawk/
 │   ├── observability/      # Analytics, metrics, logging, tracing
 │   ├── resilience/         # Circuit breaker, rate limiting, retries
 │   ├── feature/            # eval, fingerprint, voice, IDE integration
-│   ├── bridge/             # External bridges (sight, inspect, sessioncapture)
+│   ├── bridge/             # External bridges (kestrel, merlin, sessioncapture)
 │   ├── provider/           # Provider routing
 │   └── system/             # Bus, cron, retention, shutdown
 ├── docs/                   # Architecture, security, integration docs
 └── testdata/               # Test fixtures
 
-Ecosystem sibling repos (in the graycode-eco workspace):
+Ecosystem sibling repos (independent Git repos in the `graycode-eco` parent
+folder):
 ├── eyrie/              # LLM provider runtime
-├── hawk-core-contracts/ # Shared cross-repo types
-├── inspect/            # Security audit library
-├── sight/              # Diff-based code review
-├── tok/                # Tokenizer, compression, secrets scanning
-├── trace/              # Session capture and replay
-└── yaad/               # Graph-based persistent memory
+├── eagle/              # Shared cross-repo contracts
+├── merlin/             # Merlin security audit library
+├── kestrel/            # Kestrel diff-based code review
+├── shrike/             # Shrike tokenizer, compression, secrets scanning
+├── swift/              # Swift session capture and replay
+└── harrier/            # Harrier graph-based persistent memory
 ```
 
 ### Ecosystem
 
-hawk integrates these GrayCodeAI repos in three layers:
+hawk is the main CLI/product and integrates these GrayCodeAI repositories in
+three runtime layers plus optional tooling/platform services:
 
 - **Primary product:** **hawk** is the only end-user product surface in this ecosystem.
-- **Support engines mounted by Hawk:** **eyrie**, **yaad**, **tok**, **trace**, **sight**, **inspect**. Hawk imports or shells into these engines behind its own command surface.
-- **Shared foundation:** **hawk-core-contracts** holds the neutral cross-repo types that keep the engines independent from Hawk internals.
+- **Support engines mounted by Hawk:** **eyrie**, **harrier**, **shrike**, **swift**, **kestrel**, **merlin**. Hawk imports or shells into these engines behind its own command surface.
+- **Shared foundations:** **eagle** holds neutral cross-repo types and **falcon**
+  provides shared MCP server scaffolding.
+- **API consumers/extensions:** **sparrow**, **robin**, and **wren** consume
+  Hawk's daemon API; **starling** provides Hawk skills.
+- **Tooling/platform:** **owl** visualizes the generated ecosystem graph;
+  **graycode-platform** contains the optional web/BFF/Hawk Cloud plane and is
+  outside the Hawk Go runtime graph.
 
 Local development uses:
 
-- **`go.mod` modules:** pinned requirements for the support engines and `hawk-core-contracts`
+- **`go.mod` modules:** pinned requirements for the support engines and `eagle`
 - **Workspace + `go.work`:** sibling support repos are cloned in the `graycode-eco` workspace (as `../<repo>`); `go.work` resolves the module paths to those local checkouts
 - **Module-mode builds:** standalone / Docker builds resolve the pinned `go.mod` versions from the module proxy (no workspace)
 
-Cross-repo contracts now live in **`github.com/GrayCodeAI/hawk-core-contracts`** so support repos do not depend on Hawk internals. The old `hawk/shared/types` path has been removed; use `hawk-core-contracts/types` for shared severity and finding contracts.
+Cross-repo contracts now live in **`github.com/GrayCodeAI/eagle`** so support repos do not depend on Hawk internals. The old `hawk/shared/types` path has been removed; use `eagle/types` for shared severity and finding contracts.
 
 Current contract packages:
 
-- `hawk-core-contracts/types` — severity, findings
-- `hawk-core-contracts/review` — normalized review findings, comments, stats, results
-- `hawk-core-contracts/verify` — normalized verification findings, stats, reports
-- `hawk-core-contracts/tools` — tool call/result contracts
-- `hawk-core-contracts/events` — normalized tool/trace events
-- `hawk-core-contracts/policy` — permission and policy verdict contracts
+- `eagle/types` — severity, findings
+- `eagle/review` — normalized review findings, comments, stats, results
+- `eagle/verify` — normalized verification findings, stats, reports
+- `eagle/tools` — tool call/result contracts
+- `eagle/events` — normalized tool/swift events
+- `eagle/policy` — permission and policy verdict contracts
 
 You may keep a **personal** parent **`go.work`** that lists alternate clones on disk for multi-repo development.
 
@@ -475,16 +483,16 @@ You may keep a **personal** parent **`go.work`** that lists alternate clones on 
 |---|---|---|
 | **hawk** | This repo | AI coding agent |
 | **eyrie** | [GrayCodeAI/eyrie](https://github.com/GrayCodeAI/eyrie) | LLM provider runtime |
-| **sight** | [GrayCodeAI/sight](https://github.com/GrayCodeAI/sight) | Diff-based code review (`hawk sight`) |
-| **inspect** | [GrayCodeAI/inspect](https://github.com/GrayCodeAI/inspect) | Site audit library |
-| **tok** | [GrayCodeAI/tok](https://github.com/GrayCodeAI/tok) | Compression, redaction, token/cost budgets, and privacy-safe runtime graph facts |
-| **yaad** | [GrayCodeAI/yaad](https://github.com/GrayCodeAI/yaad) | Graph-based memory |
-| **trace** | [GrayCodeAI/trace](https://github.com/GrayCodeAI/trace) | Session capture and replay engine mounted as `hawk trace ...` |
-| **hawk-core-contracts** | [GrayCodeAI/hawk-core-contracts](https://github.com/GrayCodeAI/hawk-core-contracts) | Shared contracts and neutral cross-repo vocabulary |
+| **kestrel** | [GrayCodeAI/kestrel](https://github.com/GrayCodeAI/kestrel) | Diff-based code review (`hawk kestrel`) |
+| **merlin** | [GrayCodeAI/merlin](https://github.com/GrayCodeAI/merlin) | Site audit library |
+| **shrike** | [GrayCodeAI/shrike](https://github.com/GrayCodeAI/shrike) | Compression, redaction, token/cost budgets, and privacy-safe runtime graph facts |
+| **harrier** | [GrayCodeAI/harrier](https://github.com/GrayCodeAI/harrier) | Graph-based memory |
+| **swift** | [GrayCodeAI/swift](https://github.com/GrayCodeAI/swift) | Session capture and replay engine mounted as `hawk swift ...` |
+| **eagle** | [GrayCodeAI/eagle](https://github.com/GrayCodeAI/eagle) | Shared contracts and neutral cross-repo vocabulary |
 
 For the consolidated repo map and the current-vs-proposed architecture diagrams, see [docs/architecture/hawk-current-vs-proposed.md](docs/architecture/hawk-current-vs-proposed.md).
 For execution-graph ownership, automatic capture seams, export/sync commands,
-and the Trace correlation contract, see
+and the Swift correlation contract, see
 [docs/architecture/execution-graph.md](docs/architecture/execution-graph.md).
 
 ## Development

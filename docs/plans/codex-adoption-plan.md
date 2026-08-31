@@ -10,7 +10,8 @@ Source: `https://github.com/openai/codex` (Apache-2.0, Rust workspace
 
 The audit found that every codex-rs capability relevant to hawk's security and
 runtime model already has a native Go implementation, several of them deeper
-than codex's equivalents because they build on hawk's ecosystem submodules.
+than codex's equivalents because they build on Hawk's independent ecosystem
+repositories.
 No second runtime, sandbox layer, or policy engine was created.
 
 One small transparency improvement was adopted: the resolved native sandbox
@@ -28,13 +29,13 @@ Three codex ideas are deliberately deferred as future RFCs; see
 | `tui`, `ansi-escape`, `terminal-detection` | Bubble Tea/Lipgloss TUI | Keep hawk |
 | `rollout`, `thread-store`, `history` JSONL sessions with resume/fork | `internal/session` JSONL + WAL + named checkpoints + fork + recovery + handover | Keep hawk (richer) |
 | `app-server-daemon`, `app-server-protocol` (JSON-RPC for IDE/desktop) | `internal/daemon` HTTP/SSE on 4590 + `internal/acp` | Keep hawk |
-| `mcp-server`, `codex-mcp`, `rmcp-client`, `connectors` | `internal/mcp` client+server, `external/hawk-mcpkit` scaffolding | Keep hawk |
+| `mcp-server`, `codex-mcp`, `rmcp-client`, `connectors` | `internal/mcp` client+server, sibling `falcon` scaffolding | Keep hawk |
 | `skills`, `plugin`, `hooks` | community skill registry + structural validator, plugins, expanded lifecycle hook events | Keep hawk |
 | `login`, `keyring-store`, `aws-auth` | eyrie credential store in OS keychain across 28 providers | Keep hawk (broader) |
-| `model-provider(-info)`, `models-manager`, `ollama`, `lmstudio` | `external/eyrie` adapters, catalog, cascade routing | Keep hawk (much broader) |
-| `memories`, `agent-graph-store`, `context-fragments` | `external/yaad` graph memory; eventlog/graphjournal projections | Keep hawk |
+| `model-provider(-info)`, `models-manager`, `ollama`, `lmstudio` | sibling `eyrie` adapters, catalog, cascade routing | Keep hawk (much broader) |
+| `memories`, `agent-graph-store`, `context-fragments` | sibling `harrier` (Harrier) graph memory; eventlog/graphjournal projections | Keep hawk |
 | `apply-patch`, `file-search`, `file-watcher`, `git-utils` | edit tools, codegraph, git tooling, watcher hooks | Keep hawk |
-| `external-agent-migration` | trace reads Claude Code / Codex / Gemini CLI / OpenCode / Cursor sessions | Parity |
+| `external-agent-migration` | swift reads Claude Code / Codex / Gemini CLI / OpenCode / Cursor sessions | Parity |
 | **`linux-sandbox`** (Landlock + seccomp-bpf) | `internal/sandbox/landlock.go`, `seccomp.go` — raw syscalls and BPF filter, no external tools | Already implemented |
 | **macOS Seatbelt** | `internal/sandbox/seatbelt.go` — SBPL profile generator with per-policy read/write/process/network rules | Already implemented |
 | Windows confinement | `internal/sandbox/windows_acl.go` | Already implemented |
@@ -80,5 +81,5 @@ Three codex ideas are deliberately deferred as future RFCs; see
 - `go test ./...` full suite green.
 - `make vet`, `make lint`, `hawk verify` green.
 - Repo-owned markdown passes `markdownlint-cli2 '**/*.md'` (CI scope);
-  findings under `external/*` belong to the submodule repos and follow their
-  own contribution flow.
+  findings under sibling repositories belong to those repositories and follow
+  their own contribution flow.

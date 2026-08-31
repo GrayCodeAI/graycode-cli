@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
-	hawkSight "github.com/GrayCodeAI/hawk/internal/bridge/sight"
+	reviewcontracts "github.com/GrayCodeAI/eagle/review"
+	hawkKestrel "github.com/GrayCodeAI/hawk/internal/bridge/kestrel"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
-	sightLib "github.com/GrayCodeAI/sight"
+	kestrelLib "github.com/GrayCodeAI/kestrel"
 	"github.com/spf13/cobra"
 )
 
@@ -124,7 +124,7 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Build the Sight bridge through Hawk's Eyrie engine boundary.
+	// Build the Kestrel bridge through Hawk's Eyrie engine boundary.
 	ctx := context.Background()
 	selection := hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{
 		ProviderOverride: strings.TrimSpace(provider),
@@ -135,15 +135,15 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("resolve engine transport: %w", err)
 	}
 
-	var opts []sightLib.Option
+	var opts []kestrelLib.Option
 	if analyzeModel != "" {
-		opts = append(opts, sightLib.WithModel(analyzeModel))
+		opts = append(opts, kestrelLib.WithModel(analyzeModel))
 	}
-	opts = append(opts, sightLib.WithConcerns(analysisType))
+	opts = append(opts, kestrelLib.WithConcerns(analysisType))
 
-	bridge := hawkSight.NewBridge(chatProvider, providerID, opts...)
+	bridge := hawkKestrel.NewBridge(chatProvider, providerID, opts...)
 	if !bridge.Ready() {
-		return fmt.Errorf("sight bridge not ready (check API key)")
+		return fmt.Errorf("kestrel bridge not ready (check API key)")
 	}
 
 	if analyzeTimeout > 0 {
@@ -152,7 +152,7 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 		defer cancel()
 	}
 
-	// Use the analysis prompt as a "diff" — sight will review it.
+	// Use the analysis prompt as a "diff" — kestrel will review it.
 	analysisInput := fmt.Sprintf("# Analysis Type: %s\n\n%s\n\n---\n\n%s", analysisType, prompt, content)
 
 	fmt.Printf("Analyzing (%s)...\n", analysisType)

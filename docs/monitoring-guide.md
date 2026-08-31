@@ -79,7 +79,7 @@ The daemon will automatically:
 
 - Initialize the OTel SDK with a batch span processor (5s batch interval).
 - Export traces to the OTLP endpoint (`OTEL_EXPORTER_OTLP_ENDPOINT`).
-- Send trace headers from `OTEL_EXPORTER_OTLP_HEADERS`.
+- Send swift headers from `OTEL_EXPORTER_OTLP_HEADERS`.
 - Set the service name (default: `hawk-code`) and version.
 
 ### Configuration

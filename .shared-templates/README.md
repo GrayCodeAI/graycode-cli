@@ -18,7 +18,7 @@ library that other graycode-ecosystem repos copy from and diff against.
 
 - `Makefile.library.tmpl` — Go library repos (engines, SDKs, foundation repos)
 - `Makefile.binary.tmpl` — Go binary repos (currently only `hawk`)
-- `Makefile.python.tmpl` — Python repos (`hawk-sdk-python`)
+- `Makefile.python.tmpl` — Python repos (`robin`)
 - `lefthook.yml.tmpl` — git hooks config, identical across all Go repos
 - `.goreleaser.yml.tmpl` — goreleaser config for Go binary repos
 - `workflows/go-ci.yml.tmpl` — CI pipeline for Go repos

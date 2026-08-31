@@ -231,7 +231,7 @@ JSONL file stays the source of truth). Port of DSH
     populated by a background incremental indexer that tails new/rewritten
     `.jsonl` files. Index is derived and rebuildable — never authority.
   - `Search(sessionID | workspace, query, filters, page)` returns bounded,
-    redacted results (apply `tok.SecretDetector` + the session export redaction
+    redacted results (apply `shrike.SecretDetector` + the session export redaction
     path at the read boundary).
   - Workspace authorization: callers may only search sessions they own /
     the current workspace (mirror of DSH's authorized-read contract).
@@ -412,8 +412,8 @@ lifecycle with DSH's:
   `taskkill /T /F`), then confirm quiescence by tree-liveness wait. Reuse this
   helper in Phase 2.8's ACP client teardown.
 - **Env scrubbing**: before spawn, scrub ambient env vars matching
-  `KEY`/`PASSWORD`/`SECRET`/`TOKEN` — reuse `tok.SecretDetector` /
-  `tok.IsSensitiveFilename` from the `tok` submodule; explicit config values
+  `KEY`/`PASSWORD`/`SECRET`/`TOKEN` — reuse `shrike.SecretDetector` /
+  `shrike.IsSensitiveFilename` from the Shrike repository; explicit config values
   merge after the scrub.
 - `initialize.processId` stays `null` (another PID namespace must not monitor
   the host process — same reasoning as DSH).

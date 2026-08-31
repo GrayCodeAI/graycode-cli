@@ -246,7 +246,7 @@ func (cv *ContextVisualizer) Recommend() []string {
 			))
 		case sec.Name == "tool_results" && sec.Tokens > 5000:
 			recs = append(recs, fmt.Sprintf(
-				"Tool results are large — enabling tok compression would save ~60%%",
+				"Tool results are large — enabling shrike compression would save ~60%%",
 			))
 		case sec.Name == "readonly_context" && sec.Tokens > 8000:
 			recs = append(recs, fmt.Sprintf(
@@ -402,7 +402,7 @@ func sectionDisplayName(name string) string {
 	case "system_prompt":
 		return "System Prompt"
 	case "memory":
-		return "Memory (yaad)"
+		return "Memory (harrier)"
 	case "conversation":
 		return "Conversation"
 	case "tool_results":

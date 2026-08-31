@@ -204,24 +204,24 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 		})
 	}
 
-	bridge := memory.NewYaadBridge()
+	bridge := memory.NewHarrierBridge()
 	if bridge.Ready() {
-		first := strings.Split(memory.YaadStatus(), "\n")[0]
+		first := strings.Split(memory.HarrierStatus(), "\n")[0]
 		checks = append(checks, PathCheck{
-			Section: "Ecosystem", Name: "yaad", Status: PathPass,
+			Section: "Ecosystem", Name: "harrier", Status: PathPass,
 			Detail: first + " (optional persistent memory)",
 		})
 	} else {
 		checks = append(checks, PathCheck{
-			Section: "Ecosystem", Name: "yaad", Status: PathWarn,
+			Section: "Ecosystem", Name: "harrier", Status: PathWarn,
 			Detail:  "Not initialized — memory ops skipped",
-			FixHint: "Ensure ~/.yaad/data/ is writable for cross-session memory",
+			FixHint: "Ensure ~/.harrier/data/ is writable for cross-session memory",
 		})
 	}
 
 	sample := token.CountTokensFast("hawk developer path readiness")
 	checks = append(checks, PathCheck{
-		Section: "Ecosystem", Name: "tok", Status: PathPass,
+		Section: "Ecosystem", Name: "shrike", Status: PathPass,
 		Detail: fmt.Sprintf("Embedded token/compress pipeline OK (sample=%d tokens)", sample),
 	})
 
@@ -262,7 +262,7 @@ func developerPathNextStep(r DeveloperPathReport, setup SetupState) string {
 func FormatDeveloperPathReport(ctx context.Context) string {
 	r := EvaluateDeveloperPath(ctx)
 	var b strings.Builder
-	b.WriteString("Developer path (hawk · eyrie · tok · yaad)\n\n")
+	b.WriteString("Developer path (hawk · eyrie · shrike · harrier)\n\n")
 
 	status := "NEEDS SETUP"
 	switch {

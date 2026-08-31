@@ -13,7 +13,7 @@ Without memory, each Hawk session starts fresh. When you enable memory, Hawk can
 - Carry architectural decisions forward across sessions
 - Avoid re-asking questions it already has answers to
 
-Memory is powered by **yaad**, the graph-based persistent memory engine.
+Memory is powered by **harrier**, the graph-based persistent memory engine.
 
 ---
 
@@ -24,7 +24,7 @@ Memory is powered by **yaad**, the graph-based persistent memory engine.
 Toggle memory in the TUI:
 
 ```
-/yaad    # Opens memory management
+/harrier    # Opens memory management
 ```
 
 ### CLI Flag
@@ -48,13 +48,13 @@ hawk --memory
 
 ## How Memory Is Stored
 
-Memory is stored in yaad's graph database under `~/.hawk/yaad/`.
+Memory is stored in harrier's graph database under `~/.hawk/harrier/`.
 
 | Location | Scope | Description |
 |----------|-------|-------------|
-| `~/.hawk/yaad/global/` | Global | Cross-project memory |
-| `~/.hawk/yaad/workspaces/<repo>/` | Workspace | Project-specific memory |
-| `~/.hawk/yaad/sessions/` | Sessions | Session logs and summaries |
+| `~/.hawk/harrier/global/` | Global | Cross-project memory |
+| `~/.hawk/harrier/workspaces/<repo>/` | Workspace | Project-specific memory |
+| `~/.hawk/harrier/sessions/` | Sessions | Session logs and summaries |
 
 The graph structure enables semantic search and relationship mapping between memories.
 
@@ -80,7 +80,7 @@ Ask what Hawk should forget:
 /forget the snake_case convention
 ```
 
-Forget is best-effort. For guaranteed removal, use yaad's query tools directly.
+Forget is best-effort. For guaranteed removal, use harrier's query tools directly.
 
 ### Recall
 
@@ -96,24 +96,24 @@ Hawk searches across all memory sources and summarizes.
 
 ## Browsing Memory
 
-Open the yaad browser in the TUI:
+Open the harrier browser in the TUI:
 
 ```
-/yaad
+/harrier
 ```
 
 Or search directly:
 
 ```
-/yaad search <query>
+/harrier search <query>
 ```
 
 ### CLI Commands
 
 ```bash
-hawk yaad                    # Open yaad UI
-hawk yaad search <query>     # Search memory
-hawk yaad stats              # Show memory statistics
+hawk harrier                    # Open harrier UI
+hawk harrier search <query>     # Search memory
+hawk harrier stats              # Show memory statistics
 ```
 
 ---
@@ -139,10 +139,10 @@ Configure injection:
 Hawk searches memory automatically. Manual search:
 
 ```
-Search yaad memory for "auth patterns"
+Search harrier memory for "auth patterns"
 ```
 
-The yaad engine provides hybrid search:
+The harrier engine provides hybrid search:
 - **Graph traversal** for semantic relationships
 - **Full-text search** for keyword matching
 

@@ -5,19 +5,19 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
 )
 
-// yaadCodeIndexer adapts *memory.YaadBridge to repomap.CodeIndexer. The two
+// harrierCodeIndexer adapts *memory.HarrierBridge to repomap.CodeIndexer. The two
 // packages define identical CodeSearchResult shapes under different names, so
 // the adapter only has to convert the SearchCode return type; every other
 // method forwards directly.
-type yaadCodeIndexer struct {
-	bridge *memory.YaadBridge
+type harrierCodeIndexer struct {
+	bridge *memory.HarrierBridge
 }
 
-func (a *yaadCodeIndexer) IndexCodeChunk(path, content, symbol, lang string, start, end, tokens int, hash string) error {
+func (a *harrierCodeIndexer) IndexCodeChunk(path, content, symbol, lang string, start, end, tokens int, hash string) error {
 	return a.bridge.IndexCodeChunk(path, content, symbol, lang, start, end, tokens, hash)
 }
 
-func (a *yaadCodeIndexer) SearchCode(query string, limit int) ([]repomap.CodeSearchResult, error) {
+func (a *harrierCodeIndexer) SearchCode(query string, limit int) ([]repomap.CodeSearchResult, error) {
 	results, err := a.bridge.SearchCode(query, limit)
 	if err != nil {
 		return nil, err
@@ -32,14 +32,14 @@ func (a *yaadCodeIndexer) SearchCode(query string, limit int) ([]repomap.CodeSea
 	return out, nil
 }
 
-func (a *yaadCodeIndexer) GetFileHash(path string) (string, error) {
+func (a *harrierCodeIndexer) GetFileHash(path string) (string, error) {
 	return a.bridge.GetFileHash(path)
 }
 
-func (a *yaadCodeIndexer) ClearFileChunks(path string) error {
+func (a *harrierCodeIndexer) ClearFileChunks(path string) error {
 	return a.bridge.ClearFileChunks(path)
 }
 
-func (a *yaadCodeIndexer) ListIndexedPaths() ([]string, error) {
+func (a *harrierCodeIndexer) ListIndexedPaths() ([]string, error) {
 	return a.bridge.ListIndexedPaths()
 }

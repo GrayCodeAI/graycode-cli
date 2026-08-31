@@ -15,12 +15,12 @@ func TestArchitectureDocsDoNotContainStaleContractsLanguage(t *testing.T) {
 		"AGENTS.md",
 		"docs/architecture/README.md",
 		"docs/architecture/hawk-product-architecture.md",
-		"docs/architecture/hawk-core-contracts-spec.md",
+		"docs/architecture/graycode-contract-spec.md",
 		"docs/plans/hawk-contracts-migration-backlog.md",
 	}
 
 	forbiddenPhrases := []string{
-		"hawk-core-contracts` (to add)",
+		"eagle` (to add)",
 		"planned shared contracts layer",
 		"runtime still uses `eyrie/client` provider interfaces and config types",
 	}
@@ -45,16 +45,16 @@ func TestArchitectureDocsMentionCurrentReviewVerifyContracts(t *testing.T) {
 
 	checks := map[string][]string{
 		"README.md": {
-			"hawk-core-contracts/review",
-			"hawk-core-contracts/verify",
+			"eagle/review",
+			"eagle/verify",
 		},
 		"docs/architecture/hawk-product-architecture.md": {
-			"hawk-core-contracts/review",
-			"hawk-core-contracts/verify",
+			"eagle/review",
+			"eagle/verify",
 		},
-		"docs/architecture/hawk-core-contracts-spec.md": {
-			"hawk-core-contracts/review",
-			"hawk-core-contracts/verify",
+		"docs/architecture/graycode-contract-spec.md": {
+			"eagle/review",
+			"eagle/verify",
 		},
 	}
 

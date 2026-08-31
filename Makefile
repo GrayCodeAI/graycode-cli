@@ -36,11 +36,14 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench boundaries build check-replace ci clean contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard package-boundaries-guard release-parity cover cover-new fmt help install lint lint-fix \
-        release security setup smoke path sync test test-10x test-live test-new test-race tidy version vet api-docs api-validate
+.PHONY: all bench boundaries build check-replace ci clean contracts-guard contracts-parity ecosystem-guard eyrie-client-guard eyrie-engine-guard manifest-guard peer-guard internal-layers-guard package-boundaries-guard release-parity cover cover-new fmt help install lint lint-fix \
+        release security setup smoke path sync test test-10x test-live test-new test-race tidy version vet api-docs api-validate workspace
 
 check-replace: ## Fail if go.mod has local replace directives (run before tagging)
 	@bash scripts/check-no-replace-directives.sh
+
+manifest-guard: ## Validate canonical repository identities and module paths.
+	@bash scripts/ecosystem-manifest.sh validate
 
 all: lint test build ## Default — lint, test, build.
 
@@ -103,8 +106,8 @@ bench: ## Run benchmarks.
 fmt: ## Format source files (gofumpt + goimports).
 	@command -v $(GOFUMPT)   >/dev/null 2>&1 || (echo "install: go install mvdan.cc/gofumpt@latest"   && exit 1)
 	@command -v $(GOIMPORTS) >/dev/null 2>&1 || (echo "install: go install golang.org/x/tools/cmd/goimports@latest" && exit 1)
-	@git ls-files -- '*.go' ':!external/**' | xargs $(GOFUMPT) -w
-	@git ls-files -- '*.go' ':!external/**' | xargs $(GOIMPORTS) -w
+	@git ls-files -- '*.go' | xargs $(GOFUMPT) -w
+	@git ls-files -- '*.go' | xargs $(GOIMPORTS) -w
 
 vet: ## Run go vet.
 	go vet ./...
@@ -130,10 +133,13 @@ internal-layers-guard: ## Enforce one-way dependencies across stable Hawk intern
 package-boundaries-guard: ## Enforce AST/package-graph boundaries with file/line diagnostics.
 	bash ./scripts/check-package-boundaries.sh
 
-boundaries: contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard package-boundaries-guard ## Alias for all boundary guards (matches `make boundaries` in engine repos).
+contracts-parity: ## Fail if ecosystem repos pin different Eagle versions (see ecosystem.yaml).
+	bash ./scripts/check-contracts-parity.sh
 
-release-parity: ## Verify every go.mod ecosystem version is reachable from its sibling repo HEAD.
-	bash ./scripts/check-submodule-release-parity.sh
+boundaries: manifest-guard check-replace contracts-guard contracts-parity ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard package-boundaries-guard ## Alias for all boundary guards (matches `make boundaries` in engine repos).
+
+release-parity: ## Verify every go.mod ecosystem version resolves to a reachable remote commit.
+	bash ./scripts/check-module-release-parity.sh
 
 lint: ## Run golangci-lint.
 	@command -v $(GOLANGCI) >/dev/null 2>&1 || (echo "install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION)" && exit 1)
@@ -178,27 +184,12 @@ clean: ## Remove build artefacts.
 # ---------------------------------------------------------------------------
 # Setup — bootstrap local development environment.
 # ---------------------------------------------------------------------------
-FOUNDATION_REPOS := hawk-core-contracts
-ECO_REPOS := eyrie inspect sight tok trace yaad hawk-mcpkit
-WORKSPACE_REPOS := $(FOUNDATION_REPOS) $(ECO_REPOS)
+workspace: ## Regenerate the ecosystem root go.work from ecosystem.yaml.
+	@bash ./scripts/generate-workspace.sh
 
-setup: ## Set up local development environment (workspace go.work + sibling repos).
+setup: workspace ## Set up local development environment and development tools.
 	@echo "=== Setting up hawk development environment ==="
-	@echo "Generating go.work (workspace model)..."
-	@echo "go 1.26.6" > go.work
-	@echo "" >> go.work
-	@echo "use (" >> go.work
-	@echo "	." >> go.work
-	@for repo in $(WORKSPACE_REPOS); do \
-		if [ -d "../$$repo" ]; then \
-			echo "	../$$repo" >> go.work; \
-		else \
-			echo "  ⚠ sibling repo ../$$repo not found — clone it into the graycode-eco workspace"; \
-		fi; \
-	done
-	@echo ")" >> go.work
-	@go work sync
-	@echo "✓ go.work generated and synced"
+	@echo "✓ go.work generated and synced from ecosystem.yaml"
 	@echo ""
 	@echo "=== Environment check ==="
 	@echo "Go version: $$(go version)"
@@ -235,7 +226,7 @@ compat-test: ## Validate testdata/compatibility-matrix.json and report the 'next
 compat-check: ## Strict validation — non-zero exit if any component lacks a version.
 	@go run ./cmd/compat-test -matrix=next -strict -file=testdata/compatibility-matrix.json
 
-compat-drift: ## Advisory: report pin drift between hawk's go.mod and external/ submodules. Never fails.
+compat-drift: ## Advisory: report pin drift between Hawk and sibling repositories. Never fails.
 	@go run ./cmd/compat-test -check-external -file=testdata/compatibility-matrix.json
 
 .PHONY: hooks sync
@@ -245,7 +236,7 @@ hooks: ## Install git hooks via lefthook (formatting, linting, conventional comm
 
 sync: ## Sync the workspace go.work and verify sibling release parity.
 	@go work sync
-	@bash ./scripts/check-submodule-release-parity.sh
+	@bash ./scripts/check-module-release-parity.sh
 # === Cross-platform binary targets (add after existing 'build' target) ===
 
 .PHONY: build-all build-static size-check

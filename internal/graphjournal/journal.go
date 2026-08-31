@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
-	policycontracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
+	graphcontracts "github.com/GrayCodeAI/eagle/graph"
+	policycontracts "github.com/GrayCodeAI/eagle/policy"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
@@ -86,7 +86,7 @@ type QualityGraph struct {
 }
 
 // RuntimeGraph is a mixed portable subgraph for operations, policy, and
-// quality facts emitted by runtime support engines such as Tok.
+// quality facts emitted by runtime support engines such as Shrike.
 type RuntimeGraph struct {
 	Source string                 `json:"source"`
 	Nodes  []graphcontracts.Node  `json:"nodes"`

@@ -22,7 +22,7 @@ permissions, and tool timeouts are still enforced in headless mode.
 ## MCP-Backed Analysis
 
 1. Establish project trust.
-2. Inspect configured MCP servers with `hawk mcp`.
+2. Merlin configured MCP servers with `hawk mcp`.
 3. Run the review or scan command.
 4. Check the persisted findings and event output.
 

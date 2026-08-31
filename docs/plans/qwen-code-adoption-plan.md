@@ -63,4 +63,4 @@ filesystem/process sandboxing. These systems will not be duplicated.
 - Focused lifecycle, skills, engine, and command tests.
 - Full Hawk build, vet, and test suite.
 - Independent second verification pass.
-- Final diff and submodule status inspection.
+- Final diff and sibling-repository status inspection.

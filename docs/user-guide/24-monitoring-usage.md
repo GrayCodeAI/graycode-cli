@@ -83,7 +83,7 @@ Hawk Cloud provides managed usage tracking:
 - Budget alerts
 - Entitlement management
 
-See hawk-cloud documentation for details.
+See graycode-cloud documentation for details.
 
 ---
 

@@ -26,7 +26,7 @@ type HUDData struct {
 	// Message bus activity (most recent first)
 	RecentMessages []HUDMessage
 
-	// Memory stats (from yaad)
+	// Memory stats (from harrier)
 	MemoryReady    bool
 	MemoryNodes    int
 	MemoryEdges    int
@@ -144,7 +144,7 @@ func renderHUDMemorySection(data HUDData, width int) string {
 	b.WriteString(hudSectionStyle.Render("▸ Memory"))
 	b.WriteString("\n")
 	if !data.MemoryReady {
-		b.WriteString(hudDimHUDStyle.Render("  yaad not connected"))
+		b.WriteString(hudDimHUDStyle.Render("  harrier not connected"))
 		b.WriteString("\n")
 		return b.String()
 	}
@@ -163,7 +163,7 @@ func (m *chatModel) collectHUDData() HUDData {
 	data := HUDData{
 		MissionStatus: "idle",
 	}
-	if m.session != nil && m.session.MemorySvc().Yaad() != nil && m.session.MemorySvc().Yaad().Ready() {
+	if m.session != nil && m.session.MemorySvc().Harrier() != nil && m.session.MemorySvc().Harrier().Ready() {
 		data.MemoryReady = true
 	}
 	return data

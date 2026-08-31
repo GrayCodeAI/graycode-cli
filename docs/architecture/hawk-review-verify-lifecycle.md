@@ -6,14 +6,14 @@ Review and verification should be standard parts of Hawk's workflow, not optiona
 
 ## Roles
 
-### `sight`
+### `kestrel`
 Answers:
 
 - what looks wrong
 - what is risky
 - what likely regressed
 
-### `inspect`
+### `merlin`
 Answers:
 
 - did the output pass checks
@@ -30,7 +30,7 @@ Optional review pass for:
 - planning guidance
 
 ### During execution
-Trace every major action:
+Swift every major action:
 
 - prompt turn
 - tool call
@@ -39,13 +39,13 @@ Trace every major action:
 - provider invocation
 
 ### After changes
-Run `sight` for:
+Run `kestrel` for:
 
 - code review
 - risk detection
 - regression hints
 
-Run `inspect` for:
+Run `merlin` for:
 
 - test execution summaries
 - assertion results
@@ -78,4 +78,4 @@ Normalized outputs should include:
 - evidence
 - recommended next action
 
-These outputs should become contract types in `hawk-core-contracts`.
+These outputs should become contract types in `eagle`.

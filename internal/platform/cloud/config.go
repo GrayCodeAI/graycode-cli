@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	tokenService = "hawk-cloud"
+	tokenService = "graycode-cloud"
 	tokenAccount = "device-token"
 )
 

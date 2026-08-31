@@ -6,7 +6,6 @@ cd "$ROOT_DIR"
 
 violations="$(
   git grep -n 'github\.com/GrayCodeAI/hawk/shared/types' -- '*.go' \
-    ':(exclude)external/**' \
     ':(exclude)shared/types/**' \
     ':(exclude)internal/testaudit/audit_test.go' || true
 )"
@@ -15,7 +14,7 @@ if [[ -n "${violations}" ]]; then
   echo "forbidden imports of removed github.com/GrayCodeAI/hawk/shared/types found:"
   echo "${violations}"
   echo
-  echo "hawk/shared/types has been removed; use github.com/GrayCodeAI/hawk-core-contracts/types instead"
+  echo "hawk/shared/types has been removed; use github.com/GrayCodeAI/eagle/types instead"
   exit 1
 fi
 

@@ -12,7 +12,7 @@ import (
 	"log/slog"
 
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
-	"github.com/GrayCodeAI/hawk-core-contracts/llm"
+	"github.com/GrayCodeAI/eagle/llm"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 

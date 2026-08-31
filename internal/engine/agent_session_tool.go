@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+	agentcontracts "github.com/GrayCodeAI/eagle/agent"
 
 	engagent "github.com/GrayCodeAI/hawk/internal/engine/agent"
 	"github.com/GrayCodeAI/hawk/internal/eventlog"

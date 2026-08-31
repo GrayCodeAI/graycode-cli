@@ -23,9 +23,9 @@ set -o pipefail
 
 echo "== ecosystem tests =="
 go test ./internal/config/ -run TestFormatEcosystemPanel -count=1
-go test ./cmd/ -run 'TestDoctor|TestYaad|TestEcosystem|TestPath' -count=1
+go test ./cmd/ -run 'TestDoctor|TestHarrier|TestEcosystem|TestPath' -count=1
 go test ./internal/config/ -run 'DeveloperPath|FormatEcosystemPanel' -count=1
-go test ./internal/intelligence/memory/ -run 'FormatYaad|ShouldAutoRemember' -count=1
+go test ./internal/intelligence/memory/ -run 'FormatHarrier|ShouldAutoRemember' -count=1
 
 echo "== verify developer path =="
 ./scripts/verify-developer-path.sh

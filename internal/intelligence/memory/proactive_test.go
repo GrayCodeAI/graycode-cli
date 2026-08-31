@@ -5,7 +5,7 @@ import (
 )
 
 func TestProactiveContextReset(t *testing.T) {
-	bridge := &YaadBridge{ready: false}
+	bridge := &HarrierBridge{ready: false}
 	pc := NewProactiveContext(bridge)
 
 	pc.TrackFile("/tmp/auth.go")
@@ -23,7 +23,7 @@ func TestProactiveContextReset(t *testing.T) {
 }
 
 func TestProactiveContextTrackFile(t *testing.T) {
-	bridge := &YaadBridge{ready: false}
+	bridge := &HarrierBridge{ready: false}
 	pc := NewProactiveContext(bridge)
 
 	pc.TrackFile("/tmp/auth.go")
@@ -36,7 +36,7 @@ func TestProactiveContextTrackFile(t *testing.T) {
 }
 
 func TestProactiveContextForFileNotReady(t *testing.T) {
-	bridge := &YaadBridge{ready: false}
+	bridge := &HarrierBridge{ready: false}
 	pc := NewProactiveContext(bridge)
 
 	result := pc.ContextForFile("/tmp/test.go")
@@ -46,7 +46,7 @@ func TestProactiveContextForFileNotReady(t *testing.T) {
 }
 
 func TestProactiveContextForToolWithPath(t *testing.T) {
-	bridge := &YaadBridge{ready: false}
+	bridge := &HarrierBridge{ready: false}
 	pc := NewProactiveContext(bridge)
 
 	result := pc.ContextForTool("Read", map[string]interface{}{

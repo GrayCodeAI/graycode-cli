@@ -129,7 +129,7 @@ func TestAutoCaptureMetrics(t *testing.T) {
 }
 
 func TestAutoCaptureWithNilBridge(t *testing.T) {
-	bridge := &YaadBridge{ready: false}
+	bridge := &HarrierBridge{ready: false}
 	ac := NewAutoCapture(bridge)
 	defer ac.Stop()
 

@@ -31,14 +31,14 @@ type BenchmarkSuite struct {
 func RunAll(projectDir string) (*BenchmarkSuite, error) {
 	suite := &BenchmarkSuite{}
 
-	// Run yaad benchmarks
-	if yaadResults, err := runYaadBench(projectDir); err == nil {
-		suite.Results = append(suite.Results, yaadResults...)
+	// Run harrier benchmarks
+	if harrierResults, err := runHarrierBench(projectDir); err == nil {
+		suite.Results = append(suite.Results, harrierResults...)
 	}
 
-	// Run tok benchmarks
-	if tokResults, err := runTokBench(projectDir); err == nil {
-		suite.Results = append(suite.Results, tokResults...)
+	// Run shrike benchmarks
+	if shrikeResults, err := runShrikeBench(projectDir); err == nil {
+		suite.Results = append(suite.Results, shrikeResults...)
 	}
 
 	// Run hawk build benchmark
@@ -49,21 +49,21 @@ func RunAll(projectDir string) (*BenchmarkSuite, error) {
 	return suite, nil
 }
 
-// runYaadBench runs yaad's built-in benchmark suite.
-func runYaadBench(projectDir string) ([]BenchmarkResult, error) {
-	yaadDir := filepath.Join(projectDir, "external", "yaad")
-	if _, err := os.Stat(filepath.Join(yaadDir, "go.mod")); err != nil {
-		return nil, fmt.Errorf("yaad not found")
+// runHarrierBench runs harrier's built-in benchmark suite.
+func runHarrierBench(projectDir string) ([]BenchmarkResult, error) {
+	harrierDir := filepath.Join(filepath.Dir(projectDir), "harrier")
+	if _, err := os.Stat(filepath.Join(harrierDir, "go.mod")); err != nil {
+		return nil, fmt.Errorf("harrier not found")
 	}
 
 	start := time.Now()
 	cmd := exec.CommandContext(context.Background(), "go", "test", "-bench=.", "-benchmem", "-count=1", "-timeout=60s", "./engine/...")
-	cmd.Dir = yaadDir
+	cmd.Dir = harrierDir
 	output, err := cmd.CombinedOutput()
 	duration := time.Since(start)
 
 	result := BenchmarkResult{
-		Name:     "yaad/engine",
+		Name:     "harrier/engine",
 		Duration: duration,
 		Metric:   "time",
 		Passed:   err == nil,
@@ -76,21 +76,21 @@ func runYaadBench(projectDir string) ([]BenchmarkResult, error) {
 	return []BenchmarkResult{result}, nil
 }
 
-// runTokBench runs tok's benchmark suite.
-func runTokBench(projectDir string) ([]BenchmarkResult, error) {
-	tokDir := filepath.Join(projectDir, "external", "tok")
-	if _, err := os.Stat(filepath.Join(tokDir, "go.mod")); err != nil {
-		return nil, fmt.Errorf("tok not found")
+// runShrikeBench runs shrike's benchmark suite.
+func runShrikeBench(projectDir string) ([]BenchmarkResult, error) {
+	shrikeDir := filepath.Join(filepath.Dir(projectDir), "shrike")
+	if _, err := os.Stat(filepath.Join(shrikeDir, "go.mod")); err != nil {
+		return nil, fmt.Errorf("shrike not found")
 	}
 
 	start := time.Now()
 	cmd := exec.CommandContext(context.Background(), "go", "test", "-bench=.", "-benchmem", "-count=1", "-timeout=60s", "./...")
-	cmd.Dir = tokDir
+	cmd.Dir = shrikeDir
 	output, err := cmd.CombinedOutput()
 	duration := time.Since(start)
 
 	result := BenchmarkResult{
-		Name:     "tok",
+		Name:     "shrike",
 		Duration: duration,
 		Metric:   "time",
 		Passed:   err == nil,

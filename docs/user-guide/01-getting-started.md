@@ -14,10 +14,13 @@ Hawk is currently in active development. Contributor source builds are the prima
 
 ```bash
 git clone https://github.com/GrayCodeAI/hawk && cd hawk
-make setup   # clones required support repos into external/ and syncs go.work
-go build -o hawk ./cmd/hawk
+GOWORK=off go build -o hawk ./cmd/hawk
 ./hawk
 ```
+
+For full cross-repository development, place the nine Go repositories beside
+Hawk in a parent workspace and run `make setup` from `hawk`; `graycode-eco` is
+only a local folder name, not a repository containing those modules.
 
 ### Verification
 

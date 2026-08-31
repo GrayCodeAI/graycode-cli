@@ -1,11 +1,11 @@
 # graycode-eco OpenTelemetry Semantic Conventions for AI Agent Spans
 
 Status: Draft / shared spec
-Applies to: hawk, eyrie, yaad, tok, trace
+Applies to: hawk, eyrie, harrier, shrike, swift
 
 This document defines the **ecosystem-wide** OpenTelemetry (OTel) semantic
 conventions that every graycode-eco repo should follow when emitting spans for AI
-agent and LLM operations. The goal is that a single trace backend (Jaeger,
+agent and LLM operations. The goal is that a single swift backend (Jaeger,
 Tempo, Honeycomb, an OTLP collector, etc.) can correlate model calls, tool
 invocations, token usage, and cost **across all five repos** using one common
 attribute vocabulary.
@@ -34,9 +34,9 @@ directly.
   of hard-coding strings. A pinning test
   (`genai_semconv_test.go`) guards the exact key values.
 
-When adding tracing to Hawk, propagate trace context through the Engine call and
+When adding tracing to Hawk, propagate swift context through the Engine call and
 use the attribute keys in this document. Eyrie wraps provider operations;
-Hawk wraps product turns and tools. Yaad, Tok, and Trace instrument only their
+Hawk wraps product turns and tools. Harrier, Shrike, and Swift instrument only their
 own operations.
 
 ## Span kinds and names
@@ -117,13 +117,13 @@ Mapping:
   (`HAWK_CODE_ENABLE_TELEMETRY`, `HAWK_CODE_OTEL_SHUTDOWN_TIMEOUT_MS`). Emit
   `agent.id` and `session.id` on agent-turn spans; propagate them downstream to
   eyrie via context so provider spans inherit the same IDs.
-- **yaad** — memory service. Add `embeddings` spans with `gen_ai.system` +
+- **harrier** — memory service. Add `embeddings` spans with `gen_ai.system` +
   `gen_ai.request.model` from its embeddings config; tag retrieval spans with
   `session.id`.
-- **tok** — compression library/CLI. Token accounting is its domain; when it
+- **shrike** — compression library/CLI. Token accounting is its domain; when it
   emits spans, populate `gen_ai.usage.input_tokens` / `output_tokens` and
-  `cost.usd` so compression savings are visible in the same trace.
-- **trace** — CLI / replay. When ingesting third-party agent sessions, map
+  `cost.usd` so compression savings are visible in the same swift.
+- **swift** — CLI / replay. When ingesting third-party agent sessions, map
   vendor fields onto these keys so replayed traces share the ecosystem schema.
 
 ## Versioning

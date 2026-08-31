@@ -15,7 +15,7 @@ The reviewed CommandCodeAI organization contains four relevant categories:
 | `agent-skills` | MIT skill collection with progressive-disclosure guidance | Adopt authoring/process ideas; preserve individual asset licenses |
 | `awesome-agents` | Apache-2.0 example applications | Reference only; do not merge into Hawk skills |
 
-`hawk-community-skills` remains the canonical public skill registry. Its
+`starling` remains the canonical public skill registry. Its
 validator and registry tooling are more complete than the CommandCodeAI
 repositories and should remain authoritative.
 
@@ -42,8 +42,8 @@ adding a second agent runtime:
   events. A second `GOAL.md` state machine would duplicate this implementation.
 
 The comparison also found no reason to adopt Kimi Code's two-engine split or
-replace Hawk's stronger Yaad memory, Tok token controls, Trace replay, Sight
-review, Inspect auditing, or Eyrie provider runtime.
+replace Hawk's stronger Harrier memory, Shrike token controls, Swift replay, Kestrel
+review, Merlin auditing, or Eyrie provider runtime.
 
 ### 1. Skill metadata interoperability
 
@@ -91,7 +91,7 @@ policy are documented in `docs/user-guide/26-learned-preferences.md`:
 - explicit instructions remain authoritative
 - skills are reusable capabilities
 - preferences are inferred tendencies
-- Yaad stores durable facts and decisions
+- Harrier stores durable facts and decisions
 - objective review findings cannot be suppressed by preferences
 
 ### 4. Workflow and harness documentation
@@ -114,7 +114,7 @@ tool, depth, time, token, and cost budgets.
 - CommandCodeAI provider adapters: Eyrie owns provider protocols and routing.
 - BaseAI remote pipes: incompatible with Hawk's local authority and durable
   event model.
-- BaseAI `lowdb` JSON memory: weaker than Yaad and Hawk persistence.
+- BaseAI `lowdb` JSON memory: weaker than Harrier and Hawk persistence.
 - Unconditional parallel tool execution: unsafe for mutations and approvals.
 - Historical `gpt3-agent`: no permissions, sandbox, path guard, audit, or tests.
 - Media/UI/status repositories: outside Hawk's code-intelligence boundary.
@@ -126,7 +126,7 @@ tool, depth, time, token, and cost budgets.
 2. Run focused parser, validator, taste, engine, and command tests.
 3. Run the full Hawk test suite and vet.
 4. Repeat the focused and full checks independently.
-5. Inspect the final diff, worktree, and submodule status.
+5. Merlin the final diff, worktree, and sibling-repository status.
 
-The eyrie submodule remains a separate repository change and must be published
-through its own feature branch and PR before updating Hawk's submodule pointer.
+The Eyrie repository remains a separate repository change and must be published
+through its own feature branch and PR before updating Hawk's module pin.

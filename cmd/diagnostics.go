@@ -52,13 +52,20 @@ func doctorReport(settings hawkconfig.Settings) string {
 
 	// Ecosystem versions
 	b.WriteString("\nEcosystem versions:\n")
-	for _, repo := range []string{"eyrie", "yaad", "tok", "sight", "inspect", "trace"} {
-		versionFile := filepath.Join("external", repo, "VERSION")
-		// #nosec G304 -- versionFile built from a fixed internal repo-relative list
+	for _, component := range []struct{ directory, product string }{
+		{directory: "eyrie", product: "Eyrie"},
+		{directory: "harrier", product: "Harrier"},
+		{directory: "shrike", product: "Shrike"},
+		{directory: "kestrel", product: "Kestrel"},
+		{directory: "merlin", product: "Merlin"},
+		{directory: "swift", product: "Swift"},
+	} {
+		versionFile := filepath.Join(filepath.Dir(cwd), component.directory, "VERSION")
+		// #nosec G304 -- versionFile is built from a fixed sibling-repo list
 		if data, err := os.ReadFile(versionFile); err == nil {
-			b.WriteString(fmt.Sprintf("  %s: %s\n", repo, strings.TrimSpace(string(data))))
+			b.WriteString(fmt.Sprintf("  %s (%s): %s\n", component.product, component.directory, strings.TrimSpace(string(data))))
 		} else {
-			b.WriteString(fmt.Sprintf("  %s: not checked out\n", repo))
+			b.WriteString(fmt.Sprintf("  %s (%s): not checked out\n", component.product, component.directory))
 		}
 	}
 	b.WriteString("\n" + hawkconfig.FormatEcosystemPanel(context.Background(), providerName, modelName) + "\n")
@@ -121,19 +128,19 @@ func healthCheckReport(settings hawkconfig.Settings, provider string) string {
 		return health.Check{Name: "config", Status: health.Degraded, Message: result.Error()}
 	})
 
-	// Yaad memory bridge check
-	bridge := memory.NewYaadBridge()
+	// Harrier memory bridge check
+	bridge := memory.NewHarrierBridge()
 	if bridge.Ready() {
-		registry.Register("yaad", func(ctx context.Context) health.Check {
+		registry.Register("harrier", func(ctx context.Context) health.Check {
 			_, _, err := bridge.SearchByType("convention", 1)
 			if err != nil {
-				return health.Check{Name: "yaad", Status: health.Unhealthy, Message: "Yaad bridge initialized but query failed"}
+				return health.Check{Name: "harrier", Status: health.Unhealthy, Message: "Harrier bridge initialized but query failed"}
 			}
-			return health.Check{Name: "yaad", Status: health.Healthy, Message: "Yaad memory bridge operational"}
+			return health.Check{Name: "harrier", Status: health.Healthy, Message: "Harrier memory bridge operational"}
 		})
 	} else {
-		registry.Register("yaad", func(ctx context.Context) health.Check {
-			return health.Check{Name: "yaad", Status: health.Degraded, Message: "Yaad not initialized (~/.yaad/data/ not writable)"}
+		registry.Register("harrier", func(ctx context.Context) health.Check {
+			return health.Check{Name: "harrier", Status: health.Degraded, Message: "Harrier not initialized (~/.harrier/data/ not writable)"}
 		})
 	}
 

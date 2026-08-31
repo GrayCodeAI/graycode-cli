@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+	agentcontracts "github.com/GrayCodeAI/eagle/agent"
 
 	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
 	"github.com/GrayCodeAI/hawk/internal/lint"
@@ -170,7 +170,7 @@ type ToolContext struct {
 	SandboxMode        sandbox.Mode
 	AutoCommit         bool
 	Protected          PathProtector
-	YaadBridge         *memory.YaadBridge
+	HarrierBridge      *memory.HarrierBridge
 	Attribution        *types.Attribution
 	SettingsGet        func(key string) (string, bool)
 	SettingsSet        func(key, value string) error

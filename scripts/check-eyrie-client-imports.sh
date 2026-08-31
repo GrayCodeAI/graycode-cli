@@ -7,11 +7,11 @@ cd "$ROOT_DIR"
 if command -v rg >/dev/null 2>&1; then
   violations="$(
     rg -n '"github\.com/GrayCodeAI/eyrie/client(?:/[^\"]*)?"' \
-      --glob '*.go' --glob '!*_test.go' --glob '!external/**' . || true
+      --glob '*.go' --glob '!*_test.go' . || true
   )"
 else
   violations="$(
-    grep -RInE --include='*.go' --exclude='*_test.go' --exclude-dir=external \
+    grep -RInE --include='*.go' --exclude='*_test.go' \
       '"github\.com/GrayCodeAI/eyrie/client(/[^\"]*)?"' . || true
   )"
 fi

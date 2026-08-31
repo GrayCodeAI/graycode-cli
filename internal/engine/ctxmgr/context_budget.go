@@ -27,7 +27,7 @@ type ContextBudget struct {
 	SystemPrompt int // 3000-5000 tokens (rules, identity)
 	ToolDefs     int // 2000-3000 tokens (tool descriptions)
 	RepoMap      int // 2000-4000 tokens (ranked symbol map)
-	Memory       int // 1000-2000 tokens (yaad/zenbrain context)
+	Memory       int // 1000-2000 tokens (harrier/zenbrain context)
 	Workspace    int // 500 tokens (git status, branch, recent commits)
 
 	// Adaptive allocations

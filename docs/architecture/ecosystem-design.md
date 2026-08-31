@@ -1,112 +1,135 @@
-# GrayCode Ecosystem — Independent Repos, Connected Design
+# GrayCode Ecosystem — Independent Repositories, Connected Design
 
-## Purpose
+## Authority
 
-This document is the source of truth for how the GrayCodeAI ecosystem repos stay
-**independent** (own git repo, version, and release cadence) while remaining
-**connected** into one working product. It replaces the previous submodule model.
+[`hawk/ecosystem.yaml`](../ecosystem.yaml) is the canonical repository
+inventory. It defines the 15 repositories, their directory names, product
+labels, Go modules, workspace membership, and Eagle-contract participation.
+[`owl/ecosystem.json`](../../owl/ecosystem.json) is a generated snapshot and
+must match it exactly.
 
-## Repo map
+Every directory in `graycode-eco` is an independent Git repository. The plain
+workspace root provides local coordination; it is not itself a Git repository.
 
-```
-graycode-eco/  (workspace root — a plain folder, NOT a git repo)
-│
-├── hawk                 # primary product (CLI + orchestration + policy)
-├── eyrie                # support engine — provider runtime
-├── yaad                 # support engine — memory
-├── tok                  # support engine — token budgeting
-├── trace                # support engine — tracing/provenance
-├── sight                # support engine — review findings
-├── inspect              # support engine — verification findings
-├── hawk-core-contracts  # shared leaf — neutral cross-repo DTOs
-├── hawk-mcpkit          # shared leaf — MCP server scaffolding
-│
-├── hawk-sdk-go          # extension — public Go SDK (independent)
-├── hawk-sdk-python      # extension — public Python SDK (independent)
-├── hawk-community-skills# extension — skills/recipes (independent)
-├── hawk-cloud           # Cloudflare Worker — hosted control plane (independent)
-├── hawk-graph           # Node dashboard — dev tooling (independent)
-└── graycode-core        # company web/backend monorepo (independent, not Hawk runtime)
-```
+## Repository map
 
-## How "independent but connected" works
-
-### 1. Connectivity via a single shared leaf: `hawk-core-contracts`
-
-Every repo that needs to speak to another uses `hawk-core-contracts` as the one
-shared vocabulary. No engine imports another engine. No engine imports `hawk`.
-`hawk` is the single fan-in that orchestrates all six engines.
-
-```
-                    hawk   (only orchestrator)
-                 /   |   \   \   \   \
-            eyrie yaad tok trace sight inspect     ← engines: no peer imports
-                |    |    |    |    |     |
-                +----+----+----+----+-----+        ← connect only through the leaf
-                          hawk-core-contracts       (and hawk-mcpkit for MCP helpers)
+```text
+graycode-eco/
+├── hawk                 # product, CLI, daemon, orchestration, policy
+├── eagle                # shared neutral contracts
+├── falcon               # shared MCP transport/handler kit
+├── eyrie                # provider runtime (product label: Eyrie)
+├── harrier              # memory engine (product label: Harrier)
+├── shrike               # token/context engine (product label: Shrike)
+├── swift                # provenance engine (product label: Swift)
+├── kestrel              # review engine (product label: Kestrel)
+├── merlin               # verification engine (product label: Merlin)
+├── sparrow              # Go SDK
+├── robin                # Python SDK
+├── wren                 # TypeScript SDK
+├── starling             # community skills/extensions
+├── owl                  # architecture visualization tooling
+└── graycode-platform    # web, browser BFF, and Hawk Cloud Worker
 ```
 
-### 2. Local dev: workspace `go.work` (no submodules)
+## Compile-time dependency graph
 
-`hawk/go.work` lists the siblings as `../<repo>`:
+```text
+sparrow / robin / wren ── Hawk daemon API ──> hawk <── skill API ── starling
+                                             │
+                                             ├── eyrie/engine
+                                             ├── harrier       (Harrier)
+                                             ├── shrike        (Shrike)
+                                             ├── swift/cli     (Swift)
+                                             ├── kestrel       (Kestrel)
+                                             ├── merlin        (Merlin)
+                                             └── eagle
 
-```go
-go 1.26.6
-use (
-    .
-    ../eyrie
-    ../yaad
-    ../tok
-    ../trace
-    ../sight
-    ../inspect
-    ../hawk-core-contracts
-    ../hawk-mcpkit
-)
+eyrie / harrier / shrike / swift / kestrel / merlin ──> eagle (as needed)
+harrier / kestrel / merlin ──> falcon ──> mark3labs/mcp-go
 ```
 
-- No `git submodule`s, no committed `replace` directives.
-- Clone all repos into `graycode-eco/`, run `make setup` in `hawk` to regenerate
-  `go.work`, then `make sync` / `go work sync`.
-- Local edits in any sibling are picked up immediately by hawk's build.
+Hawk is the only orchestration root. Engines are peers: they do not import
+Hawk internals and do not import one another. Eagle owns neutral contracts;
+Falcon owns reusable MCP scaffolding. SDKs are API consumers, not Go imports
+of the engines.
 
-### 3. Published connectivity: Go module versions
+## Local Go workspace
 
-Standalone and module-mode builds (Docker, released consumers) resolve the engine
-versions pinned in `hawk/go.mod` from the module proxy. Each engine is released
-independently with its own semver tag. `hawk-core-contracts` is released first,
-then engines bump to it, then hawk bumps to the engines.
+The parent [`go.work`](../../../go.work) connects the nine repositories marked
+`workspace: true`: Hawk, Eagle, Falcon, and the six engine repositories. The
+SDKs, Starling, Owl, and GrayCode Platform remain independent consumers or
+tooling and are not part of the Go workspace.
 
-Release order: **contracts → engines → hawk.**
+Local sibling replacements exist only in `go.work`. Repository `go.mod` files
+remain publishable and pin released or reachable module versions. Release and
+CI must test both workspace mode and `GOWORK=off` module mode.
 
-### 4. HTTP connectivity (non-Go components)
+## Runtime/API connectivity
 
-Components outside the Go module graph connect over public APIs:
+```text
+Hawk local runtime
+  ├── Eyrie provider generation
+  ├── Harrier memory and retrieval
+  ├── Shrike token budgeting/compression
+  ├── Swift swift/provenance
+  ├── Kestrel review
+  └── Merlin verification
 
-- **`hawk-cloud`** (Cloudflare Worker) — hosted control plane (tenancy, usage,
-  audit, optional sync). Hawk syncs to it via fail-open, user-approved HTTP
-  (`POST /v1/graph/sync`, usage events). Needed only when a user opts into cloud.
-- **`graycode-core`** — the GrayCode web/backend monorepo. Not a Hawk runtime
-  dependency. It consumes `hawk-cloud`'s public API; hawk sends only opt-in,
-  fail-open telemetry to it over HTTP (ADR-0001). Never a Go import.
-- **`hawk-graph`** (Node dashboard) — dev tooling that reads architecture data;
-  no Go module link.
+Hawk ── optional authenticated HTTP ──> graycode-platform/apps/worker
+web ──> graycode-platform/apps/bff ── private Service Binding ──> worker
+worker ──> control-plane D1, usage Queue, and R2 archive
 
-## Enforcement guards (scripts + CI)
+Owl <── manifest and read-only generated repository artifacts
+```
 
-| Guard | Script / target |
-|---|---|
-| No engine→engine imports | `check-support-repo-coupling.sh` |
-| No engine→hawk imports | `check-ecosystem-boundaries.sh` |
-| No legacy `shared/types` | `check-shared-types-imports.sh` |
-| Eyrie only via `engine` facade | `check-eyrie-client-imports.sh`, `check-eyrie-engine-boundary.sh` |
-| No committed `replace` | `check-no-replace-directives.sh` |
-| go.mod version reachable from sibling HEAD | `check-submodule-release-parity.sh` (`make release-parity`) |
+The Worker deployment is named `graycode-cloud`, but it is an application
+inside the `graycode-platform` repository, not a separate repository. The BFF
+owns browser identity and forwards authenticated requests over the private
+`HawkCloudService` binding. Hawk Cloud owns Hawk-specific projects, devices,
+usage, billing, audit, and graph records.
 
-## Best practices
+Cloud is optional. Hawk local execution must never depend on the platform being
+available; automatic usage delivery is fail-open, while graph synchronization
+is an explicit user operation.
 
-- Bump `hawk-core-contracts` first; keep all engines on the same latest tag at
-  each ecosystem release to avoid version skew.
-- Never commit `replace` directives into `go.mod`.
-- Add a CI integration matrix so each engine builds against the latest contracts
-  and one job compiles hawk + all engines together.
+## Boundary rules
+
+Allowed:
+
+```text
+hawk -> engine facades and Eagle contracts
+engine -> Eagle when a shared contract is required
+harrier / kestrel / merlin -> Falcon for MCP serving
+SDK -> Hawk public HTTP/OpenAPI contract
+Starling -> Hawk skill/plugin surface
+Hawk -> deployed Hawk Cloud over authenticated HTTP only
+```
+
+Forbidden:
+
+```text
+engine -> engine
+engine -> hawk/internal/*
+SDK -> engine
+skills -> engine
+any Go module -> graycode-platform code
+```
+
+Graph and quality-projection packages imported by Hawk are explicit integration
+surfaces. If they become replaceability-sensitive, move them behind the
+corresponding engine facade rather than exporting implementation types further.
+
+## Release order
+
+1. Publish Eagle contract changes.
+2. Publish the Eagle-compatible engine revisions.
+3. Update Hawk's engine pins and verify `GOWORK=off` builds.
+4. Validate SDK OpenAPI snapshots against Hawk.
+5. Deploy GrayCode Platform independently after its Worker/BFF contract tests
+   pass.
+
+The current local Eyrie checkout is Eagle-compatible, but Hawk's published
+Eyrie pin still has a transitive `hawk-core-contracts` dependency. That is a
+release-order issue, not a reason to add a local `replace` directive or a
+platform dependency.

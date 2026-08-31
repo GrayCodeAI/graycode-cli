@@ -38,17 +38,17 @@ func NewEnhancedMemoryManager(projectDir string) *EnhancedMemoryManager {
 		MemoryManager: base,
 	}
 
-	// Initialize all subsystems once the yaad bridge is ready
-	if base.Yaad.Ready() {
-		em.AutoCapture = NewAutoCapture(base.Yaad)
-		em.Proactive = NewProactiveContext(base.Yaad)
-		em.Confidence = NewConfidenceTracker(base.Yaad)
+	// Initialize all subsystems once the harrier bridge is ready
+	if base.Harrier.Ready() {
+		em.AutoCapture = NewAutoCapture(base.Harrier)
+		em.Proactive = NewProactiveContext(base.Harrier)
+		em.Confidence = NewConfidenceTracker(base.Harrier)
 		em.Retrieval = NewRetrievalMetrics(projectDir)
-		em.CodeLinks = NewCodeMemoryLinker(base.Yaad)
-		em.SessionDiff = NewSessionDiffAnalyzer(base.Yaad, projectDir)
+		em.CodeLinks = NewCodeMemoryLinker(base.Harrier)
+		em.SessionDiff = NewSessionDiffAnalyzer(base.Harrier, projectDir)
 		em.Continuity = NewContinuityTracker(projectDir)
-		em.CrossProject = NewCrossProjectMemory(base.Yaad)
-		em.GraphBudget = NewGraphAwareBudget(base.Yaad, em.Proactive)
+		em.CrossProject = NewCrossProjectMemory(base.Harrier)
+		em.GraphBudget = NewGraphAwareBudget(base.Harrier, em.Proactive)
 	}
 
 	return em
@@ -71,7 +71,7 @@ func (em *EnhancedMemoryManager) StartSession(sessionID string) {
 		em.SessionDiff.SnapshotStart()
 	}
 	if em.Continuity != nil {
-		memoryInjected := em.Yaad.Ready()
+		memoryInjected := em.Harrier.Ready()
 		em.Continuity.StartSession(sessionID, memoryInjected)
 	}
 }
@@ -225,7 +225,7 @@ func (em *EnhancedMemoryManager) GlobalContext(budget int) string {
 func (em *EnhancedMemoryManager) EnableMissionMode(missionID, agentID string) {
 	em.mu.Lock()
 	defer em.mu.Unlock()
-	em.Shared = NewSharedMemory(em.Yaad, missionID, agentID)
+	em.Shared = NewSharedMemory(em.Harrier, missionID, agentID)
 }
 
 // ShareWithMission stores a memory visible to all agents in the mission.
@@ -307,14 +307,14 @@ func (em *EnhancedMemoryManager) Close() {
 	if em.Continuity != nil {
 		em.Continuity.Save()
 	}
-	em.Yaad.Close()
+	em.Harrier.Close()
 }
 
 // HealthCheck verifies the memory system is working correctly.
 func (em *EnhancedMemoryManager) HealthCheck() map[string]interface{} {
 	health := map[string]interface{}{
-		"yaad_ready": em.Yaad.Ready(),
-		"timestamp":  time.Now().Format(time.RFC3339),
+		"harrier_ready": em.Harrier.Ready(),
+		"timestamp":     time.Now().Format(time.RFC3339),
 	}
 
 	if em.Retrieval != nil {
@@ -344,7 +344,7 @@ func (em *EnhancedMemoryManager) DiagnosticReport(_ context.Context) string {
 	sb.WriteString("=== Memory System Diagnostic ===\n\n")
 
 	// Core status
-	sb.WriteString(fmt.Sprintf("Yaad Bridge: %v\n", em.Yaad.Ready()))
+	sb.WriteString(fmt.Sprintf("Harrier Bridge: %v\n", em.Harrier.Ready()))
 
 	// Retrieval metrics
 	if em.Retrieval != nil {

@@ -10,7 +10,7 @@ import (
 // When a session succeeds, accessed memories get a confidence boost.
 // When a session fails, accessed memories get flagged for review.
 type ConfidenceTracker struct {
-	bridge      *YaadBridge
+	bridge      *HarrierBridge
 	accessed    map[string]time.Time // nodeID → last access time
 	mu          sync.Mutex
 	boostAmount float64
@@ -18,7 +18,7 @@ type ConfidenceTracker struct {
 }
 
 // NewConfidenceTracker creates a tracker that adjusts confidence from outcomes.
-func NewConfidenceTracker(bridge *YaadBridge) *ConfidenceTracker {
+func NewConfidenceTracker(bridge *HarrierBridge) *ConfidenceTracker {
 	return &ConfidenceTracker{
 		bridge:      bridge,
 		accessed:    make(map[string]time.Time),

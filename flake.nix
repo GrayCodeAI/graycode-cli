@@ -7,14 +7,14 @@
     # GrayCodeAI sibling repos — the public Go proxy has stale v0.1.0 tags
     # (post-history-rewrite), so resolve them locally like the Dockerfile.
     eyrie   = { url = "github:GrayCodeAI/eyrie";   flake = false; };
-    inspect = { url = "github:GrayCodeAI/inspect"; flake = false; };
-    sight   = { url = "github:GrayCodeAI/sight";   flake = false; };
-    tok     = { url = "github:GrayCodeAI/tok";     flake = false; };
-    trace   = { url = "github:GrayCodeAI/trace";   flake = false; };
-    yaad    = { url = "github:GrayCodeAI/yaad";    flake = false; };
+    merlin = { url = "github:GrayCodeAI/merlin"; flake = false; };
+    kestrel   = { url = "github:GrayCodeAI/kestrel";   flake = false; };
+    shrike     = { url = "github:GrayCodeAI/shrike";     flake = false; };
+    swift   = { url = "github:GrayCodeAI/swift";   flake = false; };
+    harrier    = { url = "github:GrayCodeAI/harrier";    flake = false; };
   };
 
-  outputs = { self, nixpkgs, flake-utils, eyrie, inspect, sight, tok, trace, yaad }:
+  outputs = { self, nixpkgs, flake-utils, eyrie, merlin, kestrel, shrike, swift, harrier }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -22,11 +22,11 @@
 
         siblings = {
           "github.com/GrayCodeAI/eyrie"   = eyrie;
-          "github.com/GrayCodeAI/inspect" = inspect;
-          "github.com/GrayCodeAI/sight"   = sight;
-          "github.com/GrayCodeAI/tok"     = tok;
-          "github.com/GrayCodeAI/trace"   = trace;
-          "github.com/GrayCodeAI/yaad"    = yaad;
+          "github.com/GrayCodeAI/merlin" = merlin;
+          "github.com/GrayCodeAI/kestrel"   = kestrel;
+          "github.com/GrayCodeAI/shrike"     = shrike;
+          "github.com/GrayCodeAI/swift"   = swift;
+          "github.com/GrayCodeAI/harrier"    = harrier;
         };
 
         # GrayCode modules currently follow github.com/<org>/<name>, so the
@@ -34,21 +34,22 @@
         dirOf = mod: lib.last (lib.splitString "/" mod);
         goVer = lib.removePrefix "go" "${pkgs.go_1_26.version}";
 
-        # Copy sibling sources into external/, patch the go.mod go directive
+        # Copy sibling sources into a private Nix build staging directory,
+        # patch the go.mod go directive
         # to match the nixpkgs Go version, and add replace directives so the
         # build resolves siblings locally instead of hitting the stale proxy.
         setupReplace = ''
           sed -i 's/^go [0-9.]\+/go ${goVer}/' go.mod
           rm -f go.work go.work.sum
-          mkdir -p external
+          mkdir -p deps
           ${lib.concatStringsSep "\n" (lib.mapAttrsToList (mod: src:
-            "cp -r ${src} external/${dirOf mod}"
+            "cp -r ${src} deps/${dirOf mod}"
           ) siblings)}
           ${lib.concatStringsSep "\n" (lib.mapAttrsToList (mod: _:
-            "tmp_go_mod=$(mktemp) && awk '$0 != \"replace ${mod} => ./external/${dirOf mod}\"' go.mod > \"$tmp_go_mod\" && mv \"$tmp_go_mod\" go.mod"
+            "tmp_go_mod=$(mktemp) && awk '$0 != \"replace ${mod} => ./deps/${dirOf mod}\"' go.mod > \"$tmp_go_mod\" && mv \"$tmp_go_mod\" go.mod"
           ) siblings)}
           ${lib.concatStringsSep "\n" (lib.mapAttrsToList (mod: _:
-            "echo \"replace ${mod} => ./external/${dirOf mod}\" >> go.mod"
+            "echo \"replace ${mod} => ./deps/${dirOf mod}\" >> go.mod"
           ) siblings)}
         '';
 
@@ -59,8 +60,8 @@
           src = ./.;
 
           # The public Go proxy has stale v0.1.0 tags for GrayCodeAI sibling
-          # modules (post-history-rewrite). We resolve siblings locally via
-          # replace directives in go.mod (added in preBuild below). External
+          # modules (post-history-rewrite). We resolve sibling sources locally
+          # via replace directives in go.mod (added in preBuild below). Other
           # deps (charmbracelet, cobra, …) are fetched from the proxy. The
           # vendor FOD is skipped (null) because the proxy version mismatch
           # prevents `go mod vendor` from passing checksum verification.

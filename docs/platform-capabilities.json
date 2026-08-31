@@ -52,12 +52,12 @@
   },
   "ecosystem_compatibility": {
     "hawk+eyrie": "full",
-    "hawk+tok": "full",
-    "hawk+sight": "full",
-    "hawk+inspect": "full",
-    "hawk+yaad": "full",
-    "hawk+trace": "full",
-    "eyrie+tok": "token_compression",
-    "sight+inspect": "security_review"
+    "hawk+shrike": "full",
+    "hawk+kestrel": "full",
+    "hawk+merlin": "full",
+    "hawk+harrier": "full",
+    "hawk+swift": "full",
+    "eyrie+shrike": "token_compression",
+    "kestrel+merlin": "security_review"
   }
 }

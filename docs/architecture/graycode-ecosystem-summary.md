@@ -1,227 +1,90 @@
-# graycode-eco ecosystem Summary
+# GrayCode Ecosystem Summary
 
-## One-line view
+`graycode-eco` is only a local parent folder. `hawk` is the main CLI and the
+only primary Hawk product; the other repositories provide capabilities,
+contracts, integrations, tooling, or optional platform services.
 
-`hawk` is the product. Everything else in the graycode-eco ecosystem either powers Hawk,
-extends Hawk, or provides shared contracts for Hawk.
-
-## Final repo map
+## Repository layers
 
 ```text
-top: consumers and extensions
+API consumers/extensions
+  sparrow   robin   wren   starling
+       \      |      |       /
+                    hawk
+             (main CLI and daemon)
+                      |
+Support engines
+  eyrie   harrier   shrike   swift   kestrel   merlin
+                      |
+Foundations
+                eagle     falcon
 
-  hawk-sdk-go       hawk-sdk-python       hawk-community-skills
-         \                 |                        /
-          \                |                       /
-           +---------------+----------------------+
-                           |
-                           v
-                         hawk
-
-middle: support engines
-
-      +---------+---------+---------+---------+---------+---------+
-      |         |         |         |         |         |         |
-      v         v         v         v         v         v         v
-    eyrie     yaad      tok       trace     sight    inspect   public APIs
-
-bottom: shared foundations
-
-              hawk-core-contracts      hawk-mcpkit
+Outside the Go runtime graph
+  owl                  architecture tooling
+  graycode-platform    web, BFF, and Hawk Cloud Worker
 ```
+
+Product labels map to directories as follows: `harrier`/Harrier, `shrike`/Shrike,
+`swift`/Swift, `kestrel`/Kestrel, and `merlin`/Merlin.
 
 ## Dependency direction
 
-### Product layer
-
-- `hawk -> eyrie`
-- `hawk -> yaad`
-- `hawk -> tok`
-- `hawk -> trace`
-- `hawk -> sight`
-- `hawk -> inspect`
-- `hawk -> hawk-core-contracts`
-
-### Shared-contract layer
-
-- `engine -> hawk-core-contracts` only when a real cross-repo DTO is required
-- `engine -> hawk-mcpkit` for MCP server scaffolding (currently `sight`, `inspect`)
-
-### Extension layer
-
-- `hawk-sdk-go -> hawk`
-- `hawk-sdk-python -> hawk`
-- `hawk-community-skills -> hawk`
-
-### Forbidden edges
-
-- `engine -> engine`
-- `sdk -> engine`
-- `skills -> engine`
-- `engine -> hawk/internal/*`
-- `hawk runtime -> graycode-core` — at compile time; opt-in, fail-open HTTP
-  telemetry only, per `adr/ADR-0001-graycode-core-telemetry-edge.md`
-
-## Repo-by-repo roles
-
-| Repo | Layer | Role | Depends on | Must not depend on |
-|---|---|---|---|---|
-| `hawk` | Product | CLI, orchestration, policy, execution control, public APIs | support engines, `hawk-core-contracts` | sibling company/platform repos in runtime paths |
-| `eyrie` | Support engine | credentials, catalog, routing, model transport, normalized streaming | `hawk-core-contracts` only if needed | `yaad`, `tok`, `trace`, `sight`, `inspect` |
-| `yaad` | Support engine | memory, retrieval, persistence of long-lived context | `hawk-core-contracts` only if needed | `eyrie`, `tok`, `trace`, `sight`, `inspect` |
-| `tok` | Support engine | token budgeting, packing, truncation, context shaping | `hawk-core-contracts` only if needed | `eyrie`, `yaad`, `trace`, `sight`, `inspect` |
-| `trace` | Support engine | trace capture, replay, provenance, audit trail | `hawk-core-contracts` only if needed | `eyrie`, `yaad`, `tok`, `sight`, `inspect` |
-| `sight` | Support engine | review findings, code-quality/risk analysis | `hawk-core-contracts` | `eyrie`, `yaad`, `tok`, `trace`, `inspect` |
-| `inspect` | Support engine | verification findings, checks, pass/fail validation | `hawk-core-contracts` | `eyrie`, `yaad`, `tok`, `trace`, `sight` |
-| `hawk-core-contracts` | Foundation | shared DTOs and vocabulary | leaf module | product logic or engine implementation logic |
-| `hawk-mcpkit` | Foundation | shared MCP server scaffolding (wraps `mark3labs/mcp-go`) | upstream MCP library only | engines, hawk, graycode-core |
-| `hawk-sdk-go` | Consumer | Go integrations for Hawk public surfaces | Hawk public API/contracts | support engines directly |
-| `hawk-sdk-python` | Consumer | Python integrations for Hawk public surfaces | Hawk public API/contracts | support engines directly |
-| `hawk-community-skills` | Consumer | skills, recipes, extension packs | Hawk plugin/skill surfaces | support engines directly |
-
-## Runtime responsibility split
-
-### `hawk`
-
-Owns:
-
-- the CLI and command UX
-- session lifecycle
-- approval and permission policy
-- tool routing
-- user model preference and task-semantic model intent
-- engine coordination
-- user-visible product APIs
-
-### `eyrie`
-
-Owns:
-
-- the sole provider-facing host facade (`eyrie/engine`)
-- credential and provider-state lifecycle
-- catalog discovery and concrete model/deployment selection
-- provider adapters
-- request/response normalization
-- streaming transport
-- retry and timeout logic
-
-Hawk is Eyrie's composition root and user-facing presentation layer. Hawk
-production packages do not import Eyrie below `eyrie/engine`.
-
-### `yaad`
-
-Owns:
-
-- memory retrieval
-- memory persistence
-- summarization support for long-lived context
-
-### `tok`
-
-Owns:
-
-- token estimation
-- context packing
-- truncation strategy
-- prompt-ready context shaping
-
-### `trace`
-
-Owns:
-
-- event capture
-- replay artifacts
-- provenance/session evidence
-- audit-grade traceability
-
-### `sight`
-
-Owns:
-
-- review heuristics
-- issue/finding generation
-- normalized review output at the Hawk boundary
-
-### `inspect`
-
-Owns:
-
-- verification heuristics
-- test/assertion result normalization
-- final pass/fail output at the Hawk boundary
-
-## Why all support engines are at the same level
-
-They are all peers because Hawk is the orchestrator.
-
-That means:
-
-- `eyrie` is not "above" `sight` or `inspect`
-- `sight` is not "below" execution
-- `inspect` is not a child of review
-- `yaad` and `tok` are not shared utility packages for other engines
-
-Hawk calls whichever engine is needed for a given turn.
-
-## Future cloud position
-
-Future GrayCodeAI cloud or platform work should sit above products, not inside
-the support-engine mesh.
-
-Correct future shape:
-
 ```text
-GrayCodeAI company/platform
-├── web/docs
-├── accounts
-├── billing
-├── hosted control plane
-├── org/admin services
-└── product gateways
-    ├── Hawk
-    ├── Lark
-    └── Gitant
+hawk -> eyrie / harrier / shrike / swift / kestrel / merlin / eagle
+engines -> eagle                  # when shared contracts are needed
+harrier / kestrel / merlin -> falcon
+sparrow / robin / wren -> Hawk daemon API
+starling -> Hawk skill/plugin API
 ```
 
-For Hawk specifically:
+Forbidden edges are engine-to-engine, engine-to-Hawk-internal, SDK-to-engine,
+skills-to-engine, and any Go-module dependency on GrayCode Platform.
 
-- local CLI runtime should still work without GrayCode cloud
-- cloud can add hosted sessions, org policy, billing, identity, telemetry, or remote execution later
-- none of that should force `eyrie`, `yaad`, `tok`, `trace`, `sight`, or `inspect` to depend on platform repos
+## Runtime and hosted plane
 
-## What belongs in `graycode-core`
+```text
+Hawk main CLI
+  ├── Eyrie provider execution
+  ├── Harrier memory
+  ├── Shrike token/context management
+  ├── Swift swift/provenance
+  ├── Kestrel review
+  └── Merlin verification
 
-Good candidates:
+hawk ── optional authenticated HTTP ──> graycode-platform/apps/worker
+web ──> graycode-platform/apps/bff ── private Service Binding ──> worker
+worker ──> control-plane D1 + usage Queue + R2
+```
 
-- company website
-- account system
-- billing
-- control plane
-- docs portal
-- admin and org management
+The Worker is deployed as `graycode-cloud`, but that is an application name,
+not a repository. GrayCode Platform remains outside the Hawk Go module graph.
+Hawk's cloud usage path is fail-open; graph synchronization is explicit.
 
-Not a good candidate:
+## Repository roles
 
-- Hawk runtime-critical engine logic
-- direct support-engine dependencies
+| Repository | Role | Direct dependency rule |
+|---|---|---|
+| `hawk` | Main CLI, daemon, orchestration, policy | Integrates engines and contracts |
+| `eyrie` | Provider runtime | Uses Eagle contracts; exposes `engine` |
+| `harrier` | Harrier memory | Uses Eagle/Falcon where required |
+| `shrike` | Shrike context engine | Uses Eagle where required |
+| `swift` | Swift/provenance | Uses Eagle where required |
+| `kestrel` | Kestrel review | Uses Eagle and Falcon |
+| `merlin` | Merlin verification | Uses Eagle and Falcon |
+| `eagle` | Neutral shared contracts | Leaf module |
+| `falcon` | MCP kit | Upstream MCP library only |
+| `sparrow` | Go SDK | Hawk API contract |
+| `robin` | Python SDK | Hawk API contract |
+| `wren` | TypeScript SDK | Hawk API contract |
+| `starling` | Skills/extensions | Hawk skill surface |
+| `owl` | Architecture explorer | Generated read-only projection |
+| `graycode-platform` | Web/BFF/cloud | HTTP and Service Binding only |
 
-## Practical rule set
+## Current status
 
-When adding new work:
-
-1. If it is user-facing product behavior, put it in `hawk`.
-2. If it is specialized execution/memory/context/review/verify/trace capability, put it in the matching support engine.
-3. If multiple repos need the same DTO or vocabulary, move that contract into `hawk-core-contracts`.
-4. If it is an integration surface for external developers, put it in an SDK or skill repo.
-5. If it is company platform or cloud control-plane work, keep it outside Hawk runtime repos.
-
-## Final recommendation
-
-Keep this exact model:
-
-- one primary product repo: `hawk`
-- six peer support engines: `eyrie`, `yaad`, `tok`, `trace`, `sight`, `inspect`
-- one shared contract repo: `hawk-core-contracts`
-- three extension repos: `hawk-sdk-go`, `hawk-sdk-python`, `hawk-community-skills`
-
-This is the cleanest shape for OSS clarity, production hardening, and future scale.
+The repository-level target is implemented: independent Git repositories,
+canonical manifest, generated Owl inventory, sibling Go workspace, Eagle parity,
+and dependency boundary checks are all present. Remaining work is to publish
+the Eagle-compatible Eyrie revision, remove the transitional
+`hawk-core-contracts` dependency from the standalone graph, and decide whether
+Hawk's graph/projection packages need additional engine-owned facades.

@@ -120,7 +120,7 @@ func (s *Session) SetMaxBudgetUSD(amount float64) error {
 	if s.LifecycleSvc() != nil {
 		s.LifecycleSvc().Limits().SetMaxBudgetUSD(amount)
 	}
-	if tracker := s.currentTokUsageTracker(); tracker != nil {
+	if tracker := s.currentShrikeUsageTracker(); tracker != nil {
 		limits := tracker.GetLimits()
 		limits.CostUSD = amount
 		tracker.SetLimits(limits)
@@ -128,17 +128,17 @@ func (s *Session) SetMaxBudgetUSD(amount float64) error {
 	return nil
 }
 
-// ApplyTokUsageSettings optionally enables tok.UsageTracker token ceilings.
+// ApplyShrikeUsageSettings optionally enables shrike.UsageTracker token ceilings.
 // Values: 0 or -1 leave/disable the ceiling (provider owns rate limits);
 // >0 opts into a local cap.
-func (s *Session) ApplyTokUsageSettings(hourly, daily, session int) {
+func (s *Session) ApplyShrikeUsageSettings(hourly, daily, session int) {
 	if s == nil {
 		return
 	}
 	if hourly == 0 && daily == 0 && session == 0 {
 		return
 	}
-	tracker := s.ensureTokUsageTracker()
+	tracker := s.ensureShrikeUsageTracker()
 	limits := tracker.GetLimits()
 	if hourly == -1 {
 		limits.HourlyTokens = 0

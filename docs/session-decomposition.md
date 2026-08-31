@@ -39,7 +39,7 @@ The refactor branch now enforces these boundaries:
   Returned messages are deep copies, including nested tool arguments.
 - `LifecycleService` owns session-start/end bookkeeping, few-shot learning,
   adaptive feedback, model cascade access, and quality-loop handles.
-- `MemoryService` owns recall fallback, Yaad/enhanced-memory finalization, and
+- `MemoryService` owns recall fallback, Harrier/enhanced-memory finalization, and
   session summaries.
 - `PermissionService` owns the approval gate and ask-user callback;
   `Session.CheckApproval` is a thin orchestration facade with no state sync.
@@ -92,9 +92,9 @@ backends without an explicit migration and recovery decision.
 
 **File:** `hawk/internal/engine/chat_service.go` (~150 LOC)
 
-### 2. `MemoryService` — owns yaad bridge + recall/remember
+### 2. `MemoryService` — owns harrier bridge + recall/remember
 
-**Owns:** `Memory MemoryRecaller`, `YaadBridge *memory.YaadBridge`, `EnhancedMemory *memory.EnhancedMemoryManager`, `SkillDistiller *memory.SkillDistiller`, `Sleeptime *memory.SleeptimeAgent`, `Activity *memory.ActivityTracker`, `AgentsAccum *prompts.AgentsAccum`, `FewShotStore *FewShotStore`, `AdaptivePrompt *AdaptivePrompt`.
+**Owns:** `Memory MemoryRecaller`, `HarrierBridge *memory.HarrierBridge`, `EnhancedMemory *memory.EnhancedMemoryManager`, `SkillDistiller *memory.SkillDistiller`, `Sleeptime *memory.SleeptimeAgent`, `Activity *memory.ActivityTracker`, `AgentsAccum *prompts.AgentsAccum`, `FewShotStore *FewShotStore`, `AdaptivePrompt *AdaptivePrompt`.
 
 **Methods:**
 - `RecallContext(ctx, lastUserMsg string, budget int) string` — unifies backend recall behind one nil-safe call
@@ -150,7 +150,7 @@ backends without an explicit migration and recovery decision.
 
 **File:** `hawk/internal/engine/lifecycle_service.go` (~250 LOC)
 
-### 6. `PersistenceService` — owns checkpoint, session, yaad snapshot
+### 6. `PersistenceService` — owns checkpoint, session, harrier snapshot
 
 **Owns:** `persistID string`, `checkpointMgr *session.CheckpointManager`, `lastPromptTokens int`, `lastCompletionTokens int`, `ConvoDAG *storage.DAG`, `OnCompaction OnCompaction`, `PinnedMessages int`, `AutoCompactThresholdPct int`, `ContextWindowCached int`, `AutoCompactor *AutoCompactor`, `CompactSplit`, `CompactProviderNative`, `CompactStrategyEngine`, `Files *FileTracker`.
 
@@ -283,7 +283,7 @@ func TestToolExecutionRejectsWithoutPermission(t *testing.T) {
 }
 
 func TestMemoryRecallReturnsEmptyWhenNoBridge(t *testing.T) {
-    session := &Session{Memory: &MemoryService{}} // no YaadBridge
+    session := &Session{Memory: &MemoryService{}} // no HarrierBridge
     ctx, _ := session.Memory.RecallContext(ctx, "test", 100)
     assert.Equal(t, "", ctx)
 }

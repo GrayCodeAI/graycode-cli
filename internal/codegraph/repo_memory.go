@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// RepoMemory integrates codegraph with yaad (persistent memory) to learn
+// RepoMemory integrates codegraph with harrier (persistent memory) to learn
 // from past issues, fixes, and code patterns. This implements the research
 // finding that repository memory improves localization by 13%.
 type RepoMemory struct {

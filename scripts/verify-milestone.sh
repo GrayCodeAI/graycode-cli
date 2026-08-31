@@ -4,23 +4,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "== eyrie (sibling) =="
-EYRIE="../eyrie"
-if [[ -d "$EYRIE" ]]; then
-  (cd "$EYRIE" && go test ./... -count=1 -short)
-else
-  echo "skip: ../eyrie not found"
-fi
-
 echo "== sibling ecosystem modules =="
-for module in yaad tok sight inspect trace; do
+while IFS= read -r module; do
   dir="../$module"
   if [[ -d "$dir" ]]; then
     (cd "$dir" && go test ./... -count=1 -short)
   else
     echo "skip: $dir not found"
   fi
-done
+done < <("$ROOT/scripts/ecosystem-manifest.sh" list engines)
 
 echo "== hawk unit tests =="
 go test ./... -count=1 -short

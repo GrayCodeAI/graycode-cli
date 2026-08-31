@@ -17,7 +17,7 @@ const (
 	eyrieModule = "github.com/GrayCodeAI/eyrie"
 )
 
-var supportEngines = []string{"eyrie", "inspect", "sight", "tok", "trace", "yaad"}
+var supportEngines = []string{"eyrie", "harrier", "shrike", "swift", "kestrel", "merlin"}
 
 type packageImport struct {
 	file string
@@ -28,7 +28,7 @@ type packageImport struct {
 // TestPackageDependencyGraph checks production imports using the Go parser.
 // The shell guards remain useful for fast, cross-repository checks, while this
 // test gives us syntax-aware file/line diagnostics and does not depend on the
-// external repositories being buildable from the parent workspace.
+// sibling repositories being buildable from the parent workspace.
 func TestPackageDependencyGraph(t *testing.T) {
 	root := repoRoot(t)
 
@@ -125,8 +125,7 @@ func checkSupportRepositoryBoundaries(t *testing.T, root string) {
 func checkGoSDKBoundary(t *testing.T, root string) {
 	var violations []string
 	for _, sdkRoot := range []string{
-		filepath.Join(root, "external", "hawk-sdk-go"),
-		filepath.Join(root, "..", "hawk-sdk-go"),
+		filepath.Join(root, "..", "sparrow"),
 	} {
 		for _, imp := range productionImports(t, root, sdkRoot) {
 			for _, engine := range supportEngines {
@@ -142,7 +141,6 @@ func checkGoSDKBoundary(t *testing.T, root string) {
 
 func repositoryRoots(root, repo string) []string {
 	return []string{
-		filepath.Join(root, "external", repo),
 		filepath.Join(root, "..", repo),
 	}
 }
@@ -172,8 +170,8 @@ func productionImports(t *testing.T, root, dir string) []packageImport {
 		fset := token.NewFileSet()
 		file, parseErr := parser.ParseFile(fset, path, nil, 0)
 		if parseErr != nil {
-			// Skip files that fail to parse (e.g. syntax errors in external
-			// submodules, generated files with build tags, or encoding issues).
+			// Skip files that fail to parse (e.g. generated files with build tags
+			// or encoding issues).
 			// This test checks for boundary violations, not syntax correctness;
 			// a file that doesn't parse cannot contain import violations.
 			return nil

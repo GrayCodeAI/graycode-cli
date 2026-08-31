@@ -272,7 +272,7 @@ func TestExportMessagesFormat(t *testing.T) {
 func TestTokenEstimateRoughAccuracy(t *testing.T) {
 	cm := NewConversationManager(ConversationConfig{})
 
-	// estimateTokens uses the BPE-based tok tokenizer.
+	// estimateTokens uses the BPE-based shrike tokenizer.
 	content := "this is a test string that should produce some tokens"
 	cm.AddMessage("user", content)
 

@@ -44,7 +44,7 @@ func TestAllSetupGateways_RegistryOnly(t *testing.T) {
 			t.Fatalf("missing setup gateway %q in %v", id, gws)
 		}
 	}
-	// Newly-added gateways (groq, poolside) present in the local submodule
+	// Newly-added gateways (groq, poolside) present in the local Eyrie checkout
 	// but not yet in a published eyrie release — log if present, don't
 	// require them so the test passes with both GOWORK=on and GOWORK=off.
 	for _, extra := range []string{"groq", "poolside"} {

@@ -2,13 +2,13 @@
 # Source of truth: .shared-templates/.goreleaser.yml.tmpl
 #
 # Placeholders rendered per repo:
-#   hawk      — short repo name (e.g. hawk, yaad, trace)
-#   ./     — main package path (e.g. ./ or ./cmd/yaad)
+#   hawk      — short repo name (e.g. hawk, harrier, swift)
+#   ./     — main package path (e.g. ./ or ./cmd/harrier)
 #   AI coding agent — reads, writes, and runs code in your terminal  — short single-line description for brew/nfpms
 #   main   — Go package path holding Version vars
 #                      (e.g. main or github.com/GrayCodeAI/hawk/internal/version)
 #
-# Repos with PRO/special features (e.g. trace's macOS notarization, tok's
+# Repos with PRO/special features (e.g. swift's macOS notarization, shrike's
 # nfpms) extend this template with extra sections instead of replacing it.
 
 version: 2

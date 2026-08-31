@@ -11,22 +11,22 @@ import (
 	"testing"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
-	policycontracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
+	graphcontracts "github.com/GrayCodeAI/eagle/graph"
+	policycontracts "github.com/GrayCodeAI/eagle/policy"
 	"github.com/GrayCodeAI/hawk/internal/executiongraph"
 	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 	"github.com/GrayCodeAI/hawk/internal/session"
 )
 
-type stubTraceCorrelationResolver struct {
-	correlation traceCorrelation
+type stubSwiftCorrelationResolver struct {
+	correlation swiftCorrelation
 	err         error
 }
 
-func (s stubTraceCorrelationResolver) Resolve(
+func (s stubSwiftCorrelationResolver) Resolve(
 	context.Context,
 	string,
-) (traceCorrelation, error) {
+) (swiftCorrelation, error) {
 	return s.correlation, s.err
 }
 
@@ -97,15 +97,15 @@ func TestExecutionGraphRepositoryID(t *testing.T) {
 	}
 }
 
-func TestValidateTraceCheckpointID(t *testing.T) {
+func TestValidateSwiftCheckpointID(t *testing.T) {
 	t.Parallel()
 
-	if err := validateTraceCheckpointID("abc123def456"); err != nil {
+	if err := validateSwiftCheckpointID("abc123def456"); err != nil {
 		t.Fatalf("valid checkpoint rejected: %v", err)
 	}
 	for _, value := range []string{"", "ABC123DEF456", "not-hex-0000", "abc123"} {
-		if err := validateTraceCheckpointID(value); err == nil {
-			t.Fatalf("validateTraceCheckpointID(%q) error = nil", value)
+		if err := validateSwiftCheckpointID(value); err == nil {
+			t.Fatalf("validateSwiftCheckpointID(%q) error = nil", value)
 		}
 	}
 }
@@ -147,11 +147,11 @@ func TestExecutionGraphExportCommand(t *testing.T) {
 		t.Fatalf("graphjournal.AppendVerification() error = %v", err)
 	}
 	contextNode := graphcontracts.Node{
-		ID:        "yaad/memory/context-1",
+		ID:        "harrier/memory/context-1",
 		Kind:      graphcontracts.NodeKnowledge,
 		CreatedAt: saved.CreatedAt,
 		Provenance: graphcontracts.Provenance{
-			Producer: "yaad",
+			Producer: "harrier",
 		},
 		Attributes: map[string]string{
 			"data_classification": "metadata_only",
@@ -160,7 +160,7 @@ func TestExecutionGraphExportCommand(t *testing.T) {
 	}
 	if err := graphjournal.AppendContextGraph(
 		saved.ID,
-		"yaad",
+		"harrier",
 		"",
 		[]graphcontracts.Node{contextNode},
 		nil,
@@ -170,19 +170,19 @@ func TestExecutionGraphExportCommand(t *testing.T) {
 		t.Fatalf("graphjournal.AppendContextGraph() error = %v", err)
 	}
 	qualityNode := graphcontracts.Node{
-		ID:        "inspect/report/quality-1",
+		ID:        "merlin/report/quality-1",
 		Kind:      graphcontracts.NodeQuality,
 		CreatedAt: saved.CreatedAt,
 		Provenance: graphcontracts.Provenance{
-			Producer: "inspect",
+			Producer: "merlin",
 		},
 		Attributes: map[string]string{"entity": "report"},
 	}
 	if err := graphjournal.AppendQualityGraph(
 		saved.ID,
 		"",
-		"inspect",
-		"inspect",
+		"merlin",
+		"merlin",
 		[]graphcontracts.Node{qualityNode},
 		nil,
 		nil,
@@ -191,13 +191,13 @@ func TestExecutionGraphExportCommand(t *testing.T) {
 		t.Fatalf("graphjournal.AppendQualityGraph() error = %v", err)
 	}
 	runtimeNode := graphcontracts.Node{
-		ID: "tok/compression/runtime-1", Kind: graphcontracts.NodeOperations,
+		ID: "shrike/compression/runtime-1", Kind: graphcontracts.NodeOperations,
 		CreatedAt:  saved.CreatedAt,
-		Provenance: graphcontracts.Provenance{Producer: "tok"},
+		Provenance: graphcontracts.Provenance{Producer: "shrike"},
 		Attributes: map[string]string{"entity": "compression"},
 	}
 	if err := graphjournal.AppendRuntimeGraph(
-		saved.ID, "", "context-compaction", "tok",
+		saved.ID, "", "context-compaction", "shrike",
 		[]graphcontracts.Node{runtimeNode}, nil, nil,
 		saved.CreatedAt.Add(5*time.Second),
 	); err != nil {
@@ -211,7 +211,7 @@ func TestExecutionGraphExportCommand(t *testing.T) {
 	command.SetArgs([]string{
 		"export",
 		saved.ID,
-		"--trace-checkpoint",
+		"--swift-checkpoint",
 		"abc123def456",
 	})
 	if err := command.Execute(); err != nil {
@@ -246,18 +246,18 @@ func TestExecutionGraphExportCommand(t *testing.T) {
 	if !hasExportNodePrefix(export, "hawk/verification/") {
 		t.Fatal("graph export omitted automatic verification observation")
 	}
-	if !hasExportNodePrefix(export, "yaad/memory/") {
-		t.Fatal("graph export omitted retrieved Yaad context")
+	if !hasExportNodePrefix(export, "harrier/memory/") {
+		t.Fatal("graph export omitted retrieved Harrier context")
 	}
-	if !hasExportNodePrefix(export, "inspect/report/") {
-		t.Fatal("graph export omitted Inspect quality report")
+	if !hasExportNodePrefix(export, "merlin/report/") {
+		t.Fatal("graph export omitted Merlin quality report")
 	}
-	if !hasExportNodePrefix(export, "tok/compression/") {
-		t.Fatal("graph export omitted Tok compression operation")
+	if !hasExportNodePrefix(export, "shrike/compression/") {
+		t.Fatal("graph export omitted Shrike compression operation")
 	}
 }
 
-func TestBuildExecutionGraphExportComposesAuthoritativeTraceCorrelation(t *testing.T) {
+func TestBuildExecutionGraphExportComposesAuthoritativeSwiftCorrelation(t *testing.T) {
 	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 
 	now := time.Date(2026, time.July, 25, 6, 0, 0, 0, time.UTC)
@@ -270,25 +270,25 @@ func TestBuildExecutionGraphExportComposesAuthoritativeTraceCorrelation(t *testi
 	if err := session.Save(saved); err != nil {
 		t.Fatalf("session.Save() error = %v", err)
 	}
-	resolver := stubTraceCorrelationResolver{correlation: traceCorrelation{
-		SchemaVersion:            traceCorrelationSchemaVersion,
+	resolver := stubSwiftCorrelationResolver{correlation: swiftCorrelation{
+		SchemaVersion:            swiftCorrelationSchemaVersion,
 		HawkSessionID:            saved.ID,
 		CheckpointLookupComplete: true,
-		Matches: []traceCorrelationMatch{
+		Matches: []swiftCorrelationMatch{
 			{
-				TraceSessionID: "trace-beta",
+				SwiftSessionID: "swift-beta",
 				CheckpointIDs:  []string{"bbbbbbbbbbbb"},
 				StartedAt:      now.Add(-30 * time.Minute),
 			},
 			{
-				TraceSessionID: "trace-alpha",
+				SwiftSessionID: "swift-alpha",
 				CheckpointIDs:  []string{"aaaaaaaaaaaa", "abc123def456"},
 				StartedAt:      now.Add(-40 * time.Minute),
 			},
 		},
 	}}
 
-	export, err := buildExecutionGraphExportWithTrace(
+	export, err := buildExecutionGraphExportWithSwift(
 		[]string{saved.ID},
 		"",
 		[]string{"abc123def456"},
@@ -296,41 +296,41 @@ func TestBuildExecutionGraphExportComposesAuthoritativeTraceCorrelation(t *testi
 		resolver,
 	)
 	if err != nil {
-		t.Fatalf("buildExecutionGraphExportWithTrace() error = %v", err)
+		t.Fatalf("buildExecutionGraphExportWithSwift() error = %v", err)
 	}
 	for _, nodeID := range []string{
-		"trace/session/trace-alpha",
-		"trace/session/trace-beta",
-		"trace/checkpoint/aaaaaaaaaaaa",
-		"trace/checkpoint/abc123def456",
-		"trace/checkpoint/bbbbbbbbbbbb",
+		"swift/session/swift-alpha",
+		"swift/session/swift-beta",
+		"swift/checkpoint/aaaaaaaaaaaa",
+		"swift/checkpoint/abc123def456",
+		"swift/checkpoint/bbbbbbbbbbbb",
 	} {
 		if findExportNode(export, nodeID) == nil {
-			t.Fatalf("authoritative Trace node %q was not exported", nodeID)
+			t.Fatalf("authoritative Swift node %q was not exported", nodeID)
 		}
 	}
 	assertExportEdge(
 		t,
 		export,
 		"hawk/session/"+saved.ID,
-		"trace/session/trace-alpha",
+		"swift/session/swift-alpha",
 		graphcontracts.EdgeReferences,
 	)
 	assertExportEdge(
 		t,
 		export,
-		"trace/session/trace-alpha",
-		"trace/checkpoint/abc123def456",
+		"swift/session/swift-alpha",
+		"swift/checkpoint/abc123def456",
 		graphcontracts.EdgeProduced,
 	)
 }
 
-func TestBuildExecutionGraphExportTraceLookupFailureIsFailOpen(t *testing.T) {
+func TestBuildExecutionGraphExportSwiftLookupFailureIsFailOpen(t *testing.T) {
 	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 
 	now := time.Date(2026, time.July, 25, 6, 30, 0, 0, time.UTC)
 	saved := &session.Session{
-		ID:        "hawk-trace-fail-open",
+		ID:        "hawk-swift-fail-open",
 		CWD:       "/workspace/hawk",
 		CreatedAt: now.Add(-time.Hour),
 		UpdatedAt: now,
@@ -338,21 +338,21 @@ func TestBuildExecutionGraphExportTraceLookupFailureIsFailOpen(t *testing.T) {
 	if err := session.Save(saved); err != nil {
 		t.Fatalf("session.Save() error = %v", err)
 	}
-	export, err := buildExecutionGraphExportWithTrace(
+	export, err := buildExecutionGraphExportWithSwift(
 		[]string{saved.ID},
 		"",
 		[]string{"abc123def456"},
 		now,
-		stubTraceCorrelationResolver{err: errors.New("Trace is unavailable")},
+		stubSwiftCorrelationResolver{err: errors.New("Swift is unavailable")},
 	)
 	if err != nil {
-		t.Fatalf("Trace lookup should not block graph export: %v", err)
+		t.Fatalf("Swift lookup should not block graph export: %v", err)
 	}
-	if findExportNode(export, "trace/checkpoint/abc123def456") == nil {
+	if findExportNode(export, "swift/checkpoint/abc123def456") == nil {
 		t.Fatal("explicit checkpoint reference was lost when automatic lookup failed")
 	}
-	if findExportNode(export, "trace/session/trace-untrusted") != nil {
-		t.Fatal("failed lookup produced a speculative Trace session")
+	if findExportNode(export, "swift/session/swift-untrusted") != nil {
+		t.Fatal("failed lookup produced a speculative Swift session")
 	}
 }
 

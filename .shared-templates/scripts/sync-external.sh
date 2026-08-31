@@ -4,7 +4,7 @@
 # the graycode-eco workspace root). Unlike `make sync-submodules` (which mutates
 # the submodule checkout), this makes no changes — it only reports.
 #
-# Typical drift: you commit changes in ../tok, but forget `make
+# Typical drift: you commit changes in ../shrike, but forget `make
 # sync-submodules` + a commit in hawk to bump the external/tok pin. This
 # script catches that before it becomes a stale-dependency surprise in CI.
 set -euo pipefail

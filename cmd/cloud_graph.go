@@ -18,7 +18,7 @@ func newCloudGraphCmd() *cobra.Command {
 	}
 
 	var repositoryID string
-	var traceCheckpointIDs []string
+	var swiftCheckpointIDs []string
 	var missionDir string
 	syncCmd := &cobra.Command{
 		Use:   "sync [session-id]",
@@ -41,7 +41,7 @@ execution never depends on cloud synchronization.`,
 				export, err = buildExecutionGraphExport(
 					args,
 					repositoryID,
-					traceCheckpointIDs,
+					swiftCheckpointIDs,
 					time.Time{},
 				)
 			}
@@ -84,10 +84,10 @@ execution never depends on cloud synchronization.`,
 		"Repository scope override (defaults to the saved session directory name)",
 	)
 	syncCmd.Flags().StringArrayVar(
-		&traceCheckpointIDs,
-		"trace-checkpoint",
+		&swiftCheckpointIDs,
+		"swift-checkpoint",
 		nil,
-		"Link a Trace checkpoint ID; may be repeated",
+		"Link a Swift checkpoint ID; may be repeated",
 	)
 	syncCmd.Flags().StringVar(
 		&missionDir,

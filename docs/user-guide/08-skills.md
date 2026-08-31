@@ -133,7 +133,7 @@ hawk skills audit
 ## Installing Skills
 
 Hawk ships **no bundled skills** by default. Skills are installed on demand
-from the separate `GrayCodeAI/hawk-community-skills` repo (or any GitHub repo):
+from the separate `GrayCodeAI/starling` repo (or any GitHub repo):
 
 ```bash
 hawk skills search <query>                  # find a skill in the registry

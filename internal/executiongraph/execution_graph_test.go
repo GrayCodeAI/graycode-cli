@@ -6,16 +6,16 @@ import (
 	"testing"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
-	policycontracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
-	typescontracts "github.com/GrayCodeAI/hawk-core-contracts/types"
-	verifycontracts "github.com/GrayCodeAI/hawk-core-contracts/verify"
+	graphcontracts "github.com/GrayCodeAI/eagle/graph"
+	policycontracts "github.com/GrayCodeAI/eagle/policy"
+	typescontracts "github.com/GrayCodeAI/eagle/types"
+	verifycontracts "github.com/GrayCodeAI/eagle/verify"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/taskruntime"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
-func TestBuildProjectsSessionToolCallsAndTraceCheckpoint(t *testing.T) {
+func TestBuildProjectsSessionToolCallsAndSwiftCheckpoint(t *testing.T) {
 	t.Parallel()
 
 	generatedAt := time.Date(2026, time.July, 25, 1, 0, 0, 0, time.UTC)
@@ -44,7 +44,7 @@ func TestBuildProjectsSessionToolCallsAndTraceCheckpoint(t *testing.T) {
 		GeneratedAt:     generatedAt,
 		Scope:           graphcontracts.Scope{RepositoryID: "hawk"},
 		ProducerVersion: "test",
-		TraceCheckpoints: []TraceCheckpointRef{{
+		SwiftCheckpoints: []SwiftCheckpointRef{{
 			CheckpointID: "abc123def456",
 		}},
 	})
@@ -71,8 +71,8 @@ func TestBuildProjectsSessionToolCallsAndTraceCheckpoint(t *testing.T) {
 	if got := toolNode.Attributes["status"]; got != "completed" {
 		t.Fatalf("tool status = %q, want completed", got)
 	}
-	if findNode(export.Nodes, "trace/checkpoint/abc123def456") == nil {
-		t.Fatal("Trace checkpoint reference node was not exported")
+	if findNode(export.Nodes, "swift/checkpoint/abc123def456") == nil {
+		t.Fatal("Swift checkpoint reference node was not exported")
 	}
 
 	encoded, err := json.Marshal(export)
@@ -86,7 +86,7 @@ func TestBuildProjectsSessionToolCallsAndTraceCheckpoint(t *testing.T) {
 	}
 }
 
-func TestBuildProjectsAuthoritativeTraceSessionAndCheckpointLineage(t *testing.T) {
+func TestBuildProjectsAuthoritativeSwiftSessionAndCheckpointLineage(t *testing.T) {
 	t.Parallel()
 
 	generatedAt := time.Date(2026, time.July, 25, 1, 30, 0, 0, time.UTC)
@@ -96,13 +96,13 @@ func TestBuildProjectsAuthoritativeTraceSessionAndCheckpointLineage(t *testing.T
 	}
 	export, err := Build(Input{
 		Session: saved,
-		TraceSessions: []TraceSessionRef{{
-			SessionID: "trace-session",
+		SwiftSessions: []SwiftSessionRef{{
+			SessionID: "swift-session",
 			CreatedAt: generatedAt.Add(-50 * time.Minute),
 		}},
-		TraceCheckpoints: []TraceCheckpointRef{{
+		SwiftCheckpoints: []SwiftCheckpointRef{{
 			CheckpointID:   "abc123def456",
-			TraceSessionID: "trace-session",
+			SwiftSessionID: "swift-session",
 			CreatedAt:      generatedAt.Add(-time.Minute),
 		}},
 		GeneratedAt: generatedAt,
@@ -111,31 +111,31 @@ func TestBuildProjectsAuthoritativeTraceSessionAndCheckpointLineage(t *testing.T
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}
-	if findNode(export.Nodes, "trace/session/trace-session") == nil {
-		t.Fatal("authoritative Trace session node was not exported")
+	if findNode(export.Nodes, "swift/session/swift-session") == nil {
+		t.Fatal("authoritative Swift session node was not exported")
 	}
-	if findNode(export.Nodes, "trace/checkpoint/abc123def456") == nil {
-		t.Fatal("authoritative Trace checkpoint node was not exported")
+	if findNode(export.Nodes, "swift/checkpoint/abc123def456") == nil {
+		t.Fatal("authoritative Swift checkpoint node was not exported")
 	}
 	assertEdge(
 		t,
 		export.Edges,
 		"hawk/session/hawk-session",
-		"trace/session/trace-session",
+		"swift/session/swift-session",
 		graphcontracts.EdgeReferences,
 	)
 	assertEdge(
 		t,
 		export.Edges,
 		"hawk/session/hawk-session",
-		"trace/checkpoint/abc123def456",
+		"swift/checkpoint/abc123def456",
 		graphcontracts.EdgeReferences,
 	)
 	assertEdge(
 		t,
 		export.Edges,
-		"trace/session/trace-session",
-		"trace/checkpoint/abc123def456",
+		"swift/session/swift-session",
+		"swift/checkpoint/abc123def456",
 		graphcontracts.EdgeProduced,
 	)
 }
@@ -299,11 +299,11 @@ func TestBuildMergesRetrievedKnowledgeContext(t *testing.T) {
 		CreatedAt: generatedAt.Add(-time.Hour),
 	}
 	knowledge := graphcontracts.Node{
-		ID:        "yaad/memory/memory-1",
+		ID:        "harrier/memory/memory-1",
 		Kind:      graphcontracts.NodeKnowledge,
 		CreatedAt: generatedAt.Add(-time.Minute),
 		Provenance: graphcontracts.Provenance{
-			Producer: "yaad",
+			Producer: "harrier",
 		},
 		Attributes: map[string]string{
 			"data_classification": "metadata_only",
@@ -338,31 +338,31 @@ func TestBuildMergesQualityGraph(t *testing.T) {
 		CreatedAt: generatedAt.Add(-time.Hour),
 	}
 	report := graphcontracts.Node{
-		ID:        "inspect/report/report-1",
+		ID:        "merlin/report/report-1",
 		Kind:      graphcontracts.NodeQuality,
 		CreatedAt: generatedAt.Add(-time.Minute),
 		Provenance: graphcontracts.Provenance{
-			Producer: "inspect",
+			Producer: "merlin",
 		},
 		Attributes: map[string]string{"entity": "report"},
 	}
 	finding := graphcontracts.Node{
-		ID:        "inspect/finding/finding-1",
+		ID:        "merlin/finding/finding-1",
 		Kind:      graphcontracts.NodeQuality,
 		CreatedAt: generatedAt.Add(-time.Minute),
 		Provenance: graphcontracts.Provenance{
-			Producer: "inspect",
+			Producer: "merlin",
 		},
 		Attributes: map[string]string{"entity": "finding"},
 	}
 	contains := graphcontracts.Edge{
-		ID:        "inspect/contains/edge-1",
+		ID:        "merlin/contains/edge-1",
 		Kind:      graphcontracts.EdgeContains,
 		From:      graphcontracts.Ref{Kind: report.Kind, ID: report.ID},
 		To:        graphcontracts.Ref{Kind: finding.Kind, ID: finding.ID},
 		CreatedAt: generatedAt.Add(-time.Minute),
 		Provenance: graphcontracts.Provenance{
-			Producer: "inspect",
+			Producer: "merlin",
 		},
 	}
 	export, err := Build(Input{
@@ -392,25 +392,25 @@ func TestBuildMergesMixedRuntimeGraph(t *testing.T) {
 	saved := &session.Session{ID: "runtime-session", CreatedAt: at.Add(-time.Hour)}
 	nodes := []graphcontracts.Node{
 		{
-			ID: "tok/compression/one", Kind: graphcontracts.NodeOperations, CreatedAt: at,
-			Provenance: graphcontracts.Provenance{Producer: "tok"},
+			ID: "shrike/compression/one", Kind: graphcontracts.NodeOperations, CreatedAt: at,
+			Provenance: graphcontracts.Provenance{Producer: "shrike"},
 			Attributes: map[string]string{"entity": "compression"},
 		},
 		{
-			ID: "tok/budget/one", Kind: graphcontracts.NodePolicy, CreatedAt: at,
-			Provenance: graphcontracts.Provenance{Producer: "tok"},
+			ID: "shrike/budget/one", Kind: graphcontracts.NodePolicy, CreatedAt: at,
+			Provenance: graphcontracts.Provenance{Producer: "shrike"},
 			Attributes: map[string]string{"entity": "budget_decision"},
 		},
 		{
-			ID: "tok/redaction/one", Kind: graphcontracts.NodeQuality, CreatedAt: at,
-			Provenance: graphcontracts.Provenance{Producer: "tok"},
+			ID: "shrike/redaction/one", Kind: graphcontracts.NodeQuality, CreatedAt: at,
+			Provenance: graphcontracts.Provenance{Producer: "shrike"},
 			Attributes: map[string]string{"entity": "redaction"},
 		},
 	}
 	export, err := Build(Input{
 		Session: saved,
 		RuntimeObservations: []RuntimeObservation{{
-			ID: "tok-1", Subject: graphcontracts.Ref{Kind: graphcontracts.NodeExecution, ID: "hawk/session/" + saved.ID},
+			ID: "shrike-1", Subject: graphcontracts.Ref{Kind: graphcontracts.NodeExecution, ID: "hawk/session/" + saved.ID},
 			Nodes: nodes, OccurredAt: at,
 		}},
 		GeneratedAt: at, Scope: graphcontracts.Scope{RepositoryID: "hawk"},

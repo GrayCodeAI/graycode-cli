@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
-	policycontracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
+	graphcontracts "github.com/GrayCodeAI/eagle/graph"
+	policycontracts "github.com/GrayCodeAI/eagle/policy"
 )
 
 func TestJournalRoundTripDoesNotPersistSensitivePayloads(t *testing.T) {
@@ -66,11 +66,11 @@ func TestAppendContextGraphRoundTrip(t *testing.T) {
 	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	occurredAt := time.Date(2026, time.July, 25, 4, 30, 0, 0, time.UTC)
 	node := graphcontracts.Node{
-		ID:        "yaad/memory/memory-1",
+		ID:        "harrier/memory/memory-1",
 		Kind:      graphcontracts.NodeKnowledge,
 		CreatedAt: occurredAt.Add(-time.Hour),
 		Provenance: graphcontracts.Provenance{
-			Producer: "yaad",
+			Producer: "harrier",
 		},
 		Attributes: map[string]string{
 			"data_classification": "metadata_only",
@@ -79,7 +79,7 @@ func TestAppendContextGraphRoundTrip(t *testing.T) {
 	}
 	if err := AppendContextGraph(
 		"session-1",
-		"yaad",
+		"harrier",
 		digest("private query"),
 		[]graphcontracts.Node{node},
 		nil,
@@ -110,11 +110,11 @@ func TestAppendQualityGraphRoundTrip(t *testing.T) {
 	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	occurredAt := time.Date(2026, time.July, 25, 5, 0, 0, 0, time.UTC)
 	node := graphcontracts.Node{
-		ID:        "inspect/report/report-1",
+		ID:        "merlin/report/report-1",
 		Kind:      graphcontracts.NodeQuality,
 		CreatedAt: occurredAt,
 		Provenance: graphcontracts.Provenance{
-			Producer: "inspect",
+			Producer: "merlin",
 		},
 		Attributes: map[string]string{
 			"entity":        "report",
@@ -124,8 +124,8 @@ func TestAppendQualityGraphRoundTrip(t *testing.T) {
 	if err := AppendQualityGraph(
 		"session-1",
 		"tool-1",
-		"inspect",
-		"inspect",
+		"merlin",
+		"merlin",
 		[]graphcontracts.Node{node},
 		nil,
 		nil,

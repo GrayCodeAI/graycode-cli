@@ -5,7 +5,7 @@ Status: Implemented in Hawk's native Go architecture
 Source: `https://github.com/vercel-labs/fx`
 
 This plan records the useful ideas identified while comparing Vercel Labs'
-`fx` Unix-like coding agent with Hawk and its ecosystem submodules. It is an
+`fx` Unix-like coding agent with Hawk and its independent ecosystem repositories. It is an
 adoption plan, not a code-porting plan. Hawk should reimplement compatible
 behavior in Go and preserve its existing provider, memory, review, audit,
 session, and security boundaries.
@@ -40,12 +40,12 @@ features:
 | `ask`/automatic approval behavior | Autonomy profiles, governance, grants, hooks | Add compatibility aliases only |
 | Child agents | `internal/multiagent`, continuable children, cold resume | Add observability and configuration polish |
 | Sessions | `internal/session`, WAL, JSONL, recovery, fork, replay | Add unified status integration |
-| MCP | `internal/mcp`, `external/hawk-mcpkit` | Keep architecture; audit trust defaults |
+| MCP | `internal/mcp`, sibling `falcon` | Keep architecture; audit trust defaults |
 | Skills | Community registry, validation, provenance, scopes | Keep architecture; improve status output |
 | ACP | `internal/acp` | Extend status/config parity where useful |
-| Trace and replay | `external/trace`, `internal/session/replay` | Add terminal-level tape capability |
-| Persistent memory | `external/yaad` | Do not replace with flat JSON state |
-| Provider runtime | `external/eyrie` | Do not add provider logic to Hawk |
+| Swift and replay | sibling `swift` (Swift), `internal/session/replay` | Add terminal-level tape capability |
+| Persistent memory | sibling `harrier` (Harrier) | Do not replace with flat JSON state |
+| Provider runtime | sibling `eyrie` | Do not add provider logic to Hawk |
 
 ## Priority Model
 
@@ -65,9 +65,9 @@ when their original command, path, or workspace has changed.
 
 - Primary implementation: Hawk `internal/permissions` and
   `internal/engine/safety`.
-- Shared contract changes, if needed: `external/hawk-core-contracts/policy`.
+- Shared contract changes, if needed: sibling `eagle/policy`.
 - User-facing commands: `cmd` and the existing slash-command surface.
-- No changes to `external/eyrie` or `external/hawk-mcpkit`.
+- No changes to sibling `eyrie` or `falcon`.
 
 ### Required behavior
 
@@ -155,7 +155,7 @@ the daemon, ACP clients, and the interactive UI.
 
 ### Ownership
 
-- Snapshot contract: Hawk root or `hawk-core-contracts` if consumed cross-repo.
+- Snapshot contract: Hawk root or `eagle` if consumed cross-repo.
 - Assembly: `internal/engine`, `internal/session`, `internal/mcp`,
   `internal/permissions`, `internal/multiagent`.
 - Rendering: CLI/TUI and daemon adapters.
@@ -213,13 +213,13 @@ metadata kept outside the product snapshot.
 ### Goal
 
 Add `fx`-style terminal byte and resize recording to complement Hawk's existing
-agent-session trace and replay features.
+agent-session swift and replay features.
 
 ### Ownership
 
-- Preferred home: `external/trace` if the capability is intended for reuse by
+- Preferred home: sibling `swift` (Swift) if the capability is intended for reuse by
   other agents.
-- Hawk integration: `internal/trace` or the TUI composition layer.
+- Hawk integration: `internal/swift` or the TUI composition layer.
 - Do not put terminal tape parsing in the agent engine.
 
 ### Required behavior
@@ -237,13 +237,13 @@ agent-session trace and replay features.
 ### Proposed interfaces
 
 ```text
-hawk trace record --output <path>
-hawk trace replay <path>
-hawk trace replay <path> --frames
-hawk trace replay <path> --json
+hawk swift record --output <path>
+hawk swift replay <path>
+hawk swift replay <path> --frames
+hawk swift replay <path> --json
 ```
 
-Existing Trace session capture remains the source of prompts, tool calls, git
+Existing Swift session capture remains the source of prompts, tool calls, git
 events, and cost data. Terminal tape is a separate artifact linked by session
 ID.
 
@@ -335,7 +335,7 @@ without changing Hawk's existing MCP and skills architecture.
 
 ### Ownership
 
-- MCP runtime: `internal/mcp` and `external/hawk-mcpkit`.
+- MCP runtime: `internal/mcp` and sibling `falcon`.
 - Skill registry/validation: `internal/plugin` and the community registry.
 - Trust decisions: `internal/trust`.
 
@@ -395,7 +395,7 @@ Every implementation phase must preserve these invariants:
 - CLI text and JSON output from the same state.
 - Daemon and ACP status/session/permission parity.
 - Parent-child policy inheritance and cancellation.
-- Restart during permission persistence, session save, and trace recording.
+- Restart during permission persistence, session save, and swift recording.
 - Project fixture attempting to inject credentials, grants, hooks, or MCP
   authority.
 
@@ -403,7 +403,7 @@ Every implementation phase must preserve these invariants:
 
 - Path traversal, symlink replacement, malformed configuration, and permission
   file tampering.
-- Secret redaction in status, trace, replay, logs, and errors.
+- Secret redaction in status, swift, replay, logs, and errors.
 - Governance denial under `yolo`/high-autonomy modes.
 - Destructive-command denial under every compatibility mode.
 - Untrusted MCP server and skill installation behavior.
@@ -420,9 +420,9 @@ make security
 hawk verify
 ```
 
-For submodule changes, run the submodule's own tests and boundary checks before
+For sibling-repository changes, run that repository's own tests and boundary checks before
 updating the Hawk pointer. Do not modify provider protocols or adapters in Hawk;
-those belong in `external/eyrie`.
+those belong in the Eyrie repository.
 
 ## Delivery Sequence
 
@@ -454,7 +454,7 @@ those belong in `external/eyrie`.
 
 ### Milestone 4: Terminal tape
 
-- Design and review the versioned trace artifact format in `external/trace`.
+- Design and review the versioned swift artifact format in sibling `swift` (Swift).
 - Implement recording, replay, redaction, and deterministic golden tests.
 - Integrate recording controls into Hawk without coupling tape parsing to the
   agent loop.
@@ -469,10 +469,10 @@ those belong in `external/eyrie`.
 ## Deliberately Rejected
 
 - Copying Zig implementation code from `vercel-labs/fx`.
-- Replacing Hawk's Go runtime or ecosystem submodules.
+- Replacing Hawk's Go runtime or independent ecosystem repositories.
 - Adding a second permission evaluator.
-- Replacing Yaad with flat JSON memory.
-- Replacing Trace session capture with terminal tapes.
+- Replacing Harrier with flat JSON memory.
+- Replacing Swift session capture with terminal tapes.
 - Removing Hawk's code intelligence, review, audit, token, or provider features
   to target `fx`'s binary size.
 - Automatically executing repository-local MCP servers or hooks.

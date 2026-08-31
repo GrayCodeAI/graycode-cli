@@ -130,8 +130,8 @@ func TestRenderDetailed(t *testing.T) {
 	if !strings.Contains(result, "System Prompt") {
 		t.Error("should contain 'System Prompt'")
 	}
-	if !strings.Contains(result, "Memory (yaad)") {
-		t.Error("should contain 'Memory (yaad)'")
+	if !strings.Contains(result, "Memory (harrier)") {
+		t.Error("should contain 'Memory (harrier)'")
 	}
 	if !strings.Contains(result, "Conversation") {
 		t.Error("should contain 'Conversation'")
@@ -492,7 +492,7 @@ func TestSectionDisplayName(t *testing.T) {
 		expected string
 	}{
 		{"system_prompt", "System Prompt"},
-		{"memory", "Memory (yaad)"},
+		{"memory", "Memory (harrier)"},
 		{"conversation", "Conversation"},
 		{"tool_results", "Tool Results"},
 		{"reserved", "Reserved (output)"},

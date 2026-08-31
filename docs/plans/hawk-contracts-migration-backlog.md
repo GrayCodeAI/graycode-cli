@@ -1,7 +1,7 @@
 # Plan: Hawk Contracts Migration Backlog
 
 > Status: locally complete
-> Scope: graycode-eco ecosystem architecture cleanup after introducing `hawk-core-contracts`
+> Scope: graycode-eco ecosystem architecture cleanup after introducing `eagle`
 > Goal: keep `hawk` as the product while moving stable cross-repo contracts out of Hawk internals
 
 External follow-up still outside the scope of this local workspace audit:
@@ -14,26 +14,26 @@ External follow-up still outside the scope of this local workspace audit:
 These items are already completed in the current workspace.
 
 ### Contracts repo scaffold
-- created `hawk-core-contracts`
+- created `eagle`
 - added `go.mod`
 - added package docs
 
 ### Shared type migration
-- added `hawk-core-contracts/types`
+- added `eagle/types`
 - moved severity and finding definitions into contracts
-- migrated `sight` and `inspect` to import contracts
+- migrated `kestrel` and `merlin` to import contracts
 - switched Hawk `internal/types/severity.go` to re-export from contracts
 - removed `hawk/shared/types` after local ecosystem migration
-- removed the duplicate severity/finding definitions in `tok/types` (tok was the
+- removed the duplicate severity/finding definitions in `shrike/types` (shrike was the
   original shared-types host)
-- removed the `tok/types` compatibility shim after verifying no in-workspace
+- removed the `shrike/types` compatibility shim after verifying no in-workspace
   importers remained
 
 ### Tool contract migration
-- added `hawk-core-contracts/tools`
+- added `eagle/tools`
 - switched Hawk session persistence to provider-neutral tool contracts
 - added runtime/session conversion helpers
-- added `hawk-core-contracts/tools/tool_test.go`
+- added `eagle/tools/tool_test.go`
 - centralized message slice conversion in `hawk/internal/session`
 - removed direct lower-level provider message reconstruction from Hawk
   cmd/session restore paths
@@ -42,16 +42,16 @@ These items are already completed in the current workspace.
   through `eyrie/engine`
 
 ### Event contract migration
-- added `hawk-core-contracts/events`
+- added `eagle/events`
 - switched normalized audit `ToolEvent` to shared contract
-- switched Langfuse trace event model to shared contract
-- added `hawk-core-contracts/events/events_test.go`
+- switched Langfuse swift event model to shared contract
+- added `eagle/events/events_test.go`
 
 ### Policy contract migration
-- added `hawk-core-contracts/policy`
+- added `eagle/policy`
 - switched permission verdict and guardian decision to shared contracts
 - switched engine permission request to embed the shared request contract
-- added `hawk-core-contracts/policy/policy_test.go`
+- added `eagle/policy/policy_test.go`
 
 ### Governance
 - added `check-shared-types-imports.sh`
@@ -61,19 +61,19 @@ These items are already completed in the current workspace.
 - wired the Eyrie engine-boundary guards into `Makefile` and CI
 - added a legacy import guard so the removed `shared/types` path cannot return
 - extended the ecosystem boundary guard to scan sibling engine repos when present locally
-- updated docs across Hawk, sight, inspect, and external workspace copies
-- added standalone boundary guards in `sight` and `inspect`
-- added standalone boundary guards in `tok`, `eyrie`, `yaad`, and `trace`
+- updated docs across Hawk, kestrel, merlin, and external workspace copies
+- added standalone boundary guards in `kestrel` and `merlin`
+- added standalone boundary guards in `shrike`, `eyrie`, `harrier`, and `swift`
 - updated support repo READMEs with ecosystem boundary rules
 
 ### Review and verification contract migration
-- added `hawk-core-contracts/review`
-- added `hawk-core-contracts/verify`
+- added `eagle/review`
+- added `eagle/verify`
 - added shared review/verification contract tests
-- added sight -> review contract adapters
-- added inspect -> verify contract adapters
+- added kestrel -> review contract adapters
+- added merlin -> verify contract adapters
 - switched Hawk review persistence to neutral review contracts
-- switched Hawk review/inspect bridge paths to return neutral review/verify contracts
+- switched Hawk review/merlin bridge paths to return neutral review/verify contracts
 
 ## Remaining external follow-up
 
@@ -120,7 +120,7 @@ These are useful, but should be done only if they solve real cross-repo pain.
 
 ### 3. Add session contracts
 Potential package:
-- `hawk-core-contracts/sessions`
+- `eagle/sessions`
 
 Candidates:
 - `SessionID`
@@ -131,8 +131,8 @@ Do this only if another repo truly needs them.
 
 ### 4. Decide whether more review/verification metadata should move into contracts
 Current state:
-- normalized review result contracts now live in `hawk-core-contracts/review`
-- normalized verification report contracts now live in `hawk-core-contracts/verify`
+- normalized review result contracts now live in `eagle/review`
+- normalized verification report contracts now live in `eagle/verify`
 - Hawk consumes neutral review/verification contracts at persistence and bridge boundaries
 
 Possible later additions:
@@ -140,7 +140,7 @@ Possible later additions:
 - SAST fusion metadata if it needs to cross repo boundaries
 - richer verification provenance fields beyond the current shared report
 
-### 5. Add trace/timeline event families beyond the current normalized contracts
+### 5. Add swift/timeline event families beyond the current normalized contracts
 Current `events` package is intentionally minimal.
 
 Possible later additions:
@@ -191,7 +191,7 @@ Do not do these without a separate decision:
 
 The migration is in a good long-term state when:
 
-- `hawk-core-contracts` is the only source of truth for shared contracts
+- `eagle` is the only source of truth for shared contracts
 - support repos do not import `hawk/internal/*`
 - support repos do not import `hawk/shared/types`
 - removed compatibility shims do not return

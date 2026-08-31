@@ -21,7 +21,7 @@ func helpCategory(cmdName string) string {
 		return "Agent"
 	case "/memory", "/context", "/ctx", "/search", "/history", "/session", "/sessions", "/export", "/share", "/fork", "/branches", "/branch":
 		return "Memory"
-	case "/tools", "/mcp", "/plugin", "/plugins", "/skills", "/files", "/image", "/render", "/yaad", "/ecosystem", "/path":
+	case "/tools", "/mcp", "/plugin", "/plugins", "/skills", "/files", "/image", "/render", "/harrier", "/ecosystem", "/path":
 		return "Tools"
 	case "/doctor", "/cost", "/usage", "/metrics", "/stats", "/integrity", "/stale", "/tokens", "/provider-status":
 		return "Diagnostics"

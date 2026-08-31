@@ -10,7 +10,7 @@ import (
 )
 
 // BuildChatProvider adapts Hawk's engine-backed session client to the smaller
-// provider contract used by host integrations such as Sight. Model resolution,
+// provider contract used by host integrations such as Kestrel. Model resolution,
 // credentials, routing, and transport remain owned by Eyrie's engine facade.
 func BuildChatProvider(ctx context.Context, selection gateway.Selection, legacyProvider string) (types.ChatProvider, string, error) {
 	client, provider, _, err := BuildChatClient(ctx, selection, legacyProvider)

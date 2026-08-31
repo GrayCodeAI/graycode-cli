@@ -203,17 +203,17 @@ fi
 `
 }
 
-// GeneratePostCommit returns a shell script that notifies the hawk trace system
+// GeneratePostCommit returns a shell script that notifies the hawk swift system
 // for session capture after a commit.
 func (g *GitHookInstaller) GeneratePostCommit() string {
 	return `#!/bin/sh
 # hawk-managed: post-commit hook
-# Notifies hawk trace for session capture.
+# Notifies hawk swift for session capture.
 
 if command -v hawk >/dev/null 2>&1; then
     COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null)
     COMMIT_MSG=$(git log -1 --format='%s' 2>/dev/null)
-    hawk trace --event post-commit --hash "$COMMIT_HASH" --message "$COMMIT_MSG" 2>/dev/null &
+    hawk swift --event post-commit --hash "$COMMIT_HASH" --message "$COMMIT_MSG" 2>/dev/null &
 fi
 `
 }

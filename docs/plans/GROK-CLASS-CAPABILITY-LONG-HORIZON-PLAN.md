@@ -5,7 +5,7 @@
 **Horizon:** ~12–18 months (phased; can compress with parallel teams)  
 **Language:** Go only (no Rust ports; reimplement contracts and behavior)  
 **Primary product:** `hawk`  
-**Supporting repos:** `hawk-core-contracts`, `eyrie`, `yaad`, `tok`, `trace`, `sight`, `inspect`, `hawk-mcpkit`, `hawk-community-skills`, `hawk-cloud`, `hawk-sdk-go`, `hawk-sdk-python`, `graycode-core` (UI only)
+**Supporting repositories:** `eagle`, `eyrie`, `harrier` (Harrier), `shrike` (Shrike), `swift` (Swift), `kestrel` (Kestrel), `merlin` (Merlin), `falcon`, `starling`, `sparrow`, `robin`, `wren`, `owl`, and `graycode-platform` (web/BFF/Hawk Cloud; outside the Hawk Go runtime graph)
 
 ---
 
@@ -13,19 +13,19 @@
 
 ### Goal
 
-Bring Hawk to **Grok-class agent control-plane quality** (typed subagents, sandbox profiles, folder trust, hooks, plugins/marketplace, ACP depth, monitor/scheduler, enterprise managed policy) **without** abandoning Hawk’s multi-repo Go platform advantages (eyrie multi-provider, yaad graph memory, tok compression, mission mode, contracts, cloud ledger).
+Bring Hawk to **Grok-class agent control-plane quality** (typed subagents, sandbox profiles, folder trust, hooks, plugins/marketplace, ACP depth, monitor/scheduler, enterprise managed policy) **without** abandoning Hawk’s multi-repo Go platform advantages (eyrie multi-provider, harrier graph memory, shrike compression, mission mode, contracts, cloud ledger).
 
 ### Non-goals
 
 - Rewrite Hawk in Rust or monorepo-collapse engines into hawk.
 - Vendor lock-in to a single LLM host auth model.
-- Replace eyrie/yaad/tok/trace with Grok-shaped internal crates.
+- Replace eyrie/harrier/shrike/swift with Grok-shaped internal crates.
 - Default opt-in product telemetry that violates privacy-first posture.
 
 ### Strategy
 
 1. **Close wiring gaps first** — Hawk already has many *types* and *partial systems* that are not exposed on the Agent tool or unified.
-2. **Stabilize contracts** in `hawk-core-contracts` before multi-repo consumers.
+2. **Stabilize contracts** in `eagle` before multi-repo consumers.
 3. **Ship vertical slices** (end-to-end user value) every quarter.
 4. **Keep engines peer-independent**; hawk remains the only product orchestrator.
 
@@ -49,15 +49,15 @@ Bring Hawk to **Grok-class agent control-plane quality** (typed subagents, sandb
 | Mission worktrees | `multiagent/worker.go` creates git worktrees | **Strong for missions only** |
 | Worktree tools | `EnterWorktree` / `ExitWorktree` | **User-driven, not spawn isolation** |
 | Plugins V1/V2 | subprocess/daemon/WASM, hooks on manifest | **Partial packaging** |
-| Skills install + community registry | git install + huge `hawk-community-skills` | **Content strong** |
+| Skills install + community registry | git install + huge `starling` | **Content strong** |
 | ACP first cut | `internal/acp` + `cmd/acp.go`: init/new/prompt/cancel/permission | **Thin** |
 | Session checkpoints/fork | `internal/session/checkpoint.go`, fork, export | **Strong** |
 | Cron | `internal/tool/cron.go` max 256 jobs | **Present, UX thin** |
-| Cloud enterprise policy DTO | `hawk-cloud` enterprise: model allow/deny, capability allow/deny | **Primitive exists** |
+| Cloud enterprise policy DTO | `graycode-platform/apps/worker` (deployed as `graycode-cloud`): model allow/deny, capability allow/deny | **Primitive exists** |
 | Contracts | severity, tools, events, policy, review, verify, sessions phases | **Missing agent spawn types** |
 | Compaction | multiple `engine/compact*.go` | **Present** |
-| Memory | yaad graph engine | **Architecturally ahead of Grok markdown memory** |
-| Token/cost | tok library | **Architecturally ahead of Grok heuristic** |
+| Memory | harrier graph engine | **Architecturally ahead of Grok markdown memory** |
+| Token/cost | shrike library | **Architecturally ahead of Grok heuristic** |
 
 ### 1.2 Critical gap pattern
 
@@ -130,7 +130,7 @@ This is the single highest-ROI fix: **wire what already exists**, then extend.
          │
     ┌────┴────┬──────────┬──────────┬──────────┐
     ▼         ▼          ▼          ▼          ▼
-  eyrie     yaad       tok       trace     sight/inspect
+  eyrie     harrier       shrike       swift     kestrel/merlin
 ```
 
 **New core package (proposed):** `hawk/internal/spawn` (or expand `engine/agent`) owning:
@@ -140,7 +140,7 @@ This is the single highest-ROI fix: **wire what already exists**, then extend.
 - transcript persistence for resume
 - unified task registry (shell bg + subagents + monitors)
 
-**Contracts package (proposed):** `hawk-core-contracts/agent` (or `spawn`):
+**Contracts package (proposed):** `eagle/agent` (or `spawn`):
 
 - enums + DTOs only; no engine imports
 
@@ -229,7 +229,7 @@ Legend: **Done** | **Partial** | **Missing** | **N/A (keep engine)**
 
 | # | Concept | Status | Target |
 |---|---------|--------|--------|
-| H1 | Foreign session import | Missing | Full (trace) |
+| H1 | Foreign session import | Missing | Full (swift) |
 | H2 | Hunk agent vs external | Missing | Full |
 | H3 | Checkpoint already | Done | Keep |
 
@@ -238,8 +238,8 @@ Legend: **Done** | **Partial** | **Missing** | **N/A (keep engine)**
 | # | Concept | Status | Target |
 |---|---------|--------|--------|
 | I1 | Toggle priority order | Partial | Full |
-| I2 | Dream/consolidate product UX | Partial yaad | Full |
-| I3 | Graph memory core | Done (yaad) | Keep |
+| I2 | Dream/consolidate product UX | Partial harrier | Full |
+| I3 | Graph memory core | Done (harrier) | Keep |
 
 ### Wave J — Enterprise (P9)
 
@@ -270,7 +270,7 @@ Q3  Extensions: plugins multi-component + marketplace MVP + skill multi-harness
 Q4  Runtime: monitor/wait/loop + AskUser structured + plan alignment
 Q5  Integration: ACP phase-2 + OpenAPI + SDKs
 Q6  Enterprise: managed policy + cloud apply + IT tier
-Q7  Ecosystem: foreign import (trace) + hunk attribution + memory UX
+Q7  Ecosystem: foreign import (swift) + hunk attribution + memory UX
 Q8  Hardening: perf, fuzz, security audit, docs completion, GA polish
 ```
 
@@ -303,7 +303,7 @@ Calendar can slip; **order of waves should not reverse** (contracts before marke
 
 ### Phase 1 — Contracts foundation (2–3 weeks)
 
-**Repo:** `hawk-core-contracts`  
+**Repo:** `eagle`  
 **Module:** new package `agent` (or `spawn`) — stdlib only
 
 #### 1.1 Types to add
@@ -582,7 +582,7 @@ CheckTool:
 
 ### Phase 5 — Plugins multi-component + marketplace MVP (6–8 weeks)
 
-**Repos:** `hawk`, `hawk-community-skills`
+**Repos:** `hawk`, `starling`
 
 #### 5.1 Plugin layout (convention)
 
@@ -616,7 +616,7 @@ Loader merges components; tools optional.
 | Install resolve (git) | hawk |
 | Audit | hawk plugin malware_check (extend) |
 | CLI `hawk plugins` / TUI tab | hawk |
-| Optional web gallery | graycode-core later |
+| Optional web gallery | graycode-platform later |
 
 #### 5.4 Multi-harness skills
 
@@ -677,7 +677,7 @@ Depends on Phase 2 unified `taskruntime`.
 
 ### Phase 8 — ACP phase-2 + SDKs + OpenAPI (5–7 weeks)
 
-**Repos:** `hawk`, `hawk-sdk-go`, `hawk-sdk-python`
+**Repos:** `hawk`, `sparrow`, `robin`
 
 | Milestone | Scope |
 |-----------|--------|
@@ -699,7 +699,7 @@ Depends on Phase 2 unified `taskruntime`.
 
 ### Phase 9 — Enterprise managed policy (4–6 weeks)
 
-**Repos:** `hawk-cloud`, `hawk`, optional `eyrie`
+**Repos:** `graycode-platform/apps/worker` (deployed as `graycode-cloud`), `hawk`, optional `eyrie`
 
 | Piece | Detail |
 |-------|--------|
@@ -708,7 +708,7 @@ Depends on Phase 2 unified `taskruntime`.
 | Apply path | `~/.hawk/managed_policy.json` layers under user config |
 | Default | fail-open for individual; org can require fail-closed |
 | IT tier | non-excludable rules (already sketched in product — finish) |
-| Cloud UI | graycode-core admin later |
+| Cloud UI | graycode-platform admin later |
 
 Build on existing enterprise policyInput (model/capability lists).
 
@@ -722,13 +722,13 @@ Build on existing enterprise policyInput (model/capability lists).
 
 ---
 
-### Phase 10 — Ecosystem polish (trace import, hunks, yaad UX) (4–6 weeks)
+### Phase 10 — Ecosystem polish (swift import, hunks, harrier UX) (4–6 weeks)
 
 | Item | Repo | Detail |
 |------|------|--------|
-| Foreign import | trace + hawk CLI | Claude/Codex session metadata → index |
+| Foreign import | swift + hawk CLI | Claude/Codex session metadata → index |
 | Hunk attribution | hawk | agent vs external edits via fsnotify |
-| Memory UX | yaad + hawk | toggle priority, `/dream` consolidate |
+| Memory UX | harrier + hawk | toggle priority, `/dream` consolidate |
 | Mermaid optional | hawk | sandbox render path |
 
 **Exit criteria**
@@ -764,12 +764,12 @@ Build on existing enterprise policyInput (model/capability lists).
 | Multi-harness skills | hawk | community-skills | no |
 | Monitor/tasks | hawk | — | optional |
 | ACP | hawk | sdk-go/python | OpenAPI |
-| Managed policy | hawk-cloud | hawk, graycode-core | yes DTO |
-| Foreign import | trace | hawk | optional |
-| Memory dream UX | yaad | hawk | no |
-| Token | tok | — | no change |
+| Managed policy | graycode-platform/apps/worker (deployed as `graycode-cloud`) | hawk, graycode-platform/apps/bff | yes DTO |
+| Foreign import | swift | hawk | optional |
+| Memory dream UX | harrier | hawk | no |
+| Token | shrike | — | no change |
 | Providers | eyrie | hawk | no change |
-| Review engines | sight/inspect | hawk | findings already |
+| Review engines | kestrel/merlin | hawk | findings already |
 
 ---
 
@@ -808,7 +808,7 @@ Build on existing enterprise policyInput (model/capability lists).
 
 ### 7.5 Compatibility / contract CI
 
-- `hawk-core-contracts` version pin  
+- `eagle` version pin  
 - OpenAPI snapshot for SDKs  
 - Engine import boundary scripts (existing ecosystem boundary checks)
 
@@ -933,7 +933,7 @@ Background:
 | folder trust | `~/.hawk/trusted_folders.toml` |
 | `/loop` | `/loop` over CronScheduler |
 | plugin marketplace | `hawk plugins` + community registry |
-| managed_config | managed policy via hawk-cloud |
+| managed_config | managed policy via graycode-cloud |
 | ACP | `hawk acp` |
 
 ---
@@ -972,10 +972,10 @@ Week 4
 |----------|--------|-----------|
 | Language | Go only | graycode-eco ecosystem is Go |
 | First work | Wire existing modes | Types already exist; highest ROI |
-| Contracts location | hawk-core-contracts | Engines/SDKs may later honor modes |
+| Contracts location | eagle | Engines/SDKs may later honor modes |
 | Trust default | On | Security |
 | Marketplace before trust? | No | Supply chain |
-| Replace yaad? | No | Graph memory superior |
+| Replace harrier? | No | Graph memory superior |
 | Replace eyrie? | No | Multi-provider is differentiator |
 | Three bg systems | Unify early | Blocks monitor/wait |
 

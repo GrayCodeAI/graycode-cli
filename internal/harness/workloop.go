@@ -3,8 +3,8 @@ package harness
 import (
 	"time"
 
-	harnesscontracts "github.com/GrayCodeAI/hawk-core-contracts/harness"
-	typescontracts "github.com/GrayCodeAI/hawk-core-contracts/types"
+	harnesscontracts "github.com/GrayCodeAI/eagle/harness"
+	typescontracts "github.com/GrayCodeAI/eagle/types"
 )
 
 // Dimension represents one of the five core dimensions of the Agent Work Loop.
@@ -76,8 +76,8 @@ type AssetsDetected struct {
 	Hooks         []string `json:"hooks"`
 	SandboxPolicy string   `json:"sandbox_policy"`
 	AutonomyTier  string   `json:"autonomy_tier"`
-	InspectBridge bool     `json:"inspect_bridge"`
-	SightBridge   bool     `json:"sight_bridge"`
+	MerlinBridge  bool     `json:"merlin_bridge"`
+	KestrelBridge bool     `json:"kestrel_bridge"`
 }
 
 // HarnessReport represents the complete self-contained evaluation report for a workspace.
@@ -100,7 +100,7 @@ type EvaluateOptions struct {
 	OutputDir       string
 }
 
-// ToContractReport converts the native Hawk HarnessReport to the neutral hawk-core-contracts Report.
+// ToContractReport converts the native Hawk HarnessReport to the neutral eagle Report.
 func (r *HarnessReport) ToContractReport() *harnesscontracts.Report {
 	if r == nil {
 		return nil
@@ -167,8 +167,8 @@ func (r *HarnessReport) ToContractReport() *harnesscontracts.Report {
 			Hooks:         r.Assets.Hooks,
 			SandboxPolicy: r.Assets.SandboxPolicy,
 			AutonomyTier:  r.Assets.AutonomyTier,
-			InspectBridge: r.Assets.InspectBridge,
-			SightBridge:   r.Assets.SightBridge,
+			MerlinBridge:  r.Assets.MerlinBridge,
+			KestrelBridge: r.Assets.KestrelBridge,
 		},
 		Summary: r.Summary,
 	}

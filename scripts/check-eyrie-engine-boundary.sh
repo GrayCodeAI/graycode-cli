@@ -7,11 +7,11 @@ cd "$ROOT_DIR"
 if command -v rg >/dev/null 2>&1; then
   eyrie_imports="$(
     rg -n '"github\.com/GrayCodeAI/eyrie/[^\"]+"' \
-      --glob '*.go' --glob '!*_test.go' --glob '!external/**' . || true
+      --glob '*.go' --glob '!*_test.go' . || true
   )"
 else
   eyrie_imports="$(
-    grep -RInE --include='*.go' --exclude='*_test.go' --exclude-dir=external \
+    grep -RInE --include='*.go' --exclude='*_test.go' \
       '"github\.com/GrayCodeAI/eyrie/[^\"]+"' . || true
   )"
 fi

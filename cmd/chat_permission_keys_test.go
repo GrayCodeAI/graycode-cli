@@ -6,7 +6,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	contracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
+	contracts "github.com/GrayCodeAI/eagle/policy"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 

@@ -28,7 +28,7 @@ This project is indexed by GitNexus as **hawk** (97743 symbols, 322940 relations
 | `gitnexus://repo/hawk/context` | Codebase overview, check index freshness |
 | `gitnexus://repo/hawk/clusters` | All functional areas |
 | `gitnexus://repo/hawk/processes` | All execution flows |
-| `gitnexus://repo/hawk/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/hawk/process/{name}` | Step-by-step execution swift |
 
 ## CLI
 

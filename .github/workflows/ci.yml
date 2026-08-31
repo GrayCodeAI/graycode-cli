@@ -26,6 +26,17 @@ env:
   GOPRIVATE: "github.com/GrayCodeAI/*"
   GONOSUMDB: "github.com/GrayCodeAI/*"
   GONOSUMCHECK: "1"
+  # CI must resolve the dependency versions pinned in go.mod/go.sum, not whatever
+  # happens to sit in the sibling checkouts that the committed go.work points at.
+  # Go's reference is explicit that a committed go.work "may cause a continuous
+  # integration (CI) system to select and thus test the wrong versions of a
+  # module's dependencies" and that "CI systems should generally not be allowed to
+  # use the go.work file". Because ./.github/actions/checkout-eyrie clones the
+  # siblings at branch HEAD into the workspace parent, workspace mode would silently
+  # hide version skew (e.g. a eagle pin that no longer matches).
+  # The `module` job opts back in (GOWORK: "auto") since `go work sync` and the
+  # go.work content checks genuinely require the workspace.
+  GOWORK: "off"
 
 jobs:
   # -------------------------------------------------------------------------
@@ -45,7 +56,7 @@ jobs:
       - name: gofumpt
         run: |
           go install mvdan.cc/gofumpt@v0.10.0
-          out=$(git ls-files -- '*.go' ':!external/**' | xargs gofumpt -l)
+          out=$(git ls-files -- '*.go' | xargs gofumpt -l)
           if [ -n "$out" ]; then
             echo "::error::gofumpt would reformat:"
             echo "$out" | head -20
@@ -54,7 +65,7 @@ jobs:
       - name: goimports
         run: |
           go install golang.org/x/tools/cmd/goimports@v0.30.0
-          out=$(git ls-files -- '*.go' ':!external/**' | xargs goimports -l)
+          out=$(git ls-files -- '*.go' | xargs goimports -l)
           if [ -n "$out" ]; then
             echo "::error::goimports would reformat:"
             echo "$out" | head -20
@@ -72,11 +83,17 @@ jobs:
         run: bash ./scripts/check-eyrie-engine-boundary.sh
 
   # -------------------------------------------------------------------------
-  # 2. Module hygiene — tidy, verify (hawk + external ecosystem repos via go.work).
+  # 2. Module hygiene — tidy, verify Hawk plus the sibling Go modules via go.work.
   # -------------------------------------------------------------------------
   module:
     name: module hygiene
     runs-on: ubuntu-latest
+    # Workspace hygiene is this job's entire purpose (`go work sync`, the go.work
+    # content checks), so it deliberately re-enables the workspace that the
+    # workflow-level GOWORK: "off" disables. The steps here that must see the
+    # pinned versions already set GOWORK=off inline.
+    env:
+      GOWORK: "auto"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -90,8 +107,9 @@ jobs:
           cache: true
       - name: go work sync + module consistency
         run: |
-          # Ecosystem repos are external checkouts under hawk/external. go mod tidy can mis-resolve
-          # workspace modules here; go work sync is the supported workspace hygiene step.
+          # Sibling repos are independent checkouts in the workspace parent.
+          # go mod tidy can mis-resolve workspace modules here; go work sync is
+          # the supported workspace hygiene step.
           go work sync
           go build -mod=readonly -o /dev/null ./cmd/hawk
           if ! git diff --quiet -- go.mod go.sum go.work go.work.sum; then
@@ -103,13 +121,15 @@ jobs:
         run: go mod verify
       - name: workspace references sibling checkouts
         run: |
-          for module in hawk-core-contracts eyrie inspect sight tok trace yaad hawk-mcpkit; do
-            if ! grep -q "../${module}" go.work; then
-              echo "::error::go.work must include ../${module}."
-              cat go.work
+          workspace_file="${GITHUB_WORKSPACE}/../go.work"
+          while IFS= read -r module; do
+            [ "$module" = hawk ] && continue
+            if ! grep -q "./${module}" "$workspace_file"; then
+              echo "::error::go.work must include ./${module}."
+              cat "$workspace_file"
               exit 1
             fi
-          done
+          done < <(./scripts/ecosystem-manifest.sh list workspace)
       - name: Validate every Go module independently
         run: |
           while IFS= read -r modfile; do
@@ -118,7 +138,9 @@ jobs:
             (cd "$dir" && GOWORK=off go mod tidy -diff)
             (cd "$dir" && GOWORK=off go mod verify)
             (cd "$dir" && GOWORK=off go test ./... -count=1 -timeout=300s -skip='TestDefaultSkillDirsCrossAgent|TestCopySelectionE2E')
-          done < <(find . -name go.mod -not -path './.git/*' -not -path './external/*' -print | sort)
+          done < <(find . -name go.mod -not -path './.git/*' -print | sort)
+      - name: contracts parity guard
+        run: bash ./scripts/check-contracts-parity.sh
 
   public-modules:
     name: public module graph
@@ -157,7 +179,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-      - run: bash ./scripts/check-submodule-release-parity.sh
+      - run: bash ./scripts/check-module-release-parity.sh
 
   # -------------------------------------------------------------------------
   # 3. Vet + static analysis — compiler-level correctness.
@@ -272,7 +294,7 @@ jobs:
               continue
             fi
             violations="${violations}\n${file}:${lineno}: t.Skip() without tracking issue"
-          done < <(grep -rn 't\.Skip(' --include='*_test.go' . --exclude-dir=external 2>/dev/null | grep -v '// nolint' || true)
+          done < <(grep -rn 't\.Skip(' --include='*_test.go' . 2>/dev/null | grep -v '// nolint' || true)
           if [ -n "$violations" ]; then
             echo "::warning::Found t.Skip() without tracking issue:${violations}"
             echo ""
@@ -342,7 +364,7 @@ jobs:
           # exclusions for intentional 0755 dirs and user-supplied file
           # paths. This job reports findings without failing CI so the
           # advisory signal is visible but not a merge blocker.
-          gosec -quiet -exclude-dir external ./...
+          gosec -quiet ./...
 
   # -------------------------------------------------------------------------
   # 7. Secret scan — detect leaked API keys, tokens, credentials.
@@ -481,8 +503,8 @@ jobs:
           size_mb=$((size / 1024 / 1024))
           echo "Binary size: ${size_mb}MB"
           # Threshold history: 110MB → 80MB (binary was ~76MB) → 98MB.
-          # The 80MB line became stale: the audit-sweep merges (trace
-          # rebrand, yaad at-rest encryption, engine features) grew the
+          # The 80MB line became stale: the audit-sweep merges (swift
+          # rebrand, harrier at-rest encryption, engine features) grew the
           # release binary to ~95MB (linux/amd64, -trimpath -ldflags="-s -w").
           # Re-baselined to 98MB (3MB headroom) so this check detects new
           # bloat regressions instead of warning on every run. A real size

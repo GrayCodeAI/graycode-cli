@@ -19,7 +19,7 @@ var reviewCmd = &cobra.Command{
 	Long: `hawk review provides continuous background code review.
 
 Run 'hawk review init' to install a post-commit hook, then every commit
-is automatically reviewed using sight. View findings with 'hawk review tui'
+is automatically reviewed using kestrel. View findings with 'hawk review tui'
 or fix them with 'hawk review fix'.`,
 }
 

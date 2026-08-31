@@ -42,14 +42,14 @@ Available Commands:
   credentials  Manage secure API key storage (macOS Keychain / Linux secret service)
   daemon       Manage the hawk background server
   doctor       Run local diagnostics
-  ecosystem    Show eyrie, yaad, and tok integration status
+  ecosystem    Show eyrie, harrier, and shrike integration status
   eval         Evaluate model performance on coding benchmarks
   exec         Execute a single command non-interactively
   features     List and manage feature flags
   feedback     Submit feedback about hawk
   fingerprint  Generate a repository fingerprint (languages, deps, git info)
-  governance   Inspect and validate the governance policy ceiling
-  graph        Inspect Hawk's portable execution graph
+  governance   Merlin and validate the governance policy ceiling
+  graph        Merlin Hawk's portable execution graph
   harness      Audit workspace AI agent harness, work loop dimensions, and generation reports
   help         Help about any command
   history      Search and browse command history
@@ -75,19 +75,19 @@ Available Commands:
   sandbox      View, apply, or discard pending diff sandbox changes
   schema       Output JSON schema for hawk settings.json
   search       Search across saved sessions
-  securitylog  Inspect the tamper-evident security event log
+  securitylog  Merlin the tamper-evident security event log
   sessions     List saved sessions
   setup        Run first-time setup again
   skills       Manage skills (list, search, install, remove, audit, info, trending)
   snapshot     Manage file snapshots (undo any change)
   stats        Show usage statistics and cost analytics
   status       Show a redacted runtime status snapshot
-  tape         Inspect and checkpoint recorded terminal captures (fxtape)
+  tape         Merlin and checkpoint recorded terminal captures (fxtape)
   taste        Manage taste profile (learned coding style preferences)
   tools        List built-in tools
   toolset      List or resolve composable tool groups
-  trace        Git-native session capture for AI coding agents
-  trace-report Write a private diagnostic trace report (fx /trace parity)
+  swift        Git-native session capture for AI coding agents
+  swift-report Write a private diagnostic swift report (fx /swift parity)
   trust        Manage folder trust for project automation
   update       Check for hawk updates
   usage        Show local LLM token usage and spend (fx usage parity)

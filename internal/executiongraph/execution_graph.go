@@ -1,6 +1,6 @@
 // Package executiongraph projects Hawk-owned runtime state into the portable
 // graph contract. It is deliberately read-only: the scheduler, tools, policy
-// engine, verification engines, and Trace remain their own sources of truth.
+// engine, verification engines, and Swift remain their own sources of truth.
 package executiongraph
 
 import (
@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
-	policycontracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
-	verifycontracts "github.com/GrayCodeAI/hawk-core-contracts/verify"
+	graphcontracts "github.com/GrayCodeAI/eagle/graph"
+	policycontracts "github.com/GrayCodeAI/eagle/policy"
+	verifycontracts "github.com/GrayCodeAI/eagle/verify"
 	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/GrayCodeAI/hawk/internal/taskruntime"
 	"github.com/GrayCodeAI/hawk/internal/tool"
@@ -93,18 +93,18 @@ type RuntimeObservation struct {
 	OccurredAt time.Time
 }
 
-// TraceCheckpointRef links Hawk execution state to a checkpoint exported by
-// Trace. Subject defaults to the Hawk session when left empty.
-type TraceCheckpointRef struct {
+// SwiftCheckpointRef links Hawk execution state to a checkpoint exported by
+// Swift. Subject defaults to the Hawk session when left empty.
+type SwiftCheckpointRef struct {
 	CheckpointID   string
-	TraceSessionID string
+	SwiftSessionID string
 	Subject        graphcontracts.Ref
 	CreatedAt      time.Time
 }
 
-// TraceSessionRef links Hawk execution state to a session authoritatively
-// resolved by Trace. Subject defaults to the Hawk session when left empty.
-type TraceSessionRef struct {
+// SwiftSessionRef links Hawk execution state to a session authoritatively
+// resolved by Swift. Subject defaults to the Hawk session when left empty.
+type SwiftSessionRef struct {
 	SessionID string
 	Subject   graphcontracts.Ref
 	CreatedAt time.Time
@@ -120,8 +120,8 @@ type Input struct {
 	RuntimeObservations []RuntimeObservation
 	PolicyObservations  []PolicyObservation
 	Verifications       []VerificationObservation
-	TraceSessions       []TraceSessionRef
-	TraceCheckpoints    []TraceCheckpointRef
+	SwiftSessions       []SwiftSessionRef
+	SwiftCheckpoints    []SwiftCheckpointRef
 	GeneratedAt         time.Time
 	Scope               graphcontracts.Scope
 	ProducerVersion     string
@@ -160,10 +160,10 @@ func Build(input Input) (Export, error) {
 	if err := acc.addVerifications(input.Verifications); err != nil {
 		return Export{}, err
 	}
-	if err := acc.addTraceSessions(input.TraceSessions, sessionRef); err != nil {
+	if err := acc.addSwiftSessions(input.SwiftSessions, sessionRef); err != nil {
 		return Export{}, err
 	}
-	if err := acc.addTraceCheckpoints(input.TraceCheckpoints, sessionRef); err != nil {
+	if err := acc.addSwiftCheckpoints(input.SwiftCheckpoints, sessionRef); err != nil {
 		return Export{}, err
 	}
 
@@ -834,10 +834,10 @@ func (a *accumulator) addVerifications(observations []VerificationObservation) e
 	return nil
 }
 
-func (a *accumulator) addTraceSessions(sessions []TraceSessionRef, sessionRef graphcontracts.Ref) error {
+func (a *accumulator) addSwiftSessions(sessions []SwiftSessionRef, sessionRef graphcontracts.Ref) error {
 	for _, traceSession := range sessions {
-		traceSessionID := strings.TrimSpace(traceSession.SessionID)
-		ref := graphcontracts.Ref{Kind: graphcontracts.NodeExecution, ID: "trace/session/" + traceSessionID}
+		swiftSessionID := strings.TrimSpace(traceSession.SessionID)
+		ref := graphcontracts.Ref{Kind: graphcontracts.NodeExecution, ID: "swift/session/" + swiftSessionID}
 		createdAt := graphTime(traceSession.CreatedAt, a.generatedAt)
 		node := graphcontracts.Node{
 			ID:        ref.ID,
@@ -845,11 +845,11 @@ func (a *accumulator) addTraceSessions(sessions []TraceSessionRef, sessionRef gr
 			Scope:     a.export.Scope,
 			CreatedAt: createdAt,
 			Provenance: graphcontracts.Provenance{
-				Producer: "trace",
-				SourceID: traceSessionID,
-				Evidence: []graphcontracts.ArtifactRef{{URI: "trace://session/" + traceSessionID}},
+				Producer: "swift",
+				SourceID: swiftSessionID,
+				Evidence: []graphcontracts.ArtifactRef{{URI: "swift://session/" + swiftSessionID}},
 			},
-			Attributes: baseAttributes("trace_session"),
+			Attributes: baseAttributes("swift_session"),
 		}
 		if err := a.addNode(node); err != nil {
 			return err
@@ -862,7 +862,7 @@ func (a *accumulator) addTraceSessions(sessions []TraceSessionRef, sessionRef gr
 			continue
 		}
 		if err := subject.Validate(); err != nil {
-			return fmt.Errorf("execution graph: trace session subject: %w", err)
+			return fmt.Errorf("execution graph: swift session subject: %w", err)
 		}
 		if err := a.addEdge(graphcontracts.Edge{
 			ID:         "hawk/edge/" + subject.ID + "/references/" + ref.ID,
@@ -871,7 +871,7 @@ func (a *accumulator) addTraceSessions(sessions []TraceSessionRef, sessionRef gr
 			To:         ref,
 			Scope:      a.export.Scope,
 			CreatedAt:  createdAt,
-			Provenance: a.hawkProvenance(traceSessionID, "trace://session/"+traceSessionID),
+			Provenance: a.hawkProvenance(swiftSessionID, "swift://session/"+swiftSessionID),
 		}); err != nil {
 			return err
 		}
@@ -879,10 +879,10 @@ func (a *accumulator) addTraceSessions(sessions []TraceSessionRef, sessionRef gr
 	return nil
 }
 
-func (a *accumulator) addTraceCheckpoints(checkpoints []TraceCheckpointRef, sessionRef graphcontracts.Ref) error {
+func (a *accumulator) addSwiftCheckpoints(checkpoints []SwiftCheckpointRef, sessionRef graphcontracts.Ref) error {
 	for _, checkpoint := range checkpoints {
 		checkpointID := strings.TrimSpace(checkpoint.CheckpointID)
-		ref := graphcontracts.Ref{Kind: graphcontracts.NodeExecution, ID: "trace/checkpoint/" + checkpointID}
+		ref := graphcontracts.Ref{Kind: graphcontracts.NodeExecution, ID: "swift/checkpoint/" + checkpointID}
 		createdAt := graphTime(checkpoint.CreatedAt, a.generatedAt)
 		node := graphcontracts.Node{
 			ID:        ref.ID,
@@ -890,9 +890,9 @@ func (a *accumulator) addTraceCheckpoints(checkpoints []TraceCheckpointRef, sess
 			Scope:     a.export.Scope,
 			CreatedAt: createdAt,
 			Provenance: graphcontracts.Provenance{
-				Producer: "trace",
+				Producer: "swift",
 				SourceID: checkpointID,
-				Evidence: []graphcontracts.ArtifactRef{{URI: "trace://checkpoint/" + checkpointID}},
+				Evidence: []graphcontracts.ArtifactRef{{URI: "swift://checkpoint/" + checkpointID}},
 			},
 			Attributes: baseAttributes("checkpoint"),
 		}
@@ -907,7 +907,7 @@ func (a *accumulator) addTraceCheckpoints(checkpoints []TraceCheckpointRef, sess
 			continue
 		}
 		if err := subject.Validate(); err != nil {
-			return fmt.Errorf("execution graph: trace checkpoint subject: %w", err)
+			return fmt.Errorf("execution graph: swift checkpoint subject: %w", err)
 		}
 		if err := a.addEdge(graphcontracts.Edge{
 			ID:         "hawk/edge/" + subject.ID + "/references/" + ref.ID,
@@ -916,24 +916,24 @@ func (a *accumulator) addTraceCheckpoints(checkpoints []TraceCheckpointRef, sess
 			To:         ref,
 			Scope:      a.export.Scope,
 			CreatedAt:  createdAt,
-			Provenance: a.hawkProvenance(checkpointID, "trace://checkpoint/"+checkpointID),
+			Provenance: a.hawkProvenance(checkpointID, "swift://checkpoint/"+checkpointID),
 		}); err != nil {
 			return err
 		}
-		traceSessionID := strings.TrimSpace(checkpoint.TraceSessionID)
-		if traceSessionID != "" {
-			if err := a.addTraceSessions([]TraceSessionRef{{
-				SessionID: traceSessionID,
+		swiftSessionID := strings.TrimSpace(checkpoint.SwiftSessionID)
+		if swiftSessionID != "" {
+			if err := a.addSwiftSessions([]SwiftSessionRef{{
+				SessionID: swiftSessionID,
 				CreatedAt: createdAt,
 			}}, sessionRef); err != nil {
 				return err
 			}
 			traceSessionRef := graphcontracts.Ref{
 				Kind: graphcontracts.NodeExecution,
-				ID:   "trace/session/" + traceSessionID,
+				ID:   "swift/session/" + swiftSessionID,
 			}
 			if err := a.addEdge(graphcontracts.Edge{
-				ID:         "trace/edge/" + traceSessionID + "/produced/" + checkpointID,
+				ID:         "swift/edge/" + swiftSessionID + "/produced/" + checkpointID,
 				Kind:       graphcontracts.EdgeProduced,
 				From:       traceSessionRef,
 				To:         ref,

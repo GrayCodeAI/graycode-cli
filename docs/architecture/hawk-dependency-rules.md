@@ -1,127 +1,98 @@
 # Hawk Dependency Rules
 
+`graycode-eco` is only a local parent folder. `hawk` is the main CLI and the
+single orchestration root. Repository names below use directory/module names;
+product labels are shown in parentheses where they differ.
+
 ## Required graph
 
-These edges always hold:
-
 ```text
-hawk -> eyrie
-hawk -> yaad
-hawk -> tok
-hawk -> trace
-hawk -> sight
-hawk -> inspect
-hawk -> hawk-core-contracts
+sparrow / robin / wren ── Hawk daemon API ──> hawk <── skill API ── starling
+                                             │
+                                             ├── eyrie/engine
+                                             ├── harrier       (Harrier)
+                                             ├── shrike        (Shrike)
+                                             ├── swift/cli     (Swift)
+                                             ├── kestrel       (Kestrel)
+                                             ├── merlin        (Merlin)
+                                             └── eagle
 
-hawk-sdk-go -> hawk public API/contracts
-hawk-sdk-python -> hawk public API/contracts
-hawk-community-skills -> hawk plugin/skill API
+harrier / kestrel / merlin ──> falcon ──> mark3labs/mcp-go
+engines ──> eagle when a shared contract is required
 ```
 
-Product shape:
-
-```text
-top
-  hawk-sdk-go / hawk-sdk-python / hawk-community-skills
-                         |
-                         v
-                       hawk
-                         |
-      +------------------+------------------+
-      |         |         |        |        |
-      v         v         v        v        v
-    eyrie     yaad      tok      trace    sight    inspect
-      \         |         |        |        |         /
-       +--------+---------+--------+--------+--------+
-                               |
-                               v
-                    hawk-core-contracts
-bottom
-```
+The canonical list of all 15 repositories is in
+[`hawk/ecosystem.yaml`](../../ecosystem.yaml). `owl/ecosystem.json` is a
+generated projection of that list.
 
 ## Contract edges
 
-An engine depends on `hawk-core-contracts` **only when it produces or consumes a
-cross-repo contract** (a shared finding, severity, event, etc.). Engines that
-expose no cross-repo type stay contract-free — adding the dependency "to be
-consistent" is a violation of "keep the graph minimal", not an improvement.
+An engine may depend on Eagle only when it produces or consumes a cross-repo
+contract such as a finding, severity, event, or graph fact. Current Go module
+consumers are tracked by `ecosystem.yaml` and checked for Eagle version parity.
 
-Current state (keep in sync with the code; the boundary guards enforce the
-*forbidden* edges below, not these contract edges):
-
-```text
-sight   -> hawk-core-contracts   # severity/finding vocabulary
-inspect -> hawk-core-contracts   # severity/finding vocabulary
-eyrie   -> (none)   # provider/transport types are eyrie-local
-yaad    -> (none)   # memory event types are yaad-local
-trace   -> hawk-core-contracts   # portable graph export vocabulary
-```
-
-If `eyrie` or `yaad` later needs to emit or accept a shared finding/event, the
-type moves into `hawk-core-contracts` first and the engine adds the contract
-edge then — not before. Trace has this edge because it emits the shared graph
-contract; its storage and redaction types remain local.
+Falcon is a separate foundation for shared MCP transport and handler patterns.
+It remains upstream-only and must not import Hawk, Eagle, or an engine.
 
 ## Forbidden graph
 
 ```text
 engine -> engine
 engine -> hawk/internal/*
-engine -> hawk/shared/* as a public dependency
-sdk -> engine
+engine -> hawk/shared/*
+SDK -> engine
 skills -> engine
+any Go module -> graycode-platform code
 ```
 
 ## Rules
 
 ### 1. Hawk is the orchestrator
-Only Hawk coordinates the support engines.
+
+Only Hawk coordinates the support engines and owns the user-facing CLI,
+daemon, sessions, tools, policy, and product workflows.
 
 ### 2. Engines are peers
-Engines may share concepts through contracts, but not by importing each other.
 
-### 3. Shared types belong in contracts
-Anything used across repos must move to `hawk-core-contracts`.
+Engines may share concepts through Eagle contracts, but may not import each
+other. Product names do not change this rule: `harrier` is Harrier, `shrike` is
+Shrike, `swift` is Swift, `kestrel` is Kestrel, and `merlin` is Merlin.
 
-### 4. Public integrations go through Hawk
-SDKs and skills must use Hawk public APIs, contracts, or plugin surfaces.
+### 3. Provider logic stays behind Eyrie
 
-### 5. Provider logic stays behind the Eyrie engine boundary
-Provider-specific code should not leak into memory, review, verify, or trace engines.
-Hawk production code imports Eyrie only through `github.com/GrayCodeAI/eyrie/engine`.
+Hawk production code reaches provider credentials, catalogs, routing, and
+transport only through `github.com/GrayCodeAI/eyrie/engine`. This is enforced
+by shell and AST/package-graph guards.
 
-### 6. Hawk schemas stay Hawk-owned
-Hawk's conversation persistence and CLI/JSON output are explicit projections,
-not aliases or direct serialization of Eyrie engine DTOs.
+### 4. Hawk schemas stay Hawk-owned
+
+Hawk conversation persistence and CLI/JSON output are explicit projections,
+not aliases or direct serialization of Eyrie DTOs.
+
+### 5. Graph integrations are explicit surfaces
+
+Hawk currently imports selected engine-owned graph/projection packages for
+memory, token, review, and verification capture. These are integration
+exceptions, not peer-engine dependencies. If replaceability requires stronger
+isolation, move those calls behind engine-owned facades; do not expose more
+storage or implementation types.
+
+### 6. Cloud is runtime-only
+
+`graycode-platform` is outside the Hawk Go module graph. Hawk may call the
+deployed `graycode-cloud` Worker over authenticated HTTP for optional usage or
+explicit graph synchronization. Platform failures must not block local CLI
+execution.
 
 ### 7. Engine configuration is instance-scoped
-Hawk supplies effective custom gateways while constructing an Engine. Do not
-mutate Eyrie process-global gateway state from product code.
 
-## Current cleanup targets
-
-Based on current local structure:
-
-- `sight -> hawk/shared/types` removed
-- `inspect -> hawk/shared/types` removed
-- `tok/types` compatibility shim removed
-- keep support engines peer-isolated as new features are added
+Hawk supplies effective gateway settings while constructing an Eyrie Engine.
+Product code must not mutate Eyrie process-global gateway state.
 
 ## Enforcement
 
-These were previously "ideas"; they are now implemented:
-
-- each support repo documents its import boundary in its README
-  ("Ecosystem Boundaries" section)
-- CI runs `scripts/check-ecosystem-boundaries.sh` in every support repo, and
-  Hawk additionally runs `check-shared-types-imports.sh`,
-  `check-eyrie-client-imports.sh`, `check-eyrie-engine-boundary.sh`, and
-  `check-support-repo-coupling.sh`
-- Hawk runs `scripts/check-package-boundaries.sh`, an AST-based package graph
-  guard that checks the same production rules with file/line diagnostics and
-  scans available pinned or sibling support repositories without requiring
-  them to build from the parent workspace
-- `hawk-core-contracts` is kept minimal (leaf module, no external dependencies)
-
-The Hawk boundary guards use ripgrep when available and fall back to recursive
-grep, so a minimal CI image cannot turn a missing scanner into a vacuous pass.
+Hawk CI runs manifest validation, no-local-replace checks, Eagle parity,
+support-repository coupling, Eyrie facade checks, internal-layer checks, and
+the AST package-boundary audit. Support repositories run their own boundary
+guards. SDK contract tests compare their OpenAPI snapshots with Hawk's public
+daemon contract.

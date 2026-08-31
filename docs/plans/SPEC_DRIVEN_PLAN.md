@@ -62,7 +62,7 @@
 - `internal/engine/safety/permission_engine.go` — gate at Plan transition
 
 ### Phase 4: Orphan REQ Hallucination Detection
-**Goal:** Automated detection of code that doesn't trace to spec.
+**Goal:** Automated detection of code that doesn't swift to spec.
 
 **Changes:**
 1. Scan all source files for [REQ-XXX.Y.Z] citations

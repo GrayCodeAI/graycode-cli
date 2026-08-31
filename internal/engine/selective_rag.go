@@ -77,9 +77,9 @@ func (r *SelectiveRAG) ShouldRetrieve(query string, contextTokens int, recentFil
 		return true, "complex multi-file task"
 	}
 
-	// Rule 4: Debug/trace queries need retrieval
+	// Rule 4: Debug/swift queries need retrieval
 	if isDebugQuery(query) {
-		return true, "debug/trace query"
+		return true, "debug/swift query"
 	}
 
 	// Rule 5: Check historical success rate
@@ -173,7 +173,7 @@ func (r *SelectiveRAG) Stats() map[string]interface{} {
 // Helper functions for query classification
 
 func estimateTokens(text string) int {
-	// BPE-based estimate via the tok tokenizer instead of the len/4 char
+	// BPE-based estimate via the shrike tokenizer instead of the len/4 char
 	// heuristic, which systematically undercounts code-heavy text.
 	return token.CountTokensFast(text)
 }
@@ -216,7 +216,7 @@ func isComplexTask(query string) bool {
 func isDebugQuery(query string) bool {
 	debugKeywords := []string{
 		"bug", "error", "fix", "broken", "crash", "fail", "debug",
-		"trace", "why", "not working", "issue",
+		"swift", "why", "not working", "issue",
 	}
 	lower := strings.ToLower(query)
 	for _, kw := range debugKeywords {

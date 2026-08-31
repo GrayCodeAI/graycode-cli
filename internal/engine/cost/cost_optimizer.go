@@ -243,7 +243,7 @@ func (co *CostOptimizer) analyzeCompression() []Recommendation {
 			Description:      fmt.Sprintf("Average input is %d tokens; %d requests exceed 5K tokens", avgInput, largeInputCount),
 			EstimatedSavings: dailySavings,
 			Priority:         "low",
-			Action:           "Compress inputs over 5K tokens using token compression (tok) to reduce costs",
+			Action:           "Compress inputs over 5K tokens using token compression (shrike) to reduce costs",
 		})
 	}
 

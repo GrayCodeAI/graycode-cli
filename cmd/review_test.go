@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
-	contracts "github.com/GrayCodeAI/hawk-core-contracts/types"
+	reviewcontracts "github.com/GrayCodeAI/eagle/review"
+	contracts "github.com/GrayCodeAI/eagle/types"
 
 	"github.com/GrayCodeAI/hawk/internal/storage"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"

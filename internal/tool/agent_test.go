@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+	agentcontracts "github.com/GrayCodeAI/eagle/agent"
 )
 
 func TestAgentTool_NoContext(t *testing.T) {

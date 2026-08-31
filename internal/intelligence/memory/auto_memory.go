@@ -36,7 +36,7 @@ var strongTriggers = []string{
 	"prefer ", "important:",
 }
 
-// ShouldAutoRemember reports whether assistant content should be persisted to yaad.
+// ShouldAutoRemember reports whether assistant content should be persisted to harrier.
 // Requires two weak triggers or one strong trigger to limit noise.
 func ShouldAutoRemember(content string) bool {
 	lower := strings.ToLower(strings.TrimSpace(content))

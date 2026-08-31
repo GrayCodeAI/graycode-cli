@@ -155,7 +155,7 @@ Refresh the catalog:
 | Document | What You Will Learn |
 |----------|-------------------|
 | [Project Rules](12-project-rules.md) | AGENTS.md configuration |
-| [Memory](13-memory.md) | Cross-session memory via yaad |
+| [Memory](13-memory.md) | Cross-session memory via harrier |
 
 ---
 

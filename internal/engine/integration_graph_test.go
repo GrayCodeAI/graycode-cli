@@ -18,6 +18,6 @@ func TestPostResponseReportsTokOnlyRedactions(t *testing.T) {
 		t.Fatalf("SecretTypes = %#v", result.SecretTypes)
 	}
 	if strings.Contains(result.FormattedResponse, secret) {
-		t.Fatal("formatted response retained Tok-detected secret")
+		t.Fatal("formatted response retained Shrike-detected secret")
 	}
 }

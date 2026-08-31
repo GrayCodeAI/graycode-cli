@@ -67,7 +67,7 @@ A live end-to-end test (`TestBrowserLive`, opt-in via `HAWK_LIVE_BROWSER=1`) nav
 | Search | grep/glob/ls + LSP + code_search/code_graph | OpenCode LSP; hawk code_graph exceeds |
 | Shell | bash (+PowerShell on Windows) + monitor/kill/wait | all |
 | Web | web_fetch/web_search/agentic_fetch/download | all |
-| Memory | **persistent core_memory_\* (Yaad)** | only Qwen/Claude have persistence |
+| Memory | **persistent core_memory_\* (Harrier)** | only Qwen/Claude have persistence |
 | Planning | plan + spec_* suite + todo_write | Claude Code skills, Qwen plan_mode |
 | Sub-agents | `task` tool + multiagent workers | all leaders |
 | MCP | full client + mcp_auth/resources/server tools | all leaders |

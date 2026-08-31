@@ -1,7 +1,7 @@
 // Package conformance verifies that emitted telemetry spans always match the
 // documented OpenTelemetry schema (docs/OTEL-CONVENTIONS.md and the eyrie
 // gen_ai.* semantic-convention constants), so the schema cannot silently drift
-// across hawk and its submodules.
+// across Hawk and its independent ecosystem repositories.
 //
 // The schema is declarative and typed per span: a span name (or prefix
 // pattern), the required and optional attribute keys, and whether the span is
@@ -17,7 +17,7 @@ import (
 
 // Attribute vocabulary shared across the ecosystem. These mirror the keys
 // emitted by the span starters in internal/observability/oteltrace and the
-// gen_ai.* constants in external/eyrie/internal/observability.
+// gen_ai.* constants in eyrie/internal/observability.
 const (
 	AttrGenAISystem            = "gen_ai.system"
 	AttrGenAIRequestModel      = "gen_ai.request.model"

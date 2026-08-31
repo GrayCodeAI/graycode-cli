@@ -3,7 +3,7 @@
 **Status:** Draft
 **Author:** Ecosystem / DX working group
 **Last updated:** 2026-06-06
-**Scope:** Multi-month effort spanning all 5 repos (hawk, eyrie, yaad, tok, trace) + a new gallery web property + a unified docs site.
+**Scope:** Multi-month effort spanning all 5 repos (hawk, eyrie, harrier, shrike, swift) + a new gallery web property + a unified docs site.
 
 > This is a design a team executes against, not a code-session deliverable. It grounds every claim in the actual graycode-eco codebase (cited as `path:line`) and reuses what already exists rather than greenfielding.
 
@@ -29,14 +29,14 @@ Two adjacent gaps from `TOP20_COMPARISON.md` are addressed together because they
 
 graycode-eco is **not** starting from zero. A large fraction of the marketplace already exists as working Go and a populated registry:
 
-- **A populated registry already ships.** `hawk-community-skills/registry.json` is a 4.3 MB JSON array of skill entries with `name`, `description`, `category`, `tags`, `path`, `file_count`, `has_scripts` (see file head). It is served raw from GitHub and consumed by hawk at `hawk/internal/plugin/registry.go:18` (`defaultIndexURL = https://raw.githubusercontent.com/GrayCodeAI/hawk-community-skills/main/registry.json`).
+- **A populated registry already ships.** `starling/registry.json` is a 4.3 MB JSON array of skill entries with `name`, `description`, `category`, `tags`, `path`, `file_count`, `has_scripts` (see file head). It is served raw from GitHub and consumed by hawk at `hawk/internal/plugin/registry.go:18` (`defaultIndexURL = https://raw.githubusercontent.com/GrayCodeAI/starling/main/registry.json`).
 - **A registry client already works.** `hawk/internal/plugin/registry.go` defines `SkillEntry`/`SkillIndex` (`:21`, `:36`), `FetchIndex` with a 1-hour cache (`:60`), and `Install/Remove/InstalledSkillInfo` (`:196`, `:289`, `:309`).
 - **CLI surface already exists.** `hawk skills {list,search,install,remove,info,trending,audit}` is wired in `hawk/cmd/skills_cmd.go:16-211`.
-- **The extension format is partially standardized.** `SKILL.md` files carry YAML frontmatter (`name`, `description`, `license`, `tags`, `version`) — see `hawk-community-skills/api/openapi.yaml` `x-skill-format` and `categories/testing/ab-test-setup/SKILL.md` frontmatter.
+- **The extension format is partially standardized.** `SKILL.md` files carry YAML frontmatter (`name`, `description`, `license`, `tags`, `version`) — see `starling/api/openapi.yaml` `x-skill-format` and `categories/testing/ab-test-setup/SKILL.md` frontmatter.
 - **A V2 manifest already supports MCP-adjacent bundles.** `hawk/internal/plugin/manifest_v2.go:11` (`ManifestV2`) carries `Tools`, `Permissions`, `Hooks` (`:32` `ManifestHook` with `Event`/`Command`/`Priority`), `Config`, `Dependencies`, `Mode` (subprocess/daemon).
 - **Trust scaffolding already exists.** `hawk/internal/plugin/malware_check.go:19` blocks `eval()`, pipe-to-shell, reverse shells; `hawk/internal/plugin/audit.go` flags hidden-Unicode / homoglyph attacks (`hawk skills audit`).
 
-The gap is therefore **consolidation and elevation**, not invention: (a) a *standardized, multi-asset* extension format (today's registry is skills-only); (b) a *browsable web gallery*; (c) a *trust/signing* story beyond static malware regexes; and (d) a *unified docs site* that today is five disconnected `README.md`/`ARCHITECTURE.md` trees (`hawk/docs/`, `eyrie/docs/`, `yaad/`, `tok/docs/`, `trace/docs/`).
+The gap is therefore **consolidation and elevation**, not invention: (a) a *standardized, multi-asset* extension format (today's registry is skills-only); (b) a *browsable web gallery*; (c) a *trust/signing* story beyond static malware regexes; and (d) a *unified docs site* that today is five disconnected `README.md`/`ARCHITECTURE.md` trees (`hawk/docs/`, `eyrie/docs/`, `harrier/`, `shrike/docs/`, `swift/docs/`).
 
 ---
 
@@ -67,7 +67,7 @@ The gap is therefore **consolidation and elevation**, not invention: (a) a *stan
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  hawk-community-skills  (git repo = source of truth)                  │
+│  starling  (git repo = source of truth)                  │
 │  ├── categories/<cat>/<ext>/extension.yaml   (NEW: multi-asset)       │
 │  │       + SKILL.md / commands/ / mcp/ / hooks/ / themes/ / agents/   │
 │  ├── registry.json            (v1, kept)                              │
@@ -146,7 +146,7 @@ Today's `SkillEntry` (`registry.go:21`) already has most fields. v2 adds a `kind
       "version": "1.4.0",
       "license": "MIT",
       "author": "GrayCode AI",
-      "repo": "GrayCodeAI/hawk-community-skills",
+      "repo": "GrayCodeAI/starling",
       "provides": { "skills":1, "commands":2, "hooks":1, "mcpServers":1, "themes":1, "subagents":1 },
       "signed": true,
       "publisher": "graycode",
@@ -157,7 +157,7 @@ Today's `SkillEntry` (`registry.go:21`) already has most fields. v2 adds a `kind
 }
 ```
 
-Backward compatibility: `registry.go`'s `SkillIndex.Skills` (`:36`) keeps reading `registry.json`. A small shim maps v2 `extensions[]` → `SkillEntry` so older hawk binaries keep working; new binaries prefer `registry.v2.json` and fall back. The existing `tools/update_registry.py` / `tools/registry_schema.py` generators (in `hawk-community-skills/tools/`) are extended to emit both.
+Backward compatibility: `registry.go`'s `SkillIndex.Skills` (`:36`) keeps reading `registry.json`. A small shim maps v2 `extensions[]` → `SkillEntry` so older hawk binaries keep working; new binaries prefer `registry.v2.json` and fall back. The existing `tools/update_registry.py` / `tools/registry_schema.py` generators (in `starling/tools/`) are extended to emit both.
 
 ### 3.4 API surface
 
@@ -174,7 +174,7 @@ The marketplace has **no HTTP API server** (per NG1). Its "API" is:
 **Flow A — Install with trust verification**
 
 ```
-user: hawk ext install GrayCodeAI/hawk-community-skills terraform-pro
+user: hawk ext install GrayCodeAI/starling terraform-pro
   → RegistryClient.FetchIndex()           registry.go:60 (cache <1h)
   → resolve entry, get repo+path+publisher+signature
   → git clone --depth 1 (existing)        registry.go:215
@@ -204,7 +204,7 @@ browser → hawkskills.dev/extensions  (static Docusaurus/Mintlify page)
 ```
 CI (docs repo) →
   pull README.md / ARCHITECTURE.md / docs/** from each of hawk, eyrie,
-     yaad, tok, trace  (git submodules or sparse checkout)
+     harrier (Harrier), shrike (Shrike), swift (Swift)  (independent checkouts or sparse checkout)
   → transform: inject sidebars, rewrite intra-repo links
   → generate /extensions/* from registry.v2.json
   → render comparison tables from TOP20_COMPARISON.md
@@ -234,9 +234,9 @@ Concrete reuse map — what is *already there* and what each piece becomes:
 | Rule/skill discovery precedence | `DefaultRuleSources`, `RuleDiscoverer` | `hawk/internal/context/rules.go:20`, `:46` |
 | Trust — static scan | `malware_check.go` (blocked/suspicious regex) | `hawk/internal/plugin/malware_check.go:19` |
 | Trust — unicode/homoglyph | `audit.go` (`AuditFinding`, severities) | `hawk/internal/plugin/audit.go:12-22` |
-| Registry generators/validators | Python tooling | `hawk-community-skills/tools/{update_registry,registry_schema,validate_skill,package_skill,sync_marketplace}.py` |
-| Format reference | OpenAPI skill-format spec | `hawk-community-skills/api/openapi.yaml` (`x-skill-format`) |
-| IDE/agent plugin manifests | `.claude-plugin/{plugin,marketplace}.json` | `hawk-community-skills/.claude-plugin/` |
+| Registry generators/validators | Python tooling | `starling/tools/{update_registry,registry_schema,validate_skill,package_skill,sync_marketplace}.py` |
+| Format reference | OpenAPI skill-format spec | `starling/api/openapi.yaml` (`x-skill-format`) |
+| IDE/agent plugin manifests | `.claude-plugin/{plugin,marketplace}.json` | `starling/.claude-plugin/` |
 
 **Net-new Go (small, additive):**
 - `hawk/internal/plugin/trust.go` — signature verification (Flow A) and a `trustdb` of publisher public keys.
@@ -255,24 +255,24 @@ The discovery-precedence engine (`rules.go:20` `DefaultRuleSources`, walk-up + l
 ## 5. Phased Rollout
 
 ### P0 — Foundation (format + index + trust core)
-- **M0.1** Specify and freeze the `extension.yaml` schema; publish as `x-extension-format` alongside the existing `x-skill-format` in `hawk-community-skills/api/openapi.yaml`.
+- **M0.1** Specify and freeze the `extension.yaml` schema; publish as `x-extension-format` alongside the existing `x-skill-format` in `starling/api/openapi.yaml`.
 - **M0.2** `registry.v2.json` generator in `tools/update_registry.py`; emit both v1 and v2; v1 stays the default `defaultIndexURL` consumer for older binaries.
 - **M0.3** `extension.go` parser + adapter into `ManifestV2`; `hawk ext install` reuses `registry.go:196` clone path; multi-asset copy (skills/commands/hooks/mcp/themes/subagents).
 - **M0.4** Trust v1: detached **minisign/cosign** signatures (`signatures/<ext>.sig`), publisher pubkey bundled in hawk; `--allow-unsigned` escape hatch; wire `malware_check.go` + `audit.go` into the install path as hard gates.
 - **Exit:** `hawk ext install` works for at least 5 multi-asset extensions, signature-verified, on a v2 index.
 
 ### P1 — Gallery + Docs site (the visible surface)
-- **M1.1** Stand up the static site (decision in §6). Pages: `/extensions` (gallery), per-extension detail, `/docs/{hawk,eyrie,yaad,tok,trace}` (getting-started + API ref + architecture), `/comparison` (rendered from `TOP20_COMPARISON.md`).
+- **M1.1** Stand up the static site (decision in §6). Pages: `/extensions` (gallery), per-extension detail, `/docs/{hawk,eyrie,harrier,shrike,swift}` (getting-started + API ref + architecture), `/comparison` (rendered from `TOP20_COMPARISON.md`).
 - **M1.2** Build-time generation of `/extensions/index.json` from `registry.v2.json`; client-side fuzzy search, category + capability-badge filters.
-- **M1.3** Aggregate the 5 repos' docs via submodule/sparse checkout in CI (Flow C); link-rewriting + unified sidebar.
+- **M1.3** Aggregate the 5 independent repositories' docs via checkout or sparse checkout in CI (Flow C); link-rewriting + unified sidebar.
 - **M1.4** `hawk ext update` (diff installed version vs index, re-verify, atomic replace) and `hawk ext verify <name>` (re-check signature/audit of an installed extension).
 - **Exit:** hawkskills.dev (or chosen domain) live; gallery browseable; one-line install copy works; docs cover all 5 repos with getting-started + API ref.
 
 ### P2 — Ecosystem maturity & publisher self-service
-- **M2.1** `hawk ext publish` — scaffolds `extension.yaml`, runs validators (`tools/validate_skill.py` extended), signs locally, opens a PR to `hawk-community-skills`.
+- **M2.1** `hawk ext publish` — scaffolds `extension.yaml`, runs validators (`tools/validate_skill.py` extended), signs locally, opens a PR to `starling`.
 - **M2.2** Publisher trust tiers: verified-publisher badge (key in hawk's bundled trust DB) vs community (signed but unverified) vs unsigned.
 - **M2.3** Trending/installs analytics — privacy-preserving (aggregate counts from PR-based opt-in pings or GitHub stars only; **no per-user tracking**, see §7).
-- **M2.4** Cross-repo extension kinds: eyrie provider plug-ins, tok compression profiles (`TOP20_COMPARISON.md:181` team profiles), trace exporters — registered through the same `extension.yaml` `provides` mechanism with new `kind`s.
+- **M2.4** Cross-repo extension kinds: eyrie provider plug-ins, shrike compression profiles (`TOP20_COMPARISON.md:181` team profiles), swift exporters — registered through the same `extension.yaml` `provides` mechanism with new `kind`s.
 - **Exit:** External contributors can publish a verified, multi-asset extension end-to-end; gallery shows mixed-kind extensions across the ecosystem.
 
 ---
@@ -283,7 +283,7 @@ The discovery-precedence engine (`rules.go:20` `DefaultRuleSources`, walk-up + l
 
 | Option | Pros | Cons | License |
 |---|---|---|---|
-| **Docusaurus** (recommended) | OSS, React, self-hosted on GitHub/Cloudflare Pages, full control over the custom `/extensions` gallery component, MDX, versioned docs, large ecosystem | More config than hosted Mintlify; we own the build | **MIT** — no vendor lock-in, aligns with the MIT skills repo (`hawk-community-skills/LICENSE`) |
+| **Docusaurus** (recommended) | OSS, React, self-hosted on GitHub/Cloudflare Pages, full control over the custom `/extensions` gallery component, MDX, versioned docs, large ecosystem | More config than hosted Mintlify; we own the build | **MIT** — no vendor lock-in, aligns with the MIT skills repo (`starling/LICENSE`) |
 | **Mintlify** | Beautiful defaults, fast, hosted | Hosted SaaS dependency, less freedom for a custom gallery widget, potential cost, **data leaves our control** (conflicts with privacy-first) | Proprietary SaaS |
 
 **Recommendation: Docusaurus**, self-hosted on GitHub Pages or Cloudflare Pages. It is MIT, keeps the project's privacy-first / no-third-party-data posture (§7), and lets us build the gallery as a first-class React route fed by a static `index.json`. Mintlify's hosted model conflicts with NG1/G6.
@@ -303,7 +303,7 @@ minisign is the lighter P0 choice (single keypair, no external infra). cosign/si
 
 ### Licensing implications
 - Every extension's `extension.yaml` **must** carry a `license` field (already required for skills — `openapi.yaml` `required_frontmatter`). The gallery surfaces it; the validator rejects missing/unknown licenses.
-- The community repo is **MIT** (`hawk-community-skills/LICENSE`). Contributed extensions retain their own license but must be OSI-approved; a CI check (extend `tools/validate_skill.py`) flags GPL/AGPL bundled binaries that would conflict with hawk's distribution model (mirrors `TOP20_COMPARISON.md:241`).
+- The community repo is **MIT** (`starling/LICENSE`). Contributed extensions retain their own license but must be OSI-approved; a CI check (extend `tools/validate_skill.py`) flags GPL/AGPL bundled binaries that would conflict with hawk's distribution model (mirrors `TOP20_COMPARISON.md:241`).
 - Docusaurus (MIT) and minisign (ISC) impose no copyleft obligations.
 
 ---
@@ -320,7 +320,7 @@ These repos are privacy-first; the marketplace must not regress that.
   4. **Permission disclosure:** `extension.yaml` `permissions` (mapped to `ManifestV2.Permissions`, `manifest_v2.go:18`) are shown to the user before install; `run_shell`/`network` require explicit confirmation.
 - **MCP server execution is the highest-risk asset.** Bundled MCP servers run as subprocesses. P0 ships them as **opt-in** (the extension installs the *definition*; the user must explicitly enable the server), and prefers `stdio` transport with no inbound network surface.
 - **Prompt-injection through extension content.** Skills/prompts are injected into the system prompt via the same path as rules (`rules.go`). The audit (3) plus the existing HTML-comment-stripping concern (`TOP20_COMPARISON.md:74`) apply; the validator strips/flags suspicious frontmatter.
-- **Offline/air-gapped install.** Because install is `git clone` + local copy with local signature verification, an org can mirror `hawk-community-skills` internally and point `defaultIndexURL`/`--index` at it — no call to GitHub required.
+- **Offline/air-gapped install.** Because install is `git clone` + local copy with local signature verification, an org can mirror `starling` internally and point `defaultIndexURL`/`--index` at it — no call to GitHub required.
 - **No third-party doc analytics.** Self-hosted Docusaurus (§6) avoids shipping user reading data to a SaaS. Any "installs" metric (P2) is aggregate-only and opt-in.
 - **Signing key custody.** Verified-publisher keys ship in hawk's binary; rotation requires a hawk release. P2 cosign/sigstore would move trust to a transparency log, reducing reliance on bundled keys.
 
@@ -329,8 +329,8 @@ These repos are privacy-first; the marketplace must not regress that.
 ## 8. Open Questions
 
 1. **Signing backend:** minisign (simple, key-in-binary) for P0, or go straight to sigstore/cosign keyless (transparency log, no key custody) and align with the SBOM effort (`TOP20_COMPARISON.md:240`)? Tradeoff: operational simplicity now vs. provenance rigor later.
-2. **One repo or two?** Keep gallery + docs in `hawk-community-skills`, or split docs into a new `hawk-docs` repo with the 5 repos as submodules? (Submodules complicate contributor flow but isolate doc build from skill content.)
-3. **Cross-repo extension kinds (P2):** do eyrie/tok/trace assets (provider plugins, compression profiles, exporters) belong in the *same* `hawk-community-skills` registry, or a per-repo registry federated into one gallery index?
+2. **One repo or two?** Keep gallery + docs in `starling`, or split docs into a new `hawk-docs` repo with the 5 repos as submodules? (Submodules complicate contributor flow but isolate doc build from skill content.)
+3. **Cross-repo extension kinds (P2):** do eyrie/shrike/swift assets (provider plugins, compression profiles, exporters) belong in the *same* `starling` registry, or a per-repo registry federated into one gallery index?
 4. **Versioning & compat matrix:** `compat.minHawkVersion` exists (`manifest_v2.go:20`), but do we also need per-asset compat (e.g., an MCP server needing a specific transport hawk supports)? Tie-in to the tri-modal MCP transport gap (`TOP20_COMPARISON.md:83`).
 5. **Install integrity for non-skill assets:** today install only copies `SKILL.md` trees (`registry.go` discovers `SKILL.md`); multi-asset copy (commands/hooks/mcp/themes/subagents) needs a defined on-disk layout under `~/.hawk/`. What are the canonical install dirs for each asset kind?
 6. **Domain & hosting:** confirm `hawkskills.dev` (referenced `TOP20_COMPARISON.md:65`) ownership and Pages target (GitHub vs Cloudflare).
@@ -345,11 +345,11 @@ These repos are privacy-first; the marketplace must not regress that.
 | **P0 — format + index v2** | `extension.yaml` spec, v2 generator in `tools/`, `extension.go` parser + `ManifestV2` adapter, multi-asset install layout, `hawk ext` command tree | **4–5 ew** |
 | **P0 — trust core** | `trust.go` (Ed25519/minisign verify), publisher key bundling, wire `malware_check`/`audit` as install gates, permission-disclosure UX | **3–4 ew** |
 | **P1 — gallery** | Docusaurus setup, `/extensions` React route, build-time `index.json`, search + filters + detail pages | **4–5 ew** |
-| **P1 — unified docs** | Aggregate 5 repos (submodule/sparse checkout CI), sidebars + link rewrite, getting-started + API-ref scaffolding per repo, comparison tables from `TOP20_COMPARISON.md` | **5–7 ew** |
+| **P1 — unified docs** | Aggregate 5 independent repositories (checkout/sparse-checkout CI), sidebars + link rewrite, getting-started + API-ref scaffolding per repo, comparison tables from `TOP20_COMPARISON.md` | **5–7 ew** |
 | **P1 — CLI update/verify** | `hawk ext update`, `hawk ext verify`, atomic replace | **2 ew** |
 | **P2 — publisher self-service** | `hawk ext publish` scaffolder + validators, PR automation | **3 ew** |
 | **P2 — trust tiers + sigstore upgrade** | verified-publisher badges, optional cosign/sigstore keyless + transparency log | **3–4 ew** |
-| **P2 — cross-repo kinds** | eyrie/tok/trace extension kinds + federated index | **3–4 ew** |
+| **P2 — cross-repo kinds** | eyrie/shrike/swift extension kinds + federated index | **3–4 ew** |
 | **Cross-cutting** | docs writing (content, not framework), security review, CI, design iteration | **4–6 ew** |
 | **Total** | | **≈ 31–44 eng-weeks** (~7.5–11 eng-months; 2 engineers ~4–5 calendar months) |
 
@@ -359,7 +359,7 @@ The estimate is bounded on the low side because the hardest plumbing — the reg
 
 ### Appendix: grounding index (real files cited)
 
-- `hawk-community-skills/registry.json`, `registry.json` head (schema), `tools/*.py`, `api/openapi.yaml`, `.claude-plugin/{plugin,marketplace}.json`, `categories/testing/ab-test-setup/SKILL.md`, `LICENSE`
+- `starling/registry.json`, `registry.json` head (schema), `tools/*.py`, `api/openapi.yaml`, `.claude-plugin/{plugin,marketplace}.json`, `categories/testing/ab-test-setup/SKILL.md`, `LICENSE`
 - `hawk/internal/plugin/registry.go:18,21,36,60,196,201,215,289,309`
 - `hawk/internal/plugin/manifest_v2.go:11,18,20,32,42`
 - `hawk/internal/plugin/skill_loader.go:51`

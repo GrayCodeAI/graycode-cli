@@ -11,7 +11,7 @@ For Hawk, the developer path is the minimum local setup required to chat, edit c
 - A local model catalog available through eyrie
 - No plaintext API keys left in Eyrie's configured `provider.json` or legacy env files
 - Safe defaults for Bash execution and filesystem access
-- Optional but healthy ecosystem integrations like yaad memory
+- Optional but healthy ecosystem integrations like harrier memory
 
 Run the report at any time:
 
@@ -26,15 +26,30 @@ hawk preflight
 
 ### 1. Build and workspace setup
 
-If you are contributing from source, clone Hawk and fetch the support repos first:
+If you are contributing from source, clone Hawk as the main CLI. The support
+repositories are independent sibling checkouts when you need the full local
+workspace; they are not nested under Hawk:
 
 ```bash
-git clone https://github.com/GrayCodeAI/hawk && cd hawk
+mkdir graycode-eco && cd graycode-eco
+git clone https://github.com/GrayCodeAI/hawk
+git clone https://github.com/GrayCodeAI/eagle
+git clone https://github.com/GrayCodeAI/eyrie
+git clone https://github.com/GrayCodeAI/falcon
+git clone https://github.com/GrayCodeAI/harrier
+git clone https://github.com/GrayCodeAI/shrike
+git clone https://github.com/GrayCodeAI/swift
+git clone https://github.com/GrayCodeAI/kestrel
+git clone https://github.com/GrayCodeAI/merlin
+cd hawk
 make setup
 go build -o hawk ./cmd/hawk
 ```
 
-`make setup` populates `external/` and syncs `go.work`, which Hawk expects in contributor builds.
+`make setup` validates the canonical 15-repository manifest and regenerates the
+parent `../go.work` from the nine local Go repositories. Hawk can also be built
+as a standalone checkout with `GOWORK=off go build ./cmd/hawk`; the sibling
+workspace is only required for cross-repository development and boundary checks.
 
 ### 2. Configure credentials
 
@@ -98,8 +113,8 @@ hawk path --strict
 `hawk path` also verifies the core support layer behind Hawk:
 
 - `eyrie` for provider routing and local preflight readiness
-- `tok` for token estimation and compression
-- `yaad` for optional persistent memory
+- `shrike` for token estimation and compression
+- `harrier` for optional persistent memory
 
 If you want the broader status summary:
 

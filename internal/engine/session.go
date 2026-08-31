@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+	agentcontracts "github.com/GrayCodeAI/eagle/agent"
 	"github.com/GrayCodeAI/hawk/internal/conversationarc"
 	"github.com/GrayCodeAI/hawk/internal/engine/planning"
 	"github.com/GrayCodeAI/hawk/internal/eventlog"
@@ -53,7 +53,7 @@ type SnapshotTracker interface {
 //	llm            *ChatService        (Phase 1: LLM transport)
 //	perms          *PermissionService  (Phase 2: safety/approval)
 //	life           *LifecycleService   (Phase 3: self-improvement loop)
-//	memory         *MemoryService      (Phase 4: yaad bridge)
+//	memory         *MemoryService      (Phase 4: harrier bridge)
 //	persist        *PersistenceService (Phase 5: conversation store)
 //	tools          *ToolService        (Phase 6: tool execution)
 //

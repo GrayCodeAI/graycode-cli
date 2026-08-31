@@ -211,7 +211,7 @@ Highest-value remaining work, in order:
 26. Ignorable flag — Delivered: `Event.Ignorable` + `WireEvent.Ignorable`
     fields (`ignorable,omitempty`). `AppendIgnorable` appends marked events.
     `llm.retry`, `llm.retry-started`, `schedule.change`, and
-    `session.title-llm-request` marked ignorable (trace-only).
+    `session.title-llm-request` marked ignorable (swift-only).
 27. Session header DSH parity — Delivered: `Meta` extended with
     `ParentSession`, `SeedLength`, `Origin`, `DelegationDepth`, `AgentPreset`.
 28. Format version enforcement — Delivered: `SessionFormatVersion = 1`

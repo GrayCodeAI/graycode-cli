@@ -56,7 +56,7 @@ go mod init github.com/GrayCodeAI/hawk-vscode
 mkdir -p cmd extension/src
 
 # Add dependencies
-go get github.com/GrayCodeAI/hawk-sdk-go
+go get github.com/GrayCodeAI/sparrow
 
 # Add WebSocket transport
 go get golang.org/x/net/websocket
@@ -148,7 +148,7 @@ hawk-vscode/
 **What:**
 - Create marketplace for community extensions
 - Add extension discovery endpoint to hawk
-- Create `hawk-community-skills` integration
+- Create `starling` integration
 - Add version compatibility checking
 
 **Why:**
@@ -275,7 +275,7 @@ func (s *Session) handleInstallExtension(w http.ResponseWriter, r *http.Request)
 }
 ```
 
-**Update hawk-community-skills:**
+**Update starling:**
 ```bash
 # Add extension manifest
 mkdir -p .extensions/python
@@ -319,7 +319,7 @@ EOF
 
 ## Phase 2: Medium Priority (Next Sprint - Score Impact: +0.3)
 
-### 3. Add Documentation Site (graycode-core)
+### 3. Add Documentation Site (graycode-platform)
 
 **Effort:** Large (2-3 weeks)
 **Priority:** MEDIUM
@@ -359,7 +359,7 @@ npm run deploy
 
 ---
 
-### 4. Add Community Forum (graycode-core)
+### 4. Add Community Forum (graycode-platform)
 
 **Effort:** Large (2-3 weeks)
 **Priority:** MEDIUM
@@ -452,7 +452,7 @@ go build forum.go
 package main
 
 import (
-    "github.com/GrayCodeAI/hawk-mcpkit"
+    "github.com/GrayCodeAI/falcon"
     "github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -594,7 +594,7 @@ Current architecture status: see `docs/architecture/hawk-architecture-baseline.m
 
 ---
 
-### **graycode-core** (Core Framework)
+### **graycode-platform** (Web and Cloud Platform)
 
 | Phase | Improvement | Effort | Impact | Status |
 |-------|--------------|--------|--------|--------|
@@ -606,7 +606,7 @@ Current architecture status: see `docs/architecture/hawk-architecture-baseline.m
 
 ---
 
-### **hawk-sdk-go** (Go SDK)
+### **sparrow** (Go SDK)
 
 | Phase | Improvement | Effort | Impact | Status |
 |-------|--------------|--------|--------|--------|
@@ -617,7 +617,7 @@ Current architecture status: see `docs/architecture/hawk-architecture-baseline.m
 
 ---
 
-### **hawk-sdk-python** (Python SDK)
+### **robin** (Python SDK)
 
 | Phase | Improvement | Effort | Impact | Status |
 |-------|--------------|--------|--------|--------|
@@ -639,15 +639,15 @@ Current architecture status: see `docs/architecture/hawk-architecture-baseline.m
 
 ---
 
-### **Other Repos (tok, trace, yaad, sight, inspect)**
+### **Other Repos (shrike, swift, harrier, kestrel, merlin)**
 
 | Repo | Phase | Improvement | Effort | Impact |
 |------|-------|--------------|--------|--------|
-| tok | 3 | Add token usage prediction | Small | +0.1 |
-| trace | 3 | Add trace sharing | Small | +0.1 |
-| yaad | 3 | Add memory analytics | Small | +0.1 |
-| sight | 3 | Add review templates | Small | +0.1 |
-| inspect | 3 | Add verification templates | Small | +0.1 |
+| shrike | 3 | Add token usage prediction | Small | +0.1 |
+| swift | 3 | Add swift sharing | Small | +0.1 |
+| harrier | 3 | Add memory analytics | Small | +0.1 |
+| kestrel | 3 | Add review templates | Small | +0.1 |
+| merlin | 3 | Add verification templates | Small | +0.1 |
 
 **Historical self-assessment; no current numeric score is assigned.**
 

@@ -15,7 +15,7 @@ port matrices; it freezes what “Year 0 done” means and tracks pack status.
 |----|--------|
 | Reimplement Grok **behavior** in Go | Copy Rust crates or depend on Grok |
 | Map capabilities to graycode-eco repos | Collapse engines into hawk monorepo |
-| Wire existing modes/budgets first | Rebuild eyrie/yaad/tok as Grok clones |
+| Wire existing modes/budgets first | Rebuild eyrie/harrier/shrike as Grok clones |
 | Privacy-first telemetry (OTEL opt-in) | Port Mixpanel defaults |
 
 ## Pack status
@@ -23,7 +23,7 @@ port matrices; it freezes what “Year 0 done” means and tracks pack status.
 | Pack | Scope | Status |
 |------|--------|--------|
 | PACK-00 | ADR, inventory, flags, test matrix template | **Done** (2026-07-16) |
-| PACK-01 | `hawk-core-contracts/agent` spawn DTOs | **Done** (v0.1.6) |
+| PACK-01 | `eagle/agent` spawn DTOs | **Done** (v0.1.6) |
 | PACK-02 | Typed spawn + Agent tool + taskruntime unify | **Mostly done** — typed Agent tool, explore bash hard gate, taskruntime registry, worktree isolation; true transcript resume still stub |
 | PACK-03 | sandbox.toml + folder trust + safe-bash | **Partial** — folder trust + sandbox.toml + project plugin/hook gates; named acceptEdits modes / safe-bash product polish remain |
 | PACK-04 | Hooks complete + PreToolUse in PermissionEngine | **Done** — PreToolUse deny-before-autonomy, vendor aliases, HTTP hooks, discovery dirs, plugin env, acceptEdits/dontAsk aliases |

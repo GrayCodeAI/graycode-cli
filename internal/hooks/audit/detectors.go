@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	contracts "github.com/GrayCodeAI/hawk-core-contracts/events"
+	contracts "github.com/GrayCodeAI/eagle/events"
 )
 
 // DetectorHit represents one detected occurrence of wasteful behavior.

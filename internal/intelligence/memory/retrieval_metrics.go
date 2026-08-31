@@ -45,7 +45,7 @@ type RetrievalReport struct {
 func NewRetrievalMetrics(projectDir string) *RetrievalMetrics {
 	savePath := ""
 	if projectDir != "" {
-		savePath = filepath.Join(projectDir, ".yaad", "retrieval_metrics.json")
+		savePath = filepath.Join(projectDir, ".harrier", "retrieval_metrics.json")
 	}
 	rm := &RetrievalMetrics{
 		entries:  make([]RetrievalEntry, 0, 256),

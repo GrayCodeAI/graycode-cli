@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
-	policycontracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
+	graphcontracts "github.com/GrayCodeAI/eagle/graph"
+	policycontracts "github.com/GrayCodeAI/eagle/policy"
 	"github.com/GrayCodeAI/hawk/internal/executiongraph"
 	"github.com/GrayCodeAI/hawk/internal/fsutil"
 	"github.com/GrayCodeAI/hawk/internal/graphjournal"
@@ -24,9 +24,9 @@ import (
 func newExecutionGraphCmd() *cobra.Command {
 	graphCmd := &cobra.Command{
 		Use:   "graph",
-		Short: "Inspect Hawk's portable execution graph",
+		Short: "Merlin Hawk's portable execution graph",
 		Long: `Project Hawk-owned sessions, task requests, structured tasks, runtime tasks,
-tool calls, policy observations, verification results, and explicit Trace
+tool calls, policy observations, verification results, and explicit Swift
 checkpoint links into the shared graph contract.
 
 This command is read-only. Existing runtime components remain the source of
@@ -35,7 +35,7 @@ truth for scheduling, tools, policy, verification, persistence, and tracing.`,
 	}
 
 	var repositoryID string
-	var traceCheckpointIDs []string
+	var swiftCheckpointIDs []string
 	var missionDir string
 	exportCmd := &cobra.Command{
 		Use:   "export [session-id]",
@@ -53,7 +53,7 @@ truth for scheduling, tools, policy, verification, persistence, and tracing.`,
 				export, err = buildExecutionGraphExport(
 					args,
 					repositoryID,
-					traceCheckpointIDs,
+					swiftCheckpointIDs,
 					time.Now().UTC(),
 				)
 			}
@@ -82,10 +82,10 @@ truth for scheduling, tools, policy, verification, persistence, and tracing.`,
 		"Read mission-graph.json from this mission directory instead of a session",
 	)
 	exportCmd.Flags().StringArrayVar(
-		&traceCheckpointIDs,
-		"trace-checkpoint",
+		&swiftCheckpointIDs,
+		"swift-checkpoint",
 		nil,
-		"Link a Trace checkpoint ID; may be repeated",
+		"Link a Swift checkpoint ID; may be repeated",
 	)
 	graphCmd.AddCommand(exportCmd)
 	return graphCmd
@@ -94,24 +94,24 @@ truth for scheduling, tools, policy, verification, persistence, and tracing.`,
 func buildExecutionGraphExport(
 	args []string,
 	repositoryID string,
-	traceCheckpointIDs []string,
+	swiftCheckpointIDs []string,
 	now time.Time,
 ) (executiongraph.Export, error) {
-	return buildExecutionGraphExportWithTrace(
+	return buildExecutionGraphExportWithSwift(
 		args,
 		repositoryID,
-		traceCheckpointIDs,
+		swiftCheckpointIDs,
 		now,
-		traceCLICorrelationResolver{},
+		swiftCLICorrelationResolver{},
 	)
 }
 
-func buildExecutionGraphExportWithTrace(
+func buildExecutionGraphExportWithSwift(
 	args []string,
 	repositoryID string,
-	traceCheckpointIDs []string,
+	swiftCheckpointIDs []string,
 	now time.Time,
-	resolver traceCorrelationResolver,
+	resolver swiftCorrelationResolver,
 ) (executiongraph.Export, error) {
 	saved, err := loadExecutionGraphSession(args)
 	if err != nil {
@@ -129,24 +129,24 @@ func buildExecutionGraphExportWithTrace(
 		}
 	}
 
-	traceRefs := make([]executiongraph.TraceCheckpointRef, 0, len(traceCheckpointIDs))
-	for _, checkpointID := range traceCheckpointIDs {
+	swiftRefs := make([]executiongraph.SwiftCheckpointRef, 0, len(swiftCheckpointIDs))
+	for _, checkpointID := range swiftCheckpointIDs {
 		checkpointID = strings.TrimSpace(checkpointID)
-		if validationErr := validateTraceCheckpointID(checkpointID); validationErr != nil {
+		if validationErr := validateSwiftCheckpointID(checkpointID); validationErr != nil {
 			return executiongraph.Export{}, validationErr
 		}
-		traceRefs = append(traceRefs, executiongraph.TraceCheckpointRef{
+		swiftRefs = append(swiftRefs, executiongraph.SwiftCheckpointRef{
 			CheckpointID: checkpointID,
 			CreatedAt:    now,
 		})
 	}
-	traceSessions := make([]executiongraph.TraceSessionRef, 0)
+	swiftSessions := make([]executiongraph.SwiftSessionRef, 0)
 	if resolver != nil {
 		correlation, correlationErr := resolver.Resolve(context.Background(), saved.ID)
 		if correlationErr == nil {
-			resolvedSessions, resolvedCheckpoints := traceReferencesFromCorrelation(correlation, now)
-			traceSessions = append(traceSessions, resolvedSessions...)
-			traceRefs = append(traceRefs, resolvedCheckpoints...)
+			resolvedSessions, resolvedCheckpoints := swiftReferencesFromCorrelation(correlation, now)
+			swiftSessions = append(swiftSessions, resolvedSessions...)
+			swiftRefs = append(swiftRefs, resolvedCheckpoints...)
 		}
 	}
 
@@ -166,8 +166,8 @@ func buildExecutionGraphExportWithTrace(
 		RuntimeObservations: runtimeObservations,
 		PolicyObservations:  policyObservations,
 		Verifications:       verificationObservations,
-		TraceSessions:       traceSessions,
-		TraceCheckpoints:    traceRefs,
+		SwiftSessions:       swiftSessions,
+		SwiftCheckpoints:    swiftRefs,
 		GeneratedAt:         now,
 		Scope:               scope,
 		ProducerVersion:     version,
@@ -178,21 +178,21 @@ func buildExecutionGraphExportWithTrace(
 	return export, nil
 }
 
-func traceReferencesFromCorrelation(
-	correlation traceCorrelation,
+func swiftReferencesFromCorrelation(
+	correlation swiftCorrelation,
 	fallback time.Time,
-) ([]executiongraph.TraceSessionRef, []executiongraph.TraceCheckpointRef) {
-	sessions := make([]executiongraph.TraceSessionRef, 0, len(correlation.Matches))
-	checkpoints := make([]executiongraph.TraceCheckpointRef, 0)
+) ([]executiongraph.SwiftSessionRef, []executiongraph.SwiftCheckpointRef) {
+	sessions := make([]executiongraph.SwiftSessionRef, 0, len(correlation.Matches))
+	checkpoints := make([]executiongraph.SwiftCheckpointRef, 0)
 	for _, match := range correlation.Matches {
-		sessions = append(sessions, executiongraph.TraceSessionRef{
-			SessionID: match.TraceSessionID,
+		sessions = append(sessions, executiongraph.SwiftSessionRef{
+			SessionID: match.SwiftSessionID,
 			CreatedAt: graphCorrelationTime(match.StartedAt, fallback),
 		})
 		for _, checkpointID := range match.CheckpointIDs {
-			checkpoints = append(checkpoints, executiongraph.TraceCheckpointRef{
+			checkpoints = append(checkpoints, executiongraph.SwiftCheckpointRef{
 				CheckpointID:   checkpointID,
-				TraceSessionID: match.TraceSessionID,
+				SwiftSessionID: match.SwiftSessionID,
 				CreatedAt:      fallback,
 			})
 		}
@@ -411,13 +411,13 @@ func executionGraphRepositoryID(override, sessionCWD string) string {
 	return filepath.Base(filepath.Clean(path))
 }
 
-func validateTraceCheckpointID(checkpointID string) error {
+func validateSwiftCheckpointID(checkpointID string) error {
 	if len(checkpointID) != 12 {
-		return fmt.Errorf("invalid Trace checkpoint ID %q: must be 12 lowercase hex characters", checkpointID)
+		return fmt.Errorf("invalid Swift checkpoint ID %q: must be 12 lowercase hex characters", checkpointID)
 	}
 	decoded, err := hex.DecodeString(checkpointID)
 	if err != nil || hex.EncodeToString(decoded) != checkpointID {
-		return fmt.Errorf("invalid Trace checkpoint ID %q: must be 12 lowercase hex characters", checkpointID)
+		return fmt.Errorf("invalid Swift checkpoint ID %q: must be 12 lowercase hex characters", checkpointID)
 	}
 	return nil
 }

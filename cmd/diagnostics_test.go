@@ -33,7 +33,7 @@ func TestDoctorReport(t *testing.T) {
 	if !strings.Contains(report, "Version") {
 		t.Error("report should mention version")
 	}
-	if !strings.Contains(report, "Ecosystem (eyrie · yaad · tok)") {
+	if !strings.Contains(report, "Ecosystem (eyrie · harrier · shrike)") {
 		t.Error("report should include ecosystem panel")
 	}
 }

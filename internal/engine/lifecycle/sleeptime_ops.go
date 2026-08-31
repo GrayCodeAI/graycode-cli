@@ -18,11 +18,11 @@ type memoryOp struct {
 // ErrNoMemoryOps indicates the LLM response contained no JSON array of ops.
 var ErrNoMemoryOps = errors.New("no memory ops array in response")
 
-// ParseAndApplyMemoryOps parses the LLM's JSON response and applies memory operations via yaad.
+// ParseAndApplyMemoryOps parses the LLM's JSON response and applies memory operations via harrier.
 // Every failure mode is surfaced as an error so callers can log and observe the memory loop.
-func ParseAndApplyMemoryOps(bridge *memory.YaadBridge, response string) error {
+func ParseAndApplyMemoryOps(bridge *memory.HarrierBridge, response string) error {
 	if bridge == nil {
-		return errors.New("memory ops: yaad bridge is nil")
+		return errors.New("memory ops: harrier bridge is nil")
 	}
 	// Extract JSON array from response (may have surrounding text)
 	start := strings.Index(response, "[")

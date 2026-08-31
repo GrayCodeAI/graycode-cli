@@ -425,11 +425,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			taskType:    taskType,
 		})
 
-		// Inject memory metadata from yaad
-		if s.MemorySvc().Yaad() != nil && s.MemorySvc().Yaad().Ready() {
-			if _, contents, err := s.MemorySvc().Yaad().SearchByType("convention", 100); err == nil {
+		// Inject memory metadata from harrier
+		if s.MemorySvc().Harrier() != nil && s.MemorySvc().Harrier().Ready() {
+			if _, contents, err := s.MemorySvc().Harrier().SearchByType("convention", 100); err == nil {
 				convCount := len(contents)
-				if _, dContents, err := s.MemorySvc().Yaad().SearchByType("decision", 100); err == nil {
+				if _, dContents, err := s.MemorySvc().Harrier().SearchByType("decision", 100); err == nil {
 					decCount := len(dContents)
 					total := convCount + decCount
 					if total > 0 {
@@ -782,7 +782,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			if s.LifecycleSvc().Pipeline() != nil && textContent.Len() > 0 {
 				postResult := s.LifecycleSvc().Pipeline().PostResponse(textContent.String(), s.Persistence().RawMessages())
 				if postResult != nil {
-					s.recordTokRedactionObservation(textContent.String(), postResult.SecretMatches, postResult.SecretTypes)
+					s.recordShrikeRedactionObservation(textContent.String(), postResult.SecretMatches, postResult.SecretTypes)
 				}
 				if postResult != nil && postResult.FormattedResponse != "" {
 					textContent.Reset()
@@ -805,7 +805,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}
 			}
 			// Sleeptime: background memory consolidation
-			if s.MemorySvc().Sleeptime() != nil && s.MemorySvc().Sleeptime().ShouldRun() && s.MemorySvc().Yaad() != nil && s.MemorySvc().Yaad().Ready() {
+			if s.MemorySvc().Sleeptime() != nil && s.MemorySvc().Sleeptime().ShouldRun() && s.MemorySvc().Harrier() != nil && s.MemorySvc().Harrier().Ready() {
 				// Snapshot messages to avoid data race with main loop appending
 				msgs := make([]types.EyrieMessage, len(s.Persistence().RawMessages()))
 				copy(msgs, s.Persistence().RawMessages())
@@ -828,13 +828,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					if err != nil || resp == nil {
 						return
 					}
-					if err := lifecycle.ParseAndApplyMemoryOps(s.MemorySvc().Yaad(), resp.Content); err != nil {
+					if err := lifecycle.ParseAndApplyMemoryOps(s.MemorySvc().Harrier(), resp.Content); err != nil {
 						slog.Warn("memory ops", "error", err)
 					}
 				}()
 			}
 			// Skill distillation: extract reusable skill from multi-turn tasks
-			if s.MemorySvc().SkillDistiller() != nil && toolTurns >= 5 && s.MemorySvc().Yaad() != nil && s.MemorySvc().Yaad().Ready() {
+			if s.MemorySvc().SkillDistiller() != nil && toolTurns >= 5 && s.MemorySvc().Harrier() != nil && s.MemorySvc().Harrier().Ready() {
 				// Snapshot messages to avoid data race with main loop appending
 				msgs := make([]types.EyrieMessage, len(s.Persistence().RawMessages()))
 				copy(msgs, s.Persistence().RawMessages())
@@ -872,7 +872,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						return
 					}
 					content, _ := json.Marshal(skill)
-					if err := s.MemorySvc().Yaad().Remember(string(content), "skill"); err != nil {
+					if err := s.MemorySvc().Harrier().Remember(string(content), "skill"); err != nil {
 						slog.Warn("background skill remember failed", "error", err)
 					}
 				}()
@@ -1093,7 +1093,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 		}
 
-		// Auto-remember: save conversation context and insights to yaad after each turn
+		// Auto-remember: save conversation context and insights to harrier after each turn
 		if s.MemorySvc().Memory() != nil {
 			userMsg := ""
 			assistantMsg := ""

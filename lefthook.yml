@@ -128,7 +128,7 @@ pre-push:
       run: |
         # Informational only — warns if go.mod versions have fallen behind the
         # sibling dev clones, but never blocks a push.
-        bash scripts/check-submodule-release-parity.sh || true
+        bash scripts/check-module-release-parity.sh || true
 
 # ---------------------------------------------------------------------------
 # commit-msg — validate Conventional Commits and strip AI co-author trailers.

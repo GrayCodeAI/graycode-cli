@@ -1,10 +1,10 @@
 // Package types provides Hawk-owned runtime types and shared compatibility aliases.
-// Severity, TokenSeverity, and AuditSeverity are forwarded from hawk-core-contracts/types.
+// Severity, TokenSeverity, and AuditSeverity are forwarded from eagle/types.
 // Provider-facing compatibility now lives in explicit adapters inside internal/types/client.go.
 package types
 
 import (
-	contracts "github.com/GrayCodeAI/hawk-core-contracts/types"
+	contracts "github.com/GrayCodeAI/eagle/types"
 )
 
 // Severity represents the impact level of a finding.

@@ -122,7 +122,7 @@ All plugins are scanned on install for:
 ## Publishing to the Community Registry
 
 1. Push your plugin to a public GitHub repository.
-2. The registry index (maintained at `hawk-community-skills/registry.json`) is periodically refreshed.
+2. The registry index (maintained at `starling/registry.json`) is periodically refreshed.
 3. Users discover plugins via `hawk plugin search <query>`.
 4. Users install via `hawk plugin install <github-repo-url>`.
 5. Registry installation includes automatic audit and security scanning.
