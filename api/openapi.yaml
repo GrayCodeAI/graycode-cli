@@ -273,6 +273,78 @@ components:
           items:
             $ref: "#/components/schemas/GraphEvent"
 
+    GraphSyncRequest:
+      type: object
+      required: [syncId, projectId, graph]
+      properties:
+        syncId:
+          type: string
+          minLength: 1
+          maxLength: 256
+        projectId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        sessionId:
+          type: string
+          maxLength: 128
+        graph:
+          $ref: "#/components/schemas/ExecutionGraph"
+
+    GraphSyncResponse:
+      type: object
+      required: [accepted, duplicate, graphDigest]
+      properties:
+        accepted:
+          type: boolean
+        duplicate:
+          type: boolean
+        graphDigest:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        facts:
+          type: integer
+
+    GraphReadResponse:
+      type: object
+      required: [graph, limits, pagination]
+      properties:
+        graph:
+          type: object
+          properties:
+            schema_version:
+              type: string
+            generated_at:
+              type: string
+              format: date-time
+            scope:
+              type: object
+              additionalProperties:
+                type: string
+            nodes:
+              type: array
+              items:
+                type: object
+            edges:
+              type: array
+              items:
+                type: object
+            events:
+              type: array
+              items:
+                type: object
+        limits:
+          type: object
+          properties:
+            perFactType:
+              type: integer
+        pagination:
+          type: object
+          properties:
+            next_cursor:
+              type: string
+              nullable: true
+
     Message:
       type: object
       properties:
@@ -858,6 +930,105 @@ paths:
                 $ref: "#/components/schemas/Error"
         "503":
           description: Graph projection is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/graph/sync:
+    post:
+      operationId: syncGraph
+      tags: [graphs]
+      summary: Ingest portable graph facts from a producer
+      description: |
+        Accepts a producer's portable `*.graph/v1` facts (e.g. from a future
+        ecosystem repo), validates them against the shared graph contract, and
+        acknowledges with an idempotency digest. Mirrors the cloud plane's
+        `/v1/graph/sync` so a producer can target either surface with the same
+        payload. The daemon retains an in-memory idempotency ledger; durable
+        retention is the cloud plane's job.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GraphSyncRequest"
+      responses:
+        "202":
+          description: Graph accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphSyncResponse"
+        "200":
+          description: Graph accepted as a duplicate of a prior sync
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphSyncResponse"
+        "400":
+          description: Invalid or non-portable graph
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Sync ID reused with different content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/projects/{projectId}/graph:
+    get:
+      operationId: getProjectGraph
+      tags: [graphs]
+      summary: Read back ingested portable graph facts for a project
+      description: |
+        Returns the portable graph facts previously accepted via
+        `POST /v1/graph/sync` for a project, mirroring the cloud plane's read
+        projection so a producer can verify what was ingested on either
+        surface. The daemon returns a single page per fact type.
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 250
+      responses:
+        "200":
+          description: Portable graph facts for the project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphReadResponse"
+        "400":
+          description: Invalid project or session identifier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
           content:
             application/json:
               schema:
