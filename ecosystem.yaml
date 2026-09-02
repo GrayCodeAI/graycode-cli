@@ -5,7 +5,7 @@ schema_version: 1
 # records the user-facing capability. Tooling must consume this file instead of
 # carrying its own repo-name list.
 contracts:
-  eagle_version: v0.0.0-20260831121050-12ea8cc11b16
+  eagle_version: v0.0.0-20260902153929-5877bed17503
   portable_graph_schema: hawk.graph/v1
   cloud_graph_schema: graycode-cloud.graph/v1
   usage_event: usage.recorded.v1
@@ -45,7 +45,7 @@ repositories:
     language: go
     module: github.com/GrayCodeAI/eyrie
     workspace: true
-    tracks_eagle: true
+    tracks_eagle: false
     facade: github.com/GrayCodeAI/eyrie/engine
 
   - directory: harrier
@@ -55,7 +55,7 @@ repositories:
     language: go
     module: github.com/GrayCodeAI/harrier
     workspace: true
-    tracks_eagle: true
+    tracks_eagle: false
     facade: github.com/GrayCodeAI/harrier/engine
 
   - directory: shrike
@@ -65,7 +65,7 @@ repositories:
     language: go
     module: github.com/GrayCodeAI/shrike
     workspace: true
-    tracks_eagle: true
+    tracks_eagle: false
     facade: github.com/GrayCodeAI/shrike
 
   - directory: swift
@@ -75,7 +75,7 @@ repositories:
     language: go
     module: github.com/GrayCodeAI/swift
     workspace: true
-    tracks_eagle: true
+    tracks_eagle: false
     facade: github.com/GrayCodeAI/swift/cli
 
   - directory: kestrel
@@ -85,7 +85,7 @@ repositories:
     language: go
     module: github.com/GrayCodeAI/kestrel
     workspace: true
-    tracks_eagle: true
+    tracks_eagle: false
     facade: github.com/GrayCodeAI/kestrel
 
   - directory: merlin
@@ -95,7 +95,7 @@ repositories:
     language: go
     module: github.com/GrayCodeAI/merlin
     workspace: true
-    tracks_eagle: true
+    tracks_eagle: false
     facade: github.com/GrayCodeAI/merlin
 
   - directory: sparrow
