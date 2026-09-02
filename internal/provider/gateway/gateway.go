@@ -11,7 +11,7 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/GrayCodeAI/eagle/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 )
 

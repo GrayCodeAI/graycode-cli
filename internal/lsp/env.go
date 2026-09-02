@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/shrike"
+	shrike "github.com/GrayCodeAI/shrike"
 )
 
 var sensitiveKeySubstrings = []string{

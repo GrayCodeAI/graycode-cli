@@ -3,7 +3,7 @@ package types
 import (
 	"context"
 
-	"github.com/GrayCodeAI/eagle/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
 )
 
 // ContentPart is a provider-neutral multimodal message part. Hawk owns this
@@ -75,7 +75,7 @@ type EyrieStreamEvent = llm.EyrieStreamEvent
 
 // StreamResult wraps a Hawk-owned streaming response with cleanup. It aliases
 // the canonical contract type; its Close() method and canonical constructor
-// (NewStreamResult) live in github.com/GrayCodeAI/eagle/llm.
+// (NewStreamResult) live in github.com/GrayCodeAI/eyrie/llm.
 type StreamResult = llm.StreamResult
 
 // EyrieMessage is Hawk's runtime conversation DTO.

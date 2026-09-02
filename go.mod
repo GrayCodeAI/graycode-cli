@@ -11,12 +11,12 @@ require (
 	charm.land/bubbles/v2 v2.1.1
 	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.5
-	github.com/GrayCodeAI/eagle v0.0.0-20260831121050-12ea8cc11b16
-	github.com/GrayCodeAI/eyrie v0.0.0-20260831133556-13f65882f1c9
-	github.com/GrayCodeAI/harrier v0.0.0-20260831121051-a93a92eeec6d
-	github.com/GrayCodeAI/kestrel v0.0.0-20260831121051-606ec6d9b867
-	github.com/GrayCodeAI/merlin v0.0.0-20260831133238-f31093d609bc
-	github.com/GrayCodeAI/shrike v0.0.0-20260831133117-d530178858b4
+	github.com/GrayCodeAI/eagle v0.0.0-20260902153929-5877bed17503
+	github.com/GrayCodeAI/eyrie v0.2.3-0.20260902140659-6bc3068cd48a
+	github.com/GrayCodeAI/harrier v0.0.0-20260902154449-d52fa214feb7
+	github.com/GrayCodeAI/kestrel v0.0.0-20260902154440-1b4c8cf7ea62
+	github.com/GrayCodeAI/merlin v0.0.0-20260902154444-0f4b9f7326cb
+	github.com/GrayCodeAI/shrike v0.0.0-20260902154002-4465cf58fe59
 	github.com/alecthomas/chroma/v2 v2.26.1
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/charmbracelet/x/ansi v0.11.7
@@ -60,7 +60,6 @@ exclude (
 )
 
 require (
-	github.com/GrayCodeAI/falcon v0.0.0-20260831121050-870f4262da2b // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1 // indirect
@@ -172,7 +171,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0
-	github.com/GrayCodeAI/swift v0.0.0-20260831121051-6579cc97156a
+	github.com/GrayCodeAI/swift v0.0.0-20260902154454-07d895ebce4d
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect

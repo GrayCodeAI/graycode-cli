@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	contracts "github.com/GrayCodeAI/eagle/tools"
+	contracts "github.com/GrayCodeAI/eyrie/tools"
 	"github.com/GrayCodeAI/hawk/internal/eventlog"
 	"github.com/GrayCodeAI/hawk/internal/eventlog/zstdz"
 	"github.com/GrayCodeAI/hawk/internal/storage"

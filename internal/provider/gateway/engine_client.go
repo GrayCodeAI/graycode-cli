@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/GrayCodeAI/eagle/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )

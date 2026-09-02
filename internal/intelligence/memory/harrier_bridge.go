@@ -18,6 +18,7 @@ import (
 	harrierEngine "github.com/GrayCodeAI/harrier/engine"
 	harrierGraph "github.com/GrayCodeAI/harrier/graph"
 	"github.com/GrayCodeAI/harrier/portablegraph"
+	harrierPortableGraph "github.com/GrayCodeAI/harrier/portablegraph/graph"
 	"github.com/GrayCodeAI/harrier/storage"
 	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 	"github.com/GrayCodeAI/hawk/internal/hawkerr"
@@ -447,7 +448,7 @@ func (b *HarrierBridge) recordContextGraph(query string, result *harrierEngine.R
 		Edges:           result.Edges,
 		Query:           query,
 		GeneratedAt:     time.Now(),
-		Scope:           b.graphScope,
+		Scope:           toHarrierScope(b.graphScope),
 		ProducerVersion: harrier.Version,
 	})
 	if err != nil {
@@ -458,13 +459,102 @@ func (b *HarrierBridge) recordContextGraph(query string, result *harrierEngine.R
 		b.graphSessionID,
 		"harrier",
 		projection.QuerySHA256,
-		projection.Nodes,
-		projection.Edges,
-		projection.Events,
+		toEagleNodes(projection.Nodes),
+		toEagleEdges(projection.Edges),
+		toEagleEvents(projection.Events),
 		projection.GeneratedAt,
 	); err != nil {
 		slog.Warn("[hawk/memory] harrier context graph observation failed", "error", err)
 	}
+}
+
+// The following helpers convert Harrier's vendored portable-graph contract
+// types into Hawk's eagle/graph contract types (and the reverse for scope).
+// The definitions are byte-identical, so conversion is a field-by-field copy
+// at the sibling boundary.
+
+func toHarrierScope(s graphcontracts.Scope) harrierPortableGraph.Scope {
+	return harrierPortableGraph.Scope{TenantID: s.TenantID, ProjectID: s.ProjectID, RepositoryID: s.RepositoryID}
+}
+
+func toEagleNodes(nodes []harrierPortableGraph.Node) []graphcontracts.Node {
+	out := make([]graphcontracts.Node, len(nodes))
+	for i, n := range nodes {
+		out[i] = toEagleNode(n)
+	}
+	return out
+}
+
+func toEagleNode(n harrierPortableGraph.Node) graphcontracts.Node {
+	return graphcontracts.Node{
+		ID:          n.ID,
+		Kind:        graphcontracts.NodeKind(n.Kind),
+		Scope:       toEagleScope(n.Scope),
+		CreatedAt:   n.CreatedAt,
+		EffectiveAt: n.EffectiveAt,
+		Provenance:  toEagleProvenance(n.Provenance),
+		Attributes:  n.Attributes,
+	}
+}
+
+func toEagleEdges(edges []harrierPortableGraph.Edge) []graphcontracts.Edge {
+	out := make([]graphcontracts.Edge, len(edges))
+	for i, e := range edges {
+		out[i] = toEagleEdge(e)
+	}
+	return out
+}
+
+func toEagleEdge(e harrierPortableGraph.Edge) graphcontracts.Edge {
+	return graphcontracts.Edge{
+		ID:          e.ID,
+		Kind:        graphcontracts.EdgeKind(e.Kind),
+		From:        toEagleRef(e.From),
+		To:          toEagleRef(e.To),
+		Scope:       toEagleScope(e.Scope),
+		CreatedAt:   e.CreatedAt,
+		EffectiveAt: e.EffectiveAt,
+		Provenance:  toEagleProvenance(e.Provenance),
+		Attributes:  e.Attributes,
+	}
+}
+
+func toEagleEvents(events []harrierPortableGraph.Event) []graphcontracts.Event {
+	out := make([]graphcontracts.Event, len(events))
+	for i, ev := range events {
+		out[i] = toEagleEvent(ev)
+	}
+	return out
+}
+
+func toEagleEvent(ev harrierPortableGraph.Event) graphcontracts.Event {
+	return graphcontracts.Event{
+		ID:             ev.ID,
+		Type:           graphcontracts.EventType(ev.Type),
+		Subject:        toEagleRef(ev.Subject),
+		Scope:          toEagleScope(ev.Scope),
+		OccurredAt:     ev.OccurredAt,
+		CorrelationID:  ev.CorrelationID,
+		CausationID:    ev.CausationID,
+		IdempotencyKey: ev.IdempotencyKey,
+		Provenance:     toEagleProvenance(ev.Provenance),
+	}
+}
+
+func toEagleRef(r harrierPortableGraph.Ref) graphcontracts.Ref {
+	return graphcontracts.Ref{Kind: graphcontracts.NodeKind(r.Kind), ID: r.ID}
+}
+
+func toEagleScope(s harrierPortableGraph.Scope) graphcontracts.Scope {
+	return graphcontracts.Scope{TenantID: s.TenantID, ProjectID: s.ProjectID, RepositoryID: s.RepositoryID}
+}
+
+func toEagleProvenance(p harrierPortableGraph.Provenance) graphcontracts.Provenance {
+	evidence := make([]graphcontracts.ArtifactRef, len(p.Evidence))
+	for i, a := range p.Evidence {
+		evidence[i] = graphcontracts.ArtifactRef{URI: a.URI, Digest: a.Digest, MediaType: a.MediaType}
+	}
+	return graphcontracts.Provenance{Producer: p.Producer, Version: p.Version, SourceID: p.SourceID, Evidence: evidence}
 }
 
 func (b *HarrierBridge) recordSelectedContext(label string, nodes []*storage.Node) {

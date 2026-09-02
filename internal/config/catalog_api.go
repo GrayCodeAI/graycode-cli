@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	llm "github.com/GrayCodeAI/eagle/llm"
+	llm "github.com/GrayCodeAI/eyrie/llm"
 	gw "github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
