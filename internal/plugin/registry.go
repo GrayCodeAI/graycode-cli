@@ -17,7 +17,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
-const defaultIndexURL = "https://raw.githubusercontent.com/GrayCodeAI/hawk-community-skills/main/registry.json"
+const defaultIndexURL = "https://raw.githubusercontent.com/GrayCodeAI/starling/main/registry.json"
 
 // SkillInvocationPolicy controls which callers may invoke a skill.
 type SkillInvocationPolicy struct {

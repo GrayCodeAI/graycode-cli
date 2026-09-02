@@ -318,10 +318,10 @@ func TestClassifyErrorMessage_Fallback(t *testing.T) {
 
 func TestBridgeError_Error_WithErr(t *testing.T) {
 	inner := errors.New("inner error")
-	be := NewBridgeError("yaad", "Remember", "failed to connect", inner)
+	be := NewBridgeError("harrier", "Remember", "failed to connect", inner)
 	result := be.Error()
-	if !contains(result, "yaad bridge") {
-		t.Errorf("Error() should contain 'yaad bridge', got %q", result)
+	if !contains(result, "harrier bridge") {
+		t.Errorf("Error() should contain 'harrier bridge', got %q", result)
 	}
 	if !contains(result, "Remember") {
 		t.Errorf("Error() should contain 'Remember', got %q", result)
@@ -335,10 +335,10 @@ func TestBridgeError_Error_WithErr(t *testing.T) {
 }
 
 func TestBridgeError_Error_WithoutErr(t *testing.T) {
-	be := NewBridgeError("trace", "Recall", "no data", nil)
+	be := NewBridgeError("swift", "Recall", "no data", nil)
 	result := be.Error()
-	if !contains(result, "trace bridge") {
-		t.Errorf("Error() should contain 'trace bridge', got %q", result)
+	if !contains(result, "swift bridge") {
+		t.Errorf("Error() should contain 'swift bridge', got %q", result)
 	}
 	if !contains(result, "no data") {
 		t.Errorf("Error() should contain 'no data', got %q", result)
@@ -351,14 +351,14 @@ func TestBridgeError_Error_WithoutErr(t *testing.T) {
 
 func TestBridgeError_Unwrap(t *testing.T) {
 	inner := errors.New("inner error")
-	be := NewBridgeError("sight", "Enable", "failed", inner)
+	be := NewBridgeError("kestrel", "Enable", "failed", inner)
 	if be.Unwrap() != inner {
 		t.Error("Unwrap() should return the inner error")
 	}
 }
 
 func TestBridgeError_Unwrap_Nil(t *testing.T) {
-	be := NewBridgeError("inspect", "Query", "failed", nil)
+	be := NewBridgeError("merlin", "Query", "failed", nil)
 	if be.Unwrap() != nil {
 		t.Error("Unwrap() should return nil for no inner error")
 	}

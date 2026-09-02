@@ -28,11 +28,11 @@ func TestReadRequires(t *testing.T) {
 go 1.26
 
 require (
-	github.com/GrayCodeAI/hawk-core-contracts v1.0.0
+	github.com/GrayCodeAI/eagle v1.0.0
 	github.com/spf13/cobra v1.8.0
 )
 
-require github.com/GrayCodeAI/tok v1.9.0 // indirect
+require github.com/GrayCodeAI/shrike v1.9.0 // indirect
 `)
 
 	reqs, err := readRequires(modPath)
@@ -40,9 +40,9 @@ require github.com/GrayCodeAI/tok v1.9.0 // indirect
 		t.Fatalf("readRequires: %v", err)
 	}
 	tests := map[string]string{
-		"github.com/GrayCodeAI/hawk-core-contracts": "v1.0.0",
-		"github.com/spf13/cobra":                    "v1.8.0",
-		"github.com/GrayCodeAI/tok":                 "v1.9.0",
+		"github.com/GrayCodeAI/eagle":  "v1.0.0",
+		"github.com/spf13/cobra":       "v1.8.0",
+		"github.com/GrayCodeAI/shrike": "v1.9.0",
 	}
 	for mod, want := range tests {
 		if got := reqs[mod]; got != want {
@@ -75,14 +75,14 @@ func TestCheckDrift_DetectsDrift(t *testing.T) {
 
 go 1.26
 
-require github.com/GrayCodeAI/hawk-core-contracts v1.5.0
+require github.com/GrayCodeAI/eagle v1.5.0
 `)
 	// Consumer sibling pins an older version of the shared contract.
-	writeMod(t, filepath.Join(ws, "inspect", "go.mod"), `module github.com/GrayCodeAI/inspect
+	writeMod(t, filepath.Join(ws, "merlin", "go.mod"), `module github.com/GrayCodeAI/merlin
 
 go 1.26
 
-require github.com/GrayCodeAI/hawk-core-contracts v1.2.0
+require github.com/GrayCodeAI/eagle v1.2.0
 `)
 
 	var buf bytes.Buffer
@@ -97,8 +97,8 @@ require github.com/GrayCodeAI/hawk-core-contracts v1.2.0
 	if err != nil {
 		t.Fatalf("checkDrift: %v", err)
 	}
-	if !strings.Contains(buf.String(), "inspect") {
-		t.Errorf("expected drift report to mention inspect consumer, got:\n%s", buf.String())
+	if !strings.Contains(buf.String(), "merlin") {
+		t.Errorf("expected drift report to mention merlin consumer, got:\n%s", buf.String())
 	}
 }
 
@@ -110,13 +110,13 @@ func TestCheckDrift_NoDriftWhenVersionsMatch(t *testing.T) {
 
 go 1.26
 
-require github.com/GrayCodeAI/hawk-core-contracts v1.5.0
+require github.com/GrayCodeAI/eagle v1.5.0
 `)
-	writeMod(t, filepath.Join(ws, "sight", "go.mod"), `module github.com/GrayCodeAI/sight
+	writeMod(t, filepath.Join(ws, "kestrel", "go.mod"), `module github.com/GrayCodeAI/kestrel
 
 go 1.26
 
-require github.com/GrayCodeAI/hawk-core-contracts v1.5.0
+require github.com/GrayCodeAI/eagle v1.5.0
 `)
 
 	var buf bytes.Buffer
@@ -144,7 +144,7 @@ func TestCheckDrift_SkipsMissingSiblings(t *testing.T) {
 
 go 1.26
 
-require github.com/GrayCodeAI/hawk-core-contracts v1.5.0
+require github.com/GrayCodeAI/eagle v1.5.0
 `)
 	// Directory present but no go.mod — must be skipped silently.
 	if err := os.MkdirAll(filepath.Join(ws, "not-checked-out"), 0o755); err != nil {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/GrayCodeAI/hawk-core-contracts/llm"
+	"github.com/GrayCodeAI/eagle/llm"
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 

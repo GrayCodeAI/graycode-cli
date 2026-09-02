@@ -19,9 +19,11 @@ Use the documents in this order when statements conflict:
 4. `hawk-dependency-rules.md` for allowed and forbidden dependency edges.
 5. `spec.md` for behavioral requirements and agent-loop semantics.
 
-Hawk is a Go repository and workspace entry point in a multi-repository
-ecosystem. The `external/` directory contains pinned support repositories for
-reproducible integration; it does not make the support engines one monorepo.
+Hawk is the main Go CLI/product and workspace entry point in a
+multi-repository ecosystem. `graycode-eco` is only the plain parent folder;
+the sibling repositories retain independent Git histories and release
+cadences. Local integration uses the parent `go.work`; standalone builds use
+published module pins. There is no current `hawk/external/` vendor tree.
 
 ## Target product graph
 
@@ -31,11 +33,11 @@ users / SDKs / skills / daemon clients
                 v
               hawk
        /        |        \
-    eyrie     yaad       tok
-    trace     sight    inspect
+    eyrie     harrier       shrike
+    swift     kestrel    merlin
                 |
                 v
-       hawk-core-contracts
+       eagle
 ```
 
 The graph is intentionally directional:
@@ -44,7 +46,7 @@ The graph is intentionally directional:
   composition, and public product surfaces.
 - Eyrie owns provider protocols, routing, credentials, catalogs, and provider
   execution behind `eyrie/engine`.
-- Yaad, Tok, Trace, Sight, and Inspect are support engines and must not import
+- Harrier, Shrike, Swift, Kestrel, and Merlin are support engines and must not import
   Hawk internals or one another.
 - Core contracts contain stable cross-repository vocabulary and DTOs, not
   runtime orchestration.
@@ -55,21 +57,21 @@ The graph is intentionally directional:
 ### Complete or enforced
 
 - Hawk production code uses Eyrie through the `eyrie/engine` facade.
-- Sight and Inspect are integrated through Hawk bridge packages.
+- Kestrel and Merlin are integrated through Hawk bridge packages.
 - Support-engine sibling imports and imports of Hawk internals are guarded.
 - The AST/package-graph guard reports production boundary violations with
   file/line diagnostics across Hawk and available support repositories.
 - Persisted tool, review, verification, event, and policy contracts use the
-  implemented portions of `hawk-core-contracts`.
-- Native-compaction capability contracts use `hawk-core-contracts/llm`; Eyrie
+  implemented portions of `eagle`.
+- Native-compaction capability contracts use `eagle/llm`; Eyrie
   request translation remains inside `internal/provider/gateway`, keeping the
   engine layer independent of the provider adapter package for this path.
 - Container-required state and its executor are owned by `ToolService` and
   read through synchronized snapshots, including asynchronous TUI retry.
-- `GraphAwareBudget` reads Yaad through `YaadBridge`; its graph-budget path no
-  longer imports Yaad engine or storage implementation types directly.
+- `GraphAwareBudget` reads Harrier through `HarrierBridge`; its graph-budget path no
+  longer imports Harrier engine or storage implementation types directly.
 - `CodeMemoryLinker` also routes node search, edge creation, and file-anchor
-  persistence through `YaadBridge`; remaining direct Yaad users are isolated
+  persistence through `HarrierBridge`; remaining direct Harrier users are isolated
   to the other memory workflow slices awaiting migration.
 - The local boundary suite, full Go tests, and `go vet` pass at this baseline.
 
@@ -85,10 +87,11 @@ The graph is intentionally directional:
   At this baseline its top-level production files contain approximately
   19,253 lines, its top-level tests approximately 11,855 lines, and the
   subtree contains compatibility alias/re-export files.
-- Hawk's Yaad and Tok implementation imports are now consolidated behind
-  `YaadBridge` and `internal/token` for the migrated production paths. The
-  remaining direct Yaad users are isolated workflow or test integrations;
-  replaceability is improved, but still not equivalent to the Eyrie boundary.
+- Hawk's Harrier and Shrike implementation imports are now concentrated in
+  `HarrierBridge` and `internal/token` for the migrated production paths. The
+  graph/projection packages used for capture remain explicit integration
+  surfaces; replaceability is improved, but still not equivalent to the Eyrie
+  boundary.
 - `PersistenceService` is the in-memory runtime owner for transcript/context
   state and checkpoint metadata. The active durable session path remains
   `internal/session` JSONL plus the external file WAL used for crash recovery.
@@ -110,8 +113,9 @@ The graph is intentionally directional:
 ### ADR-B01 — Keep the multi-repository ecosystem
 
 Do not collapse the support engines into Hawk or force a shared release cycle.
-The `graycode-eco` workspace and Hawk's pinned `external/` modules provide local
-integration without removing independent ownership and release boundaries.
+The `graycode-eco` parent workspace and Hawk's published module pins provide
+local integration without removing independent ownership and release
+boundaries.
 
 ### ADR-B02 — Preserve the Eyrie boundary
 
@@ -127,7 +131,7 @@ packages should not be added until the current seams are explicit.
 
 ### ADR-B04 — Add facades selectively
 
-Yaad, Tok, and Trace require a facade decision based on actual replacement and
+Harrier, Shrike, and Swift require a facade decision based on actual replacement and
 release needs. A facade is justified when it isolates Hawk from implementation
 types or enables independent upgrades; it is not justified merely to increase
 the number of packages.
@@ -145,7 +149,7 @@ This program does not aim to:
 
 - rewrite the agent loop from scratch;
 - merge all engines into one repository;
-- move every runtime or persistence type into `hawk-core-contracts`;
+- move every runtime or persistence type into `eagle`;
 - make every engine use identical integration depth;
 - add IDE parity before the internal architecture is stable;
 - treat passing tests as proof that migration work is complete.
@@ -173,8 +177,8 @@ explicitly retained as a compatibility exception. Lazy persistence
 initialization, cost snapshots, and WAL recovery error reporting are now
 synchronized and tested. Phase 3 has explicit non-interactive and interactive
 startup composition boundaries, with heavy TUI configuration remaining
-deferred for first-frame latency. Phase 4 has consolidated the migrated Yaad
-and Tok implementation imports behind narrow Hawk-owned facades. The next
+deferred for first-frame latency. Phase 4 has consolidated the migrated Harrier
+and Shrike implementation imports behind narrow Hawk-owned facades. The next
 decision is the persistence ADR: document and enforce one durable authority,
 then define the migration and recovery contract before introducing additional
 storage backends.

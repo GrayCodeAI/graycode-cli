@@ -47,7 +47,7 @@ type ContinuityReport struct {
 func NewContinuityTracker(projectDir string) *ContinuityTracker {
 	savePath := ""
 	if projectDir != "" {
-		savePath = filepath.Join(projectDir, ".yaad", "continuity.json")
+		savePath = filepath.Join(projectDir, ".harrier", "continuity.json")
 	}
 	ct := &ContinuityTracker{
 		sessions: make([]ContinuitySession, 0),

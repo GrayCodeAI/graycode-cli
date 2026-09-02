@@ -2,7 +2,10 @@
 
 ## Product statement
 
-Hawk is a model-agnostic AI coding agent CLI from GrayCodeAI.
+Hawk is the model-agnostic main AI coding-agent CLI from GrayCodeAI.
+
+`graycode-eco` is only the local parent folder used to develop the independent
+repositories. It is not a monorepo or a runtime product.
 
 Hawk is the only primary product surface in the graycode-eco ecosystem. The support repos exist to power Hawk, not to compete with it as standalone products.
 
@@ -17,22 +20,30 @@ catalog state through model selection and normalized generation/streaming.
 - Keep Hawk CLI-first and local-first.
 - Keep provider integration pluggable.
 - Keep support engines isolated from each other.
-- Make trace, review, and verification first-class.
+- Make swift, review, and verification first-class.
 - Keep the design ready for a future hosted layer without making cloud a dependency.
 
 ## Target repo set
 
 - `hawk`
 - `eyrie`
-- `yaad`
-- `tok`
-- `trace`
-- `sight`
-- `inspect`
-- `hawk-sdk-go`
-- `hawk-sdk-python`
-- `hawk-community-skills`
-- `hawk-core-contracts`
+- `harrier`
+- `shrike`
+- `swift`
+- `kestrel`
+- `merlin`
+- `sparrow`
+- `robin`
+- `starling`
+- `eagle`
+- `falcon`
+- `wren`
+- `owl`
+- `graycode-platform` (outside the Hawk runtime module graph)
+
+Directory names are authoritative for dependencies: `harrier` is Harrier,
+`shrike` is Shrike, `swift` is Swift, `kestrel` is Kestrel, and `merlin` is
+Merlin. The product labels remain useful in CLI and user-facing documentation.
 
 ## Runtime architecture
 
@@ -46,32 +57,33 @@ Users / SDKs / Skills
         |                             |
         v                             v
  core execution                 trust / quality
- eyrie  yaad  tok              trace  sight  inspect
+ eyrie  harrier  shrike              swift  kestrel  merlin
         \    |    /                 \    |    /
          \   |   /                   \   |   /
           +--+--+---------------------+--+--+
                      |
                      v
-            hawk-core-contracts
+            eagle
 ```
 
 ## Current vs proposed
 
-Current implementation in this repo:
+Current implementation in the workspace:
 
 ```text
 hawk
   -> eyrie
-  -> yaad
-  -> tok
-  -> trace
-  -> sight
-  -> inspect
-  -> hawk-core-contracts
+  -> harrier
+  -> shrike
+  -> swift
+  -> kestrel
+  -> merlin
+  -> eagle
 
 support engines
-  -> hawk-core-contracts only when they need shared contracts
-  x-> each other
+  -> eagle when they need shared contracts
+  -> falcon where MCP serving is shared
+  x-> Hawk internals or each other
 ```
 
 Proposed steady-state architecture:
@@ -85,12 +97,12 @@ SDKs / Skills / future integrations
    +------------+------------+------------+------------+------------+------------+
    |            |            |            |            |            |            |
    v            v            v            v            v            v            v
- Eyrie        Yaad         Tok         Trace        Sight       Inspect    public APIs
+ Eyrie        Harrier         Shrike         Swift        Kestrel       Merlin    public APIs
    \            |            |            |            |            /
     +-----------+------------+------------+------------+-----------+
                                  |
                                  v
-                      hawk-core-contracts
+                      eagle
 ```
 
 This means:
@@ -98,8 +110,10 @@ This means:
 - Hawk is the product and orchestration boundary
 - all six engines stay at the same architectural level
 - engines remain independent from each other
-- shared cross-repo vocabulary lives below them in `hawk-core-contracts`
+- shared cross-repo vocabulary lives below them in `eagle`
 - SDKs and community skills consume Hawk, not the engines directly
+- `graycode-platform` provides the optional hosted plane through HTTP and a
+  private Service Binding; it is not imported by Hawk or any engine
 
 ## Hawk responsibilities
 
@@ -134,34 +148,34 @@ Hawk does not own:
 - retries/timeouts/fallbacks
 - low-level provider registry and compatibility logic behind the engine facade
 
-### `yaad`
+### `harrier`
 - session and long-term memory
 - retrieval hooks
 - summaries and persistence contracts
 
-### `tok`
+### `shrike`
 - token budgeting
 - context ranking
 - packing and truncation
 - model-ready context assembly inputs
 
-### `trace`
+### `swift`
 - event capture
 - replay records
 - provenance
 - audit visibility
 
-### `sight`
+### `kestrel`
 - review findings
 - risk detection
 - code quality analysis
-- review-engine-local output converted into shared `hawk-core-contracts/review` contracts at product boundaries
+- review-engine-local output converted into shared `eagle/review` contracts at product boundaries
 
-### `inspect`
+### `merlin`
 - verification checks
 - test/assertion normalization
 - final pass/fail validation
-- verification-engine-local output converted into shared `hawk-core-contracts/verify` contracts at product boundaries
+- verification-engine-local output converted into shared `eagle/verify` contracts at product boundaries
 
 ## Primary runtime flow
 
@@ -169,12 +183,12 @@ Hawk does not own:
 2. Hawk loads product settings, policy, and workspace state, then creates an
    Eyrie Engine with effective per-instance custom gateway settings.
 3. Hawk creates or resumes a session.
-4. Hawk asks `tok` for context assembly.
-5. Hawk asks `yaad` for relevant memory.
+4. Hawk asks `shrike` for context assembly.
+5. Hawk asks `harrier` for relevant memory.
 6. Hawk routes provider execution through `eyrie`.
-7. Hawk invokes tools and records actions through `trace`.
-8. Hawk invokes `sight` when review should run.
-9. Hawk invokes `inspect` when verification should run.
+7. Hawk invokes tools and records actions through `swift`.
+8. Hawk invokes `kestrel` when review should run.
+9. Hawk invokes `merlin` when verification should run.
 10. Hawk persists results and returns output to the user.
 
 At step 6, Hawk passes intent and Hawk-owned conversation DTOs through its
@@ -191,7 +205,7 @@ schema.
 - define shared contracts inventory
 
 ### Phase 2
-- add `hawk-core-contracts`
+- add `eagle`
 - move shared types out of Hawk internals
 
 Status:
@@ -208,7 +222,7 @@ Status:
 
 ### Phase 4
 - harden orchestration boundaries in Hawk
-- formalize provider, trace, review, and verify integration points
+- formalize provider, swift, review, and verify integration points
 
 Status:
 - completed for the local runtime boundary
@@ -221,7 +235,7 @@ Status:
 
 Status:
 - policy is now explicit and guarded in Hawk docs
-- `hawk-sdk-go` is covered by the support-repo coupling guard so it cannot grow
+- `sparrow` is covered by the support-repo coupling guard so it cannot grow
   direct engine imports
 - broader non-Go consumer enforcement remains future work
 
@@ -237,8 +251,8 @@ Status:
 The architecture is in good shape when:
 
 - `hawk` is the only product surface
-- engines depend only on `hawk-core-contracts`
+- engines depend only on `eagle`
 - shared types no longer live in Hawk internals as a cross-repo API
 - provider abstraction is stable
-- trace, review, and verification are part of the standard runtime flow
+- swift, review, and verification are part of the standard runtime flow
 - deprecated compatibility surfaces have a documented removal path and active guardrails

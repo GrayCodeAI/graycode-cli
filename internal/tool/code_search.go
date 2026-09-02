@@ -16,7 +16,7 @@ func (CodeSearchTool) RiskLevel() string { return "low" }
 func (CodeSearchTool) Aliases() []string { return []string{"code_search", "search_code"} }
 
 func (CodeSearchTool) Description() string {
-	return `Semantic code search via yaad. Use this instead of Grep when you need to find implementations by meaning, not exact text. Start with limit=5; if results look relevant, use offset to paginate. Set refresh=true to update the index first.`
+	return `Semantic code search via harrier. Use this instead of Grep when you need to find implementations by meaning, not exact text. Start with limit=5; if results look relevant, use offset to paginate. Set refresh=true to update the index first.`
 }
 
 func (CodeSearchTool) Parameters() map[string]interface{} {

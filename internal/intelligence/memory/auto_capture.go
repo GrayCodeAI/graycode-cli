@@ -11,9 +11,9 @@ import (
 
 // AutoCapture extracts memorable content from tool results without explicit agent calls.
 // It analyzes tool outputs and automatically stores conventions, decisions, bugs, and
-// file-level knowledge into yaad's graph.
+// file-level knowledge into harrier's graph.
 type AutoCapture struct {
-	bridge  *YaadBridge
+	bridge  *HarrierBridge
 	mu      sync.Mutex
 	queue   chan captureJob
 	done    chan struct{}
@@ -57,7 +57,7 @@ func (m *CaptureMetrics) inc(nodeType string) {
 
 // NewAutoCapture creates an auto-capture processor that consumes tool results
 // in the background and stores extracted memories.
-func NewAutoCapture(bridge *YaadBridge) *AutoCapture {
+func NewAutoCapture(bridge *HarrierBridge) *AutoCapture {
 	ac := &AutoCapture{
 		bridge:  bridge,
 		queue:   make(chan captureJob, 128),

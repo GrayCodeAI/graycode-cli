@@ -27,7 +27,7 @@ func TestGetSessionGraphProjectsBoundedRequest(t *testing.T) {
 
 	request := httptest.NewRequest(
 		http.MethodGet,
-		"/v1/sessions/session-1/graph?repository=hawk&trace_checkpoint=012345abcdef&trace_checkpoint=fedcba987654",
+		"/v1/sessions/session-1/graph?repository=hawk&swift_checkpoint=012345abcdef&swift_checkpoint=fedcba987654",
 		nil,
 	)
 	request.Header.Set("Authorization", "Bearer secret")
@@ -41,8 +41,8 @@ func TestGetSessionGraphProjectsBoundedRequest(t *testing.T) {
 		t.Fatalf("captured request = %#v", captured)
 	}
 	wantCheckpoints := []string{"012345abcdef", "fedcba987654"}
-	if !reflect.DeepEqual(captured.TraceCheckpointIDs, wantCheckpoints) {
-		t.Fatalf("checkpoints = %#v, want %#v", captured.TraceCheckpointIDs, wantCheckpoints)
+	if !reflect.DeepEqual(captured.SwiftCheckpointIDs, wantCheckpoints) {
+		t.Fatalf("checkpoints = %#v, want %#v", captured.SwiftCheckpointIDs, wantCheckpoints)
 	}
 	if captured.GeneratedAt.IsZero() || captured.GeneratedAt.Location() != time.UTC {
 		t.Fatalf("generated_at = %v, want non-zero UTC", captured.GeneratedAt)
@@ -97,8 +97,8 @@ func TestGetSessionGraphRejectsInvalidInputBeforeFactory(t *testing.T) {
 		},
 		{
 			name: "checkpoint",
-			url:  "/v1/sessions/session-1/graph?trace_checkpoint=ABC",
-			code: "invalid_trace_checkpoint",
+			url:  "/v1/sessions/session-1/graph?swift_checkpoint=ABC",
+			code: "invalid_swift_checkpoint",
 		},
 	}
 	for _, test := range tests {

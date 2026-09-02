@@ -42,14 +42,14 @@ Available Commands:
   credentials  Manage secure API key storage (macOS Keychain / Linux secret service)
   daemon       Manage the hawk background server
   doctor       Run local diagnostics
-  ecosystem    Show eyrie, yaad, and tok integration status
+  ecosystem    Show eyrie, harrier, and shrike integration status
   eval         Evaluate model performance on coding benchmarks
   exec         Execute a single command non-interactively
   features     List and manage feature flags
   feedback     Submit feedback about hawk
   fingerprint  Generate a repository fingerprint (languages, deps, git info)
   governance   Inspect and validate the governance policy ceiling
-  graph        Inspect Hawk's portable execution graph
+  graph        Merlin Hawk's portable execution graph
   harness      Audit workspace AI agent harness, work loop dimensions, and generation reports
   help         Help about any command
   history      Search and browse command history
@@ -82,12 +82,12 @@ Available Commands:
   snapshot     Manage file snapshots (undo any change)
   stats        Show usage statistics and cost analytics
   status       Show a redacted runtime status snapshot
+  swift        Git-native session capture for AI coding agents
+  swift-report Write a private diagnostic swift report (fx /swift parity)
   tape         Inspect and checkpoint recorded terminal captures (fxtape)
   taste        Manage taste profile (learned coding style preferences)
   tools        List built-in tools
   toolset      List or resolve composable tool groups
-  trace        Git-native session capture for AI coding agents
-  trace-report Write a private diagnostic trace report (fx /trace parity)
   trust        Manage folder trust for project automation
   update       Check for hawk updates
   usage        Show local LLM token usage and spend (fx usage parity)

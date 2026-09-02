@@ -17,8 +17,8 @@ func testIndex() SkillIndex {
 		Version:   1,
 		UpdatedAt: "2026-05-01T00:00:00Z",
 		Skills: []SkillEntry{
-			{Name: "api-review", Description: "Reviews API endpoints", Author: "graycode", Repo: "GrayCodeAI/hawk-community-skills", Category: "engineering", Tags: []string{"api", "review"}, Version: "1.0.0", Installs: 342},
-			{Name: "security-scan", Description: "Scans for security vulnerabilities", Author: "graycode", Repo: "GrayCodeAI/hawk-community-skills", Category: "security", Tags: []string{"security", "scan"}, Version: "2.1.0", Installs: 891},
+			{Name: "api-review", Description: "Reviews API endpoints", Author: "graycode", Repo: "GrayCodeAI/starling", Category: "engineering", Tags: []string{"api", "review"}, Version: "1.0.0", Installs: 342},
+			{Name: "security-scan", Description: "Scans for security vulnerabilities", Author: "graycode", Repo: "GrayCodeAI/starling", Category: "security", Tags: []string{"security", "scan"}, Version: "2.1.0", Installs: 891},
 			{Name: "changelog", Description: "Generates changelogs from git commits", Author: "community", Repo: "community/skills", Category: "workflow", Tags: []string{"changelog", "git"}, Version: "1.2.0", Installs: 156},
 		},
 	}
@@ -164,7 +164,7 @@ license: MIT
 category: engineering
 tags: ["api", "review", "rest"]
 agents: ["hawk", "claude-code"]
-source-repo: GrayCodeAI/hawk-community-skills
+source-repo: GrayCodeAI/starling
 source-ref: v1.2.0
 source-installed-at: 2026-05-01T00:00:00Z
 ---
@@ -189,7 +189,7 @@ Review all API endpoints.
 	if len(skill.Agents) != 2 {
 		t.Errorf("expected 2 agents, got %d", len(skill.Agents))
 	}
-	if skill.Source.Repo != "GrayCodeAI/hawk-community-skills" {
+	if skill.Source.Repo != "GrayCodeAI/starling" {
 		t.Errorf("source repo: got %q", skill.Source.Repo)
 	}
 	if skill.Source.Ref != "v1.2.0" {
@@ -247,7 +247,7 @@ func TestFormatSkillEntry(t *testing.T) {
 		Version:     "1.0.0",
 		Author:      "graycode",
 		Description: "Reviews API endpoints",
-		Repo:        "GrayCodeAI/hawk-community-skills",
+		Repo:        "GrayCodeAI/starling",
 		Installs:    342,
 	}
 	out := FormatSkillEntry(e)
@@ -273,7 +273,7 @@ func TestFormatSkillInfo(t *testing.T) {
 		License:  "MIT",
 		Category: "engineering",
 		Tags:     []string{"api", "review"},
-		Source:   SkillSource{Repo: "GrayCodeAI/hawk-community-skills", Ref: "v1.0.0"},
+		Source:   SkillSource{Repo: "GrayCodeAI/starling", Ref: "v1.0.0"},
 	}
 	out := FormatSkillInfo(s, "/path/to/skill")
 	if !strings.Contains(out, "Skill: api-review") {
@@ -282,7 +282,7 @@ func TestFormatSkillInfo(t *testing.T) {
 	if !strings.Contains(out, "MIT") {
 		t.Error("expected license")
 	}
-	if !strings.Contains(out, "GrayCodeAI/hawk-community-skills") {
+	if !strings.Contains(out, "GrayCodeAI/starling") {
 		t.Error("expected source repo")
 	}
 }

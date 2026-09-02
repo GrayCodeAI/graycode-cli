@@ -288,7 +288,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 
 	// Warm code index in background so first CodeSearch is fast
 	go func() {
-		if bridge := memory.NewYaadBridge(); bridge != nil && bridge.Ready() {
+		if bridge := memory.NewHarrierBridge(); bridge != nil && bridge.Ready() {
 			_ = bridge.InitCodeIndex()
 			bridge.Close()
 		}

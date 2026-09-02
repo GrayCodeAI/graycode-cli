@@ -27,7 +27,7 @@ type Snapshot struct {
 	Hooks         ComponentStatus  `json:"hooks"`
 	Recovery      string           `json:"session_recovery_state,omitempty"`
 	ActiveGoal    string           `json:"active_goal,omitempty"`
-	Trace         ComponentStatus  `json:"trace"`
+	Swift         ComponentStatus  `json:"swift"`
 	Warnings      []string         `json:"warnings,omitempty"`
 	GeneratedAt   time.Time        `json:"generated_at"`
 }

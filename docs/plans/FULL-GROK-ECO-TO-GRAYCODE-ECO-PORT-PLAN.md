@@ -22,8 +22,8 @@
 3. **Prefer wire-first** — Hawk already has partial types; complete wiring before greenfield.  
 4. **Privacy-first defaults** — Grok Mixpanel/Sentry defaults become **opt-in** OTEL/privacy-safe telemetry.  
 5. **Multi-provider stays** — Grok sampler/auth maps to **eyrie**, not a single-vendor clone.  
-6. **Memory stays yaad** — Grok markdown memory maps to **yaad APIs + UX**, not a second store.  
-7. **Tokens stay tok** — Grok `xai-token-estimation` is obsolete relative to tok.  
+6. **Memory stays harrier** — Grok markdown memory maps to **harrier APIs + UX**, not a second store.
+7. **Tokens stay shrike** — Grok `xai-token-estimation` is obsolete relative to shrike.
 8. **Track everything** — even 70-line crates appear in the matrix (Done / Partial / Port / Skip / N/A).
 
 ### Status legend
@@ -68,17 +68,17 @@ Critical path remains **months**; **complete parity** including TUI polish and e
 grok-eco/grok-build  (one Rust workspace)
         │
         ├─► hawk                    product CLI/TUI/engine/tools/hooks/plugins/ACP
-        ├─► hawk-core-contracts     pure DTOs (tool/spawn/hooks/policy)
+        ├─► eagle     pure DTOs (tool/spawn/hooks/policy)
         ├─► eyrie                   LLM routing/stream/retry/catalog/auth credentials
-        ├─► yaad                    memory graph + dream UX
-        ├─► tok                     compression / secrets / token cost
-        ├─► trace                   session capture/import/replay
-        ├─► sight / inspect         review & live audit (no Grok 1:1)
-        ├─► hawk-mcpkit             MCP server helpers
-        ├─► hawk-community-skills   skills + marketplace content
-        ├─► hawk-cloud              managed policy / tenancy / usage
-        ├─► hawk-sdk-go/python      ACP/daemon clients
-        └─► graycode-core           web dashboard only (optional)
+        ├─► harrier                    memory graph + dream UX
+        ├─► shrike                     compression / secrets / token cost
+        ├─► swift                   session capture/import/replay
+        ├─► kestrel / merlin         review & live audit (no Grok 1:1)
+        ├─► falcon             MCP server helpers
+        ├─► starling   skills + marketplace content
+        ├─► graycode-platform/apps/worker  managed policy / tenancy / usage
+        ├─► sparrow/python      ACP/daemon clients
+        └─► graycode-platform       web dashboard/BFF (optional)
 ```
 
 **There is only one Grok product repo (`grok-build`).**  
@@ -121,7 +121,7 @@ grok-eco/grok-build  (one Rust workspace)
 | `xai-grok-update` | 11k | Auto-update | hawk | Partial | M | |
 | `xai-grok-mcp` | 10k | MCP client (oauth, wire) | hawk `mcp` | Partial | L | |
 | `xai-codebase-graph` | 9.7k | Tree-sitter graph | hawk codegraph/repomap | Partial | L | |
-| `xai-grok-memory` | 9.7k | Cross-session memory | **yaad** | Done* | M | Port UX only |
+| `xai-grok-memory` | 9.7k | Cross-session memory | **harrier** | Done* | M | Port UX only |
 | `xai-grok-hooks` | 8.3k | File/HTTP hooks | hawk hooks | Port | L | |
 | `xai-fsnotify` | 6.7k | FS events | hawk (fsnotify) | Partial | S | |
 | `xai-grok-config` | 6k | Config layers + managed | hawk config + cloud | Port | L | |
@@ -138,16 +138,16 @@ grok-eco/grok-build  (one Rust workspace)
 | `ptyctl-cli` | 0.8k | PTY CLI | hawk tests/tools | Optional | S | |
 | `xai-tty-utils` | 1.2k | TTY-safe spawn | hawk | Port | S | |
 | `xai-hooks-plugins-types` | 1.2k | Hooks/plugins ACP DTOs | contracts | Port | S | |
-| `xai-sqlite-journal` | 0.8k | SQLite journal mode | hawk/yaad/tok | Partial | XS | |
+| `xai-sqlite-journal` | 0.8k | SQLite journal mode | hawk/harrier/shrike | Partial | XS | |
 | `xai-system-power` | 0.7k | Sleep/wake notify | hawk sleep_prevent | Partial | S | |
 | `xai-grok-http` | 0.6k | Shared HTTP client | hawk/netutil | Partial | XS | |
 | `xai-agent-lifecycle` | 0.6k | Lifecycle hooks data | hawk hooks/engine | Partial | S | |
 | `xai-gix-status` | 0.6k | Fast git status | hawk git tools | Partial | S | |
 | `xai-grok-paths` | 0.6k | AbsPath types | hawk | N/A | XS | Go path.Clean enough |
-| `xai-grok-secrets` | 0.6k | Secrets helpers | tok + eyrie | Partial | S | |
+| `xai-grok-secrets` | 0.6k | Secrets helpers | shrike + eyrie | Partial | S | |
 | `xai-grok-announcements` | 0.4k | Release announcements | hawk tips/notify | Port | S | |
 | `xai-grok-auth` | 0.4k | Auth seam | eyrie + hawk auth | Partial | M | Browser OAuth optional |
-| `xai-token-estimation` | 0.3k | Bytes/4 heuristic | **tok** | Skip | — | tok superior |
+| `xai-token-estimation` | 0.3k | Bytes/4 heuristic | **shrike** | Skip | — | shrike superior |
 | `xai-tracing-macros` | 0.2k | Log macros | hawk observability | N/A | XS | |
 | `xai-grok-env` | 0.2k | Backend env presets | eyrie/hawk | Partial | XS | |
 | `xai-prompt-queue` | 0.2k | Prompt queue types | hawk | Port | S | |
@@ -161,11 +161,11 @@ grok-eco/grok-build  (one Rust workspace)
 |------------|-----:|------------|--------|--------|--------|-------|
 | `xai-computer-hub-sdk` | 14k | Remote tool server SDK | new or hawk | Port (Y2+) | XL | Only if multi-host tools wanted |
 | `xai-computer-hub-core` | 4.2k | Transport/registry | same | Port (Y2+) | L | |
-| `xai-computer-hub-mcp-adapter` | 1k | MCP into hub | hawk-mcpkit | Port (Y2+) | M | |
+| `xai-computer-hub-mcp-adapter` | 1k | MCP into hub | falcon | Port (Y2+) | M | |
 | `xai-tool-protocol` | 6.6k | Wire protocol | contracts + hawk | Port (Y2) | L | |
 | `xai-tool-runtime` | 5.4k | Tool trait runtime | hawk tool | Partial | L | |
 | `xai-tool-types` | 3.6k | Spawn/task types | **contracts** | Port | M | **P0** |
-| `xai-grok-compaction` | 6.8k | Compaction engine | hawk engine + tok | Partial | L | |
+| `xai-grok-compaction` | 6.8k | Compaction engine | hawk engine + shrike | Partial | L | |
 | `xai-circuit-breaker` | 2.2k | HTTP breaker | eyrie/resilience | Partial | S | |
 | `xai-tracing` | 0.8k | Tracing | hawk OTEL | Partial | S | |
 | `xai-test-utils` | 0.4k | Hermetic git tests | hawk testutil | Partial | S | |
@@ -214,7 +214,7 @@ Grok vendors codex/opencode tool implementations for compatibility profiles.
 |----------------|------|--------|
 | Codex apply_patch / read / list / grep | hawk tools | Optional compat profile |
 | OpenCode read/write/edit/bash/glob/grep/todo/skill | hawk | Optional `compat.opencode` |
-| Claude import | missing | **Port** into trace/hawk |
+| Claude import | missing | **Port** into swift/hawk |
 | Cursor skills scan | missing | **Port** |
 
 ---
@@ -233,7 +233,7 @@ Grok slash modules (port checklist → hawk `/` commands or CLI):
 | plugins / mcps / marketplace | Partial | Port |
 | plan / view_plan | Partial | Align with /spec |
 | loop | Partial (cron) | Port `/loop` |
-| remember / memory | Partial (yaad) | Port UX |
+| remember / memory | Partial (harrier) | Port UX |
 | voice | Partial | Streaming STT |
 | dashboard | Partial (HUD) | Port |
 | usage | Partial | Port |
@@ -271,7 +271,7 @@ Grok slash modules (port checklist → hawk `/` commands or CLI):
 | 10 hooks | same |
 | 11 custom models | eyrie + hawk |
 | 12 project rules AGENTS.md | exists Partial |
-| 13 memory | yaad UX |
+| 13 memory | harrier UX |
 | 14 headless | CLI flags doc |
 | 15 agent/ACP | acp doc |
 | 16 subagents | spawn doc |
@@ -296,8 +296,8 @@ These are “small” crates/modules but required for **full** port claims:
 |------|-----------|-------------|--------|
 | Folder trust | `workspace/folder_trust.rs` | **Port** `internal/trust` | M |
 | envrc / direnv load | `workspace/envrc.rs` | **Port** | S |
-| Foreign sessions (Claude/Codex) | `foreign_sessions/` | **Port** via trace | L |
-| Managed config sync | `shell/managed_config` | **Port** via hawk-cloud | L |
+| Foreign sessions (Claude/Codex) | `foreign_sessions/` | **Port** via swift | L |
+| Managed config sync | `shell/managed_config` | **Port** via graycode-cloud | L |
 | Claude import | `shell/claude_import*` | **Port** | M |
 | Prompt queue | `xai-prompt-queue` | **Port** | S |
 | Interjection (“btw”) | `xai-interjection-core` | **Port** | S |
@@ -332,12 +332,12 @@ These are “small” crates/modules but required for **full** port claims:
 | Hyperlink routing | pager | Port | S |
 | Config TOML live edit | pager | Port | S |
 | Goal classifier | shell session | Port | S |
-| Trace classifier | shell | map to hawk trace | S |
+| Swift classifier | shell | map to hawk swift | S |
 | Repo changes tracking | shell session | Partial | M |
 | Active sessions multi | shell | Partial | M |
 | MCP doctor | shell mcp_doctor | Port | S |
 | Bundle / extensions suggest | shell extensions | Partial | M |
-| Instrumentation / inspect modules | shell | map observability | S |
+| Instrumentation / merlin modules | shell | map observability | S |
 
 ---
 
@@ -361,7 +361,7 @@ These are “small” crates/modules but required for **full** port claims:
 | Quarter | Deliverables |
 |---------|--------------|
 | **Q5** | ACP session/load/resume; richer updates; OpenAPI; sdk-go/python fields |
-| **Q6** | Managed policy (signed) hawk-cloud → hawk; IT tier; config layer order |
+| **Q6** | Managed policy (signed) graycode-cloud → hawk; IT tier; config layer order |
 | **Q7** | Foreign session import (Claude/Codex); envrc; hunk tracker; fast worktree; mermaid render |
 | **Q8** | Voice streaming upgrade; update checker parity; MCP doctor; slash parity batch 1; user-guide 13–24 |
 
@@ -399,7 +399,7 @@ Each pack is a shippable program of work with Definition of Done.
 
 ### PACK-01: Contracts (2–3 weeks) — **start here**
 
-**Repo:** `hawk-core-contracts`
+**Repo:** `eagle`
 
 - [ ] `agent` package: CapabilityMode, IsolationMode, SubagentType, SpawnRequest, SpawnResult  
 - [ ] Hook event name constants  
@@ -490,7 +490,7 @@ Each pack is a shippable program of work with Definition of Done.
 
 ### PACK-11: Session ecosystem (6 weeks)
 
-- [ ] Foreign sessions import (trace)  
+- [ ] Foreign sessions import (swift)
 - [ ] Claude import CLI  
 - [ ] envrc load  
 - [ ] Hunk attribution tracker  
@@ -549,7 +549,7 @@ Only if product requires remote tool hosts:
 
 Port/finish: spawn, tools, sandbox, trust, hooks, plugins, marketplace client, TUI, ACP, headless, slash, taskruntime, hunks, mermaid, voice, crash, announcements, queue, interjection, plan, ask user, update, PTY harness, envrc, permissions pipeline, user-guide.
 
-### `hawk-core-contracts`
+### `eagle`
 
 Port: spawn/capability/isolation types, hook events, optional sandbox policy DTO, tool protocol types (later).
 
@@ -557,39 +557,39 @@ Port: spawn/capability/isolation types, hook events, optional sandbox policy DTO
 
 Absorb: sampling/stream/retry/circuit-breaker lessons; catalog already ahead; managed deployment hooks; **do not** become Grok-only auth.
 
-### `yaad`
+### `harrier`
 
 Port memory **UX**: dream, toggle priority, flush; keep graph store.
 
-### `tok`
+### `shrike`
 
 Keep; optionally align display token estimates; secrets scanning already stronger.
 
-### `trace`
+### `swift`
 
 Foreign session import; share/export; session indexing parity with Grok session features that are capture-oriented.
 
-### `sight` / `inspect`
+### `kestrel` / `merlin`
 
-No direct Grok crates; keep peer engines; ensure hawk composition matches Grok “review/inspect” product moments if any.
+No direct Grok crates; keep peer engines; ensure hawk composition matches Grok “review/merlin” product moments if any.
 
-### `hawk-mcpkit`
+### `falcon`
 
 Liveness, shared OAuth helpers, hub MCP adapter if hub lands.
 
-### `hawk-community-skills`
+### `starling`
 
 Marketplace content + multi-component packages + validation.
 
-### `hawk-cloud`
+### `graycode-platform/apps/worker` (deployed as `graycode-cloud`)
 
 Managed policy, usage ledger (exists), entitlements, SSO/SCIM (exists primitives).
 
-### `hawk-sdk-go` / `hawk-sdk-python`
+### `sparrow` / `robin`
 
 Spawn options, plugins meta, permission/sandbox, stream formats.
 
-### `graycode-core`
+### `graycode-platform`
 
 Dashboard/usage/marketplace web UI only.
 
@@ -603,8 +603,8 @@ Dashboard/usage/marketplace web UI only.
 | Mixpanel default | Privacy |
 | Sentry hard-dependency | Opt-in error reporting |
 | SpaceXAI-only browser auth as sole path | Multi-provider + keychain |
-| `xai-token-estimation` | tok wins |
-| Replace yaad with markdown memory files | Graph better |
+| `xai-token-estimation` | shrike wins |
+| Replace harrier with markdown memory files | Graph better |
 | Replace eyrie with xai-grok-sampler | Multi-provider better |
 | ratatui widgets | Bubble Tea stack |
 | `xai-proto-build` | Rust build |
@@ -650,7 +650,7 @@ Declare complete when:
 6. Folder trust + sandbox deny globs pass security tests on macOS+Linux.  
 7. Marketplace can install a multi-component plugin.  
 8. Subagent explore/plan/general + resume + worktree isolation work.  
-9. No second memory/token/provider stack duplicated against yaad/tok/eyrie.  
+9. No second memory/token/provider stack duplicated against harrier/shrike/eyrie.
 10. Continuous parity process (PACK-17) running for 2 releases.
 
 ---

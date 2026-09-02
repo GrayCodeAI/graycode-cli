@@ -25,12 +25,12 @@ Plus follow-up work (already merged into the same branch):
 |------|-------|--------|--------|
 | Meta-audit | `TestSessionLegacyFieldAccessAudit` (cmd/ hard-fail at 30, internal/ soft-fail) | ✅ committed | `f2e8337` + hard-fail in `a05f6f8` |
 | H5 first migrated command | `/branch` → `chat_subcommand_branch.go` (exemplar) | ✅ committed | `d56c9f7` |
-| H6 cmd/ migrations | s.Permissions → PermSvc().Memory(), s.Autonomy → PermSvc().Autonomy(), s.PermissionFn, s.Mode, s.MaxTurns, s.Memory, s.YaadBridge, s.EnhancedMemory | ✅ committed | `5c972e0`, `b8d6543`, `b5e7585` |
+| H6 cmd/ migrations | s.Permissions → PermSvc().Memory(), s.Autonomy → PermSvc().Autonomy(), s.PermissionFn, s.Mode, s.MaxTurns, s.Memory, s.HarrierBridge, s.EnhancedMemory | ✅ committed | `5c972e0`, `b8d6543`, `b5e7585` |
 | H5 batch-2 | 9 more slash commands (version, env, doctor, init, focus, pin, files, commit, session) | ✅ committed | `cae49d1` |
 | H5 batch-3 | 19 more slash commands (render, review, refactor, mode, model, context, memory, soul, etc.) | ✅ committed | `3aafc34` |
 | H5 batch-4 | Dispatcher wired + 35 cases removed from switch | ✅ committed | `0714223` |
 | H5 batch-5 | 11 more cases removed | ✅ committed | `ee15873` |
-| H5 batch-6 | 11 more slash commands + cases removed (council, dream, away, yaad, etc.) | ✅ committed | `1c8d7e6` (cmd) + `0bbaf6b` (cases) |
+| H5 batch-6 | 11 more slash commands + cases removed (council, dream, away, harrier, etc.) | ✅ committed | `1c8d7e6` (cmd) + `0bbaf6b` (cases) |
 | H5 batch-7 | delegatingCommand helper + 9 simple commands (copy, select, mouse, etc.) | ✅ committed | `b7d2b5b` + `0bbaf6b` |
 | H5 batch-8 | 15 more commands (parallel, skills, tasks, vibe, learn, etc.) | ✅ committed | `034190a` |
 | H5 batch-9 | 14 session-delegating commands (export, rename, tag, etc.) | ✅ committed | `1dd0c83` |
@@ -48,7 +48,7 @@ All 50+ slash commands in `cmd/chat_commands.go` (1745 lines) have been migrated
 
 ## H6: Session field migration (cmd/ done; internal/ in progress)
 
-The `s.Permissions` / `s.Autonomy` / `s.PermissionFn` / `s.Mode` / `s.MaxTurns` / `s.Memory` / `s.YaadBridge` / `s.EnhancedMemory` legacy fields in `cmd/` are now routed through the `PermissionService` and `MemoryService` sub-services via setters and getters. The `PermissionService.Memory()/AutoMode()/Classifier()/BypassKill()` getters and `MemoryService.SetMemory/SetYaad/SetEnhanced()` setters were added as part of this PR.
+The `s.Permissions` / `s.Autonomy` / `s.PermissionFn` / `s.Mode` / `s.MaxTurns` / `s.Memory` / `s.HarrierBridge` / `s.EnhancedMemory` legacy fields in `cmd/` are now routed through the `PermissionService` and `MemoryService` sub-services via setters and getters. The `PermissionService.Memory()/AutoMode()/Classifier()/BypassKill()` getters and `MemoryService.SetMemory/SetHarrier/SetEnhanced()` setters were added as part of this PR.
 
 **Meta-audit** (`TestSessionLegacyFieldAccessAudit`) currently reports:
 - **Total**: 458 legacy accesses across 45 files

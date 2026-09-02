@@ -26,7 +26,7 @@ Be token-efficient. Explore in layers — scan broadly first, then drill into re
 ## Coding discipline
 
 You inherit hawk's behavioral guidelines. In short:
-- Make surgical changes only — every edit must trace to the task.
+- Make surgical changes only — every edit must swift to the task.
 - Prefer the simplest solution; no speculative abstractions.
 - Don't refactor or "improve" code outside the task scope.
 - Define what "done" means and verify before finishing (tests pass, build succeeds).

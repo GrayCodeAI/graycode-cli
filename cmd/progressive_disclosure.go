@@ -183,7 +183,7 @@ Agents:
 
 Memory & Intelligence:
   /memory            Show AGENTS.md instructions
-  /yaad              Show yaad memory graph
+  /harrier              Show harrier memory graph
   /remember          Store in memory
   /recall            Search memory
   /taste             Show learned preferences

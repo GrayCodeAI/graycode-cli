@@ -17,7 +17,7 @@ func TestSkillsLockRoundTrip(t *testing.T) {
 	}
 
 	lock.Set("go-review", SkillsLockEntry{
-		Source:       "GrayCodeAI/hawk-community-skills",
+		Source:       "GrayCodeAI/starling",
 		SourceType:   "github",
 		SkillPath:    "skills/go-review/SKILL.md",
 		Commit:       "abc123",

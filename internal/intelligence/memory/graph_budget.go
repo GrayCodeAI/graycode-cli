@@ -7,14 +7,14 @@ import (
 	"sync"
 )
 
-// GraphAwareBudget makes memory allocation smarter by using yaad's graph
+// GraphAwareBudget makes memory allocation smarter by using harrier's graph
 // to determine what context to inject. It considers:
 // - Active file subgraphs (what memories relate to files being worked on)
 // - Confidence and staleness (prioritize high-confidence, non-stale memories)
 // - Task complexity (more memory for complex multi-file tasks)
 // - Impact analysis (what's affected by current changes)
 type GraphAwareBudget struct {
-	bridge     *YaadBridge
+	bridge     *HarrierBridge
 	proactive  *ProactiveContext
 	mu         sync.Mutex
 	baseBudget int
@@ -30,7 +30,7 @@ type MemoryInjection struct {
 }
 
 // NewGraphAwareBudget creates a graph-aware memory budget allocator.
-func NewGraphAwareBudget(bridge *YaadBridge, proactive *ProactiveContext) *GraphAwareBudget {
+func NewGraphAwareBudget(bridge *HarrierBridge, proactive *ProactiveContext) *GraphAwareBudget {
 	return &GraphAwareBudget{
 		bridge:     bridge,
 		proactive:  proactive,

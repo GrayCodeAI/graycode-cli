@@ -3,17 +3,24 @@
 # Local replace directives must not be present when tagging a release.
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ECO_DIR="$(cd "${ROOT_DIR}/.." && pwd)"
 errors=0
 while IFS= read -r modfile; do
-  if grep -qE '^replace .+ => \.\./' "$modfile"; then
+  if grep -qE '=>[[:space:]]+(\./|\.\./|/)' "$modfile"; then
     echo "ERROR: local replace directive found in $modfile"
-    grep -nE '^replace .+ => \.\./' "$modfile"
+    grep -nE '=>[[:space:]]+(\./|\.\./|/)' "$modfile"
     errors=$((errors + 1))
   fi
-done < <(find . -name 'go.mod' -not -path '*/vendor/*' -not -path '*/.gocache/*' -not -path '*/external/*')
+done < <(
+  while IFS= read -r repo; do
+    [[ -d "${ECO_DIR}/${repo}" ]] || continue
+    find "${ECO_DIR}/${repo}" -name vendor -prune -o -name go.mod -type f -print
+  done < <("${ROOT_DIR}/scripts/ecosystem-manifest.sh" list workspace)
+) | sort
 
 if [ $errors -gt 0 ]; then
-  echo "\nFail: $errors go.mod file(s) have local replace directives that must be removed before tagging a release."
+  printf '\nFail: %d go.mod file(s) have local replace directives that must be removed before tagging a release.\n' "$errors"
   exit 1
 fi
 echo "OK: no local replace directives found."

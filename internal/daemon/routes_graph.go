@@ -15,14 +15,14 @@ import (
 
 const (
 	maxGraphRepositoryIDLength = 256
-	maxGraphTraceCheckpoints   = 64
+	maxGraphSwiftCheckpoints   = 64
 )
 
 // GraphRequest is the bounded, read-only input to a daemon graph projection.
 type GraphRequest struct {
 	SessionID          string
 	RepositoryID       string
-	TraceCheckpointIDs []string
+	SwiftCheckpointIDs []string
 	GeneratedAt        time.Time
 }
 
@@ -55,20 +55,20 @@ func (s *Server) handleGetSessionGraph(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	checkpointIDs := r.URL.Query()["trace_checkpoint"]
-	if len(checkpointIDs) > maxGraphTraceCheckpoints {
+	checkpointIDs := r.URL.Query()["swift_checkpoint"]
+	if len(checkpointIDs) > maxGraphSwiftCheckpoints {
 		writeJSON(w, http.StatusBadRequest, ErrorResponse{
-			Error: "too many Trace checkpoint IDs",
-			Code:  "too_many_trace_checkpoints",
+			Error: "too many Swift checkpoint IDs",
+			Code:  "too_many_swift_checkpoints",
 		})
 		return
 	}
 	for i := range checkpointIDs {
 		checkpointIDs[i] = strings.TrimSpace(checkpointIDs[i])
-		if !validGraphTraceCheckpointID(checkpointIDs[i]) {
+		if !validGraphSwiftCheckpointID(checkpointIDs[i]) {
 			writeJSON(w, http.StatusBadRequest, ErrorResponse{
-				Error: "invalid Trace checkpoint ID",
-				Code:  "invalid_trace_checkpoint",
+				Error: "invalid Swift checkpoint ID",
+				Code:  "invalid_swift_checkpoint",
 			})
 			return
 		}
@@ -88,7 +88,7 @@ func (s *Server) handleGetSessionGraph(w http.ResponseWriter, r *http.Request) {
 	export, err := factory(r.Context(), GraphRequest{
 		SessionID:          id,
 		RepositoryID:       repositoryID,
-		TraceCheckpointIDs: append([]string(nil), checkpointIDs...),
+		SwiftCheckpointIDs: append([]string(nil), checkpointIDs...),
 		GeneratedAt:        time.Now().UTC(),
 	})
 	if err != nil {
@@ -121,7 +121,7 @@ func validGraphRepositoryID(value string) bool {
 	return true
 }
 
-func validGraphTraceCheckpointID(value string) bool {
+func validGraphSwiftCheckpointID(value string) bool {
 	if len(value) != 12 {
 		return false
 	}

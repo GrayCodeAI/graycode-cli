@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	graphcontracts "github.com/GrayCodeAI/eagle/graph"
+	policycontracts "github.com/GrayCodeAI/eagle/policy"
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
-	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
-	policycontracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
 	"github.com/GrayCodeAI/hawk/internal/engine/token"
 	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 	"github.com/GrayCodeAI/hawk/internal/types"
@@ -117,10 +117,10 @@ func (s *Session) SessionID() string {
 	return s.executionGraphSessionID()
 }
 
-// ConfigureContextGraphObservation binds Yaad recall projections to this
+// ConfigureContextGraphObservation binds Harrier recall projections to this
 // persisted Hawk session. It is safe to call before either side is configured.
 func (s *Session) ConfigureContextGraphObservation(repositoryDir string) {
-	if s == nil || s.MemorySvc() == nil || s.MemorySvc().Yaad() == nil {
+	if s == nil || s.MemorySvc() == nil || s.MemorySvc().Harrier() == nil {
 		return
 	}
 	if strings.TrimSpace(repositoryDir) == "" {
@@ -130,13 +130,13 @@ func (s *Session) ConfigureContextGraphObservation(repositoryDir string) {
 	if strings.TrimSpace(repositoryDir) != "" {
 		repositoryID = filepath.Base(filepath.Clean(repositoryDir))
 	}
-	s.MemorySvc().Yaad().ConfigureGraphObservation(
+	s.MemorySvc().Harrier().ConfigureGraphObservation(
 		s.executionGraphSessionID(),
 		graphcontracts.Scope{RepositoryID: repositoryID},
 	)
 }
 
-func (s *Session) recordTokCompressionObservation(source, stage string, stats token.Stats) {
+func (s *Session) recordShrikeCompressionObservation(source, stage string, stats token.Stats) {
 	sessionID := s.executionGraphSessionID()
 	if sessionID == "" || stats.OriginalTokens <= 0 {
 		return
@@ -159,7 +159,7 @@ func (s *Session) recordTokCompressionObservation(source, stage string, stats to
 	})
 	if err == nil {
 		err = graphjournal.AppendRuntimeGraph(
-			sessionID, "", stage, "tok",
+			sessionID, "", stage, "shrike",
 			export.Nodes, export.Edges, export.Events, observedAt,
 		)
 	}
@@ -171,7 +171,7 @@ func (s *Session) recordTokCompressionObservation(source, stage string, stats to
 	}
 }
 
-func (s *Session) recordTokRedactionObservation(source string, matchCount int, types map[string]int) {
+func (s *Session) recordShrikeRedactionObservation(source string, matchCount int, types map[string]int) {
 	sessionID := s.executionGraphSessionID()
 	if sessionID == "" || matchCount <= 0 {
 		return
@@ -197,7 +197,7 @@ func (s *Session) recordTokRedactionObservation(source string, matchCount int, t
 	})
 	if err == nil {
 		err = graphjournal.AppendRuntimeGraph(
-			sessionID, "", "response-redaction", "tok",
+			sessionID, "", "response-redaction", "shrike",
 			export.Nodes, export.Edges, export.Events, observedAt,
 		)
 	}
@@ -209,7 +209,7 @@ func (s *Session) recordTokRedactionObservation(source string, matchCount int, t
 	}
 }
 
-func (s *Session) recordTokUsageBudgetObservation(
+func (s *Session) recordShrikeUsageBudgetObservation(
 	tokens int,
 	costUSD float64,
 	provider, model string,
@@ -217,7 +217,7 @@ func (s *Session) recordTokUsageBudgetObservation(
 	if s == nil || tokens <= 0 {
 		return
 	}
-	tracker := s.ensureTokUsageTracker()
+	tracker := s.ensureShrikeUsageTracker()
 	tracker.Record(tokens, costUSD, provider, model)
 	allowed, reason := tracker.CanProceed()
 	usage := tracker.GetUsage()
@@ -255,7 +255,7 @@ func (s *Session) recordTokUsageBudgetObservation(
 	})
 	if err == nil {
 		err = graphjournal.AppendRuntimeGraph(
-			sessionID, "", "usage-budget", "tok",
+			sessionID, "", "usage-budget", "shrike",
 			export.Nodes, export.Edges, export.Events, observedAt,
 		)
 	}
@@ -267,22 +267,22 @@ func (s *Session) recordTokUsageBudgetObservation(
 	}
 }
 
-func (s *Session) ensureTokUsageTracker() *token.UsageTracker {
+func (s *Session) ensureShrikeUsageTracker() *token.UsageTracker {
 	if s == nil || s.LifecycleSvc() == nil {
 		return nil
 	}
 	return s.LifecycleSvc().EnsureUsageTracker()
 }
 
-func (s *Session) currentTokUsageTracker() *token.UsageTracker {
+func (s *Session) currentShrikeUsageTracker() *token.UsageTracker {
 	if s == nil || s.LifecycleSvc() == nil {
 		return nil
 	}
 	return s.LifecycleSvc().UsageTracker()
 }
 
-func (s *Session) tokUsageCanProceed() (bool, string) {
-	tracker := s.currentTokUsageTracker()
+func (s *Session) shrikeUsageCanProceed() (bool, string) {
+	tracker := s.currentShrikeUsageTracker()
 	if tracker == nil {
 		return true, ""
 	}

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	contracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
+	contracts "github.com/GrayCodeAI/eagle/policy"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 

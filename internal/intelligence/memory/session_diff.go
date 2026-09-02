@@ -13,7 +13,7 @@ import (
 // memories from the diff: new files → purpose, new deps → choices,
 // conventions followed/violated → confidence updates.
 type SessionDiffAnalyzer struct {
-	bridge     *YaadBridge
+	bridge     *HarrierBridge
 	projectDir string
 	startFiles map[string]string // path → content hash at session start
 	mu         sync.Mutex
@@ -29,7 +29,7 @@ type DiffResult struct {
 }
 
 // NewSessionDiffAnalyzer creates a diff analyzer for a project directory.
-func NewSessionDiffAnalyzer(bridge *YaadBridge, projectDir string) *SessionDiffAnalyzer {
+func NewSessionDiffAnalyzer(bridge *HarrierBridge, projectDir string) *SessionDiffAnalyzer {
 	return &SessionDiffAnalyzer{
 		bridge:     bridge,
 		projectDir: projectDir,

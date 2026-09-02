@@ -9,7 +9,7 @@ The Hawk dashboard provides system status and monitoring information.
 In the TUI:
 
 ```
-/ecosystem         # Ecosystem status (Eyrie, yaad, tok)
+/ecosystem         # Ecosystem status (Eyrie, harrier, shrike)
 /path              # Developer path readiness
 /preflight         # Quick health check
 ```
@@ -23,9 +23,9 @@ Shows the status of all Hawk components:
 | Component | Status |
 |-----------|--------|
 | Eyrie (providers) | Ready / Error |
-| yaad (memory) | Connected / Offline |
-| tok (tokenizer) | Available |
-| trace (session capture) | Ready |
+| harrier (memory) | Connected / Offline |
+| shrike (tokenizer) | Available |
+| swift (session capture) | Ready |
 
 ---
 

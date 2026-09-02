@@ -171,8 +171,8 @@ func detectAssets(root string) AssetsDetected {
 	}
 
 	// Default assumption for bridges
-	assets.InspectBridge = true
-	assets.SightBridge = true
+	assets.MerlinBridge = true
+	assets.KestrelBridge = true
 	assets.AutonomyTier = "Builder"
 	assets.SandboxPolicy = "workspace"
 
@@ -400,7 +400,7 @@ func evalVerification(root string, assets AssetsDetected, report *HarnessReport)
 	score := 95
 	state := EvidenceStatePresent
 
-	if !assets.InspectBridge || !assets.SightBridge {
+	if !assets.MerlinBridge || !assets.KestrelBridge {
 		score -= 15
 		state = EvidenceStatePartial
 		report.Findings = append(report.Findings, Finding{
@@ -408,7 +408,7 @@ func evalVerification(root string, assets AssetsDetected, report *HarnessReport)
 			Dimension:       DimensionVerification,
 			Severity:        SeverityLow,
 			Title:           "Verification Audit Bridges Unverified",
-			Description:     "Security audit (inspect) or code review (sight) engines are operating in baseline mode.",
+			Description:     "Security audit (merlin) or code review (kestrel) engines are operating in baseline mode.",
 			Impact:          "Deep security vulnerability scans and formal diff review quality graphs are unattached.",
 			EvidenceSource:  "internal/bridge",
 			EvidenceState:   EvidenceStatePartial,

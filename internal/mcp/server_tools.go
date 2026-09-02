@@ -105,11 +105,11 @@ func hawkSearchTool(executor ToolExecutor) MCPToolHandler {
 	}
 }
 
-// hawkMemoryRecallTool recalls information from yaad memory.
+// hawkMemoryRecallTool recalls information from harrier memory.
 func hawkMemoryRecallTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
 		Name:        "hawk_memory_recall",
-		Description: "Recall stored information from hawk's persistent memory (yaad).",
+		Description: "Recall stored information from hawk's persistent memory (harrier).",
 		Annotations: readOnlyAnnotations("Recall from hawk memory"),
 		InputSchema: map[string]interface{}{
 			"type": "object",
@@ -141,11 +141,11 @@ func hawkMemoryRecallTool(executor ToolExecutor) MCPToolHandler {
 	}
 }
 
-// hawkMemoryStoreTool stores information to yaad memory.
+// hawkMemoryStoreTool stores information to harrier memory.
 func hawkMemoryStoreTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
 		Name:        "hawk_memory_store",
-		Description: "Store information in hawk's persistent memory (yaad) for future recall.",
+		Description: "Store information in hawk's persistent memory (harrier) for future recall.",
 		Annotations: &ToolAnnotations{
 			Title:           "Store in hawk memory",
 			ReadOnlyHint:    boolPtr(false),
@@ -186,12 +186,12 @@ func hawkMemoryStoreTool(executor ToolExecutor) MCPToolHandler {
 	}
 }
 
-// hawkReviewTool triggers a code review via sight.
+// hawkReviewTool triggers a code review via kestrel.
 func hawkReviewTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
 		Name:        "hawk_review",
-		Description: "Trigger a code review using hawk's sight module. Analyzes code for quality, style, and potential issues.",
-		Annotations: readOnlyAnnotations("Review code (sight)"),
+		Description: "Trigger a code review using hawk's kestrel module. Analyzes code for quality, style, and potential issues.",
+		Annotations: readOnlyAnnotations("Review code (kestrel)"),
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -222,12 +222,12 @@ func hawkReviewTool(executor ToolExecutor) MCPToolHandler {
 	}
 }
 
-// hawkScanTool triggers a security scan via inspect.
+// hawkScanTool triggers a security scan via merlin.
 func hawkScanTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
 		Name:        "hawk_scan",
-		Description: "Trigger a security scan using hawk's inspect module. Identifies vulnerabilities and security issues.",
-		Annotations: readOnlyAnnotations("Security scan (inspect)"),
+		Description: "Trigger a security scan using hawk's merlin module. Identifies vulnerabilities and security issues.",
+		Annotations: readOnlyAnnotations("Security scan (merlin)"),
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -259,12 +259,12 @@ func hawkScanTool(executor ToolExecutor) MCPToolHandler {
 	}
 }
 
-// hawkCompressTool compresses text via tok.
+// hawkCompressTool compresses text via shrike.
 func hawkCompressTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
 		Name:        "hawk_compress",
-		Description: "Compress text using hawk's tok module to reduce token usage while preserving meaning.",
-		Annotations: readOnlyAnnotations("Compress text (tok)"),
+		Description: "Compress text using hawk's shrike module to reduce token usage while preserving meaning.",
+		Annotations: readOnlyAnnotations("Compress text (shrike)"),
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{

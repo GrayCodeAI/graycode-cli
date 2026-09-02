@@ -11,13 +11,13 @@ import (
 // and memory graph nodes. When code is indexed, it auto-links to memories
 // that reference that file. Enables "show all memories about this function."
 type CodeMemoryLinker struct {
-	bridge *YaadBridge
+	bridge *HarrierBridge
 	mu     sync.Mutex
 	cache  map[string][]string // file path → memory node IDs
 }
 
 // NewCodeMemoryLinker creates a linker that bridges code index and memory graph.
-func NewCodeMemoryLinker(bridge *YaadBridge) *CodeMemoryLinker {
+func NewCodeMemoryLinker(bridge *HarrierBridge) *CodeMemoryLinker {
 	return &CodeMemoryLinker{
 		bridge: bridge,
 		cache:  make(map[string][]string),

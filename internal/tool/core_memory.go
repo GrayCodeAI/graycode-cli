@@ -35,10 +35,10 @@ func (CoreMemoryAppendTool) Execute(ctx context.Context, input json.RawMessage) 
 		return "", err
 	}
 	tc := GetToolContext(ctx)
-	if tc == nil || tc.YaadBridge == nil {
+	if tc == nil || tc.HarrierBridge == nil {
 		return "", fmt.Errorf("memory not available")
 	}
-	if err := tc.YaadBridge.Remember(p.Content, p.Label); err != nil {
+	if err := tc.HarrierBridge.Remember(p.Content, p.Label); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Appended to [%s] memory block.", p.Label), nil
@@ -74,10 +74,10 @@ func (CoreMemoryReplaceTool) Execute(ctx context.Context, input json.RawMessage)
 		return "", err
 	}
 	tc := GetToolContext(ctx)
-	if tc == nil || tc.YaadBridge == nil {
+	if tc == nil || tc.HarrierBridge == nil {
 		return "", fmt.Errorf("memory not available")
 	}
-	ids, contents, err := tc.YaadBridge.SearchByType(p.Label, 100)
+	ids, contents, err := tc.HarrierBridge.SearchByType(p.Label, 100)
 	if err != nil {
 		return "", err
 	}
@@ -85,7 +85,7 @@ func (CoreMemoryReplaceTool) Execute(ctx context.Context, input json.RawMessage)
 	for i, content := range contents {
 		if strings.Contains(content, p.OldContent) {
 			updated := strings.Replace(content, p.OldContent, p.NewContent, 1)
-			if err := tc.YaadBridge.UpdateNodeContent(ids[i], updated); err != nil {
+			if err := tc.HarrierBridge.UpdateNodeContent(ids[i], updated); err != nil {
 				return "", err
 			}
 			replaced++
@@ -125,20 +125,20 @@ func (CoreMemoryRethinkTool) Execute(ctx context.Context, input json.RawMessage)
 		return "", err
 	}
 	tc := GetToolContext(ctx)
-	if tc == nil || tc.YaadBridge == nil {
+	if tc == nil || tc.HarrierBridge == nil {
 		return "", fmt.Errorf("memory not available")
 	}
-	ids, _, err := tc.YaadBridge.SearchByType(p.Label, 1)
+	ids, _, err := tc.HarrierBridge.SearchByType(p.Label, 1)
 	if err != nil {
 		return "", err
 	}
 	if len(ids) > 0 {
-		if err := tc.YaadBridge.UpdateNodeContent(ids[0], p.NewValue); err != nil {
+		if err := tc.HarrierBridge.UpdateNodeContent(ids[0], p.NewValue); err != nil {
 			return "", err
 		}
 		return fmt.Sprintf("Rewrote [%s] memory block.", p.Label), nil
 	}
-	if err := tc.YaadBridge.Remember(p.NewValue, p.Label); err != nil {
+	if err := tc.HarrierBridge.Remember(p.NewValue, p.Label); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Created new [%s] memory block.", p.Label), nil

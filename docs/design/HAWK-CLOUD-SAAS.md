@@ -434,8 +434,8 @@ erode that.
    `CheckBudget` (`budget_provider.go:181`) bound runaway agent spend per tenant.
 6. **Code privacy.** Customer code lives only in the ephemeral microVM and the
    session store; offer per-org data-retention controls and a "no-retention" mode
-   that discards transcripts after the session. Redaction (tok secrets detection,
-   `tok/secrets.go`) should run before any transcript is persisted to the shared
+   that discards transcripts after the session. Redaction (shrike secrets detection,
+   `shrike/secrets.go`) should run before any transcript is persisted to the shared
    store.
 7. **RBAC checks at the edge AND the service layer** (defense in depth) — never
    trust workspace/org IDs from the client without verifying membership.

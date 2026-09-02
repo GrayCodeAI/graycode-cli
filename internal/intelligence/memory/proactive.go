@@ -15,7 +15,7 @@ import (
 // Instead of waiting for explicit recall calls, it tracks which files
 // the agent is working on and proactively surfaces relevant memories.
 type ProactiveContext struct {
-	bridge       *YaadBridge
+	bridge       *HarrierBridge
 	activeFiles  map[string]time.Time
 	injectedKeys map[string]bool // track what we've already injected to avoid duplicates
 	mu           sync.Mutex
@@ -23,7 +23,7 @@ type ProactiveContext struct {
 }
 
 // NewProactiveContext creates a proactive context injector.
-func NewProactiveContext(bridge *YaadBridge) *ProactiveContext {
+func NewProactiveContext(bridge *HarrierBridge) *ProactiveContext {
 	return &ProactiveContext{
 		bridge:       bridge,
 		activeFiles:  make(map[string]time.Time),
@@ -68,7 +68,7 @@ func (pc *ProactiveContext) ContextForFile(path string) string {
 
 	pc.TrackFile(path)
 
-	// Search yaad for memories related to this file
+	// Search harrier for memories related to this file
 	basename := filepath.Base(path)
 	dir := filepath.Dir(path)
 	dirBase := filepath.Base(dir)

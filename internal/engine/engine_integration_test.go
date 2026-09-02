@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	contracts "github.com/GrayCodeAI/hawk-core-contracts/policy"
+	contracts "github.com/GrayCodeAI/eagle/policy"
 	"github.com/GrayCodeAI/hawk/internal/types"
 
 	"github.com/GrayCodeAI/hawk/internal/session"

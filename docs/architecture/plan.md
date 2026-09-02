@@ -25,7 +25,7 @@ Session
   ├─ llm *ChatService        (Phase 1: LLM transport)
   ├─ perms *PermissionService (Phase 2: safety/approval)
   ├─ life *LifecycleService   (Phase 3: self-improvement)
-  ├─ memory *MemoryService    (Phase 4: yaad bridge)
+  ├─ memory *MemoryService    (Phase 4: harrier bridge)
   ├─ persist *PersistenceService (Phase 5: conversation store)
   └─ tools *ToolService       (Phase 6: tool execution)
 ```
@@ -152,9 +152,9 @@ services; it is not a claim that those fields have already moved.
 ## Dependencies
 
 - **eyrie:** LLM provider engine behind `eyrie/engine` (workspace sibling)
-- **yaad:** Graph-based persistent memory (workspace sibling)
-- **tok:** Tokenizer, compression (workspace sibling)
-- **hawk-core-contracts:** Shared types (workspace sibling)
+- **harrier:** Graph-based persistent memory (workspace sibling)
+- **shrike:** Tokenizer, compression (workspace sibling)
+- **eagle:** Shared types (workspace sibling)
 
 ## Success Metrics
 

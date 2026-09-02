@@ -10,34 +10,34 @@ import (
 )
 
 // dreamSubcommand implements the /dream slash command. It runs
-// memory consolidation: takes the loaded yaad memories and asks
+// memory consolidation: takes the loaded harrier memories and asks
 // the model to summarize and clean them up.
 type dreamSubcommand struct{}
 
 func (d *dreamSubcommand) Name() string      { return "dream" }
 func (d *dreamSubcommand) Aliases() []string { return nil }
 func (d *dreamSubcommand) Description() string {
-	return "consolidate yaad memories into a coherent summary"
+	return "consolidate harrier memories into a coherent summary"
 }
 func (d *dreamSubcommand) Usage() string { return "" }
 func (d *dreamSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	projectDir, _ := os.Getwd()
-	status := memory.YaadStatus()
+	status := memory.HarrierStatus()
 	if strings.Contains(status, "not initialized") || strings.Contains(status, "no memories") {
-		m.messages = append(m.messages, displayMsg{role: "system", content: status + "\nRun 'yaad' to start storing memories, or use /memory to view AGENTS.md."})
+		m.messages = append(m.messages, displayMsg{role: "system", content: status + "\nRun 'harrier' to start storing memories, or use /memory to view AGENTS.md."})
 		return m, nil
 	}
-	yaadCtx := memory.LoadYaadContext(projectDir)
-	if yaadCtx == "" {
-		m.messages = append(m.messages, displayMsg{role: "system", content: "No yaad memories found to consolidate."})
+	harrierCtx := memory.LoadHarrierContext(projectDir)
+	if harrierCtx == "" {
+		m.messages = append(m.messages, displayMsg{role: "system", content: "No harrier memories found to consolidate."})
 		return m, nil
 	}
-	dreamPrompt := `Review the yaad memories below and consolidate them into a coherent summary.
+	dreamPrompt := `Review the harrier memories below and consolidate them into a coherent summary.
 Focus on: recurring patterns, user preferences learned, project context that should persist,
 and any corrections or feedback. Remove redundant or outdated entries.
-Write the consolidated result as clear, organized yaad memory nodes.
+Write the consolidated result as clear, organized harrier memory nodes.
 
-` + yaadCtx
+` + harrierCtx
 	m.messages = append(m.messages, displayMsg{role: "system", content: "Running memory consolidation...\n" + status})
 	return m.startPromptCommand("/dream", dreamPrompt)
 }

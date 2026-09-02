@@ -18,10 +18,10 @@ runs:
         INPUT_REF: ${{ inputs.ref }}
       run: |
         set -euo pipefail
-        # hawk's committed go.work references ../<repo>, so the siblings must
-        # be cloned into the parent of the checked-out workspace.
+        # The generated workspace references sibling bird-codename repos.
         ws_parent="$(cd "${GITHUB_WORKSPACE}/.." && pwd)"
-        for repo in hawk-core-contracts eyrie inspect sight tok trace yaad hawk-mcpkit; do
+        while IFS= read -r repo; do
+          [ "$repo" = hawk ] && continue
           dest="${ws_parent}/${repo}"
           if [ -d "$dest/.git" ]; then
             echo "$repo already present at $dest"
@@ -34,4 +34,4 @@ runs:
             echo "Branch '$INPUT_REF' not found on $repo, falling back to main"
             git clone --depth=1 --branch main "https://github.com/GrayCodeAI/${repo}.git" "$dest"
           fi
-        done
+        done < <(./scripts/ecosystem-manifest.sh list workspace)

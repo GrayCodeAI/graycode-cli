@@ -1,7 +1,7 @@
 # graycode-eco Unified Config-as-Code
 
 Status: Draft / shared spec
-Applies to: hawk, eyrie, yaad, tok, trace
+Applies to: hawk, eyrie, harrier, shrike, swift
 
 This document specifies a **single, unified configuration schema** for the
 graycode-eco ecosystem: one declarative file (`graycode-eco.yaml`, with an equivalent
@@ -12,8 +12,8 @@ repo reads the slice of the schema it owns.
 
 Today each repo configures itself independently through its own env vars,
 flags, and config files (hawk: `config.json` + `HAWK_*`/`GRAYCODE_*` env; eyrie:
-provider env vars; yaad: `~/.yaad/config.toml`; tok: `TOK_*` env; trace:
-`TRACE_*` env). This spec does **not** replace those mechanisms — it defines a
+provider env vars; harrier: `~/.harrier/config.toml`; shrike: `TOK_*` env; swift:
+`SWIFT_*` env). This spec does **not** replace those mechanisms — it defines a
 superset schema and maps every setting back to the repo + existing env
 var/flag that implements it today, so adoption can be incremental and the
 unified file can be **rendered down** to per-repo env/config without changing
@@ -29,8 +29,8 @@ any runtime behavior.
 3. **Repo-owned sections.** Each top-level section is owned by one repo (with
    `model`/`providers` shared by hawk + eyrie). A repo only reads its sections.
 4. **Two encodings, one schema.** YAML is canonical for humans; the identical
-   structure is valid JSON for machine generation. (yaad's on-disk format is
-   TOML; its section maps 1:1 to `~/.yaad/config.toml`.)
+   structure is valid JSON for machine generation. (harrier's on-disk format is
+   TOML; its section maps 1:1 to `~/.harrier/config.toml`.)
 5. **Secrets by reference.** API keys are never inlined. Fields ending in
    `_env` name the environment variable that holds the secret.
 
@@ -77,11 +77,11 @@ gateway:
     url_env: EYRIE_MODEL_CATALOG_URL
     refresh: EYRIE_MODEL_CATALOG_REFRESH
 
-# ─── yaad: memory ───────────────────────────────────────────────────────────
+# ─── harrier: memory ───────────────────────────────────────────────────────────
 memory:
   addr: 127.0.0.1:3456
-  api_key_env: YAAD_API_KEY
-  data_dir: ~/.yaad
+  api_key_env: HARRIER_API_KEY
+  data_dir: ~/.harrier
   hot_token_budget: 800
   warm_token_budget: 800
   max_memories: 10000
@@ -97,21 +97,21 @@ memory:
     enabled: true
     half_life_days: 30
 
-# ─── tok: compression ───────────────────────────────────────────────────────
+# ─── shrike: compression ───────────────────────────────────────────────────────
 compression:
   enabled: true
   preset: ""                             # TOK_PRESET
   mode: ""                               # TOK_MODE
   max_context: 0                         # TOK_MAX_CONTEXT
   budget: 0                              # TOK_BUDGET
-  db_path: ~/.tok/usage.db               # TOK_DATABASE_PATH / TOK_DB_PATH
+  db_path: ~/.shrike/usage.db               # TOK_DATABASE_PATH / TOK_DB_PATH
   tracking_disabled: false               # TOK_TRACKING_DISABLED / TOK_TELEMETRY_DISABLED
 
-# ─── trace + telemetry (shared OTel) ────────────────────────────────────────
-trace:
-  search_url: ""                         # TRACE_SEARCH_URL
-  log_level: info                        # TRACE_LOG_LEVEL
-  telemetry_optout: false                # TRACE_TELEMETRY_OPTOUT / TRACE_NO_TELEMETRY
+# ─── swift + telemetry (shared OTel) ────────────────────────────────────────
+swift:
+  search_url: ""                         # SWIFT_SEARCH_URL
+  log_level: info                        # SWIFT_LOG_LEVEL
+  telemetry_optout: false                # SWIFT_TELEMETRY_OPTOUT / SWIFT_NO_TELEMETRY
   posthog:
     api_key_env: POSTHOG_API_KEY
     endpoint: https://app.posthog.com
@@ -154,17 +154,17 @@ setting; the unified key is rendered down to it.
 | `gateway.model_catalog.refresh`      | `EYRIE_MODEL_CATALOG_REFRESH` / `HAWK_AUTO_REFRESH_CATALOG` / `HAWK_CATALOG_REFRESH_ALWAYS` |
 | `gateway` config dir                 | `HAWK_CONFIG_DIR` (default `~/.eyrie`) |
 
-### yaad: memory
+### harrier: memory
 
-yaad's on-disk format is `~/.yaad/config.toml` (struct in
-`yaad/config/config.go`). The `memory.*` section maps 1:1 to that file plus a
+harrier's on-disk format is `~/.harrier/config.toml` (struct in
+`harrier/config/config.go`). The `memory.*` section maps 1:1 to that file plus a
 few env vars.
 
-| Unified key                       | Mechanism today (yaad)                          |
+| Unified key                       | Mechanism today (harrier)                          |
 |-----------------------------------|-------------------------------------------------|
-| `memory.addr`                     | `YAAD_ADDR` env                                 |
-| `memory.api_key_env`              | `YAAD_API_KEY` env                              |
-| `memory.data_dir`                 | `YAAD_DATA_DIR` env                             |
+| `memory.addr`                     | `HARRIER_ADDR` env                                 |
+| `memory.api_key_env`              | `HARRIER_API_KEY` env                              |
+| `memory.data_dir`                 | `HARRIER_DATA_DIR` env                             |
 | `memory.hot_token_budget`         | `config.toml` `[memory].hot_token_budget`       |
 | `memory.warm_token_budget`        | `config.toml` `[memory].warm_token_budget`      |
 | `memory.max_memories`             | `config.toml` `[memory].max_memories`           |
@@ -176,12 +176,12 @@ few env vars.
 | `memory.search.default_limit`     | `config.toml` `[search].default_limit`          |
 | `memory.decay.enabled`            | `config.toml` `[decay].enabled`                 |
 | `memory.decay.half_life_days`     | `config.toml` `[decay].half_life_days`          |
-| TLS cert/key                      | `YAAD_TLS_CERT`, `YAAD_TLS_KEY` / `[server]` TLS |
-| agent identity                    | `YAAD_AGENT_ID`, `YAAD_ADD_ONLY` env            |
+| TLS cert/key                      | `HARRIER_TLS_CERT`, `HARRIER_TLS_KEY` / `[server]` TLS |
+| agent identity                    | `HARRIER_AGENT_ID`, `HARRIER_ADD_ONLY` env            |
 
-### tok: compression
+### shrike: compression
 
-| Unified key                       | Mechanism today (tok)                           |
+| Unified key                       | Mechanism today (shrike)                           |
 |-----------------------------------|-------------------------------------------------|
 | `compression.preset`              | `TOK_PRESET` env                                |
 | `compression.mode`                | `TOK_MODE` env                                  |
@@ -191,15 +191,15 @@ few env vars.
 | `compression.tracking_disabled`   | `TOK_TRACKING_DISABLED` / `TOK_TELEMETRY_DISABLED` env |
 | (advanced tuning knobs)           | `TOK_*` family: `TOK_COMPACTION`, `TOK_ENTROPY_THRESHOLD`, `TOK_CACHE_SIZE`, `TOK_ATTENTION_SINK`, `TOK_STRUCTURAL_COLLAPSE`, etc. (left out of the top-level schema; pass through via `compression.advanced` map if needed) |
 
-### trace + telemetry
+### swift + telemetry
 
-| Unified key                       | Mechanism today (trace / hawk)                  |
+| Unified key                       | Mechanism today (swift / hawk)                  |
 |-----------------------------------|-------------------------------------------------|
-| `trace.search_url`                | `TRACE_SEARCH_URL` env                          |
-| `trace.log_level`                 | `TRACE_LOG_LEVEL` env                           |
-| `trace.telemetry_optout`          | `TRACE_TELEMETRY_OPTOUT` / `TRACE_NO_TELEMETRY` env |
-| `trace.posthog.api_key_env`       | `POSTHOG_API_KEY` env                           |
-| `trace.posthog.endpoint`          | `POSTHOG_ENDPOINT` env                          |
+| `swift.search_url`                | `SWIFT_SEARCH_URL` env                          |
+| `swift.log_level`                 | `SWIFT_LOG_LEVEL` env                           |
+| `swift.telemetry_optout`          | `SWIFT_TELEMETRY_OPTOUT` / `SWIFT_NO_TELEMETRY` env |
+| `swift.posthog.api_key_env`       | `POSTHOG_API_KEY` env                           |
+| `swift.posthog.endpoint`          | `POSTHOG_ENDPOINT` env                          |
 | `telemetry.enabled`               | `HAWK_CODE_ENABLE_TELEMETRY` env (hawk)         |
 | `telemetry.shutdown_timeout_ms`   | `HAWK_CODE_OTEL_SHUTDOWN_TIMEOUT_MS` env (hawk) |
 | `telemetry.otlp_endpoint`         | `OTEL_EXPORTER_OTLP_ENDPOINT` (standard OTel)   |
@@ -208,11 +208,11 @@ few env vars.
 
 The unified file is designed to be **resolved** into the existing mechanisms:
 
-- **env-based repos** (hawk, eyrie, tok, trace): export the mapped env var for
+- **env-based repos** (hawk, eyrie, shrike, swift): export the mapped env var for
   any key set in `graycode-eco.yaml` that is not already present in the process
   environment (preserving "env wins" precedence).
-- **file-based repos** (yaad): write/merge the `memory.*` section into
-  `~/.yaad/config.toml` using the field names above.
+- **file-based repos** (harrier): write/merge the `memory.*` section into
+  `~/.harrier/config.toml` using the field names above.
 
 A reference resolver can live in any repo as an additive, stdlib-only helper
 (`encoding/json` for the JSON form; a small hand-rolled reader or
@@ -231,16 +231,16 @@ The schema is encoding-agnostic. The YAML above is identical in structure to:
     { "name": "anthropic", "api_key_env": "ANTHROPIC_API_KEY" }
   ],
   "gateway": { "base_url": "http://localhost:8080", "api_key_env": "EYRIE_API_KEY" },
-  "memory": { "addr": "127.0.0.1:3456", "data_dir": "~/.yaad" },
-  "compression": { "enabled": true, "db_path": "~/.tok/usage.db" },
-  "trace": { "telemetry_optout": false },
+  "memory": { "addr": "127.0.0.1:3456", "data_dir": "~/.harrier" },
+  "compression": { "enabled": true, "db_path": "~/.shrike/usage.db" },
+  "swift": { "telemetry_optout": false },
   "telemetry": { "enabled": false }
 }
 ```
 
 ## Relationship to OTel conventions
 
-The `telemetry` and `trace` sections only configure *transport/opt-out*. The
+The `telemetry` and `swift` sections only configure *transport/opt-out*. The
 *attribute vocabulary* emitted on spans is defined separately in
 [`OTEL-CONVENTIONS.md`](./OTEL-CONVENTIONS.md), with eyrie's
 `internal/observability` package as the reference implementation.

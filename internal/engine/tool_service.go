@@ -464,9 +464,9 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 			return resp.Content, nil
 		}
 	}
-	var yaad *memory.YaadBridge
+	var harrier *memory.HarrierBridge
 	if s.deps.memory != nil {
-		yaad = s.deps.memory.Yaad()
+		harrier = s.deps.memory.Harrier()
 	}
 	sbMode := s.deps.permissions.SandboxMode()
 	var available []tool.Tool
@@ -478,16 +478,16 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 		AgentSpawnFn:        s.deps.agentSpawn,
 		AskUserFn:           s.deps.askUser,
 		CommitMessageChatFn: commitChat,
-		YaadBridge:          yaad,
-		// Semantic code search backed by the yaad code-chunk index. Wiring the
+		HarrierBridge:       harrier,
+		// Semantic code search backed by the harrier code-chunk index. Wiring the
 		// closures here makes CodeSearchTool functional in production (the
 		// interface was declared but never bound). Refresh rebuilds only
 		// added/changed files via content-hash staleness.
 		CodeSearchFn: func(cctx context.Context, query string, limit int) ([]tool.CodeSearchResult, error) {
-			if yaad == nil {
+			if harrier == nil {
 				return nil, fmt.Errorf("code search unavailable: no memory bridge")
 			}
-			results, err := yaad.SearchCode(query, limit)
+			results, err := harrier.SearchCode(query, limit)
 			if err != nil {
 				return nil, err
 			}
@@ -501,17 +501,17 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 			return out, nil
 		},
 		RefreshCodeIndexFn: func(cctx context.Context) error {
-			if yaad == nil {
+			if harrier == nil {
 				return fmt.Errorf("code index refresh unavailable: no memory bridge")
 			}
 			dir := s.WorkingDir()
 			if dir == "" {
 				return fmt.Errorf("code index refresh unavailable: no working directory")
 			}
-			if err := yaad.InitCodeIndex(); err != nil {
+			if err := harrier.InitCodeIndex(); err != nil {
 				return err
 			}
-			_, _, _, err := repomap.IncrementalReindex(dir, nil, &yaadCodeIndexer{yaad})
+			_, _, _, err := repomap.IncrementalReindex(dir, nil, &harrierCodeIndexer{harrier})
 			return err
 		},
 		SpecSlugGet:        func() string { return s.deps.permissions.SpecSlug() },

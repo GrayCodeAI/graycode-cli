@@ -5,24 +5,24 @@
   "updated": "2026-06-02",
   "components": [
     "hawk",
-    "hawk-sdk-go",
-    "hawk-sdk-python",
+    "sparrow",
+    "robin",
     "eyrie",
-    "sight",
-    "inspect",
-    "tok",
-    "yaad",
-    "trace"
+    "kestrel",
+    "merlin",
+    "shrike",
+    "harrier",
+    "swift"
   ],
   "dependencies": {
-    "hawk":            ["eyrie", "sight", "inspect", "tok"],
-    "hawk-sdk-go":     ["hawk"],
-    "hawk-sdk-python": ["hawk"],
-    "sight":           ["hawk", "eyrie"],
-    "inspect":         ["hawk"],
-    "trace":           [],
-    "tok":             ["hawk"],
-    "yaad":            [],
+    "hawk":            ["eyrie", "kestrel", "merlin", "shrike"],
+    "sparrow":     ["hawk"],
+    "robin": ["hawk"],
+    "kestrel":           ["hawk", "eyrie"],
+    "merlin":         ["hawk"],
+    "swift":           [],
+    "shrike":             ["hawk"],
+    "harrier":            [],
     "eyrie":           []
   },
   "matrices": [
@@ -31,14 +31,14 @@
       "description": "Latest tested-together stable combination across the eco. This is what new users get when installing.",
       "components": {
         "hawk":            "0.1.0",
-        "hawk-sdk-go":     "0.1.0",
-        "hawk-sdk-python": "0.1.0",
+        "sparrow":     "0.1.0",
+        "robin": "0.1.0",
         "eyrie":           "0.1.0",
-        "sight":           "0.1.0",
-        "inspect":         "0.1.0",
-        "tok":             "0.1.0",
-        "yaad":            "0.1.0",
-        "trace":           "0.1.0"
+        "kestrel":           "0.1.0",
+        "merlin":         "0.1.0",
+        "shrike":             "0.1.0",
+        "harrier":            "0.1.0",
+        "swift":           "0.1.0"
       }
     },
     {
@@ -46,14 +46,14 @@
       "description": "Combination that the upcoming release will ship — kept up to date by release-please as components advance. Tested in CI on every PR.",
       "components": {
         "hawk":            "main",
-        "hawk-sdk-go":     "main",
-        "hawk-sdk-python": "main",
+        "sparrow":     "main",
+        "robin": "main",
         "eyrie":           "main",
-        "sight":           "main",
-        "inspect":         "main",
-        "tok":             "main",
-        "yaad":            "main",
-        "trace":           "main"
+        "kestrel":           "main",
+        "merlin":         "main",
+        "shrike":             "main",
+        "harrier":            "main",
+        "swift":           "main"
       }
     }
   ]

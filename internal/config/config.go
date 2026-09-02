@@ -102,15 +102,15 @@ func gitCmd(args ...string) (string, error) {
 	return strings.TrimSpace(string(out)), err
 }
 
-// loadYaadMemories queries yaad for project-relevant memories and injects them
-// into the system prompt. Uses the yaad bridge with project-specific search.
-func loadYaadMemories(projectDir string) string {
+// loadHarrierMemories queries harrier for project-relevant memories and injects them
+// into the system prompt. Uses the harrier bridge with project-specific search.
+func loadHarrierMemories(projectDir string) string {
 	if projectDir == "" {
 		return ""
 	}
-	// Use the yaad bridge to search for project context.
-	// The bridge handles graceful degradation if yaad is unavailable.
-	return memory.LoadYaadContext(projectDir)
+	// Use the harrier bridge to search for project context.
+	// The bridge handles graceful degradation if harrier is unavailable.
+	return memory.LoadHarrierContext(projectDir)
 }
 
 // BuildContext assembles the full context string for the system prompt.
@@ -146,8 +146,8 @@ func BuildDeferredContextWithDirs(addDirs []string) string {
 			parts = append(parts, "Additional directory instructions ("+dir+"):\n"+md)
 		}
 	}
-	if yaad := loadYaadMemories(cwd); yaad != "" {
-		parts = append(parts, yaad)
+	if harrier := loadHarrierMemories(cwd); harrier != "" {
+		parts = append(parts, harrier)
 	}
 	return strings.Join(parts, "\n")
 }

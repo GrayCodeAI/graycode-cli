@@ -11,9 +11,9 @@ import (
 
 // EcosystemReport is the structured view of the ecosystem panel.
 type EcosystemReport struct {
-	Eyre EcosystemEyrie `json:"eyrie"`
-	Yaad EcosystemYaad  `json:"yaad"`
-	Tok  EcosystemTok   `json:"tok"`
+	Eyre    EcosystemEyrie   `json:"eyrie"`
+	Harrier EcosystemHarrier `json:"harrier"`
+	Shrike  EcosystemShrike  `json:"shrike"`
 }
 
 type EcosystemEyrie struct {
@@ -25,12 +25,12 @@ type EcosystemEyrie struct {
 	RoutingStages int    `json:"routing_stages,omitempty"`
 }
 
-type EcosystemYaad struct {
+type EcosystemHarrier struct {
 	Ready  bool   `json:"ready"`
 	Status string `json:"status,omitempty"`
 }
 
-type EcosystemTok struct {
+type EcosystemShrike struct {
 	Embedded     bool `json:"embedded"`
 	SampleTokens int  `json:"sample_tokens"`
 }
@@ -53,25 +53,25 @@ func BuildEcosystemReport(ctx context.Context, provider, model string) Ecosystem
 		r.Eyre.RoutingStages = dep.RoutingStages
 	}
 
-	// yaad
-	bridge := memory.NewYaadBridge()
-	r.Yaad.Ready = bridge.Ready()
-	if r.Yaad.Ready {
-		first := strings.Split(memory.YaadStatus(), "\n")[0]
-		r.Yaad.Status = first
+	// harrier
+	bridge := memory.NewHarrierBridge()
+	r.Harrier.Ready = bridge.Ready()
+	if r.Harrier.Ready {
+		first := strings.Split(memory.HarrierStatus(), "\n")[0]
+		r.Harrier.Status = first
 	}
 
-	// tok
-	r.Tok.Embedded = true
-	r.Tok.SampleTokens = token.CountTokensFast("hawk context compression pipeline")
+	// shrike
+	r.Shrike.Embedded = true
+	r.Shrike.SampleTokens = token.CountTokensFast("hawk context compression pipeline")
 
 	return r
 }
 
-// FormatEcosystemPanel summarizes eyrie, yaad, and tok integration for doctor and status output.
+// FormatEcosystemPanel summarizes eyrie, harrier, and shrike integration for doctor and status output.
 func FormatEcosystemPanel(ctx context.Context, provider, model string) string {
 	var b strings.Builder
-	b.WriteString("Ecosystem (eyrie · yaad · tok):\n")
+	b.WriteString("Ecosystem (eyrie · harrier · shrike):\n")
 
 	// eyrie — LLM provider layer
 	cat := CatalogHealthReport(ctx)
@@ -99,18 +99,18 @@ func FormatEcosystemPanel(ctx context.Context, provider, model string) string {
 	}
 	b.WriteString(eyrieLine + "\n")
 
-	// yaad — persistent memory graph
-	bridge := memory.NewYaadBridge()
+	// harrier — persistent memory graph
+	bridge := memory.NewHarrierBridge()
 	if bridge.Ready() {
-		first := strings.Split(memory.YaadStatus(), "\n")[0]
-		b.WriteString("  yaad: " + first + " · bridge ready\n")
+		first := strings.Split(memory.HarrierStatus(), "\n")[0]
+		b.WriteString("  harrier: " + first + " · bridge ready\n")
 	} else {
-		b.WriteString("  yaad: not initialized · memory ops skipped (~/.yaad/data/)\n")
+		b.WriteString("  harrier: not initialized · memory ops skipped (~/.harrier/data/)\n")
 	}
 
-	// tok — token counting and context compression (always embedded)
+	// shrike — token counting and context compression (always embedded)
 	sample := token.CountTokensFast("hawk context compression pipeline")
-	b.WriteString(fmt.Sprintf("  tok: embedded · token/compress pipeline OK (sample=%d tokens)\n", sample))
+	b.WriteString(fmt.Sprintf("  shrike: embedded · token/compress pipeline OK (sample=%d tokens)\n", sample))
 
 	return strings.TrimRight(b.String(), "\n")
 }

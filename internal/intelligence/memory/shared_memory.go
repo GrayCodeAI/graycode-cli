@@ -12,7 +12,7 @@ import (
 // in Hawk's mission mode. When one agent discovers something, all other
 // agents in the same mission can see it immediately.
 type SharedMemory struct {
-	bridge    *YaadBridge
+	bridge    *HarrierBridge
 	missionID string
 	agentID   string
 	mu        sync.RWMutex
@@ -39,7 +39,7 @@ type ConflictInfo struct {
 }
 
 // NewSharedMemory creates a shared memory instance for a specific mission.
-func NewSharedMemory(bridge *YaadBridge, missionID, agentID string) *SharedMemory {
+func NewSharedMemory(bridge *HarrierBridge, missionID, agentID string) *SharedMemory {
 	return &SharedMemory{
 		bridge:    bridge,
 		missionID: missionID,

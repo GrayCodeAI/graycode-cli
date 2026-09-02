@@ -1,35 +1,36 @@
 # MiniMax-AI → hawk Adoption Plan
 
-Status: Implemented in working tree; submodule PRs and skills curation remain follow-ups
+Status: Implemented in working tree; sibling-repository PRs and skills curation remain follow-ups
 Date: 2026-08-21
 Scope: Adopt the high-value, verified concepts from MiniMax-AI's open-source
-repos into the hawk ecosystem (hawk + submodules: eyrie, hawk-core-contracts,
-hawk-mcpkit, sight, inspect).
+repos into the Hawk ecosystem (Hawk plus independent repositories: Eyrie, Eagle,
+Falcon, Kestrel, and Merlin).
 
 ## Findings summary
 
-Deep code review of 6 MiniMax-AI repos against hawk's existing submodules and
+Deep code review of 6 MiniMax-AI repos against Hawk's existing sibling
+repositories and
 internals produced these adoptions, ordered by value:
 
 | # | MiniMax repo | Adopt into | Action |
 |---|---|---|---|
-| 1 | MiniMax-Provider-Verifier | `external/eyrie` | Add provider-conformance metrics + wire the orphaned `verify` harness into CI |
-| 2 | MiniMax/skills | `hawk-community-skills` | Curate high-quality skill content (content, not mechanism) |
-| 3 | MiniMax-Coding-Plan-MCP | hawk / `hawk-mcpkit` | MCP v2 no-network test pattern + image-source normalization (patterns only) |
+| 1 | MiniMax-Provider-Verifier | sibling `eyrie` | Add provider-conformance metrics + wire the orphaned `verify` harness into CI |
+| 2 | MiniMax/skills | `starling` | Curate high-quality skill content (content, not mechanism) |
+| 3 | MiniMax-Coding-Plan-MCP | hawk / `falcon` | MCP v2 no-network test pattern + image-source normalization (patterns only) |
 | 4 | minimax_search | hawk tooling | Jina page→Markdown browse extractor + evidence-extraction prompt (pattern) |
 | 5 | Mini-Agent | hawk engine | Cooperative-cancellation-with-cleanup + token-aware lossy summarization (patterns) |
 | 6 | MiniMax-MCP / JS | — | Not adoptable (media generation, out of scope) |
 
 ## 1. Eyrie provider-conformance metrics + CI wiring (highest value)
 
-### Verified current state (eyrie submodule)
+### Verified current state (eyrie repository)
 
-- `external/eyrie/verify/verify.go` — a complete behavioral conformance harness
+- `eyrie/verify/verify.go` — a complete behavioral conformance harness
   exists: `Case`/`CaseResult`/`Expectation`/`Report`, `Run()`, `scoreResponse()`,
   `ToolCallF1()`, `DiffBaseline()`, `Markdown()`.
-- `external/eyrie/verify/cases.go` — `CanonicalCases()` with 3 cases:
+- `eyrie/verify/cases.go` — `CanonicalCases()` with 3 cases:
   `basic-chat`, `deterministic-answer`, `tool-call`.
-- `external/eyrie/verify/metrics.go` — `ToolCallF1()` already implemented.
+- `eyrie/verify/metrics.go` — `ToolCallF1()` already implemented.
 - **Confirmed gap:** the `verify` package is referenced ONLY by its own tests.
   It is not wired into any CLI, Makefile target, CI job, or provider-registration
   gate. Only structural registry/parity tests are enforced.
@@ -42,7 +43,7 @@ internals produced these adoptions, ordered by value:
 ### What to implement
 
 **A. Add a `SchemaValidate` helper (argument-level) — new file
-`external/eyrie/verify/schema.go`**
+`eyrie/verify/schema.go`**
 
 Add `SchemaValidate(args map[string]any, schema map[string]any) error` that
 checks tool-call arguments against the tool's `Parameters` JSON schema:
@@ -51,7 +52,7 @@ checks tool-call arguments against the tool's `Parameters` JSON schema:
 
 This is the `ToolCalls-Schema-Accuracy` dimension from MiniMax-Provider-Verifier.
 
-**B. Add `MatchRate` to `Report` — edit `external/eyrie/verify/verify.go`**
+**B. Add `MatchRate` to `Report` — edit `eyrie/verify/verify.go`**
 
 Compute the `ToolCalls-Match-Rate` (trigger-vs-stop correctness) alongside F1.
 Extend `CaseResult` already has `ExpectedTool`/`CalledAnyTool`/`CorrectTool`, so
@@ -62,7 +63,7 @@ tool_calls_match_rate = (TP + TN) / expected_tool_call_total_count
 mirroring MiniMax's confusion-matrix metric.
 
 **C. Add a `verify` CLI entrypoint — new file
-`external/eyrie/cmd/verify/main.go`**
+`eyrie/cmd/verify/main.go`**
 
 A small `go run`-able binary (or a `verify` subcommand if eyrie has a cmd/) that
 runs `verify.Run` against a provider endpoint (live or cassette) and exits
@@ -73,8 +74,8 @@ non-zero on unmet thresholds:
 
 This makes the orphaned harness operational and enables CI gating.
 
-**D. Add a Makefile target + CI job — edit `external/eyrie/Makefile` and
-`external/eyrie/.github/workflows/ci.yml`**
+**D. Add a Makefile target + CI job — edit `eyrie/Makefile` and
+`eyrie/.github/workflows/ci.yml`**
 
 - Makefile: `verify` target that runs the harness in cassette mode (no tokens)
   and `verify-live` for manual live runs.
@@ -82,39 +83,39 @@ This makes the orphaned harness operational and enables CI gating.
   on PRs, ensuring the harness is exercised and providers don't regress.
 
 ### Files
-- `external/eyrie/verify/schema.go` (new)
-- `external/eyrie/verify/schema_test.go` (new)
-- `external/eyrie/verify/verify.go` (add MatchRate)
-- `external/eyrie/verify/verify_test.go` (add tests)
-- `external/eyrie/cmd/verify/main.go` (new)
-- `external/eyrie/Makefile` (verify target)
-- `external/eyrie/.github/workflows/ci.yml` (verify job)
+- `eyrie/verify/schema.go` (new)
+- `eyrie/verify/schema_test.go` (new)
+- `eyrie/verify/verify.go` (add MatchRate)
+- `eyrie/verify/verify_test.go` (add tests)
+- `eyrie/cmd/verify/main.go` (new)
+- `eyrie/Makefile` (verify target)
+- `eyrie/.github/workflows/ci.yml` (verify job)
 
-## 2. Curate MiniMax/skills content into hawk-community-skills
+## 2. Curate MiniMax/skills content into starling
 
 ### Verified current state (hawk)
 - hawk's skills system (`internal/plugin`) reads markdown+YAML-frontmatter skills
   from dirs (`~/.hawk/skills`, `.claude/skills`, `.zero/skills`, `skills`) with a
-  registry (`hawk-community-skills` repo, `hawk skills search/install/list/remove`).
+  registry (`starling` repo, `hawk skills search/install/list/remove`).
 - MiniMax/skills (13.4k★) has 18 high-quality skills in the same format
   (frontmatter `name`/`description`/`license`/`metadata`), especially
   `frontend-dev`, `fullstack-dev`, `shader-dev`, mobile guides, `vision-analysis`.
 
 ### What to implement
-- Port the best MiniMax skills into `GrayCodeAI/hawk-community-skills` (separate
+- Port the best MiniMax skills into `GrayCodeAI/starling` (separate
   repo), adapting frontmatter to hawk's convention (`globs`, `alwaysApply`).
 - This is a content curation task in a separate repo; tracked here for
-  completeness but implemented as a follow-up PR in `hawk-community-skills`.
+  completeness but implemented as a follow-up PR in `starling`.
 
 ### Files
-- `hawk-community-skills/registry.json` (add entries)
-- `hawk-community-skills/skills/<name>/SKILL.md` (port content)
+- `starling/registry.json` (add entries)
+- `starling/skills/<name>/SKILL.md` (port content)
 
 ## 3. MCP v2 no-network test pattern + image-source normalization
 
 ### Verified current state (hawk)
 - `internal/mcp` implements its own JSON-RPC client + server and does NOT use the
-  shared `hawk-mcpkit` scaffolding (architectural divergence).
+  shared `falcon` scaffolding (architectural divergence).
 - hawk has `internal/attachment/image.go` for image decode, and `ScreenshotTool`
   / `BrowserTool`. No image-source (URL/file/data-URL) normalization helper.
 - MiniMax-Coding-Plan-MCP shows: MCP v2 tool registration + no-network test
@@ -126,7 +127,7 @@ This makes the orphaned harness operational and enables CI gating.
   HTTP URL / local path / data-URL / base64 into a data URL (`@`-prefix strip),
   mirroring MiniMax's `process_image_url`. Add unit tests.
 - Add an MCP no-network integration test pattern to `internal/mcp` or
-  `hawk-mcpkit` demonstrating in-process payload assertion without network.
+  `falcon` demonstrating in-process payload assertion without network.
 
 ### Files
 - `internal/attachment/normalize_image_source.go` (new)
@@ -185,7 +186,7 @@ This makes the orphaned harness operational and enables CI gating.
 3. hawk image-source normalization helper + tests
 4. hawk Jina browse extractor + tests
 5. Agent-loop cancellation/summarization patterns
-6. hawk-community-skills content curation (follow-up PR in separate repo)
+6. starling content curation (follow-up PR in separate repo)
 
 ## Implementation status
 
@@ -196,5 +197,5 @@ This makes the orphaned harness operational and enables CI gating.
 - [x] Hawk cancellation cleanup for incomplete assistant tool-use/tool-result turns.
 - [x] Confirmed hawk's existing `internal/engine/compact` already provides token-triggered
   compaction; no duplicate summarizer was added.
-- [ ] Publish the eyrie submodule changes through its own feature branch and PR.
-- [ ] Curate MiniMax skills into `hawk-community-skills` through its own feature branch and PR.
+- [ ] Publish the Eyrie repository changes through its own feature branch and PR.
+- [ ] Curate MiniMax skills into `starling` through its own feature branch and PR.

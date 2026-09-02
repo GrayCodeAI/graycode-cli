@@ -13,17 +13,17 @@ runtime owners
   permission engine
   verification bridges
   graph observation journal
-  Yaad retrieval + Hawk code index
-  Inspect + Sight quality projections
-  Tok runtime projection
+  Harrier retrieval + Hawk code index
+  Merlin + Kestrel quality projections
+  Shrike runtime projection
   Eyrie operations projection
-  Trace checkpoints
+  Swift checkpoints
         |
         v
 internal/executiongraph
         |
         v
-hawk-core-contracts/graph
+eagle/graph
         |
         +--> hawk graph export
         |
@@ -41,16 +41,16 @@ hawk-core-contracts/graph
 | Agent, shell, and monitor tasks | `internal/taskruntime` | Read-only projection |
 | Permission verdicts | permission subsystem | Automatically summarized after tool permission and approval gates |
 | Verification reports | verification engines/bridges | Built-in plan verification is automatically summarized; other engines can supply typed observations |
-| Retrieved memory context | Yaad | Exact metadata-only retrieved subgraph is journaled and linked to the Hawk session |
-| Retrieved code context | Hawk code index in Yaad storage | Metadata-only code-chunk knowledge nodes are journaled |
-| Website audit quality | Inspect | Bounded report/finding subgraph and neutral verification summary are journaled when the caller supplies a session identity |
-| Code review quality | Sight | Bounded review/finding subgraph and neutral verification summary are journaled when the caller supplies a session identity |
-| Context compression operations | Tok | Compression statistics are automatically captured during persisted-session context compaction |
-| Response redaction quality | Tok | Aggregate Tok-only secret matches are automatically captured after persisted-session response redaction |
-| Token usage and budget decisions | Tok | Deduplicated provider usage updates Tok's tracker; usage and next-turn budget decisions are automatically captured |
+| Retrieved memory context | Harrier | Exact metadata-only retrieved subgraph is journaled and linked to the Hawk session |
+| Retrieved code context | Hawk code index in Harrier storage | Metadata-only code-chunk knowledge nodes are journaled |
+| Website audit quality | Merlin | Bounded report/finding subgraph and neutral verification summary are journaled when the caller supplies a session identity |
+| Code review quality | Kestrel | Bounded review/finding subgraph and neutral verification summary are journaled when the caller supplies a session identity |
+| Context compression operations | Shrike | Compression statistics are automatically captured during persisted-session context compaction |
+| Response redaction quality | Shrike | Aggregate Shrike-only secret matches are automatically captured after persisted-session response redaction |
+| Token usage and budget decisions | Shrike | Deduplicated provider usage updates Shrike's tracker; usage and next-turn budget decisions are automatically captured |
 | Model routing and generation usage | Eyrie | Route and normalized usage operations are automatically captured after each persisted-session model turn |
 | Observation history | `internal/graphjournal` | Append-only, privacy-safe runtime evidence |
-| Trace sessions and checkpoints | Trace | Exact start-time metadata correlation plus stable external references |
+| Swift sessions and checkpoints | Swift | Exact start-time metadata correlation plus stable external references |
 
 The graph package never mutates these owners and never schedules work.
 
@@ -83,7 +83,7 @@ Graph-driven execution keeps the existing operational controls:
 - worktrees still provide per-feature isolation;
 - mission persistence records each wave join durably;
 - a portable `mission-graph.json` artifact is rewritten alongside `mission.json`
-  so graph consumers can inspect mission state without reading mutable runtime
+  so graph consumers can merlin mission state without reading mutable runtime
   structs;
 - later waves are cancellation- and failure-sensitive;
 - downstream tasks are never unlocked by a failed blocker.
@@ -100,26 +100,26 @@ Nodes:
 - `hawk/tool-call/<session>/<tool-use-id>` — tool invocation metadata;
 - `hawk/policy/<id>` — permission verdict;
 - `hawk/verification/<id>` — neutral verification result;
-- `yaad/memory/<id>` — retrieved memory knowledge;
+- `harrier/memory/<id>` — retrieved memory knowledge;
 - `hawk/code-chunk/<digest>` — retrieved code-index knowledge;
-- `inspect/report/<digest>` and `inspect/finding/<digest>` — website audit
+- `merlin/report/<digest>` and `merlin/finding/<digest>` — website audit
   quality facts;
-- `sight/review/<digest>` and `sight/finding/<digest>` — code-review quality
+- `kestrel/review/<digest>` and `kestrel/finding/<digest>` — code-review quality
   facts;
-- `tok/compression/<digest>`, `tok/usage/<digest>`, `tok/budget/<digest>`, and
-  `tok/redaction/<digest>` — operations, policy, and quality facts;
+- `shrike/compression/<digest>`, `shrike/usage/<digest>`, `shrike/budget/<digest>`, and
+  `shrike/redaction/<digest>` — operations, policy, and quality facts;
 - `eyrie/route/<digest>` and `eyrie/generation/<digest>` — model route and
   normalized generation operations;
-- `trace/checkpoint/<id>` — externally owned Trace checkpoint reference.
+- `swift/checkpoint/<id>` — externally owned Swift checkpoint reference.
 
 Edges:
 
 - `contains` — session/task hierarchy and task-to-tool containment;
 - `depends_on` — blocking task dependency;
-- `references` — related tasks and Hawk-to-Trace checkpoint linkage;
+- `references` — related tasks and Hawk-to-Swift checkpoint linkage;
 - `governed_by` — execution subject to policy verdict;
 - `validated_by` — execution subject to verification result.
-- imported Inspect `contains` edges — report-to-finding hierarchy.
+- imported Merlin `contains` edges — report-to-finding hierarchy.
 
 All nodes, edges, and events pass the shared contract validators. Edges whose
 source or target node is absent are rejected.
@@ -156,15 +156,15 @@ digests.
 ```bash
 hawk graph export [session-id]
   --repository <scope>
-  --trace-checkpoint <12-hex-id>  # repeatable
+  --swift-checkpoint <12-hex-id>  # repeatable
 ```
 
 The default repository scope is derived from the saved session's working
-directory basename. If Trace captured
-`TRACE_TAG_HAWK_SESSION_ID=<hawk-session-id>` at its actual session-start
-boundary, export automatically resolves the exact Trace session and committed
-checkpoints through `trace graph correlation`. Explicit
-`--trace-checkpoint` values remain additive. Trace lookup failures never block
+directory basename. If Swift captured
+`SWIFT_TAG_HAWK_SESSION_ID=<hawk-session-id>` at its actual session-start
+boundary, export automatically resolves the exact Swift session and committed
+checkpoints through `swift graph correlation`. Explicit
+`--swift-checkpoint` values remain additive. Swift lookup failures never block
 Hawk export, and incomplete checkpoint enumeration produces a session link
 without unverified checkpoint links.
 
@@ -176,7 +176,7 @@ endpoint:
 ```text
 GET /v1/sessions/{id}/graph
   ?repository=<scope>
-  &trace_checkpoint=<12-hex-id>  # repeatable, maximum 64
+  &swift_checkpoint=<12-hex-id>  # repeatable, maximum 64
 ```
 
 The endpoint uses the daemon's normal Bearer or `X-API-Key` authentication,
@@ -194,7 +194,7 @@ completed session snapshot can be uploaded explicitly:
 ```bash
 hawk cloud graph sync [session-id]
   --repository <scope>
-  --trace-checkpoint <12-hex-id>  # repeatable
+  --swift-checkpoint <12-hex-id>  # repeatable
 ```
 
 The cloud adapter hashes values behind sensitive attribute names, changes those
@@ -225,14 +225,14 @@ The central tool-execution seam automatically records:
 - the final permission-engine outcome for every persisted-session tool call;
 - enabled human-approval gate outcomes;
 - aggregate results from `VerifyPlanExecution`.
-- Yaad subgraphs selected by direct, graph-budget, global, proactive, and
+- Harrier subgraphs selected by direct, graph-budget, global, proactive, and
   shared-memory retrieval;
-- Hawk code-index chunks selected through Yaad-backed code search.
-- Inspect scans invoked through the observed bridge/pipeline path.
-- Sight reviews invoked through the observed bridge path.
-- Tok compression performed by persisted-session context compaction.
-- Tok-only secret matches removed from persisted-session responses.
-- Tok usage summaries and budget decisions emitted from the central,
+- Hawk code-index chunks selected through Harrier-backed code search.
+- Merlin scans invoked through the observed bridge/pipeline path.
+- Kestrel reviews invoked through the observed bridge path.
+- Shrike compression performed by persisted-session context compaction.
+- Shrike-only secret matches removed from persisted-session responses.
+- Shrike usage summaries and budget decisions emitted from the central,
   deduplicated provider-accounting seam.
 - Eyrie model route and usage reported for persisted-session turns.
 
@@ -242,26 +242,26 @@ graph-driven `hawk mission --from-tasks` path additionally emits operations
 nodes for each deterministic wave join, including bounded completion, failure,
 and blocked-downstream counts.
 
-Inspect and Sight observed bridge calls now emit both their producer-owned
+Merlin and Kestrel observed bridge calls now emit both their producer-owned
 quality topology and Hawk's neutral aggregate verification observation. The
 latter contains only failure state, finding count, maximum severity, and a
 SHA-256 target digest, allowing `validated_by` composition without retaining
 URLs, diffs, findings, evidence, or fixes in the observation journal.
 
-Tok's tracker now contributes hourly, daily, session, and cost limits to the
+Shrike's tracker now contributes hourly, daily, session, and cost limits to the
 pre-turn guard. Existing Hawk cost accounting and limits remain authoritative
-and are updated first; Tok observes the same deduplicated request usage and
+and are updated first; Shrike observes the same deduplicated request usage and
 provides the additional token-window decision.
 
-### Trace identity handshake contract
+### Swift identity handshake contract
 
-Trace now exposes the Trace-owned, read-only
+Swift now exposes the Swift-owned, read-only
 `graph correlation --hawk-session <id>` surface through the permitted
 `cli.NewRootCmd()` boundary. It:
 
-- matches only the `TRACE_TAG_HAWK_SESSION_ID` value stored at Trace's actual
+- matches only the `SWIFT_TAG_HAWK_SESSION_ID` value stored at Swift's actual
   session-start boundary;
-- returns the authoritative Trace session and checkpoint IDs for that Hawk ID;
+- returns the authoritative Swift session and checkpoint IDs for that Hawk ID;
 - never guesses identity from the current branch, HEAD, timestamps, or prompt
   similarity;
 - returns an empty match set rather than a speculative match.
@@ -269,11 +269,11 @@ Trace now exposes the Trace-owned, read-only
 Hawk now consumes this surface through `cli.NewRootCmd()`, validates the schema
 and echoed Hawk identity, bounds the response, and emits:
 
-- Hawk session `references` Trace session;
-- Hawk session `references` each authoritative Trace checkpoint;
-- Trace session `produced` Trace checkpoint.
+- Hawk session `references` Swift session;
+- Hawk session `references` each authoritative Swift checkpoint;
+- Swift session `produced` Swift checkpoint.
 
 Malformed, mismatched, oversized, unavailable, or incomplete responses fail
-open without speculative facts. Explicit `--trace-checkpoint` links remain
+open without speculative facts. Explicit `--swift-checkpoint` links remain
 available and additive. Permission enforcement and verification gates still
 execute before observation emission.

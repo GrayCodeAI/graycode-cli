@@ -56,7 +56,7 @@ hawk/
 ```
 
 Legacy note: `hawk/shared/types` has been removed. Shared cross-repo severity
-and finding contracts now live in `hawk-core-contracts/types`.
+and finding contracts now live in `eagle/types`.
 
 ---
 
@@ -91,21 +91,21 @@ and finding contracts now live in `hawk-core-contracts/types`.
 | Service | Role | Connection |
 |---------|------|------------|
 | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/bird.svg" width="16" height="16" alt="bird" /> **eyrie** | LLM provider runtime | `:8080` — all LLM calls routed here |
-| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/brain.svg" width="16" height="16" alt="brain" /> **yaad** | Persistent memory | `:3456` — session context, recall |
-| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/eye.svg" width="16" height="16" alt="eye" /> **sight** | Code review | Library — diff-based review |
-| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/search.svg" width="16" height="16" alt="search" /> **inspect** | Security audit | Library — website scanning |
-| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/scissors.svg" width="16" height="16" alt="scissors" /> **tok** | Token optimization | Library — compression, secrets |
-| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/camera.svg" width="16" height="16" alt="camera" /> **trace** | Session capture | CLI hook — git-native capture |
+| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/brain.svg" width="16" height="16" alt="brain" /> **harrier** | Persistent memory | `:3456` — session context, recall |
+| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/eye.svg" width="16" height="16" alt="eye" /> **kestrel** | Code review | Library — diff-based review |
+| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/search.svg" width="16" height="16" alt="search" /> **merlin** | Security audit | Library — website scanning |
+| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/scissors.svg" width="16" height="16" alt="scissors" /> **shrike** | Token optimization | Library — compression, secrets |
+| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/camera.svg" width="16" height="16" alt="camera" /> **swift** | Session capture | CLI hook — git-native capture |
 
 ### Client SDKs
 
 | SDK | Language | Key Features |
 |-----|----------|--------------|
-| **hawk-sdk-go** | Go | Cobra-style client, context-aware retries, SSE streaming |
-| **hawk-sdk-python** | Python | Pydantic models, httpx async, pytest suite |
-| **hawk-sdk-typescript** | TypeScript | Zero dependencies (global fetch), Agent + tools |
+| **sparrow** | Go | Cobra-style client, context-aware retries, SSE streaming |
+| **robin** | Python | Pydantic models, httpx async, pytest suite |
+| **wren** | TypeScript | Zero dependencies (global fetch), Agent + tools |
 
-All three SDKs share types from **hawk-core-contracts** and consume the daemon REST API (:4590).
+All three SDKs share types from **eagle** and consume the daemon REST API (:4590).
 
 > <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/lightbulb.svg" width="16" height="16" alt="lightbulb" /> **hawk never talks to LLM APIs directly** — all calls go through eyrie.
 
@@ -130,4 +130,4 @@ Tool Call → <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/i
 | Zero CGO | Pure Go, cross-compilable. Tree-sitter is optional |
 | `internal/` is private | Other repos should not import `internal/*` |
 | `go.work` | Resolves the ecosystem siblings (`../<repo>`) for local and CI workspace integration |
-| `hawk-core-contracts` | Shared cross-repo severity, findings, review, verify, tools, events, and policy contracts — engines import this instead of `hawk/internal` or removed `hawk/shared/types` |
+| `eagle` | Shared cross-repo severity, findings, review, verify, tools, events, and policy contracts — engines import this instead of `hawk/internal` or removed `hawk/shared/types` |

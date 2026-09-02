@@ -8,27 +8,27 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/GrayCodeAI/harrier/engine"
+	"github.com/GrayCodeAI/harrier/graph"
+	"github.com/GrayCodeAI/harrier/storage"
 	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 	"github.com/GrayCodeAI/hawk/internal/testutil"
-	"github.com/GrayCodeAI/inspect"
-	"github.com/GrayCodeAI/sight"
-	"github.com/GrayCodeAI/tok"
-	"github.com/GrayCodeAI/yaad/engine"
-	"github.com/GrayCodeAI/yaad/graph"
-	"github.com/GrayCodeAI/yaad/storage"
+	"github.com/GrayCodeAI/kestrel"
+	"github.com/GrayCodeAI/merlin"
+	"github.com/GrayCodeAI/shrike"
 )
 
-// mockSightProvider implements sight.Provider for integration testing.
-type mockSightProvider struct {
+// mockKestrelProvider implements kestrel.Provider for integration testing.
+type mockKestrelProvider struct {
 	response string
 }
 
-func (m *mockSightProvider) Chat(_ context.Context, _ []sight.Message, _ sight.ChatOpts) (*sight.Response, error) {
-	return &sight.Response{Content: m.response, TokensUsed: 100}, nil
+func (m *mockKestrelProvider) Chat(_ context.Context, _ []kestrel.Message, _ kestrel.ChatOpts) (*kestrel.Response, error) {
+	return &kestrel.Response{Content: m.response, TokensUsed: 100}, nil
 }
 
-// setupYaad creates a yaad engine backed by a temp SQLite database.
-func setupYaad(t *testing.T) *engine.Engine {
+// setupHarrier creates a harrier engine backed by a temp SQLite database.
+func setupHarrier(t *testing.T) *engine.Engine {
 	t.Helper()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	store, err := storage.NewStore(dbPath)
@@ -40,12 +40,12 @@ func setupYaad(t *testing.T) *engine.Engine {
 	return engine.New(store, g)
 }
 
-func TestIntegration_SightReviewStoreRecall(t *testing.T) {
+func TestIntegration_KestrelReviewStoreRecall(t *testing.T) {
 	// 1. Set up mock LLM provider that returns a code review finding
 	mockResp := `[{"severity":"high","file":"main.go","line":10,"message":"SQL injection vulnerability","fix":"Use parameterized queries","reasoning":"Direct string concatenation in SQL"}]`
-	provider := &mockSightProvider{response: mockResp}
+	provider := &mockKestrelProvider{response: mockResp}
 
-	// 2. Run sight review with mock provider
+	// 2. Run kestrel review with mock provider
 	diff := `--- a/main.go
 +++ b/main.go
 @@ -8,0 +9,3 @@
@@ -54,16 +54,16 @@ func TestIntegration_SightReviewStoreRecall(t *testing.T) {
 +}`
 
 	ctx := context.Background()
-	result, err := sight.Review(ctx, diff, sight.WithProvider(provider))
+	result, err := kestrel.Review(ctx, diff, kestrel.WithProvider(provider))
 	if err != nil {
-		t.Fatalf("sight.Review failed: %v", err)
+		t.Fatalf("kestrel.Review failed: %v", err)
 	}
 	if result == nil {
 		t.Fatal("expected non-nil result")
 	}
 
-	// 3. Store the review findings in yaad
-	eng := setupYaad(t)
+	// 3. Store the review findings in harrier
+	eng := setupHarrier(t)
 	findingsJSON, _ := json.Marshal(result.Findings)
 	node, err := eng.Remember(ctx, engine.RememberInput{
 		Content: fmt.Sprintf("Code review findings: %s", string(findingsJSON)),
@@ -103,7 +103,7 @@ func TestIntegration_SightReviewStoreRecall(t *testing.T) {
 	}
 }
 
-func TestIntegration_InspectScanHTTPTest(t *testing.T) {
+func TestIntegration_MerlinScanHTTPTest(t *testing.T) {
 	// 1. Start a test HTTP server with known issues
 	ts := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
@@ -118,11 +118,11 @@ func TestIntegration_InspectScanHTTPTest(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	// 2. Run inspect scan
+	// 2. Run merlin scan
 	ctx := context.Background()
-	report, err := inspect.Scan(ctx, ts.URL, inspect.Quick)
+	report, err := merlin.Scan(ctx, ts.URL, merlin.Quick)
 	if err != nil {
-		t.Fatalf("inspect.Scan failed: %v", err)
+		t.Fatalf("merlin.Scan failed: %v", err)
 	}
 	if report == nil {
 		t.Fatal("expected non-nil report")
@@ -131,13 +131,13 @@ func TestIntegration_InspectScanHTTPTest(t *testing.T) {
 		t.Fatalf("expected target=%s, got %s", ts.URL, report.Target)
 	}
 
-	// 3. Store findings in yaad
-	eng := setupYaad(t)
+	// 3. Store findings in harrier
+	eng := setupHarrier(t)
 	reportJSON, _ := json.Marshal(report.Stats)
 	_, err = eng.Remember(ctx, engine.RememberInput{
 		Content: fmt.Sprintf("Site audit of %s: %d findings. %s", ts.URL, report.Stats.FindingsTotal, string(reportJSON)),
 		Type:    "bug",
-		Tags:    "inspect,audit",
+		Tags:    "merlin,audit",
 	})
 	if err != nil {
 		t.Fatalf("eng.Remember failed: %v", err)
@@ -162,8 +162,8 @@ func TestIntegration_TokCompression(t *testing.T) {
 	large += "[ERROR] 2025-05-08 10:01:00 Failed to process item 101: connection timeout\n"
 	large += "[WARN] 2025-05-08 10:01:01 Retrying with backoff...\n"
 
-	// 1. Compress with tok
-	compressed, stats := tok.Compress(large)
+	// 1. Compress with shrike
+	compressed, stats := shrike.Compress(large)
 	if stats.ReductionPercent <= 0 {
 		t.Fatalf("expected positive compression, got %.1f%%", stats.ReductionPercent)
 	}
@@ -175,18 +175,18 @@ func TestIntegration_TokCompression(t *testing.T) {
 	}
 
 	// 2. Verify token estimation works
-	tokens := tok.EstimateTokens(large)
+	tokens := shrike.EstimateTokens(large)
 	if tokens == 0 {
 		t.Fatal("EstimateTokens should return non-zero for non-empty text")
 	}
 
-	// 3. Store compression stats in yaad
-	eng := setupYaad(t)
+	// 3. Store compression stats in harrier
+	eng := setupHarrier(t)
 	ctx := context.Background()
 	_, err := eng.Remember(ctx, engine.RememberInput{
 		Content: fmt.Sprintf("Token compression: %d → %d tokens (%.1f%% reduction)", stats.OriginalTokens, stats.FinalTokens, stats.ReductionPercent),
 		Type:    "convention",
-		Tags:    "tok,performance",
+		Tags:    "shrike,performance",
 	})
 	if err != nil {
 		t.Fatalf("eng.Remember failed: %v", err)
@@ -230,25 +230,25 @@ func TestIntegration_FullPipeline(t *testing.T) {
 	ctx := context.Background()
 
 	// 1. Initialize all components
-	eng := setupYaad(t)
+	eng := setupHarrier(t)
 
-	// 2. Use tok to compress some context
+	// 2. Use shrike to compress some context
 	verbose := "This is a very long and verbose piece of text that contains a lot of redundant information that could be compressed significantly by removing unnecessary repetition and verbosity from the text content."
-	compressed, _ := tok.Compress(verbose)
+	compressed, _ := shrike.Compress(verbose)
 	if compressed == "" {
 		t.Log("no compression applied, using original")
 	}
 
-	// 3. Use sight to review code (mock)
+	// 3. Use kestrel to review code (mock)
 	mockResp := `[{"severity":"medium","file":"app.go","line":5,"message":"Unused variable","fix":"Remove unused var"}]`
-	provider := &mockSightProvider{response: mockResp}
+	provider := &mockKestrelProvider{response: mockResp}
 	diff := "--- a/app.go\n+++ b/app.go\n@@ -4,0 +5 @@\n+var unused = 42"
-	reviewResult, err := sight.Review(ctx, diff, sight.WithProvider(provider))
+	reviewResult, err := kestrel.Review(ctx, diff, kestrel.WithProvider(provider))
 	if err != nil {
-		t.Fatalf("sight.Review: %v", err)
+		t.Fatalf("kestrel.Review: %v", err)
 	}
 
-	// 4. Store in yaad
+	// 4. Store in harrier
 	_, err = eng.Remember(ctx, engine.RememberInput{
 		Content: fmt.Sprintf("Review: %d findings in app.go", len(reviewResult.Findings)),
 		Type:    "bug",
@@ -258,19 +258,19 @@ func TestIntegration_FullPipeline(t *testing.T) {
 		t.Fatalf("Remember: %v", err)
 	}
 
-	// 5. Use inspect on a test server
+	// 5. Use merlin on a test server
 	ts := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprint(w, `<!DOCTYPE html><html><head><title>OK</title></head><body>OK</body></html>`)
 	}))
 	defer ts.Close()
 
-	report, err := inspect.Scan(ctx, ts.URL, inspect.Quick)
+	report, err := merlin.Scan(ctx, ts.URL, merlin.Quick)
 	if err != nil {
-		t.Fatalf("inspect.Scan: %v", err)
+		t.Fatalf("merlin.Scan: %v", err)
 	}
 
-	// 6. Store inspect result
+	// 6. Store merlin result
 	_, err = eng.Remember(ctx, engine.RememberInput{
 		Content: fmt.Sprintf("Audit %s: %d pages, %d issues", ts.URL, report.Stats.PagesScanned, report.Stats.FindingsTotal),
 		Type:    "spec",

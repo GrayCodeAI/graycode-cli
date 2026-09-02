@@ -7,8 +7,8 @@ alwaysApply: false
 # Extending hawk
 
 hawk is an open-source code intelligence platform. It lives in the `graycode-eco`
-workspace alongside the ecosystem repos that power it (`eyrie`, `hawk-core-contracts`,
-`tok`, `yaad`, `trace`, `sight`, `inspect`). This document describes how to extend
+workspace alongside the ecosystem repos that power it (`eyrie`, `eagle`,
+`shrike`, `harrier`, `swift`, `kestrel`, `merlin`). This document describes how to extend
 hawk with custom tools, skills, hooks, and integrations.
 
 ## Development workflow
@@ -105,10 +105,10 @@ hawk specialist path                       # prints the resolved specialists dir
 
 hawk ships **no bundled skills** by default. Skills are markdown instruction
 files that extend agent capabilities, sourced from the separate
-`GrayCodeAI/hawk-community-skills` repo and installed on demand:
+`GrayCodeAI/starling` repo and installed on demand:
 
 ```bash
-hawk skills search <query>          # find skills in hawk-community-skills
+hawk skills search <query>          # find skills in starling
 hawk skills install <owner/repo> [skill-name]   # install after user approval
 hawk skills list                    # list installed skills
 hawk skills remove <name>
@@ -187,7 +187,7 @@ hawk verify
 
 ### Architecture note: cross-repo contracts
 
-Legacy `hawk/shared/types` has been removed. Cross-repo severity and finding contracts now live in `github.com/GrayCodeAI/hawk-core-contracts` (`hawk-core-contracts/types`) — extensions and support repos must import that module instead of Hawk internals.
+Legacy `hawk/shared/types` has been removed. Cross-repo severity and finding contracts now live in `github.com/GrayCodeAI/eagle` (`eagle/types`) — extensions and support repos must import that module instead of Hawk internals.
 
 ### Architecture note: provider ownership
 
@@ -228,7 +228,7 @@ This project is indexed by GitNexus as **hawk** (97743 symbols, 322940 relations
 | `gitnexus://repo/hawk/context` | Codebase overview, check index freshness |
 | `gitnexus://repo/hawk/clusters` | All functional areas |
 | `gitnexus://repo/hawk/processes` | All execution flows |
-| `gitnexus://repo/hawk/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/hawk/process/{name}` | Step-by-step execution swift |
 
 ## CLI
 
@@ -245,7 +245,7 @@ This project is indexed by GitNexus as **hawk** (97743 symbols, 322940 relations
 
 ### Workspace workflow (sibling repos)
 
-hawk depends on ecosystem repos (`eyrie`, `hawk-core-contracts`, etc.) as independent sibling repos in the `graycode-eco` workspace. Hawk's `go.work` lists them as `../<repo>`, so local changes in any sibling are automatically picked up by hawk. Each sibling is its own git repo, versioned and released independently.
+hawk depends on ecosystem repos (`eyrie`, `eagle`, etc.) as independent sibling repos in the `graycode-eco` workspace. Hawk's `go.work` lists them as `../<repo>`, so local changes in any sibling are automatically picked up by hawk. Each sibling is its own git repo, versioned and released independently.
 
 1. Edit + test in `../<repo>` — run its tests, run `make test` in hawk
 2. Push from the sibling: `git push origin <branch>`

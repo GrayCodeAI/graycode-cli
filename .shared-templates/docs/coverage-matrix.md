@@ -10,23 +10,23 @@ repo's threshold, update both the CI file and this table in the same PR.**
 |---|---|---|
 | `hawk` | 60% | inline `bc` check in `ci.yml` |
 | `eyrie` | 60% | inline `bc` check in `ci.yml` |
-| `yaad` | 49% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
-| `tok` | 38% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
-| `trace` | 58% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
-| `sight` | 74% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
-| `inspect` | 76% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
-| `hawk-sdk-go` | 80% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
-| `hawk-sdk-python` | 78% | `--cov-fail-under=` in `ci.yml` (python-ci.yml.tmpl) |
-| `hawk-core-contracts` | none enforced | leaf library; add one before it grows past a handful of files |
-| `hawk-mcpkit` | none enforced | leaf library; add one before it grows past a handful of files |
-| `hawk-community-skills` | n/a | no Go/Python test suite (skill/content registry) |
+| `harrier` | 49% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
+| `shrike` | 38% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
+| `swift` | 58% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
+| `kestrel` | 74% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
+| `merlin` | 76% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
+| `sparrow` | 80% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
+| `robin` | 78% | `--cov-fail-under=` in `ci.yml` (python-ci.yml.tmpl) |
+| `eagle` | none enforced | leaf library; add one before it grows past a handful of files |
+| `falcon` | none enforced | leaf library; add one before it grows past a handful of files |
+| `starling` | n/a | no Go/Python test suite (skill/content registry) |
 
 ## Why thresholds differ per repo
 
 These are *floors*, not targets — set near each repo's actual coverage at
 the time CI was set up, then only ever raised (never silently lowered) as
-the repo's test suite grows. A wide range (38% in `tok` vs 80% in
-`hawk-sdk-go`) reflects real differences in how much of each repo is
+the repo's test suite grows. A wide range (38% in `shrike` vs 80% in
+`sparrow`) reflects real differences in how much of each repo is
 exercised by unit tests vs. requiring live provider credentials
 (`test-live` targets) or manual verification — it is not an oversight.
 

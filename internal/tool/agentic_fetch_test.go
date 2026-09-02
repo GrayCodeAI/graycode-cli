@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+	agentcontracts "github.com/GrayCodeAI/eagle/agent"
 )
 
 func TestAgenticFetch_BatchFanOut(t *testing.T) {

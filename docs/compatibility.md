@@ -71,8 +71,8 @@ It runs on:
 ## Pin freshness (advisory)
 
 Separate from the matrix above: `hawk`'s own `go.mod` directly pins a couple
-of shared leaf dependencies (currently `hawk-core-contracts`), and several
-`external/` submodule consumers (`inspect`, `sight`, ...) pin the *same*
+of shared leaf dependencies (currently `eagle`), and several sibling-repository
+consumers (`merlin`/Merlin, `kestrel`/Kestrel, ...) pin the *same*
 dependencies independently in their own `go.mod`. Go's minimal version
 selection means whatever `hawk` pins wins in `hawk`'s own build — but if a
 consumer's own pin is older, that consumer's CI has never actually tested the
@@ -82,16 +82,15 @@ tag push exercised it).
 
 `make compat-drift` (wired into this workflow as an advisory, non-blocking
 step) reports any such mismatch by comparing `hawk/go.mod` against each
-`external/<repo>/go.mod`:
+`../<repo>/go.mod`:
 
 ```bash
 make compat-drift
 ```
 
 This **never fails the build** — it's a signal for humans to notice and
-re-pin the consumer, not a gate. It depends on `external/` submodules being
-checked out (the workflow does this via `checkout-eyrie`); running it without
-that will just report nothing to check.
+re-pin the consumer, not a gate. It checks sibling repositories when they are
+present; a Hawk-only checkout simply reports no local consumers to compare.
 
 ## Validating the file
 

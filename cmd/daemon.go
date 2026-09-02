@@ -204,7 +204,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		return buildExecutionGraphExport(
 			[]string{req.SessionID},
 			req.RepositoryID,
-			req.TraceCheckpointIDs,
+			req.SwiftCheckpointIDs,
 			req.GeneratedAt,
 		)
 	})

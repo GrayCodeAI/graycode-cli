@@ -19,7 +19,7 @@ func (m *memorySubcommand) Usage() string       { return "" }
 func (m *memorySubcommand) Handle(ml *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 	md := strings.TrimSpace(hawkconfig.LoadAgentsMD())
 	if md == "" {
-		ml.messages = append(ml.messages, displayMsg{role: "system", content: "No AGENTS.md project instructions found.\nUse /yaad for persistent graph memory."})
+		ml.messages = append(ml.messages, displayMsg{role: "system", content: "No AGENTS.md project instructions found.\nUse /harrier for persistent graph memory."})
 	} else {
 		ml.messages = append(ml.messages, displayMsg{role: "system", content: "Project instructions (AGENTS.md):\n" + md})
 	}

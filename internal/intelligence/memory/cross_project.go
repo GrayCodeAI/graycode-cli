@@ -11,12 +11,12 @@ import (
 // and workflow patterns are stored with scope:"global" and injected regardless
 // of which project the user is working in.
 type CrossProjectMemory struct {
-	bridge *YaadBridge
+	bridge *HarrierBridge
 	mu     sync.Mutex
 }
 
 // NewCrossProjectMemory creates a cross-project memory manager.
-func NewCrossProjectMemory(bridge *YaadBridge) *CrossProjectMemory {
+func NewCrossProjectMemory(bridge *HarrierBridge) *CrossProjectMemory {
 	return &CrossProjectMemory{bridge: bridge}
 }
 

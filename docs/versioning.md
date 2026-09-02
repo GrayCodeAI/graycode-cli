@@ -12,7 +12,7 @@ repository that follows this layout. Adopted 2026-05-14.
 
 ## Pattern by repo type
 
-### Go binaries (`hawk`, `yaad`, `trace`)
+### Go binaries (`hawk`, `harrier`, `swift`)
 
 - `VERSION` at the repo root.
 - A version package (`internal/version` for binaries, or `main` itself) declares
@@ -38,7 +38,7 @@ repository that follows this layout. Adopted 2026-05-14.
   the `VERSION` file because release-please bumps both atomically).
 - This is the Kubernetes / Helm / gh-cli pattern.
 
-### Go libraries (`hawk-sdk-go`, `eyrie`, `sight`, `inspect`, `tok`)
+### Go libraries (`sparrow`, `eyrie`, `kestrel`, `merlin`, `shrike`)
 
 - `VERSION` at the repo root.
 - A `version.go` file co-located with `VERSION` uses `//go:embed` to read it at
@@ -76,7 +76,7 @@ func init() {
 }
 ```
 
-### Python (`hawk-sdk-python`)
+### Python (`robin`)
 
 - `VERSION` at the repo root.
 - `pyproject.toml` uses `dynamic = ["version"]` with hatch reading from `VERSION`:

@@ -28,7 +28,7 @@ layout:
 |-----------|---------|
 | `cmd/` | CLI entry point (Cobra) and TUI (Bubble Tea) |
 | `internal/` | Private Go packages (not importable by external repos) |
-| `go.work` | Resolves ecosystem siblings (eyrie, yaad, tok, inspect, sight, trace, hawk-core-contracts) |
+| Parent `go.work` | Resolves the nine local Go siblings: hawk, eagle, falcon, eyrie, harrier (Harrier), shrike (Shrike), swift (Swift), kestrel (Kestrel), and merlin (Merlin) |
 | `spec/` | OpenSpec schema consumed by `internal/spec` |
 | `docs/` | Architecture docs, design docs, plans |
 | `rules/` | User-defined rules |
@@ -56,7 +56,7 @@ The `internal/` directory SHALL contain the following packages:
 | `multiagent/` | Personas, inter-agent messaging, sub-agents |
 | `feature/` | Eval, fingerprint, voice, taste, shellmode |
 | `observability/` | Logger, metrics, OTEL tracing, alerts |
-| `bridge/` | Integrations (inspect, sight, trace, sessioncapture) |
+| `bridge/` | Integrations (merlin, kestrel, swift, sessioncapture) |
 | `prompt/` | Identity preamble |
 | `prompts/` | Modular template system (role, execution, tools, etc.) |
 | `provider/` | Task-semantic roles, cascade intent, and product policy |
@@ -83,7 +83,7 @@ The `internal/engine/` package SHALL contain the following sub-systems:
 | `spec/` | Spec DAG, schema, validator, delta, archive |
 | `branching/` | Conversation branching, snowball detection |
 | `lifecycle/` | Self-improvement loop, few-shot, adaptive prompt |
-| `memory/` | Yaad bridge, enhanced memory, skill distillation |
+| `memory/` | Harrier bridge, enhanced memory, skill distillation |
 | `planning/` | Goals, task decomposition |
 | `workflow/` | JSON-defined automation pipelines |
 | `review/` | Code review bot, quality scorer |
@@ -114,7 +114,7 @@ The agent loop in `stream.go` SHALL execute the following phases:
 **Phase 1: Session Start (once)**
 1. Execute session start hooks
 2. Inject learned guidelines from Lifecycle.OnSessionStart()
-3. Inject remembered context from Yaad.Recall()
+3. Inject remembered context from Harrier.Recall()
 4. Inject few-shot examples from FewShotStore
 5. Inject user preferences from AdaptivePrompt
 6. Inject previous learnings from AgentsAccum
@@ -126,7 +126,7 @@ The agent loop in `stream.go` SHALL execute the following phases:
 3. Run integration pipeline PreQuery (intent, cache, injection scan)
 4. Find last user message
 5. Match skills by context (auto-skill)
-6. Refresh Yaad memories
+6. Refresh Harrier memories
 7. Build LLM ChatOptions (system prompt, tools, model)
 8. Inject ephemeral context (beliefs, matched skills, spec stage)
 9. Execute the LLM call via `ChatService.Stream()` and the `eyrie/engine` adapter
@@ -194,7 +194,7 @@ The memory system SHALL implement the following feedback loops:
 2. Learn user corrections → AdaptivePrompt
 3. Distill skills → SkillDistiller
 4. Capture trajectory → TrajectoryDistiller
-5. Store memories → Yaad
+5. Store memories → Harrier
 
 **Session Start Loop:**
 1. Inject learned guidelines

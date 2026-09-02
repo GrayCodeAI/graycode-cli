@@ -356,7 +356,7 @@ func (s *PersistenceService) AppendSystemContext(content string) {
 }
 
 // ReplaceSystemContextSection replaces a section of the system prompt
-// identified by a header string. Used by yaad recall (which refreshes
+// identified by a header string. Used by harrier recall (which refreshes
 // the "## Relevant Memories" block on every turn).
 func (s *PersistenceService) ReplaceSystemContextSection(header, content string) {
 	if s == nil {

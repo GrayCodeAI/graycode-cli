@@ -7,7 +7,7 @@ cd "$ROOT_DIR"
 pattern='github\.com/GrayCodeAI/hawk/(internal/|shared/types)'
 violations=""
 
-for repo in ../sight ../inspect ../tok ../trace ../yaad ../eyrie; do
+for repo in ../kestrel ../merlin ../shrike ../swift ../harrier ../eyrie; do
   if [[ -d "${repo}" ]]; then
     repo_hits="$(
       grep -RInE --include='*.go' "${pattern}" "${repo}" || true
@@ -19,10 +19,10 @@ for repo in ../sight ../inspect ../tok ../trace ../yaad ../eyrie; do
 done
 
 if [[ -n "${violations}" ]]; then
-  echo "forbidden Hawk imports found in external ecosystem repos:"
+      echo "forbidden Hawk imports found in sibling ecosystem repos:"
   echo "${violations}"
   echo
-  echo "support repos must use hawk-core-contracts or their own contracts, not hawk/internal or removed hawk/shared/types"
+  echo "support repos must use eagle or their own contracts, not hawk/internal or removed hawk/shared/types"
   exit 1
 fi
 

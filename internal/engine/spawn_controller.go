@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	agentcontracts "github.com/GrayCodeAI/hawk-core-contracts/agent"
+	agentcontracts "github.com/GrayCodeAI/eagle/agent"
 
 	"github.com/GrayCodeAI/hawk/internal/taskruntime"
 )

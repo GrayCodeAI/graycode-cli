@@ -13,7 +13,7 @@ func TestRenderAgentStatusPanel_Idle(t *testing.T) {
 	if !strings.Contains(out, "no active mission") {
 		t.Error("expected idle mission indicator")
 	}
-	if !strings.Contains(out, "yaad not connected") {
+	if !strings.Contains(out, "harrier not connected") {
 		t.Error("expected memory-not-connected indicator")
 	}
 }

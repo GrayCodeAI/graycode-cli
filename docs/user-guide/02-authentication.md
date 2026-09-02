@@ -133,7 +133,7 @@ eyJhbGciOiJSUzI1NiIs...
 JSON with optional refresh token:
 
 ```json
-{"access_token": "eyJhbGciOi...", "refresh_token": "ref-tok", "expires_in": 3600}
+{"access_token": "eyJhbGciOi...", "refresh_token": "ref-shrike", "expires_in": 3600}
 ```
 
 ### Configuration

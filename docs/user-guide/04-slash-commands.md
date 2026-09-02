@@ -135,22 +135,22 @@ Toggle multiline input mode. When enabled, `Enter` inserts a newline and `Shift+
 
 ---
 
-## Memory (via yaad)
+## Memory (via harrier)
 
-### `/yaad`
+### `/harrier`
 
-Browse persistent memory stored in yaad.
-
-```
-/yaad
-```
-
-### `/yaad search <query>`
-
-Search yaad memories.
+Browse persistent memory stored in harrier.
 
 ```
-/yaad search auth implementation
+/harrier
+```
+
+### `/harrier search <query>`
+
+Search harrier memories.
+
+```
+/harrier search auth implementation
 ```
 
 ### `/remember <note>`
@@ -359,7 +359,7 @@ Quick ready-to-chat check.
 
 ### `/ecosystem`
 
-Show ecosystem component status (Eyrie, yaad, tok).
+Show ecosystem component status (Eyrie, harrier, shrike).
 
 ```
 /ecosystem

@@ -12,12 +12,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 # =============================================================================
-# VARIANT 1 — Support engine (eyrie, yaad, tok, trace, sight, inspect).
-# Engines are peers: they may depend on hawk-core-contracts and hawk-mcpkit,
+# VARIANT 1 — Support engine (eyrie, harrier, shrike, swift, kestrel, merlin).
+# Engines are peers: they may depend on eagle and falcon,
 # but never on hawk/internal/* or another engine.
 # =============================================================================
 FORBIDDEN_HAWK='github\.com/GrayCodeAI/hawk/(internal/|shared/types)'
-FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(yaad|tok|trace|sight|inspect)(/|")'
+FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(harrier|shrike|swift|kestrel|merlin)(/|")'
 # ^ list every OTHER engine here — never include yourself.
 
 exit_code=0
@@ -34,7 +34,7 @@ if [[ -n "${violations}" ]]; then
   echo "forbidden Hawk imports found:"
   echo "${violations}"
   echo
-  echo "support repos must use hawk-core-contracts or local contracts, not hawk/internal or removed hawk/shared/types"
+  echo "support repos must use eagle or local contracts, not hawk/internal or removed hawk/shared/types"
   exit_code=1
 fi
 
@@ -53,7 +53,7 @@ fi
 echo "ecosystem boundary guard passed"
 
 # =============================================================================
-# VARIANT 2 — Foundation repo (hawk-core-contracts, hawk-mcpkit).
+# VARIANT 2 — Foundation repo (eagle, falcon).
 # Foundation repos sit below everything: zero graycode-eco dependencies at all.
 # =============================================================================
 #
@@ -77,12 +77,12 @@ echo "ecosystem boundary guard passed"
 # echo "ecosystem boundary guard passed"
 
 # =============================================================================
-# VARIANT 3 — SDK / skills consumer (hawk-sdk-go, hawk-sdk-python,
-# hawk-community-skills). Consumers may depend on hawk's public surfaces
+# VARIANT 3 — SDK / skills consumer (sparrow, robin,
+# starling). Consumers may depend on hawk's public surfaces
 # only — never on a support engine directly, and never on hawk/internal.
 # =============================================================================
 #
-# FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(eyrie|yaad|tok|trace|sight|inspect)(/|")'
+# FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(eyrie|harrier|shrike|swift|kestrel|merlin)(/|")'
 # FORBIDDEN_INTERNAL='github\.com/GrayCodeAI/hawk/internal'
 #
 # (same rg/grep + report pattern as Variant 1, naming "SDKs/skills must go

@@ -287,7 +287,7 @@ func TestGeneratePostCommit(t *testing.T) {
 	if !strings.Contains(script, "hawk-managed") {
 		t.Error("missing hawk-managed marker")
 	}
-	if !strings.Contains(script, "hawk trace") {
+	if !strings.Contains(script, "hawk swift") {
 		t.Error("missing trace notification")
 	}
 	if !strings.Contains(script, "post-commit") {

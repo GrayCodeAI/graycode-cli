@@ -12,7 +12,7 @@ import (
 )
 
 // PluginBridge wraps a shell-based bridge plugin, executing an external CLI
-// binary as a subprocess. It mirrors the trace sessioncapture bridge pattern:
+// binary as a subprocess. It mirrors the swift sessioncapture bridge pattern:
 // it degrades gracefully when the binary is not found in PATH.
 type PluginBridge struct {
 	manifest *Manifest

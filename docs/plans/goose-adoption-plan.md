@@ -17,15 +17,15 @@ sandboxing model.
 
 | Goose package/concept | Hawk implementation | Decision |
 |---|---|---|
-| Provider abstraction (~36) | `external/eyrie` (28 built-in + 75+ live) | Keep hawk |
-| Sessions (SQLite WAL) | `internal/session` JSONL+WAL+zstd + `external/trace` | Keep hawk |
-| MCP (client+server) | `internal/mcp` + `external/hawk-mcpkit` | Keep hawk |
+| Provider abstraction (~36) | sibling `eyrie` (28 built-in + 75+ live) | Keep hawk |
+| Sessions (SQLite WAL) | `internal/session` JSONL+WAL+zstd + sibling `swift` (Swift) | Keep hawk |
+| MCP (client+server) | `internal/mcp` + sibling `falcon` | Keep hawk |
 | ACP | `internal/acp` | Keep hawk |
 | Extensions/skills | `internal/plugin`, skills registry | Keep hawk |
 | OS sandboxing | `internal/sandbox` seatbelt/landlock/seccomp/ACL | **hawk ahead** (goose has none) |
 | OSV malware gate | `internal/permissions/osv_checker.go` (`CheckCommand`/`CheckPackage`) | Keep hawk |
 | Hints / AGENTS.md | `internal/config` AGENTS.md loader | **Adopt** @file references + subdir hints |
-| Context compaction | `external/tok` + `internal/engine/compaction` | **Adopt** structured-summary retry ladder |
+| Context compaction | sibling `shrike` (Shrike) + `internal/engine/compaction` | **Adopt** structured-summary retry ladder |
 | Extension env safety | none (only OSV gate) | **Adopt** disallowed-env-var filter |
 | Download manager | `internal/container`, `tool` | Out of scope |
 
@@ -50,7 +50,7 @@ or MCP stdio processes by filtering dangerous environment overrides
   checker) — a `sanitizeEnv` / `SafeEnv` helper.
 - Consumers: `internal/mcp` stdio launch path and `internal/plugin` package
   execution.
-- No changes to `external/eyrie`.
+- No changes to sibling `eyrie`.
 
 ### Required behavior
 
@@ -120,7 +120,7 @@ accounting, matching `goose-context-management`.
 
 ### Scope and ownership
 
-- Primary: `internal/engine/compaction` (and `external/tok` for any
+- Primary: `internal/engine/compaction` (and sibling `shrike` (Shrike) for any
   compression primitive).
 - Behavior: on compaction context-overflow, drop tool responses from the middle
   outwards and retry; parse structured summaries leniently with a lossless raw
@@ -143,7 +143,7 @@ accounting, matching `goose-context-management`.
 ## Deliberately Deferred
 
 - Goose's SQLite session store (`usage_ledger`, token/cost schema): hawk's
-  JSONL/WAL + trace + cost tracker cover it; a schema migration is a larger
+  JSONL/WAL + swift + cost tracker cover it; a schema migration is a larger
   change and is tracked separately.
 - MCP Apps / agent-provided HTML UIs: novel but requires UI-layer design.
 - ACP-as-provider wrapping other CLIs: larger provider abstraction change.

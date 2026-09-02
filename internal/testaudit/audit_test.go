@@ -274,7 +274,7 @@ func TestNoDirectSharedTypesImports(t *testing.T) {
 					continue
 				}
 				pos := pf.FSet.Position(imp.Pos())
-				t.Fatalf("forbidden direct hawk/shared/types import at %s:%d; the path has been removed, use hawk-core-contracts instead", rel, pos.Line)
+				t.Fatalf("forbidden direct hawk/shared/types import at %s:%d; the path has been removed, use eagle instead", rel, pos.Line)
 			}
 		}
 	}
@@ -334,7 +334,7 @@ func TestAllExportedTypesHaveDocComments(t *testing.T) {
 var legacySessionFields = []string{
 	"Permissions", "AutoMode", "Classifier", "BypassKill", "Mode",
 	"MaxTurns", "MaxBudgetUSD", "AllowedDirs", "PermissionFn",
-	"Memory", "YaadBridge", "EnhancedMemory",
+	"Memory", "HarrierBridge", "EnhancedMemory",
 	"Cascade", "Lifecycle", "Reflector", "CostTracker",
 	"Autonomy", "Sandbox", "Plan", "Beliefs", "Critic", "Backtrack",
 	"Limits", "Trajectory", "Shadow", "Snapshots", "ConversationGraph",

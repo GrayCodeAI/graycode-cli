@@ -51,7 +51,7 @@ func (s *Session) checkGuardConditions(ctx context.Context, ch chan<- StreamEven
 			return false
 		}
 	}
-	if allowed, reason := s.tokUsageCanProceed(); !allowed {
+	if allowed, reason := s.shrikeUsageCanProceed(); !allowed {
 		s.emitExhaustion(ctx, ch, reason)
 		return false
 	}

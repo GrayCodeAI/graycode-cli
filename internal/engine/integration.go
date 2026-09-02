@@ -375,7 +375,7 @@ func (p *IntegrationPipeline) PostResponse(response string, messages []types.Eyr
 	// 3. Detect file mentions
 	result.MentionedFiles = p.FileMentionDetector.DetectMentions(result.FormattedResponse)
 
-	// 4. Redact secrets from output (hawk's patterns + tok's 27 patterns)
+	// 4. Redact secrets from output (hawk's patterns + shrike's 27 patterns)
 	result.FormattedResponse = p.OutputRedactor.Redact(result.FormattedResponse)
 	secretDetector := token.DefaultSecretDetector()
 	secretMatches := secretDetector.DetectSecrets(result.FormattedResponse)

@@ -19,7 +19,7 @@ Faces (TUI / headless / ACP / daemon)
               Session kernel
            (agentLoop · tools)
                     │
-     eyrie · yaad · tok · trace · sight · inspect
+     eyrie · harrier · shrike · swift · kestrel · merlin
 ```
 
 ## Pieces

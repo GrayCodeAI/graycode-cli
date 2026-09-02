@@ -10,7 +10,7 @@ These preferences are advisory context, not policy.
 - Permission, sandbox, and security controls cannot be weakened by taste.
 - Review severity and correctness findings cannot be hidden by preferences.
 - Skills provide reusable procedures; preferences describe tendencies.
-- Yaad stores durable facts, conventions, and decisions separately.
+- Harrier stores durable facts, conventions, and decisions separately.
 
 Examples of suitable preferences include table-driven tests, preferred error
 wrapping style, naming conventions, and project-specific abstraction habits.
@@ -30,5 +30,5 @@ Objective: security, correctness, regression risk, missing tests
 Preference: naming, test organization, error-handling convention
 ```
 
-The objective layer always wins. Use `/taste` and `/learn` to inspect or teach
+The objective layer always wins. Use `/taste` and `/learn` to merlin or teach
 preferences explicitly rather than relying on opaque model behavior.

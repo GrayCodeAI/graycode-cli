@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/tok"
+	"github.com/GrayCodeAI/shrike"
 )
 
 var sensitiveKeySubstrings = []string{
@@ -38,7 +38,7 @@ func IsSensitiveEnvEntry(key, val string) bool {
 		return true
 	}
 	if len(val) > 0 {
-		matches := tok.DefaultSecretDetector().DetectSecrets(val)
+		matches := shrike.DefaultSecretDetector().DetectSecrets(val)
 		if len(matches) > 0 {
 			return true
 		}

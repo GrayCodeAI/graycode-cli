@@ -11,7 +11,7 @@ type MemoryManager struct {
 	Auto     *AutoMemory
 	Evolving *EvolvingMemory
 	Zen      *ZenBrain
-	Yaad     *YaadBridge
+	Harrier  *HarrierBridge
 }
 
 // NewMemoryManager creates a MemoryManager with all subsystems initialized.
@@ -20,7 +20,7 @@ func NewMemoryManager(projectDir string) *MemoryManager {
 		Auto:     NewAutoMemory(projectDir),
 		Evolving: NewEvolvingMemory(),
 		Zen:      NewZenBrain(),
-		Yaad:     NewYaadBridge(),
+		Harrier:  NewHarrierBridge(),
 	}
 }
 
@@ -33,7 +33,7 @@ func (mm *MemoryManager) LoadStartup() error {
 		return err
 	}
 	// AutoMemory.LoadStartup is a read that returns content, no error to handle.
-	// YaadBridge initializes in its constructor; nothing extra needed.
+	// HarrierBridge initializes in its constructor; nothing extra needed.
 	return nil
 }
 
@@ -82,9 +82,9 @@ func (mm *MemoryManager) Recall(query string, tokenBudget int) (string, error) {
 		}
 	}
 
-	// 5. Yaad bridge.
-	if yaadResult, err := mm.Yaad.Recall(query, budgetPer); err == nil && yaadResult != "" {
-		for _, line := range strings.Split(yaadResult, "\n") {
+	// 5. Harrier bridge.
+	if harrierResult, err := mm.Harrier.Recall(query, budgetPer); err == nil && harrierResult != "" {
+		for _, line := range strings.Split(harrierResult, "\n") {
 			key := strings.ToLower(strings.TrimSpace(line))
 			if key != "" && !seen[key] {
 				seen[key] = true
@@ -116,9 +116,9 @@ func (mm *MemoryManager) Remember(content, category string) error {
 		mm.Zen.Store(LayerEpisodic, content, []string{category})
 		return mm.Zen.Save()
 	default:
-		// Default: store in yaad if ready, otherwise fall back to core Memory.
-		if mm.Yaad.Ready() {
-			return mm.Yaad.Remember(content, category)
+		// Default: store in harrier if ready, otherwise fall back to core Memory.
+		if mm.Harrier.Ready() {
+			return mm.Harrier.Remember(content, category)
 		}
 		return Save(&Memory{Content: content, Tags: []string{category}})
 	}

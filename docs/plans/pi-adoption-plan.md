@@ -5,7 +5,8 @@ Status: Proposed
 Source: `https://github.com/earendil-works/pi` (MIT, TypeScript/Bun monorepo)
 
 This plan records the features identified as genuinely missing from hawk while
-auditing the Pi agent harness against hawk and its ecosystem submodules. It is
+auditing the Pi agent harness against Hawk and its independent ecosystem
+repositories. It is
 an adoption plan, not a code-porting plan: hawk reimplements compatible behavior
 in Go and preserves its existing provider, session, sandbox, permission,
 observability, and protocol boundaries.
@@ -33,10 +34,10 @@ The audit found that hawk already provides the foundation for most Pi features:
 
 | Pi package | Hawk implementation | Current decision |
 |---|---|---|
-| `pi-ai` (multi-provider) | `external/eyrie` client + engine facade + catalog + router + credentials | Keep hawk (broader) |
+| `pi-ai` (multi-provider) | sibling `eyrie` client + engine facade + catalog + router + credentials | Keep hawk (broader) |
 | `pi-agent-core` (agent loop) | `internal/engine` | Keep hawk |
 | `pi-coding-agent` (CLI) | `cmd` TUI + CLI + daemon | Keep hawk |
-| `pi-session-backends` (storage) | `internal/session` JSONL + zstd + WAL + SQLite index, `external/trace` | Keep hawk |
+| `pi-session-backends` (storage) | `internal/session` JSONL + zstd + WAL + SQLite index, sibling `swift` (Swift) | Keep hawk |
 | `pi-server` (RPC) | `internal/daemon` + `internal/acp` + `internal/mcp` | Keep hawk (broader) |
 | Permissions/sandbox | `internal/engine/safety` + `internal/sandbox` (seatbelt/landlock/seccomp/ACL/netproxy) | Keep hawk (native, ahead) |
 | `pi-tui` differential rendering | Bubble Tea v2 full-frame redraw | Adopt line-diff engine |
@@ -56,14 +57,15 @@ The audit found that hawk already provides the foundation for most Pi features:
 
 Guarantee the emitted OpenTelemetry spans and attributes always match the
 documented `gen_ai.*` / `cost.usd` / `tool.name` / `session.id` / `agent.id`
-contract, so the schema cannot silently drift across hawk and its submodules.
+contract, so the schema cannot silently drift across Hawk and its independent
+ecosystem repositories.
 
 ### Scope and ownership
 
 - Primary implementation: `internal/observability` and
-  `external/eyrie/internal/observability` (the canonical `genai_semconv`
+  `eyrie/internal/observability` (the canonical `genai_semconv`
   constants and their pinning test).
-- Shared schema constants: `external/hawk-core-contracts` if a cross-repo
+- Shared schema constants: sibling `eagle` if a cross-repo
   contract is needed, otherwise keep them in eyrie as today.
 - No changes to `internal/mcp`, `internal/sandbox`, or `internal/daemon`.
 
@@ -292,7 +294,7 @@ make security
 hawk verify
 ```
 
-For submodule changes, run the submodule's own tests and boundary checks before
+For sibling-repository changes, run that repository's own tests and boundary checks before
 updating the Hawk pointer.
 
 ## Delivery Sequence
@@ -355,7 +357,7 @@ The adoption is successful when hawk closes each confirmed gap while retaining
 its stronger architecture:
 
 - Telemetry spans always conform to the documented schema across hawk and its
-  submodules.
+  sibling repositories.
 - The agent can be evaluated end-to-end through its real tool loop.
 - The TUI re-renders only changed lines with synchronized output.
 - Session writes are fenced and remote sessions are single-owner.

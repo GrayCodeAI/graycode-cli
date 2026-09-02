@@ -6,8 +6,8 @@ import (
 )
 
 func TestBridgeError_Error(t *testing.T) {
-	err := NewBridgeError("yaad", "Remember", "connection refused", nil)
-	want := "yaad bridge: Remember: connection refused"
+	err := NewBridgeError("harrier", "Remember", "connection refused", nil)
+	want := "harrier bridge: Remember: connection refused"
 	if got := err.Error(); got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -15,7 +15,7 @@ func TestBridgeError_Error(t *testing.T) {
 
 func TestBridgeError_Wrap(t *testing.T) {
 	inner := errors.New("timeout")
-	err := NewBridgeError("sight", "Review", "provider failed", inner)
+	err := NewBridgeError("kestrel", "Review", "provider failed", inner)
 	if !errors.Is(err, inner) {
 		t.Error("Unwrap should return inner error")
 	}

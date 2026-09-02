@@ -9,20 +9,20 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
-// MemoryService is the Session's view of the memory layer: yaad bridge,
+// MemoryService is the Session's view of the memory layer: harrier bridge,
 // recall/remember interface, enhanced-memory manager, sleeptime
 // consolidation, skill distillation, file-mention detector, agents
 // accumulator. Extracted from Session in Phase 4 of the god-object
 // decomposition (see docs/session-decomposition.md).
 //
 // The interface boundary is small on purpose: every method either
-// does or doesn't talk to yaad, and the agent loop's branching on
+// does or doesn't talk to harrier, and the agent loop's branching on
 // nil is preserved.
 type MemoryService struct {
 	// memory is the simple Recall/Remember interface.
 	memory MemoryRecaller
-	// yaad is the rich memory graph bridge.
-	yaad *memory.YaadBridge
+	// harrier is the rich memory graph bridge.
+	harrier *memory.HarrierBridge
 	// enhanced is the post-session memory manager.
 	enhanced *memory.EnhancedMemoryManager
 	// skillDistiller produces reusable skill patterns from past
@@ -70,9 +70,9 @@ func (s *MemoryService) WithMemory(m MemoryRecaller) *MemoryService {
 	return s
 }
 
-// WithYaad sets the yaad bridge.
-func (s *MemoryService) WithYaad(y *memory.YaadBridge) *MemoryService {
-	s.yaad = y
+// WithHarrier sets the harrier bridge.
+func (s *MemoryService) WithHarrier(y *memory.HarrierBridge) *MemoryService {
+	s.harrier = y
 	return s
 }
 
@@ -84,18 +84,18 @@ func (s *MemoryService) WithEnhanced(e *memory.EnhancedMemoryManager) *MemorySer
 
 // RecallContext returns a string of relevant memories for the given
 // lastUserMsg under the given token budget. Returns empty string if
-// no memory is wired. Combines yaad recall + few-shot examples +
+// no memory is wired. Combines harrier recall + few-shot examples +
 // user-preference learning into one shot.
 func (s *MemoryService) RecallContext(_ context.Context, lastUserMsg string, budget int) string {
 	if s == nil {
 		return ""
 	}
 	var out string
-	if s.yaad != nil {
-		out, _ = s.yaad.Recall(lastUserMsg, budget)
+	if s.harrier != nil {
+		out, _ = s.harrier.Recall(lastUserMsg, budget)
 	}
 	// The simple recaller is the compatibility path used by tests and
-	// lightweight integrations that do not install Yaad. Memory ownership
+	// lightweight integrations that do not install Harrier. Memory ownership
 	// stays in this service instead of leaking a backend decision into the
 	// agent loop.
 	if out == "" && s.memory != nil {
@@ -109,7 +109,7 @@ func (s *MemoryService) RecallContext(_ context.Context, lastUserMsg string, bud
 
 // Remember stores a content+category pair in the memory layer.
 // Best-effort: errors are logged but not returned (the agent loop
-// shouldn't fail a turn just because yaad is unavailable).
+// shouldn't fail a turn just because harrier is unavailable).
 func (s *MemoryService) Remember(ctx context.Context, content, category string) {
 	if s.enhanced != nil {
 		_ = s.enhanced.Remember(content, category)
@@ -157,8 +157,8 @@ func (s *MemoryService) Finalize(messages []types.EyrieMessage, success bool) {
 }
 
 // Accessors.
-func (s *MemoryService) Yaad() *memory.YaadBridge { return s.yaad }
-func (s *MemoryService) Memory() MemoryRecaller   { return s.memory }
+func (s *MemoryService) Harrier() *memory.HarrierBridge { return s.harrier }
+func (s *MemoryService) Memory() MemoryRecaller         { return s.memory }
 func (s *MemoryService) Enhanced() *memory.EnhancedMemoryManager {
 	return s.enhanced
 }
@@ -169,8 +169,8 @@ func (s *MemoryService) Enhanced() *memory.EnhancedMemoryManager {
 // same value.
 func (s *MemoryService) SetMemory(m MemoryRecaller) { s.memory = m }
 
-// SetYaad replaces the legacy Yaad bridge.
-func (s *MemoryService) SetYaad(y *memory.YaadBridge) { s.yaad = y }
+// SetHarrier replaces the legacy Harrier bridge.
+func (s *MemoryService) SetHarrier(y *memory.HarrierBridge) { s.harrier = y }
 
 // SetEnhanced replaces the legacy enhanced memory manager.
 func (s *MemoryService) SetEnhanced(e *memory.EnhancedMemoryManager) { s.enhanced = e }
@@ -198,5 +198,5 @@ func (s *MemoryService) Activity() *memory.ActivityTracker { return s.activity }
 
 // IsZero reports whether the service has any memory wired.
 func (s *MemoryService) IsZero() bool {
-	return s == nil || (s.memory == nil && s.yaad == nil && s.enhanced == nil && s.skillDistiller == nil && s.sleeptime == nil && s.activity == nil)
+	return s == nil || (s.memory == nil && s.harrier == nil && s.enhanced == nil && s.skillDistiller == nil && s.sleeptime == nil && s.activity == nil)
 }

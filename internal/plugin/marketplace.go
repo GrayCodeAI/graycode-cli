@@ -46,7 +46,7 @@ func DefaultMarketplaceSources() []MarketplaceSource {
 	return []MarketplaceSource{
 		{
 			Name: "official",
-			URL:  "https://raw.githubusercontent.com/GrayCodeAI/hawk-community-skills/main/plugins-registry.json",
+			URL:  "https://raw.githubusercontent.com/GrayCodeAI/starling/main/plugins-registry.json",
 		},
 	}
 }

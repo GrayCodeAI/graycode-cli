@@ -115,7 +115,7 @@ func (s *LifecycleService) OnSessionStart(ctx context.Context, s2 *Session, last
 
 // OnSessionEnd is called by Stream() when the agent loop exits. Runs
 // the post-session pipeline: lifecycle postprocess, enhanced-memory
-// EndSession, yaad session summary, few-shot pattern storage,
+// EndSession, harrier session summary, few-shot pattern storage,
 // adaptive-prompt learning feedback.
 func (s *LifecycleService) OnSessionEnd(ctx context.Context, s2 *Session, success bool, duration time.Duration) {
 	if s.lifecycle != nil {

@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	contracts "github.com/GrayCodeAI/hawk-core-contracts/events"
+	contracts "github.com/GrayCodeAI/eagle/events"
 )
 
 // LangfuseClient sends traces to Langfuse for LLM observability.

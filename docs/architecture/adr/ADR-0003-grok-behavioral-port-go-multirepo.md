@@ -11,8 +11,8 @@
 
 Grok Build (`grok-eco/grok-build`) is a large Rust monorepo for a terminal AI
 coding agent. Hawk is a multi-repo Go platform: product (`hawk`) plus peer
-engines (`eyrie`, `yaad`, `tok`, `trace`, `sight`, `inspect`), foundation
-contracts (`hawk-core-contracts`, `hawk-mcpkit`), SDKs, cloud, and skills.
+engines (`eyrie`, `harrier`, `shrike`, `swift`, `kestrel`, `merlin`), foundation
+contracts (`eagle`, `falcon`), SDKs, cloud, and skills.
 
 The product goal is Grok-class **agent control-plane quality** (typed
 subagents, sandbox profiles, folder trust, hooks, plugins/marketplace, task
@@ -25,14 +25,14 @@ peer-engine advantages.
    not a monorepo collapse, and not a runtime dependency on Grok binaries.
 2. **Hawk remains multi-repo.** Map Grok capabilities onto existing owners:
    - product surface → `hawk`
-   - shared DTOs → `hawk-core-contracts`
+   - shared DTOs → `eagle`
    - LLM routing/stream → `eyrie`
-   - memory → `yaad`
-   - tokens/secrets/compress → `tok`
-   - session capture/import → `trace`
-   - review / live audit → `sight` / `inspect`
-   - marketplace content → `hawk-community-skills`
-   - managed policy/tenancy → `hawk-cloud`
+   - memory → `harrier`
+   - tokens/secrets/compress → `shrike`
+   - session capture/import → `swift`
+   - review / live audit → `kestrel` / `merlin`
+   - marketplace content → `starling`
+   - managed policy/tenancy → `graycode-platform/apps/worker` (deployed as `graycode-cloud`)
 3. **Wire-first.** Prefer completing types and paths that already exist
    (for example typed subagent modes) over greenfield rewrites.
 4. **Privacy-first.** Do not port default Mixpanel/product analytics. Opt-in
@@ -49,7 +49,7 @@ peer-engine advantages.
 
 ## Consequences
 
-- New shared agent spawn types live in `hawk-core-contracts/agent` (stdlib
+- New shared agent spawn types live in `eagle/agent` (stdlib
   only). Engines and SDKs may import them; contracts never import hawk.
 - Feature work updates the matrices in the full/long-horizon plans rather
   than inventing parallel roadmaps.

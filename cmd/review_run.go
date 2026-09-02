@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
-	hawkSight "github.com/GrayCodeAI/hawk/internal/bridge/sight"
+	reviewcontracts "github.com/GrayCodeAI/eagle/review"
+	hawkKestrel "github.com/GrayCodeAI/hawk/internal/bridge/kestrel"
 	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/GrayCodeAI/hawk/internal/engine"
 	"github.com/GrayCodeAI/hawk/internal/ui/icons"
-	sightLib "github.com/GrayCodeAI/sight"
+	kestrelLib "github.com/GrayCodeAI/kestrel"
 	"github.com/spf13/cobra"
 )
 
@@ -96,7 +96,7 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Build the Sight bridge through Hawk's Eyrie engine boundary.
+	// Build the Kestrel bridge through Hawk's Eyrie engine boundary.
 	ctx := context.Background()
 	selection := hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{
 		ProviderOverride: strings.TrimSpace(provider),
@@ -110,24 +110,24 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		return silentErr(fmt.Errorf("resolve engine transport: %w", err), "init bridge")
 	}
 
-	var opts []sightLib.Option
+	var opts []kestrelLib.Option
 	if reviewRunModel != "" {
-		opts = append(opts, sightLib.WithModel(reviewRunModel))
+		opts = append(opts, kestrelLib.WithModel(reviewRunModel))
 	}
 	if reviewRunConcerns != "" {
 		concerns := strings.Split(reviewRunConcerns, ",")
 		for i := range concerns {
 			concerns[i] = strings.TrimSpace(concerns[i])
 		}
-		opts = append(opts, sightLib.WithConcerns(concerns...))
+		opts = append(opts, kestrelLib.WithConcerns(concerns...))
 	}
 
-	bridge := hawkSight.NewBridge(chatProvider, providerID, opts...)
+	bridge := hawkKestrel.NewBridge(chatProvider, providerID, opts...)
 	if !bridge.Ready() {
 		if statusErr := store.SetStatus(id, ReviewStatusFailed); statusErr != nil {
 			return silentErr(statusErr, "mark review failed")
 		}
-		return silentErr(fmt.Errorf("sight bridge not ready"), "init bridge")
+		return silentErr(fmt.Errorf("kestrel bridge not ready"), "init bridge")
 	}
 
 	if reviewRunTimeout > 0 {
@@ -142,7 +142,7 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		if statusErr := store.SetStatus(id, ReviewStatusFailed); statusErr != nil {
 			return silentErr(statusErr, "mark review failed")
 		}
-		return silentErr(err, "sight review")
+		return silentErr(err, "kestrel review")
 	}
 
 	// Determine status based on findings.

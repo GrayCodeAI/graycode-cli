@@ -46,7 +46,7 @@ func TestExtractSubject(t *testing.T) {
 }
 
 func TestSharedMemoryNilBridge(t *testing.T) {
-	bridge := &YaadBridge{ready: false}
+	bridge := &HarrierBridge{ready: false}
 	sm := NewSharedMemory(bridge, "mission-1", "agent-a")
 
 	err := sm.Share("test content", "convention")
@@ -64,7 +64,7 @@ func TestSharedMemoryNilBridge(t *testing.T) {
 }
 
 func TestSharedMemoryEvents(t *testing.T) {
-	bridge := &YaadBridge{ready: false}
+	bridge := &HarrierBridge{ready: false}
 	sm := NewSharedMemory(bridge, "mission-1", "agent-a")
 
 	var received []MemoryEvent

@@ -1,8 +1,10 @@
 # Hawk Architecture v1 — Definition of Done
 
-This document defines **realistic v1 complete** for the graycode-eco ecosystem architecture.
+This document defines **realistic v1 complete** for the Hawk main CLI and its
+connected ecosystem architecture. `graycode-eco` is only the local parent
+folder; it is not a repository or product.
 
-It is the shipping bar for the contracts-and-boundaries refactor. It is **not** a promise that every future package in `hawk-core-contracts-spec.md` exists, or that every engine is wired through shared contracts on every runtime path.
+It is the shipping bar for the contracts-and-boundaries refactor. It is **not** a promise that every future package in `eagle-spec.md` exists, or that every engine is wired through shared contracts on every runtime path.
 
 ## What v1 means
 
@@ -13,7 +15,7 @@ v1 is done when the ecosystem has:
 - shared vocabulary only where cross-repo pain is real
 - automated guards so the old coupling cannot return
 
-v1 does **not** require a single unified contract layer for runtime, persistence, trace, and orchestration.
+v1 does **not** require a single unified contract layer for runtime, persistence, swift, and orchestration.
 
 ## v1 checklist
 
@@ -28,7 +30,7 @@ Status note:
 - [x] `hawk` is the only primary end-user product in the ecosystem
 - [x] Hawk coordinates engines; engines do not import each other
 - [x] SDKs and community skills consume Hawk public surfaces, not engines directly
-- [x] `graycode-core` and other company/platform repos stay outside Hawk runtime dependencies
+- [x] `graycode-platform` and other company/platform repos stay outside Hawk runtime dependencies
 
 ### Forbidden edges stay forbidden
 
@@ -36,8 +38,10 @@ Status note:
 - [x] no support repo imports removed `hawk/shared/types`
 - [x] no SDK/skills repo references support engines as primary dependencies
 - [x] Hawk production code imports Eyrie only through `eyrie/engine`
+- [x] Hawk's graph/projection imports are documented as explicit integration
+      surfaces and do not create engine-to-engine dependencies
 
-### `hawk-core-contracts` (implemented packages only)
+### `eagle` (implemented packages only)
 
 These packages are in scope for v1:
 
@@ -45,21 +49,21 @@ These packages are in scope for v1:
 - [x] `review/` — neutral review results
 - [x] `verify/` — neutral verification reports
 - [x] `tools/` — persisted tool call/result contracts
-- [x] `events/` — normalized audit/trace event subset used by Hawk
+- [x] `events/` — normalized audit/swift event subset used by Hawk
 - [x] `policy/` — permission and guardian decision contracts
 
 Adoption bar:
 
-- [x] `sight` and `inspect` import contracts for shared severity/findings and expose boundary adapters
-- [x] `tok/types` compatibility shim removed from the local ecosystem
-- [x] `eyrie`, `yaad`, and `trace` remain contract-free unless they gain a true cross-repo type
+- [x] `kestrel` and `merlin` import contracts for shared severity/findings and expose boundary adapters
+- [x] `shrike/types` compatibility shim removed from the local ecosystem
+- [x] `eyrie`, `harrier`, and `swift` remain contract-free unless they gain a true cross-repo type
 
 ### Hawk integration seams
 
-- [x] session persistence uses `hawk-core-contracts/tools`, not lower-level provider tool types
-- [x] review persistence and inspect/review bridge paths use neutral `review` / `verify` contracts
+- [x] session persistence uses `eagle/tools`, not lower-level provider tool types
+- [x] review persistence and merlin/review bridge paths use neutral `review` / `verify` contracts
 - [x] Hawk owns runtime DTOs in `internal/types` and translates them to `eyrie/engine` in `internal/engine`
-- [x] `hawk trace ...` remains a Hawk-mounted subcommand, not a competing product surface
+- [x] `hawk swift ...` remains a Hawk-mounted subcommand, not a competing product surface
 
 ### Enforcement
 
@@ -67,7 +71,8 @@ Adoption bar:
 - [x] each support repo runs `check-ecosystem-boundaries.sh` in CI
 - [x] Go SDK runs consumer boundary guard in CI
 - [x] Python SDK and community skills run consumer boundary guards in CI
-- [x] architecture docs do not describe removed or planned packages as currently shipped
+- [x] architecture docs use the canonical 15-repository manifest and distinguish
+      repository directories from product labels
 - [x] lefthook strips `Co-authored-by:` trailers so commits list only the human author
 
 ### Ship state
@@ -80,21 +85,21 @@ Adoption bar:
 
 Do not block v1 on any of the following:
 
-- `hawk-core-contracts/sessions` or `hawk-core-contracts/engines`
-- moving every Hawk internal event struct into `hawk-core-contracts/events`
-- moving trace timeline/event models out of `trace`
+- `eagle/sessions` or `eagle/engines`
+- moving every Hawk internal event struct into `eagle/events`
+- moving swift timeline/event models out of `swift`
 - unifying runtime `internal/types` DTOs and persisted contracts into one type
 - forcing every engine into the same integration depth (library vs subcommand vs service)
 - deep static import analysis for Python SDK or markdown-only skills repos
 
 ## Governance after v1
 
-Add a new `hawk-core-contracts` package only when **all** of these are true:
+Add a new `eagle` package only when **all** of these are true:
 
 1. at least two repos need the same stable type or envelope
 2. the type is vocabulary or DTO, not runtime logic
 3. the owning repo cannot keep the type local without recreating cross-repo coupling
-4. the addition is documented in `hawk-core-contracts-spec.md` before code lands
+4. the addition is documented in `eagle-spec.md` before code lands
 
 Remove compatibility shims only when:
 
@@ -122,5 +127,5 @@ go test ./... -count=1
 
 - `hawk-product-architecture.md` — target shape and phases
 - `hawk-dependency-rules.md` — allowed and forbidden edges
-- `hawk-core-contracts-spec.md` — contract inventory and planned packages
-- `../plans/hawk-contracts-migration-backlog.md` — migration history and follow-ups
+- `eagle-spec.md` — contract inventory and planned packages
+- `../plans/eagles-migration-backlog.md` — migration history and follow-ups

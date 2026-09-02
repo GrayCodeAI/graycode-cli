@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	reviewcontracts "github.com/GrayCodeAI/hawk-core-contracts/review"
+	reviewcontracts "github.com/GrayCodeAI/eagle/review"
 	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 

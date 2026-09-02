@@ -19,8 +19,8 @@ func TestNewMemoryManager(t *testing.T) {
 	if mm.Zen == nil {
 		t.Fatal("Zen subsystem not initialized")
 	}
-	if mm.Yaad == nil {
-		t.Fatal("Yaad subsystem not initialized")
+	if mm.Harrier == nil {
+		t.Fatal("Harrier subsystem not initialized")
 	}
 }
 

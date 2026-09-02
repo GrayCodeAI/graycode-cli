@@ -364,7 +364,7 @@ func configureSessionStartup(sess *engine.Session, settings hawkconfig.Settings,
 	if err := sess.SetMaxBudgetUSD(budget); err != nil {
 		return err
 	}
-	sess.ApplyTokUsageSettings(settings.HourlyTokenLimit, settings.DailyTokenLimit, settings.SessionTokenLimit)
+	sess.ApplyShrikeUsageSettings(settings.HourlyTokenLimit, settings.DailyTokenLimit, settings.SessionTokenLimit)
 
 	// Teach mode: augment system prompt with explanation instructions
 	if teachMode {
@@ -436,13 +436,13 @@ func configureSessionHeavy(sess *engine.Session) {
 
 	// Memory initialization touches persisted state and optional bridges.
 	enhancedMem := memory.NewEnhancedMemoryManager(cwd)
-	if enhancedMem.Yaad.Ready() {
-		// Periodic yaad snapshots only for long-lived sessions — short-lived
+	if enhancedMem.Harrier.Ready() {
+		// Periodic harrier snapshots only for long-lived sessions — short-lived
 		// diagnostic bridges skip scheduling entirely.
-		enhancedMem.Yaad.EnsureBackups()
+		enhancedMem.Harrier.EnsureBackups()
 
 		sess.MemorySvc().SetMemory(enhancedMem)
-		sess.MemorySvc().SetYaad(enhancedMem.Yaad)
+		sess.MemorySvc().SetHarrier(enhancedMem.Harrier)
 		sess.MemorySvc().SetEnhanced(enhancedMem)
 		sess.ConfigureContextGraphObservation(cwd)
 		// Use a real unique session ID (genID) rather than a fabricated

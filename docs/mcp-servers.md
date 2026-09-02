@@ -74,16 +74,16 @@ npm install -g my-jogyo
 - `citation` — Manage research citations
 - `session_handoff` — Transfer research context between sessions
 
-### yaad (Memory Engine)
+### harrier (Memory Engine)
 
-hawk's built-in memory engine. Configured automatically when yaad is installed.
+hawk's built-in memory engine. Configured automatically when harrier is installed.
 
 ```json
 {
   "mcp_servers": [
     {
-      "name": "yaad",
-      "command": "yaad",
+      "name": "harrier",
+      "command": "harrier",
       "args": ["serve", "--stdio"],
       "type": "stdio"
     }
@@ -91,7 +91,7 @@ hawk's built-in memory engine. Configured automatically when yaad is installed.
 }
 ```
 
-### sight (Code Review)
+### kestrel (Code Review)
 
 hawk's built-in code review engine.
 
@@ -99,8 +99,8 @@ hawk's built-in code review engine.
 {
   "mcp_servers": [
     {
-      "name": "sight",
-      "command": "sight",
+      "name": "kestrel",
+      "command": "kestrel",
       "args": ["serve", "--stdio"],
       "type": "stdio"
     }
@@ -108,7 +108,7 @@ hawk's built-in code review engine.
 }
 ```
 
-### inspect (Security Audit)
+### merlin (Security Audit)
 
 hawk's built-in security scanner.
 
@@ -116,8 +116,8 @@ hawk's built-in security scanner.
 {
   "mcp_servers": [
     {
-      "name": "inspect",
-      "command": "inspect",
+      "name": "merlin",
+      "command": "merlin",
       "args": ["serve", "--stdio"],
       "type": "stdio"
     }

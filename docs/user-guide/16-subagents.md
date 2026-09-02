@@ -36,7 +36,7 @@ Restrict a subagent's tools:
 
 | Mode | Read | Write | Execute | Description |
 |------|------|-------|---------|-------------|
-| `read-only` | Yes | No | No | Read, search, inspect only |
+| `read-only` | Yes | No | No | Read, search, merlin only |
 | `read-write` | Yes | Yes | No | Read/write files, no shell |
 | `execute` | Yes | No | Yes | Read + shell commands |
 | `all` | Yes | Yes | Yes | Full tool access |

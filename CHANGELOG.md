@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`--permission-mode` CLI flag removed**; `--dangerously-skip-permissions` unchanged (now maps to the Autonomous tier). New `--dry-run` flag added as an unconditional kill switch (deny every tool call, regardless of tier or spec stage) — replaces `dontAsk`'s hard-lockout role.
 - **Version re-baselined to `0.1.0`** across `cmd/hawk/main.go`, `cmd/daemon.go`,
   `flake.nix`, `.github/workflows/release.yml`, and the `update`/daemon test suites, aligning hawk
-  with the rest of the GrayCodeAI ecosystem (`eyrie`, `tok`, `yaad`, `sight`, `inspect`).
+  with the rest of the GrayCodeAI ecosystem (`eyrie`, `shrike`, `harrier`, `kestrel`, `merlin`).
 - **Architecture boundary hardening**: Hawk now owns runtime request/response DTOs, transport config/provider seams, and review/verification product-boundary contracts, with `eyrie/client` usage restricted to internal adapters and guarded in CI.
 - **`shared/types` removed**: Hawk no longer ships the old shared type path, and local boundary checks now block any attempt to reintroduce it.
 
@@ -69,7 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`GET /v1/ready`**: dependency-aware readiness endpoint on the daemon.
 - REPL magic commands (%reset, %undo, %tokens, %history, %copy, %save, %compact, %model, %clear)
 - Prompt cache keep-alive pings
-- Unified finding/severity contracts now live in `hawk-core-contracts/types`
+- Unified finding/severity contracts now live in `eagle/types`
 
 ### Added — Round 2 ecosystem improvements (2026-06-01)
 - **Cavecrew personas** (`internal/multiagent/agents`): three new
@@ -112,7 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a command label. API: `Record`, `AggregateForSession`,
   `ListForSession`, `PruneForSession`. Scoped to a single session so
   callers can selectively compact their own history. Companion to
-  tok's `internal/tracking.Tracker` (tok tracks globally, hawk tracks
+  shrike's `internal/tracking.Tracker` (shrike tracks globally, hawk tracks
   per-session).
 
 ### Added — Production Hardening (top-50 OSS parity)

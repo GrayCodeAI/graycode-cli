@@ -61,14 +61,14 @@ token in GitHub Actions secrets.
 Hawk can use MCP servers for extended capabilities:
 
 ```bash
-# With yaad for persistent memory
-yaad setup
+# With harrier for persistent memory
+harrier setup
 hawk chat
 
-# With trace for session capture
-trace start
+# With swift for session capture
+swift start
 hawk "refactor the API layer"
-trace stop
+swift stop
 ```
 
 ## Configuration

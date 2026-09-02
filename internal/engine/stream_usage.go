@@ -103,7 +103,7 @@ func (s *Session) recordStreamUsage(ch chan<- StreamEvent, prompt, completion in
 		TotalCost:    requestCost,
 	})
 
-	s.recordTokUsageBudgetObservation(
+	s.recordShrikeUsageBudgetObservation(
 		prompt+completion,
 		requestCost,
 		provider,
@@ -119,7 +119,7 @@ func (s *Session) recordStreamUsage(ch chan<- StreamEvent, prompt, completion in
 				Model:            model,
 			},
 		}
-		if tracker := s.currentTokUsageTracker(); tracker != nil {
+		if tracker := s.currentShrikeUsageTracker(); tracker != nil {
 			for _, alert := range tracker.DrainAlerts() {
 				ch <- StreamEvent{
 					Type:    "content",

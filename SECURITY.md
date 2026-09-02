@@ -49,9 +49,9 @@ We follow [coordinated vulnerability disclosure](https://en.wikipedia.org/wiki/C
 - **Static analysis:** `golangci-lint` (including `gosec` rules) and `go vet`
   are enforced in CI.
 - **Vulnerability scanning:** `govulncheck` runs on every CI build.
-- **Dependency pinning:** `go.sum` is pinned and committed; ecosystem
-  submodules are pinned to exact Gitlinks and verified by
-  `make submodule-release-parity`.
+- **Dependency pinning:** `go.sum` is pinned and committed; independent
+  ecosystem modules are checked for reachable published versions by
+  `make release-parity`.
 - **Reproducible builds:** release artefacts ship with SHA-256 checksums via
   goreleaser.
 - **No secrets in source:** API keys are configuration, not constants. Pre-
