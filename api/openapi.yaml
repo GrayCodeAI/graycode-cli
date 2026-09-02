@@ -342,8 +342,7 @@ components:
           type: object
           properties:
             next_cursor:
-              type: string
-              nullable: true
+              type: [string, "null"]
 
     Message:
       type: object
