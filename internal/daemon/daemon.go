@@ -105,6 +105,12 @@ type Server struct {
 	graphMu      sync.RWMutex
 	graphFactory GraphFactory
 
+	// graphLedger retains accepted POST /v1/graph/sync payloads for
+	// idempotency and durable retention. Defaults to an in-memory ledger;
+	// the composition root injects a SQLite-backed ledger for persistence
+	// across daemon restarts.
+	graphLedger GraphLedger
+
 	// routePatterns records every "METHOD /path" pattern registered on the
 	// mux so tests can verify the HTTP surface matches api/openapi.yaml.
 	routePatterns []string
@@ -172,6 +178,10 @@ type Config struct {
 	// cap (AutonomySemi) applies; set explicitly (e.g. to AutonomyFull)
 	// only for trusted, operator-owned deployments.
 	MaxAutonomy engine.AutonomyLevel `json:"-"`
+	// GraphLedger durably retains accepted POST /v1/graph/sync payloads for
+	// idempotency across daemon restarts. If nil, the server uses an
+	// in-memory ledger (survives only the process lifetime).
+	GraphLedger GraphLedger `json:"-"`
 }
 
 // DefaultMaxAutonomy is the highest autonomy tier a daemon client may
@@ -249,6 +259,10 @@ func New(cfg Config, factory SessionFactory) *Server {
 		apiLimiter:     newIPLimiter(defaultAPIRatePerMin/60, defaultAPIBurst),
 		chatLimiter:    newIPLimiter(defaultChatRatePerMin/60, defaultChatBurst),
 		metrics:        metrics.NewRegistry(),
+		graphLedger:    cfg.GraphLedger,
+	}
+	if s.graphLedger == nil {
+		s.graphLedger = newMemoryGraphLedger()
 	}
 	s.routes()
 	// Build the messaging-bridge manager. The daemon URL is finalised in Start
@@ -456,6 +470,8 @@ func (s *Server) routes() {
 	s.handle("POST /v1/sessions/{id}/lease", s.auth(s.rate(s.handleAcquireLease, s.apiLimiter)))
 	s.handle("DELETE /v1/sessions/{id}/lease", s.auth(s.rate(s.handleReleaseLease, s.apiLimiter)))
 	s.handle("GET /v1/sessions/{id}/graph", s.auth(s.rate(s.handleGetSessionGraph, s.apiLimiter)))
+	s.handle("POST /v1/graph/sync", s.auth(s.rate(s.handleGraphSync, s.apiLimiter)))
+	s.handle("GET /v1/projects/{projectId}/graph", s.auth(s.rate(s.handleGraphRead, s.apiLimiter)))
 	s.handle("DELETE /v1/sessions/{id}", s.auth(s.rate(s.handleDeleteSession, s.apiLimiter)))
 	s.handle("GET /v1/stats", s.auth(s.rate(s.handleStats, s.apiLimiter)))
 	s.handle("GET /v1/metrics", s.auth(s.rate(s.handleMetrics, s.apiLimiter)))

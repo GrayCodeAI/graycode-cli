@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/GrayCodeAI/eagle/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
 )
 
 func TestContentPartJSONContract(t *testing.T) {

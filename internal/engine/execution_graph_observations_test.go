@@ -9,7 +9,7 @@ import (
 	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 	"github.com/GrayCodeAI/hawk/internal/tool"
 	"github.com/GrayCodeAI/hawk/internal/types"
-	"github.com/GrayCodeAI/shrike"
+	shrike "github.com/GrayCodeAI/shrike"
 )
 
 type graphVerifyTool struct{}

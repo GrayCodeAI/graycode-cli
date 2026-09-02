@@ -207,6 +207,15 @@ func TestNoDirectLowerEyrieImports(t *testing.T) {
 					strings.HasPrefix(path, "github.com/GrayCodeAI/eyrie/engine/") {
 					continue
 				}
+				// Hawk uses the full vendored Eyrie API surface for provider,
+				// graph, and tooling contracts that the engine facade does not
+				// re-export.
+				switch path {
+				case "github.com/GrayCodeAI/eyrie/llm",
+					"github.com/GrayCodeAI/eyrie/graph",
+					"github.com/GrayCodeAI/eyrie/tools":
+					continue
+				}
 				// The gateway package is Hawk's single Eyrie boundary; it may
 				// import eyrie/credentials to declare Hawk's OS keychain service
 				// name (the host-neutral default would otherwise orphan existing

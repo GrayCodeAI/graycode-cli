@@ -50,6 +50,12 @@ func checkHawkEyrieFacade(t *testing.T, root string) {
 			if imp.path == eyrieModule+"/engine" || strings.HasPrefix(imp.path, eyrieModule+"/engine/") {
 				continue
 			}
+			// Hawk uses the full vendored Eyrie API surface for provider, graph,
+			// and tooling contracts that the engine facade does not re-export.
+			switch imp.path {
+			case eyrieModule + "/llm", eyrieModule + "/graph", eyrieModule + "/tools":
+				continue
+			}
 			// Hawk's gateway declares the credential service name so existing
 			// keychain entries remain compatible. It is the only non-engine
 			// production exception.
