@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
+	graphcontracts "github.com/GrayCodeAI/eagle/graph"
 	"github.com/GrayCodeAI/hawk/internal/executiongraph"
 )
 
@@ -179,7 +179,7 @@ func (s *Server) handleGraphSync(w http.ResponseWriter, r *http.Request) {
 
 // validateGraphExport checks a portable graph against the shared `*.graph/v1`
 // contract: schema version, fact-count bounds, per-fact validity (reusing
-// hawk-core-contracts/graph), unique identities, and self-contained topology (edges and
+// eagle/graph), unique identities, and self-contained topology (edges and
 // events may only reference nodes present in the same export).
 func validateGraphExport(export executiongraph.Export) error {
 	if !graphSchemaVersionPattern.MatchString(export.SchemaVersion) {

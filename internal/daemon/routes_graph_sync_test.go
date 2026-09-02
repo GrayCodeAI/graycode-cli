@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/hawk-core-contracts/graph"
+	graphcontracts "github.com/GrayCodeAI/eagle/graph"
 	"github.com/GrayCodeAI/hawk/internal/executiongraph"
 	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
