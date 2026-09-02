@@ -46,7 +46,8 @@ func OpenGraphLedger(dbPath string) (GraphLedger, error) {
 }
 
 func (l *sqliteGraphLedger) InsertIfAbsent(ctx context.Context, rec GraphSyncRecord) (bool, error) {
-	res, err := l.db.ExecContext(ctx,
+	res, err := l.db.ExecContext(
+		ctx,
 		`INSERT OR IGNORE INTO graph_syncs
 			(sync_id, project_id, session_id, schema_version, graph_digest, facts, graph_json, received_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -66,7 +67,8 @@ func (l *sqliteGraphLedger) InsertIfAbsent(ctx context.Context, rec GraphSyncRec
 func (l *sqliteGraphLedger) Get(ctx context.Context, syncID string) (GraphSyncRecord, bool, error) {
 	var rec GraphSyncRecord
 	var receivedAt int64
-	err := l.db.QueryRowContext(ctx,
+	err := l.db.QueryRowContext(
+		ctx,
 		`SELECT sync_id, project_id, session_id, schema_version, graph_digest, facts, graph_json, received_at
 		 FROM graph_syncs WHERE sync_id = ?`, syncID,
 	).Scan(&rec.SyncID, &rec.ProjectID, &rec.SessionID, &rec.SchemaVersion,
