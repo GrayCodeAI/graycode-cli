@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/GrayCodeAI/eyrie/llm"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // ChatClient abstracts the LLM client methods used by Session.

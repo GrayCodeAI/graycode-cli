@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/permissions"
-	"github.com/GrayCodeAI/hawk/internal/permissions/stableid"
+	"github.com/GrayCodeAI/graycode-cli/internal/permissions"
+	"github.com/GrayCodeAI/graycode-cli/internal/permissions/stableid"
 )
 
 func newExactStore(t *testing.T) *permissions.StableRuleStore {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -325,7 +325,7 @@ func FormatRecoveryCandidates(candidates []RecoveryCandidate) string {
 	}
 
 	var b strings.Builder
-	b.WriteString("Interrupted sessions (hawk recover <id> to resume):\n")
+	b.WriteString("Interrupted sessions (graycode recover <id> to resume):\n")
 	b.WriteString(strings.Repeat("─", 60) + "\n")
 
 	for i, c := range candidates {

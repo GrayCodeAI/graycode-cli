@@ -336,7 +336,7 @@ func ValidateTasks(content string) ValidationResult {
 
 // ValidateSpecFile validates a spec file on disk.
 func ValidateSpecFile(path string) ValidationResult {
-	data, err := os.ReadFile(path) // #nosec G304 -- path is a spec file under the hawk specs directory
+	data, err := os.ReadFile(path) // #nosec G304 -- path is a spec file under the graycode specs directory
 	if err != nil {
 		return ValidationResult{
 			Issues: []ValidationIssue{{

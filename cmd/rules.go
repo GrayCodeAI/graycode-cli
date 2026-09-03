@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/GrayCodeAI/hawk/internal/rules"
+	"github.com/GrayCodeAI/graycode-cli/internal/rules"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +18,7 @@ var rulesCmd = &cobra.Command{
 	Use:   "rules",
 	Short: "Detect, import, and export AI coding rules between tool formats",
 	Long: `rules manages AI coding rule files across different tools.
-Supported formats: hawk, cursor, claudecode, copilot, gemini.
+Supported formats: graycode, cursor, claudecode, copilot, gemini.
 
 Subcommands:
   detect                   Show which AI tool rule files exist in the current directory
@@ -56,7 +56,7 @@ var rulesDetectCmd = &cobra.Command{
 
 var rulesImportCmd = &cobra.Command{
 	Use:   "import",
-	Short: "Import rules from another tool's format into hawk",
+	Short: "Import rules from another tool's format into graycode",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if rulesImportFrom == "" {
 			return fmt.Errorf("--from flag is required (e.g. --from cursor)")
@@ -73,9 +73,9 @@ var rulesImportCmd = &cobra.Command{
 			return nil
 		}
 
-		// Export to hawk format.
-		if err := rules.Export(".", rules.FormatHawk, imported); err != nil {
-			return fmt.Errorf("export to hawk format failed: %w", err)
+		// Export to graycode format.
+		if err := rules.Export(".", rules.FormatGraycode, imported); err != nil {
+			return fmt.Errorf("export to graycode format failed: %w", err)
 		}
 
 		cmd.Println(fmt.Sprintf("Imported %d rule(s) from %s to .agents/rules/.", len(imported), rulesImportFrom))
@@ -88,30 +88,30 @@ var rulesImportCmd = &cobra.Command{
 
 var rulesExportCmd = &cobra.Command{
 	Use:   "export",
-	Short: "Export hawk rules to another tool's format",
+	Short: "Export graycode rules to another tool's format",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if rulesExportTo == "" {
 			return fmt.Errorf("--to flag is required (e.g. --to claudecode)")
 		}
 
-		// Read hawk rules.
-		hawkRules, err := rules.Import(".", rules.FormatHawk)
+		// Read graycode rules.
+		graycodeRules, err := rules.Import(".", rules.FormatGraycode)
 		if err != nil {
-			return fmt.Errorf("read hawk rules failed: %w", err)
+			return fmt.Errorf("read graycode rules failed: %w", err)
 		}
 
-		if len(hawkRules) == 0 {
-			cmd.Println("No hawk rules found in .agents/rules/. Nothing to export.")
+		if len(graycodeRules) == 0 {
+			cmd.Println("No graycode rules found in .agents/rules/. Nothing to export.")
 			return nil
 		}
 
 		to := rules.Format(rulesExportTo)
-		if err := rules.Export(".", to, hawkRules); err != nil {
+		if err := rules.Export(".", to, graycodeRules); err != nil {
 			return fmt.Errorf("export to %s format failed: %w", rulesExportTo, err)
 		}
 
-		cmd.Println(fmt.Sprintf("Exported %d rule(s) to %s format.", len(hawkRules), rulesExportTo))
-		for _, r := range hawkRules {
+		cmd.Println(fmt.Sprintf("Exported %d rule(s) to %s format.", len(graycodeRules), rulesExportTo))
+		for _, r := range graycodeRules {
 			cmd.Println(fmt.Sprintf("  - %s", r.Name))
 		}
 		return nil

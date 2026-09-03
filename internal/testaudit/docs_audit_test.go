@@ -14,9 +14,9 @@ func TestArchitectureDocsDoNotContainStaleContractsLanguage(t *testing.T) {
 		"README.md",
 		"AGENTS.md",
 		"docs/architecture/README.md",
-		"docs/architecture/hawk-product-architecture.md",
+		"docs/architecture/graycode-product-architecture.md",
 		"docs/architecture/graycode-contract-spec.md",
-		"docs/plans/hawk-contracts-migration-backlog.md",
+		"docs/plans/graycode-contracts-migration-backlog.md",
 	}
 
 	forbiddenPhrases := []string{
@@ -48,7 +48,7 @@ func TestArchitectureDocsMentionCurrentReviewVerifyContracts(t *testing.T) {
 			"eagle/review",
 			"eagle/verify",
 		},
-		"docs/architecture/hawk-product-architecture.md": {
+		"docs/architecture/graycode-product-architecture.md": {
 			"eagle/review",
 			"eagle/verify",
 		},

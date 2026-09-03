@@ -25,7 +25,7 @@ func TestWriteReportToPathPrivate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	if !strings.Contains(string(data), "# hawk swift") {
+	if !strings.Contains(string(data), "# graycode swift") {
 		t.Errorf("report content missing header")
 	}
 }
@@ -48,7 +48,7 @@ func TestWriteReportFileUniqueness(t *testing.T) {
 		t.Errorf("report %q not written to TMPDIR %q", p1, dir)
 	}
 	for _, p := range []string{p1, p2} {
-		if !strings.HasPrefix(filepath.Base(p), "hawk-swift-") {
+		if !strings.HasPrefix(filepath.Base(p), "graycode-swift-") {
 			t.Errorf("unexpected file name %q", p)
 		}
 		if !strings.HasSuffix(p, ".md") {

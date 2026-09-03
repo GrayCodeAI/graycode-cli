@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 var httpClient = &http.Client{Timeout: 10 * time.Second}
@@ -25,7 +25,7 @@ type Completion struct {
 	Title      string `json:"title"`
 	Body       string `json:"body,omitempty"`
 	OK         bool   `json:"ok"`
-	Source     string `json:"source,omitempty"` // e.g. "hawk exec"
+	Source     string `json:"source,omitempty"` // e.g. "graycode exec"
 	Branch     string `json:"branch,omitempty"`
 	WebhookURL string `json:"-"`
 }
@@ -35,8 +35,8 @@ var envReader = os.Getenv
 
 // Configured reports whether any notification channel is set up.
 func Configured() bool {
-	return envReader("HAWK_NOTIFY_WEBHOOK_URL") != "" ||
-		(envReader("HAWK_NOTIFY_TELEGRAM_TOKEN") != "" && envReader("HAWK_NOTIFY_TELEGRAM_CHAT_ID") != "")
+	return envReader("GRAYCODE_NOTIFY_WEBHOOK_URL") != "" ||
+		(envReader("GRAYCODE_NOTIFY_TELEGRAM_TOKEN") != "" && envReader("GRAYCODE_NOTIFY_TELEGRAM_CHAT_ID") != "")
 }
 
 // SendCompletion delivers c to every configured channel. Errors are joined;
@@ -47,12 +47,12 @@ func SendCompletion(c Completion) error {
 		c.Title = "Agent run finished"
 	}
 	var errs []string
-	if url := envReader("HAWK_NOTIFY_WEBHOOK_URL"); url != "" {
+	if url := envReader("GRAYCODE_NOTIFY_WEBHOOK_URL"); url != "" {
 		if err := sendWebhook(url, c); err != nil {
 			errs = append(errs, "webhook: "+err.Error())
 		}
 	}
-	tok, chat := envReader("HAWK_NOTIFY_TELEGRAM_TOKEN"), envReader("HAWK_NOTIFY_TELEGRAM_CHAT_ID")
+	tok, chat := envReader("GRAYCODE_NOTIFY_TELEGRAM_TOKEN"), envReader("GRAYCODE_NOTIFY_TELEGRAM_CHAT_ID")
 	if tok != "" && chat != "" {
 		if err := sendTelegram(tok, chat, renderText(c)); err != nil {
 			errs = append(errs, "telegram: "+err.Error())

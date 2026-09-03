@@ -8,7 +8,7 @@ func NeedsXiaomiTokenPlanRegion(providerID string) bool {
 }
 
 // SetXiaomiTokenPlanRegion persists region (cn, sgp, ams). Eyrie reads the
-// provider state directly when probing; Hawk does not mutate process env.
+// provider state directly when probing; Graycode does not mutate process env.
 func SetXiaomiTokenPlanRegion(region string) error {
 	return SetGatewayRegion(ProviderXiaomiTokenPlan, region)
 }

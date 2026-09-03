@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-A practical guide for diagnosing common hawk daemon and CLI issues.
+A practical guide for diagnosing common graycode daemon and CLI issues.
 
 ## Table of Contents
 
@@ -30,27 +30,27 @@ because the auth middleware would be open to the network.
 **Fix:** Set an API key:
 
 ```bash
-export HAWK_DAEMON_API_KEY=$(openssl rand -base64 32)
-hawk daemon start --host 0.0.0.0 --port 4590
+export GRAYCODE_DAEMON_API_KEY=$(openssl rand -base64 32)
+graycode daemon start --host 0.0.0.0 --port 4590
 ```
 
 Or bind to loopback only (no API key required, but not remotely accessible):
 
 ```bash
-hawk daemon start --host 127.0.0.1 --port 4590
+graycode daemon start --host 127.0.0.1 --port 4590
 ```
 
 ### "permission denied" on state directory
 
-The daemon writes logs, PID files, and the audit log to `~/.hawk/state/`.
+The daemon writes logs, PID files, and the audit log to `~/.graycode/state/`.
 
 **Fix:**
 
 ```bash
-mkdir -p ~/.hawk/state
-chmod 750 ~/.hawk/state
-# If running under systemd as user 'hawk', ensure ownership:
-chown -R hawk:hawk ~/.hawk
+mkdir -p ~/.graycode/state
+chmod 750 ~/.graycode/state
+# If running under systemd as user 'graycode', ensure ownership:
+chown -R graycode:graycode ~/.graycode
 ```
 
 ### "port already in use"
@@ -64,7 +64,7 @@ Another process is using port 4590.
 lsof -i :4590
 
 # Or use a different port
-hawk daemon start --port 4591
+graycode daemon start --port 4591
 ```
 
 ---
@@ -84,9 +84,9 @@ curl -v http://localhost:4590/v1/ready
 
 Check the response body for the specific failed check. Common causes:
 
-- No model configured — set `HAWK_MODEL` or provider credentials.
+- No model configured — set `GRAYCODE_MODEL` or provider credentials.
 - Eyrie catalog not initialized — the nine Go modules are independent sibling
-  repositories; from a full parent workspace, run `make setup` in hawk to
+  repositories; from a full parent workspace, run `make setup` in graycode to
   regenerate the parent `go.work`:
   ```bash
   make setup
@@ -103,11 +103,11 @@ failed to start.
 
 ```bash
 # Check if the process is running
-ps aux | grep hawk
+ps aux | grep graycode
 
 # Check logs
-journalctl -u hawk-daemon -n 50
-tail -50 ~/.hawk/state/daemon.log
+journalctl -u graycode-daemon -n 50
+tail -50 ~/.graycode/state/daemon.log
 ```
 
 ---
@@ -121,7 +121,7 @@ The daemon requires `Authorization: Bearer <key>` or `X-API-Key: <key>`.
 **Fix:**
 
 ```bash
-curl -H "X-API-Key: $HAWK_DAEMON_API_KEY" http://localhost:4590/v1/stats
+curl -H "X-API-Key: $GRAYCODE_DAEMON_API_KEY" http://localhost:4590/v1/stats
 ```
 
 ### "constant time comparison" errors in logs
@@ -132,16 +132,16 @@ No action needed.
 
 ### Forgotten API key
 
-The API key is written to `~/.hawk/state/daemon.key` (permissions 0600).
+The API key is written to `~/.graycode/state/daemon.key` (permissions 0600).
 
 ```bash
-cat ~/.hawk/state/daemon.key
+cat ~/.graycode/state/daemon.key
 ```
 
 **Security note:** Remove this file in production after initial testing:
 
 ```bash
-rm ~/.hawk/state/daemon.key
+rm ~/.graycode/state/daemon.key
 ```
 
 ---
@@ -153,7 +153,7 @@ your request. The default limits are:
 
 - **General API**: 10 req/min, burst 4
 - **Chat**: 30 req/min, burst 6
-- **Concurrent chat sessions**: 4 (configurable via `HAWK_DAEMON_MAX_CONCURRENT`)
+- **Concurrent chat sessions**: 4 (configurable via `GRAYCODE_DAEMON_MAX_CONCURRENT`)
 
 **Fix:**
 
@@ -171,7 +171,7 @@ your request. The default limits are:
 CORS is **disabled by default**. Enable it when serving browser-based clients:
 
 ```bash
-hawk daemon start --cors https://app.example.com --cors https://admin.example.com
+graycode daemon start --cors https://app.example.com --cors https://admin.example.com
 ```
 
 Use `--cors '*'` only for development — it allows any origin.
@@ -182,7 +182,7 @@ The CORS middleware handles OPTIONS preflight automatically when the `cors`
 feature flag is enabled. If you're getting 405, ensure CORS is enabled:
 
 ```bash
-export HAWK_FEATURE_CORS=1
+export GRAYCODE_FEATURE_CORS=1
 ```
 
 ---
@@ -211,7 +211,7 @@ The metrics endpoint is protected by the same API key authentication as other
 endpoints.
 
 ```bash
-curl -H "X-API-Key: $HAWK_DAEMON_API_KEY" http://localhost:4590/v1/metrics
+curl -H "X-API-Key: $GRAYCODE_DAEMON_API_KEY" http://localhost:4590/v1/metrics
 ```
 
 ### Metrics output is empty
@@ -227,7 +227,7 @@ Prometheus version supports this format (Prometheus 2.20+).
 For troubleshooting, try the JSON format:
 
 ```bash
-curl -H "X-API-Key: $HAWK_DAEMON_API_KEY" \
+curl -H "X-API-Key: $GRAYCODE_DAEMON_API_KEY" \
   "http://localhost:4590/v1/metrics?format=json"
 ```
 
@@ -240,13 +240,13 @@ curl -H "X-API-Key: $HAWK_DAEMON_API_KEY" \
 Telemetry is **opt-in**. You must explicitly enable it:
 
 ```bash
-export HAWK_CODE_ENABLE_TELEMETRY=1
+export GRAYCODE_ENABLE_TELEMETRY=1
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-hawk daemon start
+graycode daemon start
 ```
 
 **Important**: Setting `OTEL_EXPORTER_OTLP_ENDPOINT` alone does **not**
-enable telemetry. The `HAWK_CODE_ENABLE_TELEMETRY=1` flag is required.
+enable telemetry. The `GRAYCODE_ENABLE_TELEMETRY=1` flag is required.
 
 ### "telemetry initialization failed" warning in logs
 
@@ -265,7 +265,7 @@ curl -v http://localhost:4318/v1/traces
 
 The OTel SDK uses a batch span processor with a 5-second flush interval.
 On shutdown, the daemon waits up to 2 seconds (configurable via
-`HAWK_CODE_OTEL_SHUTDOWN_TIMEOUT_MS`) to flush pending spans.
+`GRAYCODE_OTEL_SHUTDOWN_TIMEOUT_MS`) to flush pending spans.
 
 To force a flush, send SIGTERM to the daemon — it will flush telemetry
 before shutting down.
@@ -276,25 +276,25 @@ before shutting down.
 
 ### Security log won't open
 
-The audit log is stored in `~/.hawk/state/securitylog/`. If the directory
+The audit log is stored in `~/.graycode/state/securitylog/`. If the directory
 doesn't exist or isn't writable:
 
 ```bash
-mkdir -p ~/.hawk/state/securitylog
-chmod 700 ~/.hawk/state/securitylog
+mkdir -p ~/.graycode/state/securitylog
+chmod 700 ~/.graycode/state/securitylog
 ```
 
 ### "log tail does not match head pointer (truncated or tampered)"
 
 This error means the security log has been modified or truncated. The
 tamper-evident design detected an inconsistency. Restore from a backup
-of the `~/.hawk/state/securitylog/` directory.
+of the `~/.graycode/state/securitylog/` directory.
 
 ### Lost the HMAC key
 
 The HMAC key (`sel.key`) is required to verify the audit log. If it's
 lost, all entries become unverifiable. **Always back up the entire
-`~/.hawk/state/securitylog/` directory.**
+`~/.graycode/state/securitylog/` directory.**
 
 ---
 
@@ -306,13 +306,13 @@ Tools that require sandboxing are disabled until the sandbox container
 is running. Check the sandbox status:
 
 ```bash
-hawk sandbox status
+graycode sandbox status
 ```
 
 Start the sandbox:
 
 ```bash
-hawk sandbox start
+graycode sandbox start
 ```
 
 ### Permission denied for a tool
@@ -328,13 +328,13 @@ audit log for the `denied` event type.
 
 1. Check the metrics endpoint for request duration:
    ```bash
-   curl -H "X-API-Key: $HAWK_DAEMON_API_KEY" \
+   curl -H "X-API-Key: $GRAYCODE_DAEMON_API_KEY" \
      "http://localhost:4590/v1/metrics?format=json"
    ```
-2. Check concurrent sessions: `hawk_daemon_chat_concurrency_used`
+2. Check concurrent sessions: `graycode_daemon_chat_concurrency_used`
 3. If at capacity, increase the concurrency limit:
    ```bash
-   export HAWK_DAEMON_MAX_CONCURRENT=8
+   export GRAYCODE_DAEMON_MAX_CONCURRENT=8
    ```
 
 ### High memory usage
@@ -352,7 +352,7 @@ large contexts can consume significant memory. Consider:
 
 ### Daemon exits immediately
 
-The default entrypoint runs `hawk daemon start --host 0.0.0.0 --port 4590`.
+The default entrypoint runs `graycode daemon start --host 0.0.0.0 --port 4590`.
 Non-loopback binds require both an API key and native TLS; an API key alone
 does not protect credentials or conversation data from plaintext interception.
 
@@ -360,9 +360,9 @@ does not protect credentials or conversation data from plaintext interception.
 
 ```bash
 docker run -p 4590:4590 \
-  -e HAWK_DAEMON_API_KEY=$(openssl rand -base64 32) \
+  -e GRAYCODE_DAEMON_API_KEY=$(openssl rand -base64 32) \
   -v "$PWD/certs:/certs:ro" \
-  ghcr.io/graycodeai/hawk-daemon:latest \
+  ghcr.io/graycodeai/graycode-daemon:latest \
   --tls-cert /certs/server.crt --tls-key /certs/server.key
 ```
 
@@ -377,35 +377,35 @@ or start-period if needed.
 
 ## Systemd Issues
 
-### "Failed to start hawk-daemon.service: Unit not found"
+### "Failed to start graycode-daemon.service: Unit not found"
 
 Install the unit file:
 
 ```bash
-sudo cp packaging/systemd/hawk-daemon.service /etc/systemd/system/
+sudo cp packaging/systemd/graycode-daemon.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now hawk-daemon
+sudo systemctl enable --now graycode-daemon
 ```
 
 ### "Permission denied" accessing state directory
 
-The systemd unit runs as user `hawk` with `ProtectSystem=strict` and
-`ReadWritePaths=%h/.hawk/state`. Ensure the user's home directory has
+The systemd unit runs as user `graycode` with `ProtectSystem=strict` and
+`ReadWritePaths=%h/.graycode/state`. Ensure the user's home directory has
 the correct state:
 
 ```bash
-sudo -u hawk mkdir -p /home/hawk/.hawk/state
-sudo -u hawk chmod 750 /home/hawk/.hawk/state
+sudo -u graycode mkdir -p /home/graycode/.graycode/state
+sudo -u graycode chmod 750 /home/graycode/.graycode/state
 ```
 
 ### Daemon not logging to journald
 
 If using the systemd unit, logs go to both journald (stdout/stderr) and
-`~/.hawk/state/daemon.log`. Check:
+`~/.graycode/state/daemon.log`. Check:
 
 ```bash
-journalctl -u hawk-daemon -f
-tail -f ~/.hawk/state/daemon.log
+journalctl -u graycode-daemon -f
+tail -f ~/.graycode/state/daemon.log
 ```
 
 If journald logs are missing, verify that stdout/stderr are not being

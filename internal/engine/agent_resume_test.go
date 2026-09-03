@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	agentcontracts "github.com/GrayCodeAI/eagle/agent"
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 func TestSubAgentResume_ReplaysTranscriptMessages(t *testing.T) {

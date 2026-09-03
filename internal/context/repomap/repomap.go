@@ -1,12 +1,12 @@
 // Package repomap is the prompt-injection shim that produces a token-budgeted
-// repository overview for hawk's context layer. It builds an import/refer
+// repository overview for graycode's context layer. It builds an import/refer
 // graph over the source files in root, ranks the nodes with a PageRank
 // pass, and renders the highest-ranked files (and their top symbols) as a
 // compact text block capped at Options.Budget tokens.
 //
 // # Relationship to internal/intelligence/repomap
 //
-// hawk ships a second package, internal/intelligence/repomap, that exposes
+// graycode ships a second package, internal/intelligence/repomap, that exposes
 // a much larger surface: call graphs, search, quality signals, API
 // scanning, incremental indexing, and so on. That package is the deep
 // analysis engine. THIS package is intentionally narrow: one entry point

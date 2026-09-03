@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/GrayCodeAI/hawk/internal/usage"
+	"github.com/GrayCodeAI/graycode-cli/internal/usage"
 	"github.com/spf13/cobra"
 )
 

@@ -11,22 +11,22 @@ import (
 	"time"
 
 	agentcontracts "github.com/GrayCodeAI/eagle/agent"
-	"github.com/GrayCodeAI/hawk/internal/conversationarc"
-	"github.com/GrayCodeAI/hawk/internal/engine/planning"
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
-	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
-	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
-	"github.com/GrayCodeAI/hawk/internal/plugin"
-	"github.com/GrayCodeAI/hawk/internal/prompts"
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
-	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
-	"github.com/GrayCodeAI/hawk/internal/schedule"
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/snapshot"
-	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/conversationarc"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/planning"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/metrics"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
+	"github.com/GrayCodeAI/graycode-cli/internal/prompts"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/resilience/ratelimit"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/schedule"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/snapshot"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // MemoryRecaller abstracts memory recall/remember so engine avoids importing memory directly.
@@ -83,7 +83,7 @@ type Session struct {
 	// milestones/phase) loaded per session. See conversationarc package.
 	arc *conversationarc.Arc
 	// incremental is the opt-in incremental system-context reconciler for
-	// dynamic sections (e.g. memories). Nil unless HAWK_INCREMENTAL_CONTEXT=1.
+	// dynamic sections (e.g. memories). Nil unless GRAYCODE_INCREMENTAL_CONTEXT=1.
 	// See incremental.go.
 	incremental *memoryIncremental
 	// learnFn persists structured lessons produced by failure reflection to a
@@ -162,7 +162,7 @@ type Session struct {
 
 // NewSession creates a conversation session through Eyrie's engine facade.
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
-	return NewHawkSession(context.Background(), gateway.Selection{
+	return NewGraycodeSession(context.Background(), gateway.Selection{
 		Provider: provider,
 		Model:    model,
 	}, provider, model, systemPrompt, registry)
@@ -896,7 +896,7 @@ func (s *Session) EscalatePermission(requestID string) bool {
 	return s.perms.EscalatePermission(requestID)
 }
 
-// SetConversationGraph attaches Hawk's product-owned conversation graph and
+// SetConversationGraph attaches Graycode's product-owned conversation graph and
 // seeds it from an already-resumed linear transcript when the graph is new.
 func (s *Session) SetConversationGraph(graph *session.ConversationGraph) {
 	if s.persist != nil {

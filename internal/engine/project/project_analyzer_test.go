@@ -425,11 +425,11 @@ func TestEngine(t *testing.T) {
 
 func TestGenerateOnboardingDoc(t *testing.T) {
 	analysis := &ProjectAnalysis{
-		Name:         "hawk",
+		Name:         "graycode",
 		Language:     "Go",
 		Framework:    "Cobra CLI + Bubbletea TUI",
 		Architecture: "layered",
-		EntryPoints:  []string{"cmd/hawk/main.go"},
+		EntryPoints:  []string{"cmd/graycode/main.go"},
 		KeyModules: []ModuleInfo{
 			{Name: "engine", Path: "engine", Purpose: "Agent loop, compaction, streaming", Size: 14000},
 			{Name: "tool", Path: "tool", Purpose: "40 built-in tools", Size: 8000},
@@ -451,7 +451,7 @@ func TestGenerateOnboardingDoc(t *testing.T) {
 
 	// Verify key sections exist.
 	expectedSections := []string{
-		"# Project: hawk",
+		"# Project: graycode",
 		"## Architecture: Layered",
 		"## Key Modules",
 		"engine (14K LOC)",

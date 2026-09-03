@@ -1,8 +1,8 @@
 package session
 
-import "github.com/GrayCodeAI/hawk/internal/types"
+import "github.com/GrayCodeAI/graycode-cli/internal/types"
 
-// FromRuntimeMessages converts Hawk runtime messages into persisted session messages.
+// FromRuntimeMessages converts Graycode runtime messages into persisted session messages.
 func FromRuntimeMessages(in []types.EyrieMessage) []Message {
 	if len(in) == 0 {
 		return nil
@@ -22,18 +22,18 @@ func FromRuntimeMessages(in []types.EyrieMessage) []Message {
 	return out
 }
 
-// FromRuntimeToolCalls converts Hawk runtime tool calls into persisted contracts.
+// FromRuntimeToolCalls converts Graycode runtime tool calls into persisted contracts.
 // types.ToolCall and session.ToolCall are identical (both alias tools.ToolCall).
 func FromRuntimeToolCalls(in []types.ToolCall) []ToolCall {
 	return in
 }
 
-// FromRuntimeToolResults converts Hawk runtime tool results into persisted contracts.
+// FromRuntimeToolResults converts Graycode runtime tool results into persisted contracts.
 func FromRuntimeToolResults(in []types.ToolResult) []ToolResult {
 	return in
 }
 
-// ToRuntimeMessages converts persisted session messages back into Hawk runtime messages.
+// ToRuntimeMessages converts persisted session messages back into Graycode runtime messages.
 func ToRuntimeMessages(in []Message) []types.EyrieMessage {
 	if len(in) == 0 {
 		return nil
@@ -53,12 +53,12 @@ func ToRuntimeMessages(in []Message) []types.EyrieMessage {
 	return out
 }
 
-// ToRuntimeToolCalls converts persisted contracts back into Hawk runtime tool calls.
+// ToRuntimeToolCalls converts persisted contracts back into Graycode runtime tool calls.
 func ToRuntimeToolCalls(in []ToolCall) []types.ToolCall {
 	return in
 }
 
-// ToRuntimeToolResults converts persisted contracts back into Hawk runtime tool results.
+// ToRuntimeToolResults converts persisted contracts back into Graycode runtime tool results.
 func ToRuntimeToolResults(in []ToolResult) []types.ToolResult {
 	return in
 }

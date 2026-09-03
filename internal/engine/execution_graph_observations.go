@@ -11,9 +11,9 @@ import (
 	policycontracts "github.com/GrayCodeAI/eagle/policy"
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	eyriegraph "github.com/GrayCodeAI/eyrie/graph"
-	"github.com/GrayCodeAI/hawk/internal/engine/token"
-	"github.com/GrayCodeAI/hawk/internal/graphjournal"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/token"
+	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 	shrikegraph "github.com/GrayCodeAI/shrike/graph"
 )
 
@@ -30,10 +30,10 @@ func (s *Session) recordPolicyObservation(tc types.ToolCall, stage string, allow
 	}
 	verdict := policycontracts.Allow(reason)
 	verdict.Rule = strings.TrimSpace(stage)
-	verdict.Source = "hawk." + strings.TrimSpace(stage)
+	verdict.Source = "graycode." + strings.TrimSpace(stage)
 	if !allowed {
 		verdict = policycontracts.Deny(reason, strings.TrimSpace(stage))
-		verdict.Source = "hawk." + strings.TrimSpace(stage)
+		verdict.Source = "graycode." + strings.TrimSpace(stage)
 	}
 	if err := graphjournal.AppendPolicy(sessionID, tc.ID, stage, verdict, time.Now()); err != nil {
 		s.Logger().Warn("graph observation append failed", map[string]interface{}{
@@ -120,7 +120,7 @@ func (s *Session) SessionID() string {
 }
 
 // ConfigureContextGraphObservation binds Harrier recall projections to this
-// persisted Hawk session. It is safe to call before either side is configured.
+// persisted Graycode session. It is safe to call before either side is configured.
 func (s *Session) ConfigureContextGraphObservation(repositoryDir string) {
 	if s == nil || s.MemorySvc() == nil || s.MemorySvc().Harrier() == nil {
 		return
@@ -335,7 +335,7 @@ func (s *Session) recordEyrieOperationObservation(
 }
 
 // The following helpers convert Eyrie's vendored graph contract types into
-// Hawk's eagle/graph contract types. The definitions are byte-identical, so
+// Graycode's eagle/graph contract types. The definitions are byte-identical, so
 // conversion is a field-by-field copy at the sibling boundary.
 
 func toEagleNodes(nodes []eyriegraph.Node) []graphcontracts.Node {

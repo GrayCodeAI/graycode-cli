@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/terminal/tape"
+	"github.com/GrayCodeAI/graycode-cli/internal/terminal/tape"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +47,7 @@ overwrites, and write a sidecar meta.json with the content hash and commit ID.`,
 func init() {
 	tapeStatusCmd.Flags().BoolVar(&tapeStatusJSON, "json", false, "output status as JSON")
 	tapeCommitCmd.Flags().StringVar(&tapeCommitName, "name", "", "commit name (default: source basename)")
-	tapeCommitCmd.Flags().StringVar(&tapeCommitDir, "dir", "", "commit directory (default: HAWK_TAPES_DIR or user config dir)")
+	tapeCommitCmd.Flags().StringVar(&tapeCommitDir, "dir", "", "commit directory (default: GRAYCODE_TAPES_DIR or user config dir)")
 	tapeCmd.AddCommand(tapeStatusCmd, tapeCommitCmd)
 	rootCmd.AddCommand(tapeCmd)
 }

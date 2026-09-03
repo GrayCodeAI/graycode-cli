@@ -31,7 +31,7 @@ func TestWorkflowTool_Name(t *testing.T) {
 }
 
 func TestListWorkflows_Empty(t *testing.T) {
-	// Change to a temp dir with no .hawk/workflows/
+	// Change to a temp dir with no .graycode/workflows/
 	tmp := t.TempDir()
 	orig, _ := os.Getwd()
 	os.Chdir(tmp)

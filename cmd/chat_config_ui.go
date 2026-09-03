@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	lipgloss "charm.land/lipgloss/v2"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 func configMutedStyle() lipgloss.Style {
@@ -13,19 +13,19 @@ func configMutedStyle() lipgloss.Style {
 
 func configTitleStyle() lipgloss.Style {
 	// Talon Gold — title is the voice of the config panel.
-	return lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	return lipgloss.NewStyle().Foreground(graycodeColor).Bold(true)
 }
 
 func configSelectedStyle() lipgloss.Style {
 	// Talon Gold (bold) marks the focused row. Keep it distinct from
 	// the active/current value, which uses configActiveStyle.
-	return lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	return lipgloss.NewStyle().Foreground(graycodeColor).Bold(true)
 }
 
 func configAccentStyle() lipgloss.Style {
 	// Accent for inline highlights (breadcrumb, status line values).
 	// Same as title — both are the panel's voice.
-	return lipgloss.NewStyle().Foreground(hawkColor)
+	return lipgloss.NewStyle().Foreground(graycodeColor)
 }
 
 func renderConfigBreadcrumb(title string) string {

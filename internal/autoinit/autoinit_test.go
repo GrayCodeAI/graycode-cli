@@ -97,7 +97,7 @@ func TestMaybeRun_Disabled(t *testing.T) {
 func TestMaybeRun_ForceIgnoresExistingContext(t *testing.T) {
 	setTestStateDir(t)
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "HAWK.md"), []byte("# x"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "GRAYCODE.md"), []byte("# x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	calls := 0
@@ -150,7 +150,7 @@ func TestMaybeRun_ReturnsMarkerWriteError(t *testing.T) {
 	if err := os.WriteFile(stateFile, []byte("not a directory"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("HAWK_STATE_DIR", stateFile)
+	t.Setenv("GRAYCODE_STATE_DIR", stateFile)
 	calls := 0
 	run := func(context.Context, string) error {
 		calls++
@@ -184,5 +184,5 @@ func TestHasContext(t *testing.T) {
 
 func setTestStateDir(t *testing.T) {
 	t.Helper()
-	t.Setenv("HAWK_STATE_DIR", filepath.Join(t.TempDir(), "state"))
+	t.Setenv("GRAYCODE_STATE_DIR", filepath.Join(t.TempDir(), "state"))
 }

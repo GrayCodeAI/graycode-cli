@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/daemon"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/daemon"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // TestDaemonReadyProbe_NilFactory verifies the probe reports not-ready when no
@@ -34,8 +34,8 @@ func TestDaemonReadyProbe_NilFactory(t *testing.T) {
 // make the daemon ready when Eyrie's authoritative preflight is incomplete.
 func TestDaemonReadyProbe_FailedEyriePreflight(t *testing.T) {
 	factory := func(daemon.ChatRequest) (*engine.Session, error) { return nil, nil }
-	probe := daemonReadyProbeWithPreflight(factory, func(context.Context) hawkconfig.EnginePreflight {
-		return hawkconfig.EnginePreflight{Ready: false}
+	probe := daemonReadyProbeWithPreflight(factory, func(context.Context) graycodeconfig.EnginePreflight {
+		return graycodeconfig.EnginePreflight{Ready: false}
 	})
 	ok, reason := probe()
 	if ok {
@@ -48,8 +48,8 @@ func TestDaemonReadyProbe_FailedEyriePreflight(t *testing.T) {
 
 func TestDaemonReadyProbe_ReadyEyriePreflight(t *testing.T) {
 	factory := func(daemon.ChatRequest) (*engine.Session, error) { return nil, nil }
-	probe := daemonReadyProbeWithPreflight(factory, func(context.Context) hawkconfig.EnginePreflight {
-		return hawkconfig.EnginePreflight{Ready: true}
+	probe := daemonReadyProbeWithPreflight(factory, func(context.Context) graycodeconfig.EnginePreflight {
+		return graycodeconfig.EnginePreflight{Ready: true}
 	})
 	ok, reason := probe()
 	if !ok || reason != "" {
@@ -62,8 +62,8 @@ func TestDaemonReadyProbe_ReadyEyriePreflight(t *testing.T) {
 func TestDaemonReadyProbe_AffectsReadyEndpoint(t *testing.T) {
 	factory := func(daemon.ChatRequest) (*engine.Session, error) { return nil, nil }
 	srv := daemon.New(daemon.Config{Port: 0, Host: "127.0.0.1"}, factory)
-	srv.SetReadyFn(daemonReadyProbeWithPreflight(factory, func(context.Context) hawkconfig.EnginePreflight {
-		return hawkconfig.EnginePreflight{Ready: false}
+	srv.SetReadyFn(daemonReadyProbeWithPreflight(factory, func(context.Context) graycodeconfig.EnginePreflight {
+		return graycodeconfig.EnginePreflight{Ready: false}
 	}))
 
 	addr, err := srv.Start()

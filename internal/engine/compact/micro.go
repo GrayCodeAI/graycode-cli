@@ -3,7 +3,7 @@ package compact
 import (
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 type MicroCompactConfig struct {

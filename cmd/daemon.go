@@ -14,18 +14,18 @@ import (
 	"syscall"
 	"time"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/daemon"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/executiongraph"
-	"github.com/GrayCodeAI/hawk/internal/fsutil"
-	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
-	"github.com/GrayCodeAI/hawk/internal/netutil"
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
-	"github.com/GrayCodeAI/hawk/internal/observability/otellog"
-	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
-	"github.com/GrayCodeAI/hawk/internal/securitylog"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/daemon"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/executiongraph"
+	"github.com/GrayCodeAI/graycode-cli/internal/fsutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/multiagent/agents"
+	"github.com/GrayCodeAI/graycode-cli/internal/netutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/otellog"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/graycode-cli/internal/securitylog"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -43,8 +43,8 @@ var (
 
 var daemonCmd = &cobra.Command{
 	Use:   "daemon",
-	Short: "Manage the hawk background server",
-	Long:  "Run hawk as a background HTTP server for programmatic/CI access.",
+	Short: "Manage the graycode background server",
+	Long:  "Run graycode as a background HTTP server for programmatic/CI access.",
 }
 
 var daemonStartCmd = &cobra.Command{
@@ -68,7 +68,7 @@ var daemonStatusCmd = &cobra.Command{
 func init() {
 	daemonStartCmd.Flags().IntVarP(&daemonPort, "port", "p", 4590, "Port to listen on")
 	daemonStartCmd.Flags().StringVar(&daemonHost, "host", netutil.LoopbackHost, "Host to bind to (default: 127.0.0.1, use 0.0.0.0 for remote access)")
-	daemonStartCmd.Flags().StringVar(&daemonAPIKey, "api-key", "", "API key for protected daemon endpoints (defaults to HAWK_DAEMON_API_KEY or a generated key)")
+	daemonStartCmd.Flags().StringVar(&daemonAPIKey, "api-key", "", "API key for protected daemon endpoints (defaults to GRAYCODE_DAEMON_API_KEY or a generated key)")
 	daemonStartCmd.Flags().StringVar(&daemonLogLevel, "log-level", "INFO", "Log level for daemon output (DEBUG, INFO, WARN, ERROR)")
 	daemonStartCmd.Flags().StringSliceVar(&daemonCORSOrigins, "cors", []string{}, "Comma-separated list of allowed CORS origins (empty disables CORS, '*' allows all)")
 	daemonStartCmd.Flags().StringVar(&daemonTLSCertFile, "tls-cert", "", "Path to TLS certificate file (enables HTTPS when paired with --tls-key)")
@@ -81,9 +81,9 @@ func init() {
 }
 
 func runDaemonStart(_ *cobra.Command, _ []string) error {
-	settings := hawkconfig.LoadSettings()
+	settings := graycodeconfig.LoadSettings()
 
-	// Initialize OpenTelemetry telemetry (opt-in via HAWK_CODE_ENABLE_TELEMETRY=1).
+	// Initialize OpenTelemetry telemetry (opt-in via GRAYCODE_ENABLE_TELEMETRY=1).
 	telemetryProviders, telemetryErr := oteltrace.InitTelemetry(oteltrace.DefaultTelemetryConfig())
 	if telemetryErr != nil {
 		fmt.Fprintln(os.Stderr, "warning: telemetry initialization failed:", telemetryErr)
@@ -111,7 +111,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	}
 
 	// Set up file-backed logging for the daemon. Logs go to
-	// ~/.hawk/state/daemon.log with slog structured output.
+	// ~/.graycode/state/daemon.log with slog structured output.
 	logFile, logErr := openDaemonLogFile()
 	var daemonLogger *logger.Logger
 	if logErr != nil {
@@ -128,10 +128,10 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	}
 
 	// Replace the discarded logger with the real file-backed logger.
-	newSession := newConfiguredHawkSessionFactory(settings, daemonLogger)
+	newSession := newConfiguredGraycodeSessionFactory(settings, daemonLogger)
 
 	// Log startup banner.
-	daemonLogger.Info("hawk daemon starting", map[string]interface{}{
+	daemonLogger.Info("graycode daemon starting", map[string]interface{}{
 		"host":              daemonHost,
 		"port":              daemonPort,
 		"telemetry_enabled": telemetryProviders != nil && telemetryProviders.IsEnabled(),
@@ -139,7 +139,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 
 	apiKey := daemonAPIKey
 	if apiKey == "" {
-		apiKey = os.Getenv("HAWK_DAEMON_API_KEY")
+		apiKey = os.Getenv("GRAYCODE_DAEMON_API_KEY")
 	}
 	if apiKey == "" {
 		var err error
@@ -210,7 +210,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	})
 
 	// Wire Eyrie's authoritative local preflight into GET /v1/ready. A session
-	// factory only proves Hawk can attempt construction; readiness additionally
+	// factory only proves Graycode can attempt construction; readiness additionally
 	// requires Eyrie's provider state, catalog, credentials, and model selection.
 	srv.SetReadyFn(daemonReadyProbe(factory))
 	addr, err := srv.Start()
@@ -227,19 +227,19 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	})
 	defer preheater.Stop()
 
-	fmt.Printf("hawk daemon running on http://%s\n", addr)
+	fmt.Printf("graycode daemon running on http://%s\n", addr)
 	fmt.Println("Endpoints: GET /v1/health, GET /v1/ready, POST /v1/chat, GET /v1/sessions, GET /v1/metrics")
 	fmt.Println("Protected endpoints require Authorization: Bearer <api-key> or X-API-Key.")
 	if len(apiKey) > 8 {
 		fmt.Printf("API key: %s...%s\n", apiKey[:4], apiKey[len(apiKey)-4:])
 	} else {
-		fmt.Println("API key: (set via --api-key or HAWK_DAEMON_API_KEY)")
+		fmt.Println("API key: (set via --api-key or GRAYCODE_DAEMON_API_KEY)")
 	}
 	fmt.Printf("Logs: %s\n", filepath.Join(storage.DaemonRunDir(), "daemon.log"))
 	if telemetryProviders != nil && telemetryProviders.IsEnabled() {
 		fmt.Println("Telemetry: enabled (OTLP export configured)")
 	} else {
-		fmt.Println("Telemetry: disabled (set HAWK_CODE_ENABLE_TELEMETRY=1 to enable)")
+		fmt.Println("Telemetry: disabled (set GRAYCODE_ENABLE_TELEMETRY=1 to enable)")
 	}
 	keyFile := filepath.Join(storage.DaemonRunDir(), "daemon.key")
 	_ = os.MkdirAll(filepath.Dir(keyFile), 0o700)
@@ -283,7 +283,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 }
 
 // openDaemonLogFile opens (or creates) the daemon log file at
-// ~/.hawk/state/daemon.log and returns it. The directory is created if needed.
+// ~/.graycode/state/daemon.log and returns it. The directory is created if needed.
 func openDaemonLogFile() (*os.File, error) {
 	dir := storage.DaemonRunDir()
 	if err := os.MkdirAll(dir, 0o750); err != nil { // #nosec G301 -- daemon run dir needs group traversal
@@ -337,10 +337,10 @@ func slogLevelFromString(s string) slog.Level {
 // This never performs a paid/live model call — Eyrie preflight only inspects
 // local catalog/credential/model state — so it is safe to call on every probe.
 func daemonReadyProbe(factory daemon.SessionFactory) func() (bool, string) {
-	return daemonReadyProbeWithPreflight(factory, hawkconfig.EnginePreflightReport)
+	return daemonReadyProbeWithPreflight(factory, graycodeconfig.EnginePreflightReport)
 }
 
-func daemonReadyProbeWithPreflight(factory daemon.SessionFactory, preflight func(context.Context) hawkconfig.EnginePreflight) func() (bool, string) {
+func daemonReadyProbeWithPreflight(factory daemon.SessionFactory, preflight func(context.Context) graycodeconfig.EnginePreflight) func() (bool, string) {
 	return func() (bool, string) {
 		if factory == nil {
 			return false, "engine not configured"
@@ -397,14 +397,14 @@ func generateDaemonAPIKey() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b[:]), nil
 }
 
-// daemonAutonomyFromFlag resolves the --autonomy flag / HAWK_DAEMON_AUTONOMY
+// daemonAutonomyFromFlag resolves the --autonomy flag / GRAYCODE_DAEMON_AUTONOMY
 // env var into the server-side autonomy cap. An empty value leaves the
 // default cap (AutonomySemi) in place; invalid values fail closed at
 // "supervised" rather than silently allowing full autonomy.
 func daemonAutonomyFromFlag(s string) engine.AutonomyLevel {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		s = os.Getenv("HAWK_DAEMON_AUTONOMY")
+		s = os.Getenv("GRAYCODE_DAEMON_AUTONOMY")
 	}
 	if s == "" {
 		return 0 // zero => DefaultMaxAutonomy in the daemon

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 func writeRedactedChatMarkdownExport(m *chatModel) (string, error) {
@@ -160,7 +160,7 @@ func exportSessionTxt(m *chatModel) (string, error) {
 		return "", fmt.Errorf("no active session")
 	}
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("Hawk Session: %s\n", m.sessionID))
+	b.WriteString(fmt.Sprintf("Graycode Session: %s\n", m.sessionID))
 	b.WriteString(fmt.Sprintf("Model: %s/%s\n", m.session.Provider(), m.session.Model()))
 	b.WriteString(fmt.Sprintf("Exported: %s\n\n", time.Now().Format(time.RFC3339)))
 	b.WriteString(strings.Repeat("=", 60) + "\n\n")

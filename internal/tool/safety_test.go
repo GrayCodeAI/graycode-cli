@@ -234,9 +234,9 @@ func TestIsSensitivePath(t *testing.T) {
 		filepath.Join(home, ".ssh", "config"),
 		filepath.Join(home, ".ssh", "authorized_keys"),
 		filepath.Join(home, ".aws", "credentials"),
-		filepath.Join(home, ".hawk", "provider.json"),
-		filepath.Join(home, ".hawk", "env"),
-		filepath.Join(home, ".hawk", ".env"),
+		filepath.Join(home, ".graycode", "provider.json"),
+		filepath.Join(home, ".graycode", "env"),
+		filepath.Join(home, ".graycode", ".env"),
 		filepath.Join(home, ".env"),
 		"/some/project/.env",
 		"/tmp/app/credentials.json",
@@ -260,26 +260,26 @@ func TestIsSensitivePath(t *testing.T) {
 	}
 }
 
-func TestIsSensitivePath_HawkConfigDir(t *testing.T) {
+func TestIsSensitivePath_GraycodeConfigDir(t *testing.T) {
 	cfgDir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", cfgDir)
+	t.Setenv("GRAYCODE_CONFIG_DIR", cfgDir)
 	prov := filepath.Join(cfgDir, "provider.json")
 	if reason := IsSensitivePath(prov); reason == "" {
-		t.Fatalf("expected custom HAWK_CONFIG_DIR provider.json blocked, got empty")
+		t.Fatalf("expected custom GRAYCODE_CONFIG_DIR provider.json blocked, got empty")
 	}
 }
 
 func TestIsSensitivePath_EyrieConfigDirTakesPrecedence(t *testing.T) {
-	hawkDir := filepath.Join(t.TempDir(), "hawk")
+	graycodeDir := filepath.Join(t.TempDir(), "graycode")
 	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
-	t.Setenv("HAWK_CONFIG_DIR", hawkDir)
+	t.Setenv("GRAYCODE_CONFIG_DIR", graycodeDir)
 	t.Setenv("EYRIE_CONFIG_DIR", eyrieDir)
 
 	if reason := IsSensitivePath(filepath.Join(eyrieDir, "provider.json")); reason == "" {
 		t.Fatal("expected EYRIE_CONFIG_DIR/provider.json to be blocked")
 	}
-	if reason := IsSensitivePath(filepath.Join(hawkDir, "settings.json")); reason != "" {
-		t.Fatalf("expected Hawk settings path to remain allowed, got %q", reason)
+	if reason := IsSensitivePath(filepath.Join(graycodeDir, "settings.json")); reason != "" {
+		t.Fatalf("expected Graycode settings path to remain allowed, got %q", reason)
 	}
 }
 
@@ -323,18 +323,18 @@ func TestFileToolsBlockEyrieProviderConfig(t *testing.T) {
 	}
 }
 
-func TestIsSensitivePath_HawkConfigDirEnv(t *testing.T) {
+func TestIsSensitivePath_GraycodeConfigDirEnv(t *testing.T) {
 	cfgDir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", cfgDir)
+	t.Setenv("GRAYCODE_CONFIG_DIR", cfgDir)
 
 	envPath := filepath.Join(cfgDir, "env")
 	if reason := IsSensitivePath(envPath); reason == "" {
-		t.Error("expected HAWK_CONFIG_DIR/env to be blocked")
+		t.Error("expected GRAYCODE_CONFIG_DIR/env to be blocked")
 	}
 
 	dotEnvPath := filepath.Join(cfgDir, ".env")
 	if reason := IsSensitivePath(dotEnvPath); reason == "" {
-		t.Error("expected HAWK_CONFIG_DIR/.env to be blocked")
+		t.Error("expected GRAYCODE_CONFIG_DIR/.env to be blocked")
 	}
 }
 
@@ -835,7 +835,7 @@ func TestCommandReferencesSensitivePath(t *testing.T) {
 		"cat .npmrc",
 		"less ~/.netrc",
 		"tar czf out.tgz ~/.ssh",
-		"cat ~/.hawk/provider.json",
+		"cat ~/.graycode/provider.json",
 		"grep key credentials.json",
 	}
 	for _, cmd := range blocked {

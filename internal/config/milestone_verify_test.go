@@ -13,18 +13,18 @@ import (
 	"github.com/GrayCodeAI/eyrie/credentials"
 )
 
-// isolateMilestoneTest uses a temp HOME and HAWK_CONFIG_DIR so verification does not touch the user machine.
+// isolateMilestoneTest uses a temp HOME and GRAYCODE_CONFIG_DIR so verification does not touch the user machine.
 func isolateMilestoneTest(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
-	hawkDir := filepath.Join(home, ".hawk")
-	if err := os.MkdirAll(hawkDir, 0o700); err != nil {
+	graycodeDir := filepath.Join(home, ".graycode")
+	if err := os.MkdirAll(graycodeDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("HOME", home)
-	t.Setenv("HAWK_CONFIG_DIR", hawkDir)
-	t.Setenv("EYRIE_CONFIG_DIR", hawkDir)
-	return hawkDir
+	t.Setenv("GRAYCODE_CONFIG_DIR", graycodeDir)
+	t.Setenv("EYRIE_CONFIG_DIR", graycodeDir)
+	return graycodeDir
 }
 
 func TestVerify_ProviderJSONOnDiskHasNoSecrets(t *testing.T) {
@@ -46,11 +46,11 @@ func TestVerify_ProviderJSONOnDiskHasNoSecrets(t *testing.T) {
 }
 
 func TestVerify_MigrateProviderSecretsStripsDisk(t *testing.T) {
-	hawkDir := isolateMilestoneTest(t)
+	graycodeDir := isolateMilestoneTest(t)
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
-	path := filepath.Join(hawkDir, "provider.json")
+	path := filepath.Join(graycodeDir, "provider.json")
 	secret := "sk-ant-migrate-verify-key-1234567890"
 	raw := `{
   "version": "1",
@@ -84,7 +84,7 @@ func TestVerify_MigrateProviderSecretsStripsDisk(t *testing.T) {
 }
 
 func TestVerify_PersistAPIKeyDoesNotWriteProviderJSON(t *testing.T) {
-	hawkDir := isolateMilestoneTest(t)
+	graycodeDir := isolateMilestoneTest(t)
 	credentials.SetDefaultStore(emptyCredentialStore{})
 	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
 
@@ -92,7 +92,7 @@ func TestVerify_PersistAPIKeyDoesNotWriteProviderJSON(t *testing.T) {
 	if err := PersistAPIKey(context.Background(), "ANTHROPIC_API_KEY", secret); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(hawkDir, "provider.json")
+	path := filepath.Join(graycodeDir, "provider.json")
 	if _, err := os.Stat(path); err == nil {
 		data, _ := os.ReadFile(path)
 		if strings.Contains(string(data), secret) {
@@ -137,7 +137,7 @@ func TestVerify_EvaluateSetupFlow(t *testing.T) {
 		t.Fatal("expected setup still needed until model selected")
 	}
 
-	providerPath := filepath.Join(os.Getenv("HOME"), ".hawk", "provider.json")
+	providerPath := filepath.Join(os.Getenv("HOME"), ".graycode", "provider.json")
 	cfg := &eyriecfg.ProviderConfig{
 		ActiveProvider: "anthropic",
 		ActiveModel:    "claude-sonnet-4-20250514",

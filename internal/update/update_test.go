@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 func TestIsNewer(t *testing.T) {
@@ -72,7 +72,7 @@ func TestCheck(t *testing.T) {
 			TagName: "v1.0.0",
 			Name:    "Release 1.0.0",
 			Body:    "Bug fixes and improvements",
-			URL:     "https://github.com/GrayCodeAI/hawk/releases/tag/v1.0.0",
+			URL:     "https://github.com/GrayCodeAI/graycode-cli/releases/tag/v1.0.0",
 		}
 		server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -233,7 +233,7 @@ func TestSummary(t *testing.T) {
 			TagName: "v2.0.0",
 			Name:    "Major Release",
 			Body:    "Breaking changes",
-			URL:     "https://github.com/GrayCodeAI/hawk/releases/tag/v2.0.0",
+			URL:     "https://github.com/GrayCodeAI/graycode-cli/releases/tag/v2.0.0",
 		}
 		server := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")

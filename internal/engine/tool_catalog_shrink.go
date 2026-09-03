@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/token"
-	"github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/token"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // Tool-catalog shrink, adopted from caveman's toolschema compressor (via
@@ -23,9 +23,9 @@ import (
 // cleanly falls back to the original catalog.
 
 // toolShrinkEnabled reports whether opt-in catalog compression is on
-// (HAWK_TOOL_SHRINK=1). Default off: existing request bytes unchanged.
+// (GRAYCODE_TOOL_SHRINK=1). Default off: existing request bytes unchanged.
 func toolShrinkEnabled() bool {
-	return strings.EqualFold(os.Getenv("HAWK_TOOL_SHRINK"), "1")
+	return strings.EqualFold(os.Getenv("GRAYCODE_TOOL_SHRINK"), "1")
 }
 
 // originalsDir stores pre-shrink catalogs keyed by content hash so the exact
@@ -34,7 +34,7 @@ func originalsDir() string {
 	return filepath.Join(storage.StateDir(), "tool-catalog-originals")
 }
 
-// shrinkEyrieTools compresses the hawk tool list via shrike's toolschema
+// shrinkEyrieTools compresses the graycode tool list via shrike's toolschema
 // compressor. The list is converted to the OpenAI function-catalog wire shape,
 // shrunk, and converted back; any name-set mismatch fails open to input.
 // When compression changed something, the original catalog is persisted under

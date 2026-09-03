@@ -1,11 +1,11 @@
 package cmd
 
-// theme.go — the single source of truth for hawk's visual identity.
+// theme.go — the single source of truth for graycode's visual identity.
 //
 // All color constants (24-bit RGB via lipgloss), raw ANSI escape codes
 // (used by the spinner line), and glyph/icon constants live here. Every
 // other file in the package references these names instead of repeating
-// hex codes or magic strings. To rebrand hawk, edit this file; to audit
+// hex codes or magic strings. To rebrand graycode, edit this file; to audit
 // what's used where, grep this file.
 //
 // Organization:
@@ -24,17 +24,17 @@ import (
 	lipgloss "charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/compat"
 
-	internaltheme "github.com/GrayCodeAI/hawk/internal/theme"
+	internaltheme "github.com/GrayCodeAI/graycode-cli/internal/theme"
 )
 
 // ---------------------------------------------------------------------------
 // 1. Brand & identity
 // ---------------------------------------------------------------------------
 
-// hawkColor is Talon Gold (#FFD700). Used for the HAWK wordmark, hawk,
+// graycodeColor is Talon Gold (#FFD700). Used for the GRAYCODE wordmark, graycode,
 // ⛬ assistant prefix, prompt arrow, cursor, exit prompt, and
 // any place that should "speak" as the brand.
-var hawkColor = lipgloss.Color(internaltheme.BrandPrimary)
+var graycodeColor = lipgloss.Color(internaltheme.BrandPrimary)
 
 // ---------------------------------------------------------------------------
 // 2. UI state
@@ -197,7 +197,7 @@ const (
 // ---------------------------------------------------------------------------
 // 10. Icons & glyphs
 //
-// Hawk's icon registry lives in internal/ui/icons. Every call site
+// Graycode's icon registry lives in internal/ui/icons. Every call site
 // references icons.ChevronRight() / icons.Robot() / etc. directly; this
 // file no longer holds any glyph constants. The audit test in
 // internal/testaudit fails CI if any non-ASCII literal appears in
@@ -240,7 +240,7 @@ func ApplyTheme(name string) {
 	p := entry.Palette
 
 	// 1. Brand — fixed across themes; palette accents remain theme-specific.
-	hawkColor = lipgloss.Color(internaltheme.BrandPrimary)
+	graycodeColor = lipgloss.Color(internaltheme.BrandPrimary)
 
 	// 2. Semantic feedback.
 	successTeal = lipgloss.Color(p.Green)
@@ -298,12 +298,12 @@ func ApplyTheme(name string) {
 // unsynchronized from View.
 func refreshThemeStyles() {
 	// markdown.go
-	mdH1Style = lipgloss.NewStyle().Foreground(hawkColor).Bold(true).Underline(true)
+	mdH1Style = lipgloss.NewStyle().Foreground(graycodeColor).Bold(true).Underline(true)
 	mdH2Style = lipgloss.NewStyle().Foreground(successTeal).Bold(true)
 	mdH3Style = lipgloss.NewStyle().Foreground(infoSky).Bold(true)
 	mdH4Style = lipgloss.NewStyle().Foreground(costViolet).Bold(true)
 	mdHeaderStyle = lipgloss.NewStyle().Foreground(textPrimary).Bold(true)
-	mdBoldStyle = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	mdBoldStyle = lipgloss.NewStyle().Foreground(graycodeColor).Bold(true)
 	mdInlineCodeStyle = lipgloss.NewStyle().Foreground(infoSky)
 	mdCodeBlockStyle = lipgloss.NewStyle().Background(bgCode)
 	mdCodeLabelStyle = lipgloss.NewStyle().Foreground(textDisabled).Background(bgCode)
@@ -322,15 +322,15 @@ func refreshThemeStyles() {
 	toolDimStyle = lipgloss.NewStyle().Foreground(textDisabled)
 	slashCmdStyle = lipgloss.NewStyle().Foreground(textDisabled)
 	slashDescStyle = lipgloss.NewStyle().Foreground(textDisabled)
-	slashSelCmdStyle = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
-	slashSelDescStyle = lipgloss.NewStyle().Foreground(hawkColor)
+	slashSelCmdStyle = lipgloss.NewStyle().Foreground(graycodeColor).Bold(true)
+	slashSelDescStyle = lipgloss.NewStyle().Foreground(graycodeColor)
 	inputBorderStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), true, false, true, false).BorderForeground(borderDim)
 	containerErrStyle = lipgloss.NewStyle().Foreground(errorCoral)
 	containerLabelStyle = lipgloss.NewStyle().Foreground(containerBlue)
 	dimColor = textDisabled
 
 	// agent_grid.go
-	agentActiveStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(hawkColor).Padding(0, 1)
+	agentActiveStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(graycodeColor).Padding(0, 1)
 	agentDoneStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(doneGreen).Padding(0, 1)
 	agentFailStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(errorCoral).Padding(0, 1)
 	agentIdleStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(textDisabled).Padding(0, 1)
@@ -338,5 +338,5 @@ func refreshThemeStyles() {
 	agentStatusStyle = lipgloss.NewStyle().Foreground(textMuted)
 
 	// chat_scrollbar.go
-	scrollbarThumbStyle = lipgloss.NewStyle().Foreground(hawkColor)
+	scrollbarThumbStyle = lipgloss.NewStyle().Foreground(graycodeColor)
 }

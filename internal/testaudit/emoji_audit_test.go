@@ -18,7 +18,7 @@ import (
 //     intentionally a small alphabet of U+25xx/U+28xx block characters.
 //     The icons package is not used here because the spinner is rendered
 //     inside a per-frame ANSI wave that is repainted 20 times a second.
-//   - welcome_banner.go — HAWK block-letter logo, U+2588 block elements.
+//   - welcome_banner.go — GRAYCODE block-letter logo, U+2588 block elements.
 //   - *_test.go — tests are allowed to assert on rendered output.
 var emojiAuditExempt = map[string]bool{
 	"braille_spinner.go":      true,
@@ -38,17 +38,17 @@ var emojiAuditPathExempt = []string{
 	"/internal/testaudit/",
 	// test_loop.go scans external compiler / test-runner stdout for
 	// status glyphs (✓/✗/✔/✕/✅/❌/⚠) as part of its test-result
-	// parser vocabulary. The literals are not hawk's own output; they
+	// parser vocabulary. The literals are not graycode's own output; they
 	// appear in compiler messages the parser has to recognise.
 	"/internal/engine/validation/test_loop.go",
 	// test_fixtures.go contains canned compiler / linter output used
 	// as fixture data for parser tests; the emoji are part of the
-	// captured external tool output, not hawk's own rendering.
+	// captured external tool output, not graycode's own rendering.
 	"/internal/tool/test_fixtures.go",
 	// framesdir.go matches the literal "❯" prompt glyph inside replayed fx
 	// snapshots to classify input rows when exporting frame artifacts. The
 	// glyph is fx's own prompt character embedded in captured output, not
-	// hawk's rendering, so it is recognised rather than produced.
+	// graycode's rendering, so it is recognised rather than produced.
 	"/internal/terminal/tape/",
 }
 
@@ -75,8 +75,8 @@ func isEmojiOrDingbat(r rune) bool {
 	return false
 }
 
-// TestNoEmojiInCmd enforces hawk's "no emoji in CLI" rule. Every glyph
-// that hawk renders must come from internal/ui/icons. This test scans
+// TestNoEmojiInCmd enforces graycode's "no emoji in CLI" rule. Every glyph
+// that graycode renders must come from internal/ui/icons. This test scans
 // every non-test .go file in cmd/, parses it, and reports any literal
 // rune in the emoji or dingbat blocks.
 //

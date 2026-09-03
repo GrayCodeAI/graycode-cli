@@ -1,9 +1,9 @@
-// Package eventlog is Hawk's append-only session event spine.
+// Package eventlog is Graycode's append-only session event spine.
 //
 // It ports the durable-design idea from DeepSeek Harness: the session log is the
 // single source of truth, and the messages the model actually sees are a
 // projection of that log (see docs/plans/dsh-harness-port-plan.md). Keeping
-// the vocabulary free of Hawk product orchestration lets the log stay a neutral,
+// the vocabulary free of Graycode product orchestration lets the log stay a neutral,
 // testable record that consumers project through without importing the engine.
 //
 // Port note: DeepSeek Harness grows its event vocabulary through TypeScript
@@ -222,7 +222,7 @@ type LlmFailure struct {
 
 // SessionFormatVersion is the eventlog format revision. DSH's session JSONL
 // backend stamps this into every SessionHeader and refuses logs carrying a
-// foreign version on load. Hawk mirrors this: the eventlog package defines the
+// foreign version on load. Graycode mirrors this: the eventlog package defines the
 // constant so both write sites and load-time checks read the same source, and
 // Validate refuses unknown versions before any event is projected.
 const SessionFormatVersion = 1

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 func testIndex() SkillIndex {
@@ -163,7 +163,7 @@ author: graycode
 license: MIT
 category: engineering
 tags: ["api", "review", "rest"]
-agents: ["hawk", "claude-code"]
+agents: ["graycode", "claude-code"]
 source-repo: GrayCodeAI/starling
 source-ref: v1.2.0
 source-installed-at: 2026-05-01T00:00:00Z
@@ -230,7 +230,7 @@ func TestInjectSourceMetadata(t *testing.T) {
 
 func TestRemove(t *testing.T) {
 	dir := t.TempDir()
-	skillDir := filepath.Join(dir, ".hawk", "skills", "test-skill")
+	skillDir := filepath.Join(dir, ".graycode", "skills", "test-skill")
 	os.MkdirAll(skillDir, 0o755)
 	os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("test"), 0o644)
 

@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/engine/history"
+import "github.com/GrayCodeAI/graycode-cli/internal/engine/history"
 
 type (
 	CommandRecord          = history.CommandRecord

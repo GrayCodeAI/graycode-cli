@@ -6,7 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 )
 
 type configRemoveCredentialMsg struct {
@@ -17,7 +17,7 @@ type configRemoveCredentialMsg struct {
 
 func removeCredentialAsync(provider string) tea.Cmd {
 	return func() tea.Msg {
-		removed, err := hawkconfig.RemoveStoredCredential(context.Background(), provider)
+		removed, err := graycodeconfig.RemoveStoredCredential(context.Background(), provider)
 		return configRemoveCredentialMsg{
 			provider: provider,
 			removed:  removed,
@@ -34,10 +34,10 @@ func (m chatModel) handleConfigRemoveCredentialMsg(msg configRemoveCredentialMsg
 	}
 	delete(modelCache, msg.provider)
 	ctx := context.Background()
-	hawkconfig.RefreshConfigCredSnapshot(ctx)
+	graycodeconfig.RefreshConfigCredSnapshot(ctx)
 	m = m.refreshConfigGatewayRows()
-	if hawkconfig.ShouldClearSelectionAfterCredentialRemove(ctx, msg.provider) {
-		_ = hawkconfig.ClearActiveSelection(ctx)
+	if graycodeconfig.ShouldClearSelectionAfterCredentialRemove(ctx, msg.provider) {
+		_ = graycodeconfig.ClearActiveSelection(ctx)
 		m.configModelProvider = ""
 		m.configModelOptions = nil
 		m.session.SetProvider("")
@@ -46,8 +46,8 @@ func (m chatModel) handleConfigRemoveCredentialMsg(msg configRemoveCredentialMsg
 	m.configTab = configTabGateways
 	m.configSel = 0
 	m.configScroll = 0
-	m.configNotice = fmt.Sprintf("Removed API key for %s", hawkconfig.GatewayDisplayName(msg.provider))
-	if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
+	m.configNotice = fmt.Sprintf("Removed API key for %s", graycodeconfig.GatewayDisplayName(msg.provider))
+	if !graycodeconfig.HasConfiguredDeploymentCached(ctx) {
 		m.configNotice += " — add an API key to continue"
 	}
 	next, cmd := m.rebuildSessionTransport()
@@ -59,7 +59,7 @@ func (m chatModel) handleConfigRemoveCredentialMsg(msg configRemoveCredentialMsg
 
 func (m chatModel) openConfigRemoveKeyPanel() (chatModel, tea.Cmd) {
 	next, cmd := m.openConfigAtTab(configTabGateways)
-	if len(hawkconfig.ConfiguredCredentialProviders()) == 0 {
+	if len(graycodeconfig.ConfiguredCredentialProviders()) == 0 {
 		next.configNotice = "No stored API keys"
 	}
 	return next, cmd

@@ -1,6 +1,6 @@
 # Monitoring and Usage
 
-Hawk tracks token usage, costs, and session activity for monitoring and debugging.
+Graycode tracks token usage, costs, and session activity for monitoring and debugging.
 
 ---
 
@@ -11,8 +11,8 @@ Token usage is tracked per session and aggregated.
 ### View Usage
 
 ```bash
-hawk usage
-hawk doctor    # Full health report
+graycode usage
+graycode doctor    # Full health report
 ```
 
 Usage shows:
@@ -24,12 +24,12 @@ Usage shows:
 
 ## Telemetry
 
-Hawk can send anonymous usage telemetry.
+Graycode can send anonymous usage telemetry.
 
 ### Enable/Disable
 
 ```json
-// ~/.hawk/settings.json
+// ~/.graycode/settings.json
 {
   "telemetry": {
     "enabled": false
@@ -40,7 +40,7 @@ Hawk can send anonymous usage telemetry.
 Or:
 
 ```bash
-hawk --telemetry    # Enable
+graycode --telemetry    # Enable
 haw --no-telemetry  # Disable
 ```
 
@@ -77,7 +77,7 @@ Accessible via `/ecosystem` in TUI.
 
 ## Cloud Integration
 
-Hawk Cloud provides managed usage tracking:
+Graycode Cloud provides managed usage tracking:
 
 - Organization-level metrics
 - Budget alerts

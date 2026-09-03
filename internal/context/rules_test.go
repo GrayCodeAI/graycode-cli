@@ -135,7 +135,7 @@ func TestRuleDiscoverer_SourcePriority(t *testing.T) {
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, ".agents", "rules"), 0o755)
 	os.MkdirAll(filepath.Join(dir, ".claude", "rules"), 0o755)
-	os.WriteFile(filepath.Join(dir, ".agents", "rules", "a.md"), []byte("# Hawk"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".agents", "rules", "a.md"), []byte("# Graycode"), 0o644)
 	os.WriteFile(filepath.Join(dir, ".claude", "rules", "b.md"), []byte("# Claude"), 0o644)
 	sub := filepath.Join(dir, "src")
 	os.MkdirAll(sub, 0o755)
@@ -146,16 +146,16 @@ func TestRuleDiscoverer_SourcePriority(t *testing.T) {
 	rules := rd.Discover(target)
 
 	// .agents/rules (priority 1) should come before .claude/rules (priority 3)
-	var hawkIdx, claudeIdx int
+	var graycodeIdx, claudeIdx int
 	for i, r := range rules {
 		if r.Source == ".agents/rules" {
-			hawkIdx = i
+			graycodeIdx = i
 		}
 		if r.Source == ".claude/rules" {
 			claudeIdx = i
 		}
 	}
-	if hawkIdx >= claudeIdx {
+	if graycodeIdx >= claudeIdx {
 		t.Error(".agents/rules should have higher precedence than .claude/rules")
 	}
 }
@@ -175,12 +175,12 @@ func TestRuleDiscoverer_EmptyProject(t *testing.T) {
 func TestRuleDiscoverer_ManagedTierPrecedence(t *testing.T) {
 	dir := t.TempDir()
 	// A project rule that would normally have top precedence.
-	os.WriteFile(filepath.Join(dir, "HAWK.md"), []byte("# Project Policy"), 0o644)
+	os.WriteFile(filepath.Join(dir, "GRAYCODE.md"), []byte("# Project Policy"), 0o644)
 	target := filepath.Join(dir, "main.go")
 	os.WriteFile(target, []byte("package main"), 0o644)
 
 	// Stand in for the IT-managed policy file (default paths are system-level).
-	managed := filepath.Join(dir, "managed-HAWK.md")
+	managed := filepath.Join(dir, "managed-GRAYCODE.md")
 	os.WriteFile(managed, []byte("# Org Policy"), 0o644)
 
 	rd := NewRuleDiscoverer(dir)
@@ -196,17 +196,17 @@ func TestRuleDiscoverer_ManagedTierPrecedence(t *testing.T) {
 	if rules[0].Content != "# Org Policy" {
 		t.Errorf("managed content mismatch: got %q", rules[0].Content)
 	}
-	// Managed must outrank the project HAWK.md regardless of project precedence.
+	// Managed must outrank the project GRAYCODE.md regardless of project precedence.
 	for i, r := range rules {
-		if r.Source == "HAWK.md" && i == 0 {
-			t.Error("project HAWK.md should not outrank managed tier")
+		if r.Source == "GRAYCODE.md" && i == 0 {
+			t.Error("project GRAYCODE.md should not outrank managed tier")
 		}
 	}
 }
 
 func TestRuleDiscoverer_ManagedTierMissing(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "HAWK.md"), []byte("# Project"), 0o644)
+	os.WriteFile(filepath.Join(dir, "GRAYCODE.md"), []byte("# Project"), 0o644)
 	target := filepath.Join(dir, "main.go")
 	os.WriteFile(target, []byte("package main"), 0o644)
 
@@ -244,7 +244,7 @@ func TestStripHTMLComments(t *testing.T) {
 
 func TestRuleDiscoverer_StripsHTMLCommentsOnLoad(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "HAWK.md"), []byte("# Rules\n<!-- internal note: do not ship -->\nUse tabs."), 0o644)
+	os.WriteFile(filepath.Join(dir, "GRAYCODE.md"), []byte("# Rules\n<!-- internal note: do not ship -->\nUse tabs."), 0o644)
 	target := filepath.Join(dir, "main.go")
 	os.WriteFile(target, []byte("package main"), 0o644)
 
@@ -253,7 +253,7 @@ func TestRuleDiscoverer_StripsHTMLCommentsOnLoad(t *testing.T) {
 
 	found := false
 	for _, r := range rules {
-		if r.Source == "HAWK.md" {
+		if r.Source == "GRAYCODE.md" {
 			found = true
 			if strings.Contains(r.Content, "internal note") {
 				t.Errorf("HTML comment not stripped from loaded content: %q", r.Content)
@@ -264,7 +264,7 @@ func TestRuleDiscoverer_StripsHTMLCommentsOnLoad(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("HAWK.md rule not loaded")
+		t.Fatal("GRAYCODE.md rule not loaded")
 	}
 }
 

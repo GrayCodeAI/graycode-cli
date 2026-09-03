@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/catalogtest"
+	"github.com/GrayCodeAI/graycode-cli/internal/catalogtest"
 )
 
 func TestCatalogReady_MissingCache(t *testing.T) {
@@ -50,11 +50,11 @@ func TestCatalogNeedsAutoRefresh_Fresh(t *testing.T) {
 }
 
 func TestAutoRefreshCatalogEnabled(t *testing.T) {
-	t.Setenv("HAWK_AUTO_REFRESH_CATALOG", "false")
+	t.Setenv("GRAYCODE_AUTO_REFRESH_CATALOG", "false")
 	if autoRefreshCatalogEnabled() {
 		t.Fatal("expected disabled")
 	}
-	t.Setenv("HAWK_AUTO_REFRESH_CATALOG", "")
+	t.Setenv("GRAYCODE_AUTO_REFRESH_CATALOG", "")
 	if !autoRefreshCatalogEnabled() {
 		t.Fatal("expected enabled by default")
 	}

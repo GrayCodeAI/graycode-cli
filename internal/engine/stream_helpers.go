@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
-	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
+	"github.com/GrayCodeAI/graycode-cli/internal/resilience/retry"
 )
 
 // truncate shortens a string to maxLen characters, appending "..." if truncated.

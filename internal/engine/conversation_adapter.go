@@ -29,7 +29,7 @@ type ConversationState struct {
 }
 
 // ConversationManager manages a conversation lifecycle, bridging eyrie's
-// conversation management into hawk's chat session flow. It is safe for
+// conversation management into graycode's chat session flow. It is safe for
 // concurrent use.
 type ConversationManager struct {
 	mu         sync.RWMutex

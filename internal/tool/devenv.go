@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // DevEnvTool allows the agent to read, write, and build Docker environments
@@ -63,7 +63,7 @@ func (t DevEnvTool) Execute(ctx context.Context, input json.RawMessage) (string,
 		content, err := os.ReadFile(dfPath) // #nosec G304 -- path provided by caller via tool/task parameters, inherent to this dev CLI's file operations
 		if err != nil {
 			if os.IsNotExist(err) {
-				return "No Hawk dev environment Dockerfile found. Use action='write' to create one in Hawk user state.", nil
+				return "No Graycode dev environment Dockerfile found. Use action='write' to create one in Graycode user state.", nil
 			}
 			return "", err
 		}

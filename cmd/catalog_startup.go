@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 )
 
 var (
@@ -13,15 +13,15 @@ var (
 )
 
 func ensureCatalogBeforeAgent(ctx context.Context, strict bool) error {
-	opts := hawkconfig.CatalogStartupOptions{
+	opts := graycodeconfig.CatalogStartupOptions{
 		ForceRefresh:    refreshCatalogFlag,
 		SkipAutoRefresh: skipCatalogRefreshFlag,
 		VerboseOutput:   refreshCatalogFlag,
 	}
 	if strict {
-		return hawkconfig.PrepareCatalogForSession(ctx, os.Stderr, opts)
+		return graycodeconfig.PrepareCatalogForSession(ctx, os.Stderr, opts)
 	}
-	hawkconfig.StartupCatalogPrefetch(ctx)
+	graycodeconfig.StartupCatalogPrefetch(ctx)
 	return nil
 }
 
@@ -29,5 +29,5 @@ func startBackgroundCatalogRefresh(ctx context.Context) {
 	if skipCatalogRefreshFlag {
 		return
 	}
-	hawkconfig.ScheduleBackgroundCatalogRefresh(ctx)
+	graycodeconfig.ScheduleBackgroundCatalogRefresh(ctx)
 }

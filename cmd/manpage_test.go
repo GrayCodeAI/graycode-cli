@@ -26,7 +26,7 @@ func TestGenerateManPage(t *testing.T) {
 	version = "1.0.0"
 	page := GenerateManPage()
 
-	if !strings.Contains(page, ".TH HAWK 1") {
+	if !strings.Contains(page, ".TH GRAYCODE 1") {
 		t.Fatal("missing .TH header")
 	}
 	if !strings.Contains(page, "1.0.0") {

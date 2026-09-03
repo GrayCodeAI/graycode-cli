@@ -118,13 +118,13 @@ func TestInstallRejectsCriticalSecurityIssue(t *testing.T) {
 }
 
 func TestPluginHookEnvKeySanitizesAndPrefixes(t *testing.T) {
-	if got := pluginHookEnvKey("path=evil"); got != "HAWK_PATH_EVIL" {
+	if got := pluginHookEnvKey("path=evil"); got != "GRAYCODE_PATH_EVIL" {
 		t.Fatalf("pluginHookEnvKey(path=evil) = %q", got)
 	}
-	if got := pluginHookEnvKey("tool name"); got != "HAWK_TOOL_NAME" {
+	if got := pluginHookEnvKey("tool name"); got != "GRAYCODE_TOOL_NAME" {
 		t.Fatalf("pluginHookEnvKey(tool name) = %q", got)
 	}
-	if got := pluginHookEnvKey(""); got != "HAWK_DATA" {
+	if got := pluginHookEnvKey(""); got != "GRAYCODE_DATA" {
 		t.Fatalf("pluginHookEnvKey(empty) = %q", got)
 	}
 }

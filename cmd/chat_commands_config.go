@@ -6,14 +6,14 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 )
 
 // handleConfigCommand handles the /config command and all its subcommands.
 func (m *chatModel) handleConfigCommand(parts []string, text string) (tea.Model, tea.Cmd) {
 	if len(parts) >= 3 && parts[1] == "provider" {
 		value := strings.TrimSpace(strings.Join(parts[2:], " "))
-		if err := hawkconfig.SetGlobalSetting("provider", value); err != nil {
+		if err := graycodeconfig.SetGlobalSetting("provider", value); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}
@@ -24,7 +24,7 @@ func (m *chatModel) handleConfigCommand(parts []string, text string) (tea.Model,
 		modelCacheMu.RUnlock()
 		if cacheHit && len(cached) > 0 {
 			m.session.SetModel(cached[0].ID)
-			_ = hawkconfig.SetGlobalSetting("model", cached[0].ID)
+			_ = graycodeconfig.SetGlobalSetting("model", cached[0].ID)
 		}
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nModel: %s\nSaved in eyrie (provider.json).", value, m.session.Model())})
 		return m, nil
@@ -47,7 +47,7 @@ func (m *chatModel) handleConfigCommand(parts []string, text string) (tea.Model,
 				return m, nil
 			}
 		}
-		if err := hawkconfig.SetGlobalSetting("model", value); err != nil {
+		if err := graycodeconfig.SetGlobalSetting("model", value); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}
@@ -72,7 +72,7 @@ func (m *chatModel) handleConfigCommand(parts []string, text string) (tea.Model,
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}
-		value, ok := hawkconfig.SettingValue(settings, parts[2])
+		value, ok := graycodeconfig.SettingValue(settings, parts[2])
 		if !ok {
 			m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Unsupported setting key %q", parts[2])})
 			return m, nil
@@ -86,7 +86,7 @@ func (m *chatModel) handleConfigCommand(parts []string, text string) (tea.Model,
 	if len(parts) >= 4 && parts[1] == "set" {
 		key := parts[2]
 		value := strings.TrimSpace(strings.Join(parts[3:], " "))
-		if err := hawkconfig.SetGlobalSetting(key, value); err != nil {
+		if err := graycodeconfig.SetGlobalSetting(key, value); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}

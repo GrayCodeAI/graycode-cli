@@ -11,7 +11,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -61,11 +61,11 @@ var (
 	reCreator = regexp.MustCompile(`(?i)(made|created|developed|built|trained|designed)\s+by\s+(?:a\s+company\s+called\s+|a\s+team\s+(?:at|called)\s+|the\s+team\s+at\s+)?\*{0,2}(Moonshot\s*AI|OpenAI|Anthropic|Google|Google\s*DeepMind|DeepMind|Meta|Meta\s*AI|Alibaba|Alibaba\s*Cloud|Mistral\s*AI|xAI|Microsoft|Microsoft\s*AI|Amazon|AWS|Cohere|01\.AI|Baidu|Huawei|IBM|Nvidia|EleutherAI|Hugging\s*Face|AI21\s*Labs|Yandex|Databricks|StepFun|Xiaomi|Sarvam\s*AI|MiniMax|BharatGen|Z\.ai|Zhipu\s*AI|Cerebras|Technology\s*Innovation\s*Institute|TII|Inflection\s*AI|Stability\s*AI|Anysphere|Cognition\s*AI|Scale\s*AI|Sakana\s*AI)\*{0,2}`)
 )
 
-// sanitizeIdentity replaces model self-identifications with "hawk" / "GrayCode AI".
+// sanitizeIdentity replaces model self-identifications with "graycode" / "GrayCode AI".
 func sanitizeIdentity(s string) string {
 	s = reModelName.ReplaceAllStringFunc(s, func(m string) string {
 		parts := reModelName.FindStringSubmatch(m)
-		return parts[1] + " hawk"
+		return parts[1] + " graycode"
 	})
 	s = reCreator.ReplaceAllString(s, "${1} by GrayCode AI")
 	return s
@@ -547,7 +547,7 @@ func renderPermissionBox(summary string, width int, timeoutAt time.Time) string 
 		}
 	}
 	body := lipgloss.JoinVertical(lipgloss.Left, bodyParts...)
-	options := lipgloss.NewStyle().Foreground(hawkColor).Render("[y] allow once   [n] deny   [a] always allow tool   [d] always deny tool")
+	options := lipgloss.NewStyle().Foreground(graycodeColor).Render("[y] allow once   [n] deny   [a] always allow tool   [d] always deny tool")
 	hint := lipgloss.NewStyle().Foreground(textMuted).Render("Esc cancels · prompt times out after 5 minutes")
 
 	rows := []string{title, "", body}
@@ -642,7 +642,7 @@ func renderReflectionBox(reflection string, width int) string {
 		boxW = 40
 	}
 
-	titleStyle := lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	titleStyle := lipgloss.NewStyle().Foreground(graycodeColor).Bold(true)
 	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true) // blue
 	contentStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))         // light gray
 
@@ -672,7 +672,7 @@ func renderReflectionBox(reflection string, width int) string {
 
 	border := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(hawkColor).
+		BorderForeground(graycodeColor).
 		Width(boxW).
 		Padding(0, 1)
 
@@ -711,12 +711,12 @@ func (m *chatModel) renderTokenCounters() string {
 	var b strings.Builder
 	b.WriteString(ansiMagenta + ansiBold + "↓" + ansiReset)
 	b.WriteString(ansiMagenta)
-	b.WriteString(formatHawkTokenCount(outTok))
+	b.WriteString(formatGraycodeTokenCount(outTok))
 	b.WriteString(ansiReset)
 	b.WriteString(ansiDim + "  " + ansiReset)
 	b.WriteString(ansiCyan + ansiBold + "↑" + ansiReset)
 	b.WriteString(ansiCyan)
-	b.WriteString(formatHawkTokenCount(inTok))
+	b.WriteString(formatGraycodeTokenCount(inTok))
 	b.WriteString(ansiReset)
 	return b.String()
 }
@@ -753,9 +753,9 @@ func (m *chatModel) tokenOutputTarget() int {
 	return m.turnEstimatedOutputRunes / 4
 }
 
-// formatHawkTokenCount renders a token count in hawk's compact form:
+// formatGraycodeTokenCount renders a token count in graycode's compact form:
 // ≥1m  → "1.5m", ≥10k → "150k", else raw digits.
-func formatHawkTokenCount(tokens int) string {
+func formatGraycodeTokenCount(tokens int) string {
 	if tokens <= 0 {
 		return "0"
 	}

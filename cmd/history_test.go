@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 func TestLoadInputHistory_Empty(t *testing.T) {
@@ -94,7 +94,7 @@ func TestAppendToHistory_EmptySkipped(t *testing.T) {
 
 func TestHistoryFilePath(t *testing.T) {
 	stateDir := filepath.Join(t.TempDir(), "state")
-	t.Setenv("HAWK_STATE_DIR", stateDir)
+	t.Setenv("GRAYCODE_STATE_DIR", stateDir)
 	expected := filepath.Join(stateDir, "history")
 	if got := historyFilePath(); got != expected {
 		t.Fatalf("got %q, want %q", got, expected)

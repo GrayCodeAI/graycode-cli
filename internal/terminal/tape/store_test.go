@@ -119,7 +119,7 @@ func TestCommitValidation(t *testing.T) {
 }
 
 func TestDefaultTapesDirUsesEnv(t *testing.T) {
-	t.Setenv("HAWK_TAPES_DIR", "/tmp/ht")
+	t.Setenv("GRAYCODE_TAPES_DIR", "/tmp/ht")
 	got := DefaultTapesDir()
 	if got != "/tmp/ht" || !strings.Contains(got, "ht") {
 		t.Errorf("DefaultTapesDir = %q, want env override", got)

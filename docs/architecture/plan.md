@@ -1,8 +1,8 @@
-# Hawk Architecture - Technical Plan
+# Graycode Architecture - Technical Plan
 
 ## Overview
 
-This plan defines the technical approach for implementing the hawk architecture specification. The architecture is already largely implemented; this plan documents the existing design decisions and identifies gaps.
+This plan defines the technical approach for implementing the graycode architecture specification. The architecture is already largely implemented; this plan documents the existing design decisions and identifies gaps.
 
 ## Architecture Decisions
 

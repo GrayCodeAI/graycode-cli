@@ -1,6 +1,6 @@
 // incremental_map.go is the persistent, on-disk symbol
 // cache. It stores per-file SHA-256 hashes and the corresponding symbol
-// lists in the Hawk cache directory (or a caller-provided directory). On
+// lists in the Graycode cache directory (or a caller-provided directory). On
 // regeneration only files whose hash changed are re-parsed, and deleted
 // files are evicted, so the index stays accurate without a full rebuild.
 package repomap
@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // IncrementalMap maintains a cached symbol index that only reprocesses changed files.

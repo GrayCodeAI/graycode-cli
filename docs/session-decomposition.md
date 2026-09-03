@@ -6,11 +6,11 @@
 > into their owning services.
 > Author: opencode session
 > Date: 2026-06-12
-> Scope: `hawk/internal/engine/session.go` (the 35-collaborator `Session` struct)
+> Scope: `graycode/internal/engine/session.go` (the 35-collaborator `Session` struct)
 
 ## Problem
 
-`Session` at `hawk/internal/engine/session.go:42-141` is a god object:
+`Session` at `graycode/internal/engine/session.go:42-141` is a god object:
 
 - 35 fields, ~30 of them `*T` pointer collaborators with optional behavior
 - Every new feature adds a field (Beliefs, Critic, Trajectory, Steer­ing, etc.)
@@ -90,7 +90,7 @@ backends without an explicit migration and recovery decision.
 - `RecordSuccess(latency time.Duration)` / `RecordFailure(err error)`
 - `BuildContinuationConfig() types.ContinuationConfig`
 
-**File:** `hawk/internal/engine/chat_service.go` (~150 LOC)
+**File:** `graycode/internal/engine/chat_service.go` (~150 LOC)
 
 ### 2. `MemoryService` — owns harrier bridge + recall/remember
 
@@ -104,7 +104,7 @@ backends without an explicit migration and recovery decision.
 - `RecordFeedback(ctx, content string, action string)` — wraps EnhancedMemory feedback
 - `ShouldRemember(text string) bool` — heuristic for auto-remember
 
-**File:** `hawk/internal/engine/memory_service.go` (~200 LOC)
+**File:** `graycode/internal/engine/memory_service.go` (~200 LOC)
 
 ### 3. `ToolService` — owns the registry + tool execution
 
@@ -117,7 +117,7 @@ backends without an explicit migration and recovery decision.
 - `SpawnBackgroundAgent(ctx, prompt string) (id string, err error)`
 - `PollBackgroundAgent(id string) (output string, done bool, err error)`
 
-**File:** `hawk/internal/engine/tool_service.go` (~400 LOC — biggest, owns the 15-stage pipeline)
+**File:** `graycode/internal/engine/tool_service.go` (~400 LOC — biggest, owns the 15-stage pipeline)
 
 ### 4. `PermissionService` — owns the safety layer
 
@@ -131,7 +131,7 @@ backends without an explicit migration and recovery decision.
 - `SetMode(mode string) error` — validates + applies
 - `SetMaxTurns(n int)`, `SetMaxBudgetUSD(usd float64)`
 
-**File:** `hawk/internal/engine/permission_service.go` (~150 LOC)
+**File:** `graycode/internal/engine/permission_service.go` (~150 LOC)
 
 ### 5. `LifecycleService` — owns the self-improvement loop
 
@@ -148,7 +148,7 @@ backends without an explicit migration and recovery decision.
 - `DetectDoomLoop(steps []ToolStep) bool`
 - `InjectSteering(messages []types.EyrieMessage) []types.EyrieMessage`
 
-**File:** `hawk/internal/engine/lifecycle_service.go` (~250 LOC)
+**File:** `graycode/internal/engine/lifecycle_service.go` (~250 LOC)
 
 ### 6. `PersistenceService` — owns checkpoint, session, harrier snapshot
 
@@ -167,7 +167,7 @@ backends without an explicit migration and recovery decision.
 - `CheckpointOnCompaction(strategy string, before, after int, manual bool)`
 - `TokenTracking() (prompt, completion int)`, `RecordAPIUsage(prompt, completion int)`
 
-**File:** `hawk/internal/engine/persistence_service.go` (~300 LOC)
+**File:** `graycode/internal/engine/persistence_service.go` (~300 LOC)
 
 ## What stays on `Session`
 

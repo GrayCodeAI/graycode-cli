@@ -69,19 +69,19 @@ func AutoCommit(ctx context.Context, path, toolName, description string) error {
 	}
 
 	base := filepath.Base(path)
-	msg := fmt.Sprintf("hawk: %s %s — %s", toolName, base, description)
+	msg := fmt.Sprintf("graycode: %s %s — %s", toolName, base, description)
 
 	if tc := GetToolContext(ctx); tc != nil && tc.Attribution != nil {
 		attr := tc.Attribution
 		switch attr.TrailerStyle {
 		case "assisted-by":
-			msg += "\n\nAssisted-by: Hawk <hawk@graycode.ai>"
+			msg += "\n\nAssisted-by: Graycode <graycode@graycode.ai>"
 		case "none", "":
 		default:
 			// co-authored-by and unknown styles are treated as none
 		}
 		if attr.GeneratedWith {
-			msg += "\nGenerated-with: Hawk"
+			msg += "\nGenerated-with: Graycode"
 		}
 	}
 

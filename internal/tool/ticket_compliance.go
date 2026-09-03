@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // Ticket represents a linked issue/ticket from any tracking system.
@@ -58,7 +58,7 @@ func NewTicketCompliance() *TicketCompliance {
 
 // ExtractTicketRef parses ticket references from branch names and PR descriptions.
 // It recognizes patterns like: #123, PROJ-456, fixes #789, closes #101,
-// feature/PROJ-123-description, "Fixes #42", "Resolves HAWK-99".
+// feature/PROJ-123-description, "Fixes #42", "Resolves GRAYCODE-99".
 func (tc *TicketCompliance) ExtractTicketRef(branchName, prDescription string) []string {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
@@ -91,7 +91,7 @@ func (tc *TicketCompliance) ExtractTicketRef(branchName, prDescription string) [
 			addRef("#" + m[1])
 		}
 
-		// Keyword-linked JIRA references (Resolves HAWK-99).
+		// Keyword-linked JIRA references (Resolves GRAYCODE-99).
 		matches = keywordJiraRefRe.FindAllStringSubmatch(prDescription, -1)
 		for _, m := range matches {
 			addRef(m[1])
@@ -403,7 +403,7 @@ func (t *TicketComplianceTool) Parameters() map[string]interface{} {
 			},
 			"ticket_id": map[string]interface{}{
 				"type":        "string",
-				"description": "The ticket/issue identifier (e.g., HAWK-123, #42)",
+				"description": "The ticket/issue identifier (e.g., GRAYCODE-123, #42)",
 			},
 			"ticket_source": map[string]interface{}{
 				"type":        "string",

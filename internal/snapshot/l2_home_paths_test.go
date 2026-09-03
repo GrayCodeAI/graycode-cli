@@ -9,15 +9,15 @@ import (
 // TestL2DefaultPathsAreHomeRelative is a regression guard for L2 — when the
 // state-store constructors are called with empty/zero args, their default
 // paths must be absolute and live under the user's home dir
-// (~/.hawk/...), not relative to <cwd>. Pre-fix, the defaults were strings
-// like ".hawk/snapshots" and ".hawk/experience" which leaked into
-// <cwd>/cmd/.hawk/ when hawk was run from its own source tree.
+// (~/.graycode/...), not relative to <cwd>. Pre-fix, the defaults were strings
+// like ".graycode/snapshots" and ".graycode/experience" which leaked into
+// <cwd>/cmd/.graycode/ when graycode was run from its own source tree.
 func TestL2DefaultPathsAreHomeRelative(t *testing.T) {
 	// Make the regression deterministic under CI and sandboxed runners. The
 	// production default is the configured state root, which may intentionally
-	// differ from HOME via HAWK_STATE_DIR.
+	// differ from HOME via GRAYCODE_STATE_DIR.
 	stateRoot := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", stateRoot)
+	t.Setenv("GRAYCODE_STATE_DIR", stateRoot)
 	wantPrefix := filepath.Clean(stateRoot) + string(filepath.Separator)
 
 	check := func(name, got string) {

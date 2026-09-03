@@ -12,11 +12,11 @@ Platform/provider capability metadata is separate: [`platform-capabilities.json`
 
 ```jsonc
 {
-  "components":   ["hawk", "eyrie", ...],   // canonical eco roster
-  "dependencies": { "hawk": ["eyrie", ...] }, // who depends on who
+  "components":   ["graycode", "eyrie", ...],   // canonical eco roster
+  "dependencies": { "graycode": ["eyrie", ...] }, // who depends on who
   "matrices": [
-    { "name": "stable", "components": { "hawk": "0.1.0", "eyrie": "0.1.0", ... } },
-    { "name": "next",   "components": { "hawk": "main",  "eyrie": "main",  ... } }
+    { "name": "stable", "components": { "graycode": "0.1.0", "eyrie": "0.1.0", ... } },
+    { "name": "next",   "components": { "graycode": "main",  "eyrie": "main",  ... } }
   ]
 }
 ```
@@ -48,7 +48,7 @@ existing consumers.
 `.shared-templates/workflows/compatibility-test.yml.tmpl` is a reusable
 workflow that:
 
-1. Reads `testdata/compatibility-matrix.json` from the hawk repo.
+1. Reads `testdata/compatibility-matrix.json` from the graycode repo.
 2. Checks out each component at the version listed in the named matrix.
 3. Builds + tests the cross-repo integration scenarios.
 
@@ -59,7 +59,7 @@ It runs on:
 
 ## Why bother
 
-- **Bug reports become triageable.** "I ran hawk 0.4 with eyrie 0.2" — you
+- **Bug reports become triageable.** "I ran graycode 0.4 with eyrie 0.2" — you
   immediately know whether that combination was ever tested.
 - **Consumers can pin reliably.** Downstream projects that vendor multiple
   eco packages can pin to a known-good stable matrix instead of guessing.
@@ -70,18 +70,18 @@ It runs on:
 
 ## Pin freshness (advisory)
 
-Separate from the matrix above: `hawk`'s own `go.mod` directly pins a couple
+Separate from the matrix above: `graycode`'s own `go.mod` directly pins a couple
 of shared leaf dependencies (currently `eagle`), and several sibling-repository
 consumers (`merlin`/Merlin, `kestrel`/Kestrel, ...) pin the *same*
 dependencies independently in their own `go.mod`. Go's minimal version
-selection means whatever `hawk` pins wins in `hawk`'s own build — but if a
+selection means whatever `graycode` pins wins in `graycode`'s own build — but if a
 consumer's own pin is older, that consumer's CI has never actually tested the
 version that ships. This is exactly the kind of drift that let a real bug
 through in July 2026 (a stale goreleaser pin sat unnoticed until the first
 tag push exercised it).
 
 `make compat-drift` (wired into this workflow as an advisory, non-blocking
-step) reports any such mismatch by comparing `hawk/go.mod` against each
+step) reports any such mismatch by comparing `graycode/go.mod` against each
 `../<repo>/go.mod`:
 
 ```bash
@@ -90,7 +90,7 @@ make compat-drift
 
 This **never fails the build** — it's a signal for humans to notice and
 re-pin the consumer, not a gate. It checks sibling repositories when they are
-present; a Hawk-only checkout simply reports no local consumers to compare.
+present; a Graycode-only checkout simply reports no local consumers to compare.
 
 ## Validating the file
 

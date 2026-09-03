@@ -70,7 +70,7 @@ fi
 
 repo_dir() {
   # The repo holding this script may be checked out under any directory name.
-  if [[ "$1" == "${SELF_REPO}" || "$1" == "hawk" && ! -d "${ECO_DIR}/hawk" ]]; then
+  if [[ "$1" == "${SELF_REPO}" || "$1" == "graycode-cli" && ! -d "${ECO_DIR}/graycode-cli" ]]; then
     echo "${ROOT_DIR}"
   else
     echo "${ECO_DIR}/$1"

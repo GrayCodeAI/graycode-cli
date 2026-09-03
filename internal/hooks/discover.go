@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // DiscoverHookDirs returns ordered hook directories to scan for a project.
@@ -14,7 +14,7 @@ func DiscoverHookDirs(projectRoot string) []string {
 	if projectRoot != "" {
 		dirs = append(
 			dirs,
-			filepath.Join(projectRoot, ".hawk", "hooks"),
+			filepath.Join(projectRoot, ".graycode", "hooks"),
 			filepath.Join(projectRoot, ".agents", "hooks"),
 			filepath.Join(projectRoot, ".claude", "hooks"),
 		)

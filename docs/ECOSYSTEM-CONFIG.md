@@ -1,7 +1,7 @@
 # graycode-eco Unified Config-as-Code
 
 Status: Draft / shared spec
-Applies to: hawk, eyrie, harrier, shrike, swift
+Applies to: graycode, eyrie, harrier, shrike, swift
 
 This document specifies a **single, unified configuration schema** for the
 graycode-eco ecosystem: one declarative file (`graycode-eco.yaml`, with an equivalent
@@ -11,7 +11,7 @@ file is the source of truth, version-controlled alongside a project, and each
 repo reads the slice of the schema it owns.
 
 Today each repo configures itself independently through its own env vars,
-flags, and config files (hawk: `config.json` + `HAWK_*`/`GRAYCODE_*` env; eyrie:
+flags, and config files (graycode: `config.json` + `GRAYCODE_*`/`GRAYCODE_*` env; eyrie:
 provider env vars; harrier: `~/.harrier/config.toml`; shrike: `TOK_*` env; swift:
 `SWIFT_*` env). This spec does **not** replace those mechanisms — it defines a
 superset schema and maps every setting back to the repo + existing env
@@ -27,7 +27,7 @@ any runtime behavior.
    `graycode-eco.yaml` value > repo default. This preserves current behavior where
    env/flags are authoritative.
 3. **Repo-owned sections.** Each top-level section is owned by one repo (with
-   `model`/`providers` shared by hawk + eyrie). A repo only reads its sections.
+   `model`/`providers` shared by graycode + eyrie). A repo only reads its sections.
 4. **Two encodings, one schema.** YAML is canonical for humans; the identical
    structure is valid JSON for machine generation. (harrier's on-disk format is
    TOML; its section maps 1:1 to `~/.harrier/config.toml`.)
@@ -40,7 +40,7 @@ Search order (first found wins for the file itself; values still follow the
 runtime precedence above):
 
 1. `--config <path>` flag (where a repo's CLI supports it)
-2. `$HAWK_ECO_CONFIG`
+2. `$GRAYCODE_ECO_CONFIG`
 3. `./graycode-eco.yaml` (project root)
 4. `~/.config/graycode-eco/config.yaml`
 
@@ -49,7 +49,7 @@ runtime precedence above):
 ```yaml
 version: 1
 
-# ─── Shared: model + providers (hawk + eyrie) ───────────────────────────────
+# ─── Shared: model + providers (graycode + eyrie) ───────────────────────────────
 model:
   default: anthropic/claude-sonnet-4-5   # provider/model the agent uses
   small_fast: anthropic/claude-haiku     # cheap model for trivial steps
@@ -68,7 +68,7 @@ providers:
 
 # ─── eyrie: gateway / runtime ───────────────────────────────────────────────
 gateway:
-  base_url: http://localhost:8080        # eyrie endpoint hawk talks to
+  base_url: http://localhost:8080        # eyrie endpoint graycode talks to
   api_key_env: EYRIE_API_KEY
   allow_insecure_public_api: false
   deployment_routing: ""                 # EYRIE_DEPLOYMENT_ROUTING
@@ -119,9 +119,9 @@ swift:
 telemetry:
   # OTel exporter settings shared by all repos. Span attribute keys follow
   # docs/OTEL-CONVENTIONS.md.
-  enabled: false                         # hawk: HAWK_CODE_ENABLE_TELEMETRY
+  enabled: false                         # graycode: GRAYCODE_ENABLE_TELEMETRY
   otlp_endpoint: ""                      # OTEL_EXPORTER_OTLP_ENDPOINT
-  shutdown_timeout_ms: 0                 # HAWK_CODE_OTEL_SHUTDOWN_TIMEOUT_MS
+  shutdown_timeout_ms: 0                 # GRAYCODE_OTEL_SHUTDOWN_TIMEOUT_MS
 ```
 
 ## Setting → repo → existing mechanism
@@ -129,13 +129,13 @@ telemetry:
 The authoritative mapping. "Mechanism today" is what already implements the
 setting; the unified key is rendered down to it.
 
-### Shared: model / providers (hawk + eyrie)
+### Shared: model / providers (graycode + eyrie)
 
 | Unified key                     | Repo        | Mechanism today                                  |
 |---------------------------------|-------------|--------------------------------------------------|
-| `model.default`                 | hawk        | `HAWK_MODEL` env / `config.json`                 |
-| `model.small_fast`              | hawk        | `GRAYCODE_SMALL_FAST_MODEL` env                  |
-| `providers[].api_key_env`       | eyrie/hawk  | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `XAI_API_KEY`, `ZAI_API_KEY`, `CANOPYWAVE_API_KEY`, `FIREWORKS_API_KEY` |
+| `model.default`                 | graycode        | `GRAYCODE_MODEL` env / `config.json`                 |
+| `model.small_fast`              | graycode        | `GRAYCODE_SMALL_FAST_MODEL` env                  |
+| `providers[].api_key_env`       | eyrie/graycode  | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `XAI_API_KEY`, `ZAI_API_KEY`, `CANOPYWAVE_API_KEY`, `FIREWORKS_API_KEY` |
 | `providers[].base_url_env`      | eyrie       | `ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL` / `OPENAI_API_BASE`, `OLLAMA_BASE_URL`, `FIREWORKS_BASE_URL` |
 | `providers[].model` (openai)    | eyrie       | `OPENAI_MODEL` env                               |
 | `providers[].model` (gemini)    | eyrie       | `GEMINI_MODEL` env                               |
@@ -145,14 +145,14 @@ setting; the unified key is rendered down to it.
 
 | Unified key                          | Mechanism today (eyrie)              |
 |--------------------------------------|--------------------------------------|
-| `gateway.base_url`                   | `EYRIE_BASE_URL` (hawk→eyrie link)   |
+| `gateway.base_url`                   | `EYRIE_BASE_URL` (graycode→eyrie link)   |
 | `gateway.api_key_env`                | `EYRIE_API_KEY`                      |
 | `gateway.allow_insecure_public_api`  | `EYRIE_ALLOW_INSECURE_PUBLIC_API`    |
-| `gateway.deployment_routing`         | `EYRIE_DEPLOYMENT_ROUTING` (also `HAWK_DEPLOYMENT_ROUTING`) |
+| `gateway.deployment_routing`         | `EYRIE_DEPLOYMENT_ROUTING` (also `GRAYCODE_DEPLOYMENT_ROUTING`) |
 | `gateway.model_catalog.path_env`     | `EYRIE_MODEL_CATALOG_PATH`           |
 | `gateway.model_catalog.url_env`      | `EYRIE_MODEL_CATALOG_URL`            |
-| `gateway.model_catalog.refresh`      | `EYRIE_MODEL_CATALOG_REFRESH` / `HAWK_AUTO_REFRESH_CATALOG` / `HAWK_CATALOG_REFRESH_ALWAYS` |
-| `gateway` config dir                 | `HAWK_CONFIG_DIR` (default `~/.eyrie`) |
+| `gateway.model_catalog.refresh`      | `EYRIE_MODEL_CATALOG_REFRESH` / `GRAYCODE_AUTO_REFRESH_CATALOG` / `GRAYCODE_CATALOG_REFRESH_ALWAYS` |
+| `gateway` config dir                 | `GRAYCODE_CONFIG_DIR` (default `~/.eyrie`) |
 
 ### harrier: memory
 
@@ -193,22 +193,22 @@ few env vars.
 
 ### swift + telemetry
 
-| Unified key                       | Mechanism today (swift / hawk)                  |
+| Unified key                       | Mechanism today (swift / graycode)                  |
 |-----------------------------------|-------------------------------------------------|
 | `swift.search_url`                | `SWIFT_SEARCH_URL` env                          |
 | `swift.log_level`                 | `SWIFT_LOG_LEVEL` env                           |
 | `swift.telemetry_optout`          | `SWIFT_TELEMETRY_OPTOUT` / `SWIFT_NO_TELEMETRY` env |
 | `swift.posthog.api_key_env`       | `POSTHOG_API_KEY` env                           |
 | `swift.posthog.endpoint`          | `POSTHOG_ENDPOINT` env                          |
-| `telemetry.enabled`               | `HAWK_CODE_ENABLE_TELEMETRY` env (hawk)         |
-| `telemetry.shutdown_timeout_ms`   | `HAWK_CODE_OTEL_SHUTDOWN_TIMEOUT_MS` env (hawk) |
+| `telemetry.enabled`               | `GRAYCODE_ENABLE_TELEMETRY` env (graycode)         |
+| `telemetry.shutdown_timeout_ms`   | `GRAYCODE_OTEL_SHUTDOWN_TIMEOUT_MS` env (graycode) |
 | `telemetry.otlp_endpoint`         | `OTEL_EXPORTER_OTLP_ENDPOINT` (standard OTel)   |
 
 ## Rendering down to per-repo config
 
 The unified file is designed to be **resolved** into the existing mechanisms:
 
-- **env-based repos** (hawk, eyrie, shrike, swift): export the mapped env var for
+- **env-based repos** (graycode, eyrie, shrike, swift): export the mapped env var for
   any key set in `graycode-eco.yaml` that is not already present in the process
   environment (preserving "env wins" precedence).
 - **file-based repos** (harrier): write/merge the `memory.*` section into

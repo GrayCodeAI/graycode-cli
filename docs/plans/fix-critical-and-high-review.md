@@ -1,7 +1,7 @@
-# Plan: Fix Critical + High-Impact Review Findings — hawk
+# Plan: Fix Critical + High-Impact Review Findings — graycode
 
 > Branch: `fix/critical-and-high-review-2026-06`
-> PR: <https://github.com/GrayCodeAI/hawk/pull/50>
+> PR: <https://github.com/GrayCodeAI/graycode-cli/pull/50>
 > Status: **✅ COMPLETE — all 9 items + extensive follow-up committed.**
 > Constraint: **no new go.mod / go.sum dependencies** for any item in this plan.
 
@@ -77,12 +77,12 @@ These were documented in the original plan as out-of-scope-for-this-PR. They rem
 
 ## Context
 
-A deep code review of `eyrie` and `hawk` (companion plan at
+A deep code review of `eyrie` and `graycode` (companion plan at
 `../eyrie/docs/plans/fix-critical-and-high-review.md`) surfaced 7 critical
-and 9 high items. This plan covers **all hawk items** (C3, C4, C5, H5,
+and 9 high items. This plan covers **all graycode items** (C3, C4, C5, H5,
 H6, H7, H8, H9) broken into a sequence of small, reviewable PRs.
 
-## Scope (hawk)
+## Scope (graycode)
 
 | ID | Severity | Title | File(s) | Effort |
 |----|----------|-------|---------|--------|
@@ -99,7 +99,7 @@ H6, H7, H8, H9) broken into a sequence of small, reviewable PRs.
 
 - H10 from eyrie: `//nolint:errcheck` on type-assertion that can panic.
 - M1–M20 medium items.
-- L-tier quick wins (e.g. `cosmenticFlags` typo, `cmd/.hawk/` leaked state).
+- L-tier quick wins (e.g. `cosmenticFlags` typo, `cmd/.graycode/` leaked state).
 - `internal/intelligence/repomap/` documentation (large, separate effort).
 - Anything that requires a new dependency.
 
@@ -127,7 +127,7 @@ PRs can be merged individually; the branch is a namespace.
 ## PR 1 — Surface silent migration error (C4)
 
 **What**: `cmd/root.go:114` calls `MigrateProviderSecrets()` and discards
-the error. If migration fails, secrets may remain in `~/.hawk/.env` while
+the error. If migration fails, secrets may remain in `~/.graycode/.env` while
 the agent is told to ignore that file.
 
 **Fix**:
@@ -236,7 +236,7 @@ core. Mitigation: keep both code paths behind a feature flag for one
 release; metric for "wait latency" before/after.
 
 **Rollback**: feature flag. If regressions appear, set
-`HAWK_MULTIAGENT_POLLING=1` to revert.
+`GRAYCODE_MULTIAGENT_POLLING=1` to revert.
 
 ---
 
@@ -360,7 +360,7 @@ legitimate-input fix, not a security regression.
 
 ## PR 7 — Sandbox default-deny (H9)
 
-**Bug**: `internal/sandbox/seatbelt.go:70-108` `DefaultHawkPolicy` defaults
+**Bug**: `internal/sandbox/seatbelt.go:70-108` `DefaultGraycodePolicy` defaults
 to `AllowWrite: true` and `AllowProcess: true`. A sandboxed bash can write
 and spawn processes out of the box.
 
@@ -464,7 +464,7 @@ behavioral changes, only structural.
 
 ```bash
 go mod verify
-go build ./cmd/hawk
+go build ./cmd/graycode
 go test -race -count=1 -shuffle=on ./...
 go vet ./...
 golangci-lint run
@@ -492,10 +492,10 @@ Coverage target: maintained at 60%+ (CI gate).
 
 ## Cross-repo coordination
 
-- **eyrie PR 4 (C2 — Vertex fix)** and **hawk PR 4 (H6 — Session
+- **eyrie PR 4 (C2 — Vertex fix)** and **graycode PR 4 (H6 — Session
   decomposition)** are independent.
 - **eyrie PR 8 (H4 — EyrieError)** is a prerequisite for any future
-  hawk-side `errors.As(err, &eyrieErr)` use (currently none). No
+  graycode-side `errors.As(err, &eyrieErr)` use (currently none). No
   ordering dependency.
 - The two repos' branches are independent and can be merged in any
   order.

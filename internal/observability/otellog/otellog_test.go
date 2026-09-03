@@ -223,7 +223,7 @@ func TestOpsChannelAndSeverity(t *testing.T) {
 		t.Fatalf("body = %q, want boom", got[0].Body().AsString())
 	}
 	// Channel routing: ops records live under the ops instrumentation scope.
-	if scope := got[0].InstrumentationScope().Name; scope != "github.com/GrayCodeAI/hawk/internal/observability/otellog/ops" {
+	if scope := got[0].InstrumentationScope().Name; scope != "github.com/GrayCodeAI/graycode-cli/internal/observability/otellog/ops" {
 		t.Fatalf("scope = %q, want .../ops", scope)
 	}
 }
@@ -242,7 +242,7 @@ func TestLedgerScopeRouting(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("exported %d records, want 1", len(got))
 	}
-	if scope := got[0].InstrumentationScope().Name; scope != "github.com/GrayCodeAI/hawk/internal/observability/otellog" {
+	if scope := got[0].InstrumentationScope().Name; scope != "github.com/GrayCodeAI/graycode-cli/internal/observability/otellog" {
 		t.Fatalf("scope = %q, want the ledger scope", scope)
 	}
 }

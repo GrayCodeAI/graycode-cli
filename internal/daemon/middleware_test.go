@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/feature"
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 // --- Pure helper unit tests ---

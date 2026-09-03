@@ -8,7 +8,7 @@ import (
 func TestTransferLearning_LearnAndApply(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk", 0o755)
+	_ = os.MkdirAll(dir+"/.graycode", 0o755)
 
 	tl := NewTransferLearning()
 	tl.Learn("go", "error_handling", "wrap errors with context", "use fmt.Errorf with %w")
@@ -22,7 +22,7 @@ func TestTransferLearning_LearnAndApply(t *testing.T) {
 func TestTransferLearning_FormatForPrompt(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk", 0o755)
+	_ = os.MkdirAll(dir+"/.graycode", 0o755)
 
 	tl := NewTransferLearning()
 	tl.Learn("go", "concurrency", "use errgroup", "bounded goroutines")
@@ -34,7 +34,7 @@ func TestTransferLearning_FormatForPrompt(t *testing.T) {
 func TestTransferLearning_Empty(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	_ = os.MkdirAll(dir+"/.hawk", 0o755)
+	_ = os.MkdirAll(dir+"/.graycode", 0o755)
 
 	tl := NewTransferLearning()
 	patterns := tl.Apply("rust", "memory management")

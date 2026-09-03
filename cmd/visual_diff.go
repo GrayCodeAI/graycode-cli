@@ -35,7 +35,7 @@ type DiffTheme struct {
 	Reset   string
 }
 
-// DefaultDiffTheme returns a DiffTheme using hawk's semantic palette so diff
+// DefaultDiffTheme returns a DiffTheme using graycode's semantic palette so diff
 // output reads consistently with the rest of the UI: additions in doneGreen,
 // deletions in errorCoral, hunk markers in infoSky, file headers in
 // containerBlue — each color mapped to one meaning, never reused for another.

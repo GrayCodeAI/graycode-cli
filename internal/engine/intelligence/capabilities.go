@@ -494,7 +494,7 @@ func (r *CapabilityRegistry) FormatHelp() string {
 	defer r.mu.RUnlock()
 
 	var sb strings.Builder
-	sb.WriteString("hawk Capabilities:\n")
+	sb.WriteString("graycode Capabilities:\n")
 	sb.WriteString(strings.Repeat("═", 19))
 	sb.WriteString("\n")
 

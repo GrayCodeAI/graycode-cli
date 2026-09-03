@@ -7,7 +7,7 @@ import (
 
 	agentcontracts "github.com/GrayCodeAI/eagle/agent"
 
-	"github.com/GrayCodeAI/hawk/internal/taskruntime"
+	"github.com/GrayCodeAI/graycode-cli/internal/taskruntime"
 )
 
 // BackgroundAgentManager tracks background sub-agent goroutines so the

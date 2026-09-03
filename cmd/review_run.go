@@ -9,10 +9,10 @@ import (
 	"time"
 
 	reviewcontracts "github.com/GrayCodeAI/eagle/review"
-	hawkKestrel "github.com/GrayCodeAI/hawk/internal/bridge/kestrel"
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	graycodeKestrel "github.com/GrayCodeAI/graycode-cli/internal/bridge/kestrel"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 	kestrelLib "github.com/GrayCodeAI/kestrel"
 	"github.com/spf13/cobra"
 )
@@ -96,9 +96,9 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Build the Kestrel bridge through Hawk's Eyrie engine boundary.
+	// Build the Kestrel bridge through Graycode's Eyrie engine boundary.
 	ctx := context.Background()
-	selection := hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{
+	selection := graycodeconfig.EffectiveSelection(ctx, graycodeconfig.SelectionOptions{
 		ProviderOverride: strings.TrimSpace(provider),
 		ModelOverride:    strings.TrimSpace(reviewRunModel),
 	})
@@ -122,7 +122,7 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		opts = append(opts, kestrelLib.WithConcerns(concerns...))
 	}
 
-	bridge := hawkKestrel.NewBridge(chatProvider, providerID, opts...)
+	bridge := graycodeKestrel.NewBridge(chatProvider, providerID, opts...)
 	if !bridge.Ready() {
 		if statusErr := store.SetStatus(id, ReviewStatusFailed); statusErr != nil {
 			return silentErr(statusErr, "mark review failed")

@@ -1,6 +1,6 @@
 # Sandbox
 
-Sandbox mode restricts what Hawk and its spawned commands can access on your filesystem using OS-level kernel primitives.
+Sandbox mode restricts what Graycode and its spawned commands can access on your filesystem using OS-level kernel primitives.
 
 ---
 
@@ -8,13 +8,13 @@ Sandbox mode restricts what Hawk and its spawned commands can access on your fil
 
 ```bash
 # Workspace sandbox (recommended for development)
-hawk --sandbox workspace
+graycode --sandbox workspace
 
 # Read-only mode
-hawk --sandbox read-only
+graycode --sandbox read-only
 
 # Strict mode
-hawk --sandbox strict
+graycode --sandbox strict
 ```
 
 ---
@@ -24,15 +24,15 @@ hawk --sandbox strict
 | Profile | FS Read | FS Write | Child Network | Use Case |
 |---------|---------|----------|---------------|----------|
 | `off` | All | All | All | No restrictions |
-| `workspace` | All | CWD + `~/.hawk/` + temp | Allowed | Normal development |
-| `read-only` | All | `~/.hawk/` + temp | Blocked (Linux) | Exploration, reviews |
-| `strict` | CWD + system | CWD + `~/.hawk/` + temp | Blocked (Linux) | Untrusted code |
+| `workspace` | All | CWD + `~/.graycode/` + temp | Allowed | Normal development |
+| `read-only` | All | `~/.graycode/` + temp | Blocked (Linux) | Exploration, reviews |
+| `strict` | CWD + system | CWD + `~/.graycode/` + temp | Blocked (Linux) | Untrusted code |
 
 ---
 
 ## Custom Profiles
 
-Create `.hawk/sandbox.toml`:
+Create `.graycode/sandbox.toml`:
 
 ```toml
 [profiles.project]
@@ -44,7 +44,7 @@ deny = ["**/.env", "**/*.pem"]
 Use with:
 
 ```bash
-hawk --sandbox project
+graycode --sandbox project
 ```
 
 ---
@@ -53,15 +53,15 @@ hawk --sandbox project
 
 ### workspace (recommended)
 
-Read anywhere, write only to the project directory and Hawk's config. Allows network access for LLM calls and web search.
+Read anywhere, write only to the project directory and Graycode's config. Allows network access for LLM calls and web search.
 
 ### read-only
 
-Read anywhere, write only to `~/.hawk/` and temp directories. Good for code exploration without risk of modification.
+Read anywhere, write only to `~/.graycode/` and temp directories. Good for code exploration without risk of modification.
 
 ### strict
 
-Most restrictive. Read only CWD and essential system paths. Write only to CWD, `~/.hawk/`, and temp.
+Most restrictive. Read only CWD and essential system paths. Write only to CWD, `~/.graycode/`, and temp.
 
 ---
 

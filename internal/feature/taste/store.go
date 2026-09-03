@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 const (
@@ -28,7 +28,7 @@ type Store struct {
 }
 
 // NewStore creates a store rooted at the given base directory.
-// If baseDir is empty, it defaults to Hawk's user state taste directory.
+// If baseDir is empty, it defaults to Graycode's user state taste directory.
 func NewStore(baseDir string) (*Store, error) {
 	if baseDir == "" {
 		baseDir = storage.TasteDir()

@@ -1,4 +1,4 @@
-module github.com/GrayCodeAI/hawk
+module github.com/GrayCodeAI/graycode-cli
 
 go 1.26.6
 

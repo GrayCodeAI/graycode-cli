@@ -310,13 +310,13 @@ func protectRendererInlineCode(text string, render func(string) string) (string,
 		if len(parts) < 2 {
 			return m
 		}
-		placeholder := fmt.Sprintf("\x00HAWK_R_INLINE_CODE_%d\x00", len(replacements))
+		placeholder := fmt.Sprintf("\x00GRAYCODE_R_INLINE_CODE_%d\x00", len(replacements))
 		replacements = append(replacements, render(parts[1]))
 		return placeholder
 	})
 	restore := func(s string) string {
 		for i, repl := range replacements {
-			s = strings.ReplaceAll(s, fmt.Sprintf("\x00HAWK_R_INLINE_CODE_%d\x00", i), repl)
+			s = strings.ReplaceAll(s, fmt.Sprintf("\x00GRAYCODE_R_INLINE_CODE_%d\x00", i), repl)
 		}
 		return s
 	}

@@ -251,7 +251,7 @@ func duckDuckGoSearch(ctx context.Context, query string, count int) ([]searchRes
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "hawk/0.1.0")
+	req.Header.Set("User-Agent", "graycode/0.1.0")
 
 	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)

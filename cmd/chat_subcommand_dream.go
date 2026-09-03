@@ -6,7 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
 )
 
 // dreamSubcommand implements the /dream slash command. It runs

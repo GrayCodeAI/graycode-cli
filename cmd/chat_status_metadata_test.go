@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 )
 
 // seedPlatformContextCacheForTest primes the platform context cache so tests
@@ -133,10 +133,10 @@ func TestConnectionStatusParts_MimoShowsPlatformContext_HyphenProvider(t *testin
 }
 
 func TestGatewayDisplayName_XiaomiTokenPlanHyphen(t *testing.T) {
-	if got := hawkconfig.GatewayDisplayName("xiaomi-mimo-token-plan"); got != "Xiaomi MiMo — Token Plan" {
+	if got := graycodeconfig.GatewayDisplayName("xiaomi-mimo-token-plan"); got != "Xiaomi MiMo — Token Plan" {
 		t.Fatalf("GatewayDisplayName(hyphen) = %q, want nice name", got)
 	}
-	if got := hawkconfig.GatewayDisplayName("xiaomi_mimo_token_plan"); got != "Xiaomi MiMo — Token Plan" {
+	if got := graycodeconfig.GatewayDisplayName("xiaomi_mimo_token_plan"); got != "Xiaomi MiMo — Token Plan" {
 		t.Fatalf("GatewayDisplayName(underscore) = %q, want nice name", got)
 	}
 }

@@ -624,7 +624,7 @@ func TestRunCommand_RejectsSensitivePath(t *testing.T) {
 	sh := NewSelfHealer(chatFn)
 
 	// A command that reads a sensitive path should be rejected outright.
-	_, _, _, err := sh.runCommand(context.Background(), "cat ~/.hawk/provider.json")
+	_, _, _, err := sh.runCommand(context.Background(), "cat ~/.graycode/provider.json")
 	if err == nil {
 		t.Fatal("expected error for command referencing sensitive path, got nil")
 	}

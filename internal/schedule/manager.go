@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
 )
 
 // DeliverFn delivers a due scheduled reminder into the active conversation.

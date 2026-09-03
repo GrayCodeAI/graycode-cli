@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/feature/eval"
-	"github.com/GrayCodeAI/hawk/internal/feature/evalloop"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature/eval"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature/evalloop"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 	"github.com/spf13/cobra"
 )
 
@@ -98,22 +98,22 @@ func runEvalLoop(cmd *cobra.Command, _ []string) error {
 	if strings.TrimSpace(evalLoopPrompt) == "" {
 		return fmt.Errorf("--prompt is required")
 	}
-	settings := hawkconfig.LoadGlobalSettings()
+	settings := graycodeconfig.LoadGlobalSettings()
 	ctx := context.Background()
 
-	gw, err := hawkconfig.NewEyrieEngineForSettings(settings)
+	gw, err := graycodeconfig.NewEyrieEngineForSettings(settings)
 	if err != nil {
 		return fmt.Errorf("eval loop: build engine client: %w", err)
 	}
 	model := strings.TrimSpace(evalLoopModel)
 	if model == "" {
-		model = strings.TrimSpace(hawkconfig.ActiveModel(ctx))
+		model = strings.TrimSpace(graycodeconfig.ActiveModel(ctx))
 	}
 	if model == "" {
 		model = strings.TrimSpace(settings.Model)
 	}
 
-	workDir, err := os.MkdirTemp("", "hawk-eval-loop-*")
+	workDir, err := os.MkdirTemp("", "graycode-eval-loop-*")
 	if err != nil {
 		return fmt.Errorf("eval loop: create temp dir: %w", err)
 	}
@@ -216,7 +216,7 @@ func runEval(_ *cobra.Command, _ []string) error {
 
 	fmt.Printf("Running %d tasks with model %s...\n", len(tasks), modelName)
 
-	suite := &eval.BenchmarkSuite{Name: "hawk-eval", Tasks: tasks}
+	suite := &eval.BenchmarkSuite{Name: "graycode-eval", Tasks: tasks}
 	runner := eval.NewRunner(modelName, "")
 	runner.NoCache = evalNoCache
 	if !evalNoCache {

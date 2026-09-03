@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 func TestExtractTicketRef_BranchName(t *testing.T) {
@@ -20,9 +20,9 @@ func TestExtractTicketRef_BranchName(t *testing.T) {
 	}{
 		{
 			name:     "JIRA-style from branch",
-			branch:   "feature/HAWK-123-add-auth",
+			branch:   "feature/GRAYCODE-123-add-auth",
 			prDesc:   "",
-			expected: []string{"HAWK-123"},
+			expected: []string{"GRAYCODE-123"},
 		},
 		{
 			name:     "branch with multiple segments",
@@ -73,13 +73,13 @@ func TestExtractTicketRef_PRDescription(t *testing.T) {
 		},
 		{
 			name:     "resolves JIRA reference",
-			prDesc:   "Resolves HAWK-99",
-			contains: []string{"HAWK-99"},
+			prDesc:   "Resolves GRAYCODE-99",
+			contains: []string{"GRAYCODE-99"},
 		},
 		{
 			name:     "multiple references",
-			prDesc:   "Fixes #42 and also resolves HAWK-99\nRelated to PROJ-200",
-			contains: []string{"#42", "HAWK-99", "PROJ-200"},
+			prDesc:   "Fixes #42 and also resolves GRAYCODE-99\nRelated to PROJ-200",
+			contains: []string{"#42", "GRAYCODE-99", "PROJ-200"},
 		},
 		{
 			name:     "no references",
@@ -110,16 +110,16 @@ func TestExtractTicketRef_PRDescription(t *testing.T) {
 func TestExtractTicketRef_Combined(t *testing.T) {
 	tc := NewTicketCompliance()
 
-	refs := tc.ExtractTicketRef("feature/HAWK-123-jwt", "Fixes #42\nResolves HAWK-123")
-	// HAWK-123 should only appear once.
+	refs := tc.ExtractTicketRef("feature/GRAYCODE-123-jwt", "Fixes #42\nResolves GRAYCODE-123")
+	// GRAYCODE-123 should only appear once.
 	count := 0
 	for _, r := range refs {
-		if r == "HAWK-123" {
+		if r == "GRAYCODE-123" {
 			count++
 		}
 	}
 	if count != 1 {
-		t.Errorf("expected HAWK-123 to appear once, appeared %d times in %v", count, refs)
+		t.Errorf("expected GRAYCODE-123 to appear once, appeared %d times in %v", count, refs)
 	}
 	// #42 should be present.
 	found := false
@@ -234,7 +234,7 @@ func TestCheckCompliance_AllSatisfied(t *testing.T) {
 	tc := NewTicketCompliance()
 
 	ticket := &Ticket{
-		ID:    "HAWK-123",
+		ID:    "GRAYCODE-123",
 		Title: "Add JWT authentication",
 		AcceptanceCriteria: []string{
 			"Token validation endpoint",
@@ -271,7 +271,7 @@ func TestCheckCompliance_PartiallySatisfied(t *testing.T) {
 	tc := NewTicketCompliance()
 
 	ticket := &Ticket{
-		ID:    "HAWK-123",
+		ID:    "GRAYCODE-123",
 		Title: "Add JWT authentication",
 		AcceptanceCriteria: []string{
 			"Token validation endpoint",
@@ -312,7 +312,7 @@ func TestCheckCompliance_NoCriteria(t *testing.T) {
 	tc := NewTicketCompliance()
 
 	ticket := &Ticket{
-		ID:                 "HAWK-1",
+		ID:                 "GRAYCODE-1",
 		Title:              "Quick fix",
 		AcceptanceCriteria: []string{},
 	}
@@ -328,7 +328,7 @@ func TestCheckCompliance_NoneSatisfied(t *testing.T) {
 	tc := NewTicketCompliance()
 
 	ticket := &Ticket{
-		ID:    "HAWK-50",
+		ID:    "GRAYCODE-50",
 		Title: "Database migration",
 		AcceptanceCriteria: []string{
 			"PostgreSQL schema migration script",
@@ -352,7 +352,7 @@ func TestCheckCompliance_NoneSatisfied(t *testing.T) {
 func TestFormatComplianceResult(t *testing.T) {
 	result := &ComplianceResult{
 		Ticket: &Ticket{
-			ID:    "HAWK-123",
+			ID:    "GRAYCODE-123",
 			Title: "Add JWT authentication",
 		},
 		Satisfied: []string{
@@ -372,7 +372,7 @@ func TestFormatComplianceResult(t *testing.T) {
 	output := FormatComplianceResult(result)
 
 	// Check key components are present.
-	if !strings.Contains(output, "HAWK-123") {
+	if !strings.Contains(output, "GRAYCODE-123") {
 		t.Error("output should contain ticket ID")
 	}
 	if !strings.Contains(output, "Add JWT authentication") {
@@ -448,8 +448,8 @@ func TestTicketComplianceTool_Execute(t *testing.T) {
 	tool := &TicketComplianceTool{}
 
 	input := map[string]string{
-		"branch_name":    "feature/HAWK-123-jwt",
-		"pr_description": "Fixes HAWK-123\n\nAdds JWT authentication",
+		"branch_name":    "feature/GRAYCODE-123-jwt",
+		"pr_description": "Fixes GRAYCODE-123\n\nAdds JWT authentication",
 		"ticket_content": `# Add JWT authentication
 
 ## Acceptance Criteria
@@ -459,7 +459,7 @@ func TestTicketComplianceTool_Execute(t *testing.T) {
 - [ ] Unit tests for token parsing
 - [ ] Documentation for API changes
 `,
-		"ticket_id":       "HAWK-123",
+		"ticket_id":       "GRAYCODE-123",
 		"ticket_source":   "jira",
 		"diff":            "+func ValidateToken(t string) error {}\n+func AuthMiddleware() {}\n",
 		"commit_messages": "feat: add token validation endpoint\nfeat: add middleware for protected routes\ntest: unit tests for token parsing",
@@ -475,7 +475,7 @@ func TestTicketComplianceTool_Execute(t *testing.T) {
 		t.Fatalf("Execute failed: %v", err)
 	}
 
-	if !strings.Contains(result, "HAWK-123") {
+	if !strings.Contains(result, "GRAYCODE-123") {
 		t.Error("result should contain ticket ID")
 	}
 	if !strings.Contains(result, "75%") {

@@ -89,12 +89,12 @@ func TestMemoryIncrementalNilRecall(t *testing.T) {
 }
 
 func TestIncrementalContextEnabledFlag(t *testing.T) {
-	t.Setenv("HAWK_INCREMENTAL_CONTEXT", "1")
+	t.Setenv("GRAYCODE_INCREMENTAL_CONTEXT", "1")
 	if !incrementalContextEnabled() {
-		t.Fatal("expected enabled with HAWK_INCREMENTAL_CONTEXT=1")
+		t.Fatal("expected enabled with GRAYCODE_INCREMENTAL_CONTEXT=1")
 	}
-	t.Setenv("HAWK_INCREMENTAL_CONTEXT", "0")
+	t.Setenv("GRAYCODE_INCREMENTAL_CONTEXT", "0")
 	if incrementalContextEnabled() {
-		t.Fatal("expected disabled with HAWK_INCREMENTAL_CONTEXT=0")
+		t.Fatal("expected disabled with GRAYCODE_INCREMENTAL_CONTEXT=0")
 	}
 }

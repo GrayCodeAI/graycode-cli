@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 )
 
-// Role identifies the purpose of a model within a Hawk multi-model workflow.
+// Role identifies the purpose of a model within a Graycode multi-model workflow.
 type Role string
 
 const (
@@ -26,7 +26,7 @@ type ModelRoles struct {
 	Commit   string `json:"commit,omitempty"`
 }
 
-// DefaultRoles keeps Hawk's workflow policy while asking Eyrie for the
+// DefaultRoles keeps Graycode's workflow policy while asking Eyrie for the
 // economical same-provider model used for commit/summarization work.
 func DefaultRoles(primaryModel string) ModelRoles {
 	primaryModel = strings.TrimSpace(primaryModel)

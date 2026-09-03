@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
 	"github.com/spf13/cobra"
 )
 
@@ -75,7 +75,7 @@ var pluginStatusCmd = &cobra.Command{
 		statuses := dm.Status()
 
 		if len(statuses) == 0 {
-			cmd.Println("No plugins discovered. Run 'hawk plugin install' to add plugins.")
+			cmd.Println("No plugins discovered. Run 'graycode plugin install' to add plugins.")
 			return nil
 		}
 
@@ -195,7 +195,7 @@ var pluginCreateCmd = &cobra.Command{
 		manifest := &plugin.ManifestV2{
 			Name:        name,
 			Version:     "0.1.0",
-			Description: fmt.Sprintf("A hawk plugin: %s", name),
+			Description: fmt.Sprintf("A graycode plugin: %s", name),
 			Author:      "",
 			Mode:        "subprocess",
 			Tools: []plugin.ManifestTool{
@@ -267,12 +267,12 @@ func main() {
 		// Write README.md
 		readme := fmt.Sprintf(`# %s
 
-A hawk plugin.
+A graycode plugin.
 
 ## Installation
 
 `+"```bash"+`
-hawk plugin install ./%s
+graycode plugin install ./%s
 `+"```"+`
 
 ## Usage
@@ -325,8 +325,8 @@ See `+"`plugin.json`"+` for the full manifest configuration.
 		cmd.Println()
 		cmd.Printf("Next steps:\n")
 		cmd.Printf("  cd %s && go mod init %s\n", name, name)
-		cmd.Printf("  hawk plugin install ./%s\n", name)
-		cmd.Printf("  hawk plugin activate %s\n", name)
+		cmd.Printf("  graycode plugin install ./%s\n", name)
+		cmd.Printf("  graycode plugin activate %s\n", name)
 		return nil
 	},
 }
@@ -408,11 +408,11 @@ var pluginMarketplaceListCmd = &cobra.Command{
 		mc := plugin.NewMarketplaceClient()
 		entries, err := mc.FetchAll()
 		if err != nil {
-			return fmt.Errorf("fetch marketplace: %w (indexes may be unpublished; add a source with hawk plugin marketplace add)", err)
+			return fmt.Errorf("fetch marketplace: %w (indexes may be unpublished; add a source with graycode plugin marketplace add)", err)
 		}
 		if len(entries) == 0 {
 			cmd.Println("No marketplace plugins found.")
-			cmd.Println("Add a source: hawk plugin marketplace add <name> <index-url>")
+			cmd.Println("Add a source: graycode plugin marketplace add <name> <index-url>")
 			return nil
 		}
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)

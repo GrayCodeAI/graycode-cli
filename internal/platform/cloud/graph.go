@@ -46,7 +46,7 @@ type GraphSyncResult struct {
 }
 
 // PrepareGraph converts a portable graph to deterministic JSON, hashes values
-// behind cloud-sensitive attribute names, and enforces Hawk Cloud's fact caps.
+// behind cloud-sensitive attribute names, and enforces Graycode Cloud's fact caps.
 // It does not mutate the caller's graph.
 func PrepareGraph(graph any) (PreparedGraph, error) {
 	raw, err := json.Marshal(graph)
@@ -74,7 +74,7 @@ func PrepareGraph(graph any) (PreparedGraph, error) {
 	}
 	facts := len(nodes) + len(edges) + len(events)
 	if facts > 900 {
-		return PreparedGraph{}, fmt.Errorf("graph has %d facts; Hawk Cloud accepts at most 900", facts)
+		return PreparedGraph{}, fmt.Errorf("graph has %d facts; Graycode Cloud accepts at most 900", facts)
 	}
 
 	for _, collection := range [][]any{nodes, edges} {
@@ -111,7 +111,7 @@ func graphFacts(document map[string]any, field string, limit int) ([]any, error)
 		return nil, fmt.Errorf("graph %s must be an array", field)
 	}
 	if len(value) > limit {
-		return nil, fmt.Errorf("graph has %d %s; Hawk Cloud accepts at most %d", len(value), field, limit)
+		return nil, fmt.Errorf("graph has %d %s; Graycode Cloud accepts at most %d", len(value), field, limit)
 	}
 	return value, nil
 }
@@ -157,14 +157,14 @@ func sha256Hex(value []byte) string {
 func (c *Client) SyncGraph(ctx context.Context, request GraphSyncRequest) (GraphSyncResult, error) {
 	var result GraphSyncResult
 	if !c.Enabled() {
-		return result, fmt.Errorf("hawk cloud is not connected")
+		return result, fmt.Errorf("graycode cloud is not connected")
 	}
 	body, err := json.Marshal(request)
 	if err != nil {
 		return result, fmt.Errorf("marshal graph sync: %w", err)
 	}
 	if len(body) > MaxGraphSyncBodySize {
-		return result, fmt.Errorf("graph sync body is %d bytes; Hawk Cloud accepts at most %d", len(body), MaxGraphSyncBodySize)
+		return result, fmt.Errorf("graph sync body is %d bytes; Graycode Cloud accepts at most %d", len(body), MaxGraphSyncBodySize)
 	}
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -193,13 +193,13 @@ func (c *Client) SyncGraph(ctx context.Context, request GraphSyncRequest) (Graph
 		if message == "" {
 			message = resp.Status
 		}
-		return result, fmt.Errorf("hawk cloud graph sync: %s", message)
+		return result, fmt.Errorf("graycode cloud graph sync: %s", message)
 	}
 	if err := json.NewDecoder(limited).Decode(&result); err != nil {
 		return result, fmt.Errorf("decode graph sync response: %w", err)
 	}
 	if !result.Accepted {
-		return result, fmt.Errorf("hawk cloud did not accept graph sync")
+		return result, fmt.Errorf("graycode cloud did not accept graph sync")
 	}
 	return result, nil
 }

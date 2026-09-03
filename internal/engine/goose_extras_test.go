@@ -9,7 +9,7 @@ import (
 
 func TestHintsLoader_LoadHints(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, ".hawkhints"), []byte("Use Go idioms\nPrefer table-driven tests"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".graycodehints"), []byte("Use Go idioms\nPrefer table-driven tests"), 0o644)
 
 	h := NewHintsLoader()
 	hints := h.LoadHints(dir)
@@ -29,7 +29,7 @@ func TestHintsLoader_LoadHints(t *testing.T) {
 
 func TestHintsLoader_Reset(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, ".hawkhints"), []byte("hint"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".graycodehints"), []byte("hint"), 0o644)
 
 	h := NewHintsLoader()
 	h.LoadHints(dir)

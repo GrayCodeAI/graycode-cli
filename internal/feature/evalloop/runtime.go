@@ -1,4 +1,4 @@
-// Package evalloop evaluates the full hawk agent end-to-end by driving the real
+// Package evalloop evaluates the full graycode agent end-to-end by driving the real
 // engine Session and tool loop against a task, rather than invoking an LLM
 // directly. It runs in an isolated working directory and snapshots the session
 // transcript as an eval artifact.

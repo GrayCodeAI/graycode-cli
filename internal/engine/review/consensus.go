@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/token"
+	"github.com/GrayCodeAI/graycode-cli/internal/token"
 )
 
 // ConsensusSampler implements the multi-sample consensus pattern inspired by

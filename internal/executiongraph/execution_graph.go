@@ -1,4 +1,4 @@
-// Package executiongraph projects Hawk-owned runtime state into the portable
+// Package executiongraph projects Graycode-owned runtime state into the portable
 // graph contract. It is deliberately read-only: the scheduler, tools, policy
 // engine, verification engines, and Swift remain their own sources of truth.
 package executiongraph
@@ -15,14 +15,14 @@ import (
 	graphcontracts "github.com/GrayCodeAI/eagle/graph"
 	policycontracts "github.com/GrayCodeAI/eagle/policy"
 	verifycontracts "github.com/GrayCodeAI/eagle/verify"
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/taskruntime"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/taskruntime"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
-const SchemaVersion = "hawk.graph/v1"
+const SchemaVersion = "graycode.graph/v1"
 
-// Export is a portable, deterministic projection of Hawk execution state.
+// Export is a portable, deterministic projection of Graycode execution state.
 type Export struct {
 	SchemaVersion string                 `json:"schema_version"`
 	GeneratedAt   time.Time              `json:"generated_at"`
@@ -42,7 +42,7 @@ type PolicyObservation struct {
 }
 
 // VerificationSummary is an already-sanitized verification aggregate loaded
-// from Hawk's runtime observation journal.
+// from Graycode's runtime observation journal.
 type VerificationSummary struct {
 	Failed       bool
 	FindingCount int
@@ -61,7 +61,7 @@ type VerificationObservation struct {
 }
 
 // ContextObservation attaches the exact metadata-only knowledge subgraph used
-// for inference to a Hawk execution subject.
+// for inference to a Graycode execution subject.
 type ContextObservation struct {
 	ID         string
 	Subject    graphcontracts.Ref
@@ -72,7 +72,7 @@ type ContextObservation struct {
 }
 
 // QualityObservation attaches a portable metadata-only quality subgraph to a
-// Hawk execution subject.
+// Graycode execution subject.
 type QualityObservation struct {
 	ID         string
 	Subject    graphcontracts.Ref
@@ -83,7 +83,7 @@ type QualityObservation struct {
 }
 
 // RuntimeObservation attaches a mixed operations/policy/quality subgraph to a
-// Hawk execution subject.
+// Graycode execution subject.
 type RuntimeObservation struct {
 	ID         string
 	Subject    graphcontracts.Ref
@@ -93,8 +93,8 @@ type RuntimeObservation struct {
 	OccurredAt time.Time
 }
 
-// SwiftCheckpointRef links Hawk execution state to a checkpoint exported by
-// Swift. Subject defaults to the Hawk session when left empty.
+// SwiftCheckpointRef links Graycode execution state to a checkpoint exported by
+// Swift. Subject defaults to the Graycode session when left empty.
 type SwiftCheckpointRef struct {
 	CheckpointID   string
 	SwiftSessionID string
@@ -102,15 +102,15 @@ type SwiftCheckpointRef struct {
 	CreatedAt      time.Time
 }
 
-// SwiftSessionRef links Hawk execution state to a session authoritatively
-// resolved by Swift. Subject defaults to the Hawk session when left empty.
+// SwiftSessionRef links Graycode execution state to a session authoritatively
+// resolved by Swift. Subject defaults to the Graycode session when left empty.
 type SwiftSessionRef struct {
 	SessionID string
 	Subject   graphcontracts.Ref
 	CreatedAt time.Time
 }
 
-// Input contains read-only snapshots from Hawk's existing runtime owners.
+// Input contains read-only snapshots from Graycode's existing runtime owners.
 type Input struct {
 	Session             *session.Session
 	Tasks               []*tool.Task
@@ -207,7 +207,7 @@ func (a *accumulator) addSession(saved *session.Session) (graphcontracts.Ref, er
 	sessionID := strings.TrimSpace(saved.ID)
 	ref := graphcontracts.Ref{Kind: graphcontracts.NodeExecution, ID: sessionNodeID(sessionID)}
 	createdAt := graphTime(saved.CreatedAt, a.generatedAt)
-	attributes := baseAttributes("hawk_session")
+	attributes := baseAttributes("graycode_session")
 	attributes["message_count"] = strconv.Itoa(len(saved.Messages))
 	addAttribute(attributes, "model", saved.Model)
 	addAttribute(attributes, "provider", saved.Provider)
@@ -220,20 +220,20 @@ func (a *accumulator) addSession(saved *session.Session) (graphcontracts.Ref, er
 		Scope:       a.export.Scope,
 		CreatedAt:   createdAt,
 		EffectiveAt: graphTime(saved.UpdatedAt, createdAt),
-		Provenance:  a.hawkProvenance(sessionID, "hawk://session/"+sessionID),
+		Provenance:  a.graycodeProvenance(sessionID, "graycode://session/"+sessionID),
 		Attributes:  attributes,
 	}
 	if err := a.addNode(node); err != nil {
 		return graphcontracts.Ref{}, err
 	}
 	if err := a.addEvent(graphcontracts.Event{
-		ID:             "hawk/event/session/" + sessionID + "/created",
+		ID:             "graycode/event/session/" + sessionID + "/created",
 		Type:           graphcontracts.EventCreated,
 		Subject:        ref,
 		Scope:          a.export.Scope,
 		OccurredAt:     createdAt,
 		CorrelationID:  sessionID,
-		IdempotencyKey: "hawk/session/" + sessionID + "/created",
+		IdempotencyKey: "graycode/session/" + sessionID + "/created",
 		Provenance:     node.Provenance,
 	}); err != nil {
 		return graphcontracts.Ref{}, err
@@ -260,16 +260,16 @@ func (a *accumulator) addSessionMessages(saved *session.Session, sessionRef grap
 			taskID := fmt.Sprintf("%s/%d", saved.ID, taskNumber)
 			currentTask = graphcontracts.Ref{
 				Kind: graphcontracts.NodeExecution,
-				ID:   "hawk/task-request/" + taskID,
+				ID:   "graycode/task-request/" + taskID,
 			}
 			node := graphcontracts.Node{
 				ID:        currentTask.ID,
 				Kind:      currentTask.Kind,
 				Scope:     a.export.Scope,
 				CreatedAt: a.generatedAt,
-				Provenance: a.hawkProvenance(
+				Provenance: a.graycodeProvenance(
 					fmt.Sprintf("%s:message:%d", saved.ID, messageIndex),
-					fmt.Sprintf("hawk://session/%s/message/%d", saved.ID, messageIndex),
+					fmt.Sprintf("graycode://session/%s/message/%d", saved.ID, messageIndex),
 				),
 				Attributes: map[string]string{
 					"entity_type":         "task_request",
@@ -313,9 +313,9 @@ func (a *accumulator) addSessionMessages(saved *session.Session, sessionRef grap
 				Kind:      ref.Kind,
 				Scope:     a.export.Scope,
 				CreatedAt: a.generatedAt,
-				Provenance: a.hawkProvenance(
+				Provenance: a.graycodeProvenance(
 					callID,
-					fmt.Sprintf("hawk://session/%s/tool-call/%s", saved.ID, callID),
+					fmt.Sprintf("graycode://session/%s/tool-call/%s", saved.ID, callID),
 				),
 				Attributes: map[string]string{
 					"entity_type":         "tool_call",
@@ -365,34 +365,34 @@ func (a *accumulator) addStructuredTasks(tasks []*tool.Task, sessionRef graphcon
 			Scope:       a.export.Scope,
 			CreatedAt:   createdAt,
 			EffectiveAt: graphTime(task.UpdatedAt, createdAt),
-			Provenance:  a.hawkProvenance(taskID, "hawk://task/"+taskID),
+			Provenance:  a.graycodeProvenance(taskID, "graycode://task/"+taskID),
 			Attributes:  attributes,
 		}
 		if err := a.addNode(node); err != nil {
 			return err
 		}
 		if err := a.addEvent(graphcontracts.Event{
-			ID:             "hawk/event/task/" + taskID + "/created",
+			ID:             "graycode/event/task/" + taskID + "/created",
 			Type:           graphcontracts.EventCreated,
 			Subject:        ref,
 			Scope:          a.export.Scope,
 			OccurredAt:     createdAt,
 			CorrelationID:  taskID,
-			IdempotencyKey: "hawk/task/" + taskID + "/created",
+			IdempotencyKey: "graycode/task/" + taskID + "/created",
 			Provenance:     node.Provenance,
 		}); err != nil {
 			return err
 		}
 		if !task.UpdatedAt.IsZero() && task.UpdatedAt.After(task.CreatedAt) {
 			if err := a.addEvent(graphcontracts.Event{
-				ID:             "hawk/event/task/" + taskID + "/transitioned",
+				ID:             "graycode/event/task/" + taskID + "/transitioned",
 				Type:           graphcontracts.EventTransitioned,
 				Subject:        ref,
 				Scope:          a.export.Scope,
 				OccurredAt:     task.UpdatedAt.UTC(),
 				CorrelationID:  taskID,
-				CausationID:    "hawk/event/task/" + taskID + "/created",
-				IdempotencyKey: "hawk/task/" + taskID + "/transitioned/" + string(task.Status),
+				CausationID:    "graycode/event/task/" + taskID + "/created",
+				IdempotencyKey: "graycode/task/" + taskID + "/transitioned/" + string(task.Status),
 				Provenance:     node.Provenance,
 			}); err != nil {
 				return err
@@ -409,7 +409,7 @@ func (a *accumulator) addStructuredTasks(tasks []*tool.Task, sessionRef graphcon
 				graphcontracts.Ref{Kind: graphcontracts.NodeExecution, ID: structuredTaskNodeID(task.ParentID)},
 				from,
 				graphTime(task.CreatedAt, a.generatedAt),
-				a.hawkProvenance(task.ID, "hawk://task/"+task.ID),
+				a.graycodeProvenance(task.ID, "graycode://task/"+task.ID),
 			); err != nil {
 				return err
 			}
@@ -418,7 +418,7 @@ func (a *accumulator) addStructuredTasks(tasks []*tool.Task, sessionRef graphcon
 				sessionRef,
 				from,
 				graphTime(task.CreatedAt, a.generatedAt),
-				a.hawkProvenance(task.ID, "hawk://task/"+task.ID),
+				a.graycodeProvenance(task.ID, "graycode://task/"+task.ID),
 			); err != nil {
 				return err
 			}
@@ -437,15 +437,15 @@ func (a *accumulator) addStructuredTasks(tasks []*tool.Task, sessionRef graphcon
 				from, to = to, from
 			}
 			if err := a.addEdge(graphcontracts.Edge{
-				ID:        "hawk/edge/task/" + task.ID + "/" + dependency.Type + "/" + dependency.TargetID,
+				ID:        "graycode/edge/task/" + task.ID + "/" + dependency.Type + "/" + dependency.TargetID,
 				Kind:      kind,
 				From:      from,
 				To:        to,
 				Scope:     a.export.Scope,
 				CreatedAt: graphTime(task.CreatedAt, a.generatedAt),
-				Provenance: a.hawkProvenance(
+				Provenance: a.graycodeProvenance(
 					task.ID,
-					"hawk://task/"+task.ID,
+					"graycode://task/"+task.ID,
 				),
 				Attributes: map[string]string{"dependency_type": dependency.Type},
 			}); err != nil {
@@ -462,7 +462,7 @@ func (a *accumulator) addRuntimeTasks(tasks []*taskruntime.Task, sessionRef grap
 			continue
 		}
 		taskID := strings.TrimSpace(task.ID)
-		ref := graphcontracts.Ref{Kind: graphcontracts.NodeExecution, ID: "hawk/runtime-task/" + taskID}
+		ref := graphcontracts.Ref{Kind: graphcontracts.NodeExecution, ID: "graycode/runtime-task/" + taskID}
 		createdAt := graphTime(task.StartedAt, a.generatedAt)
 		attributes := baseAttributes("runtime_task")
 		attributes["kind"] = string(task.Kind)
@@ -476,7 +476,7 @@ func (a *accumulator) addRuntimeTasks(tasks []*taskruntime.Task, sessionRef grap
 			Scope:       a.export.Scope,
 			CreatedAt:   createdAt,
 			EffectiveAt: graphTime(task.DoneAt, createdAt),
-			Provenance:  a.hawkProvenance(taskID, "hawk://runtime-task/"+taskID),
+			Provenance:  a.graycodeProvenance(taskID, "graycode://runtime-task/"+taskID),
 			Attributes:  attributes,
 		}
 		if err := a.addNode(node); err != nil {
@@ -488,27 +488,27 @@ func (a *accumulator) addRuntimeTasks(tasks []*taskruntime.Task, sessionRef grap
 			}
 		}
 		if err := a.addEvent(graphcontracts.Event{
-			ID:             "hawk/event/runtime-task/" + taskID + "/created",
+			ID:             "graycode/event/runtime-task/" + taskID + "/created",
 			Type:           graphcontracts.EventCreated,
 			Subject:        ref,
 			Scope:          a.export.Scope,
 			OccurredAt:     createdAt,
 			CorrelationID:  taskID,
-			IdempotencyKey: "hawk/runtime-task/" + taskID + "/created",
+			IdempotencyKey: "graycode/runtime-task/" + taskID + "/created",
 			Provenance:     node.Provenance,
 		}); err != nil {
 			return err
 		}
 		if !task.DoneAt.IsZero() {
 			if err := a.addEvent(graphcontracts.Event{
-				ID:             "hawk/event/runtime-task/" + taskID + "/transitioned",
+				ID:             "graycode/event/runtime-task/" + taskID + "/transitioned",
 				Type:           graphcontracts.EventTransitioned,
 				Subject:        ref,
 				Scope:          a.export.Scope,
 				OccurredAt:     task.DoneAt.UTC(),
 				CorrelationID:  taskID,
-				CausationID:    "hawk/event/runtime-task/" + taskID + "/created",
-				IdempotencyKey: "hawk/runtime-task/" + taskID + "/transitioned/" + string(task.Status),
+				CausationID:    "graycode/event/runtime-task/" + taskID + "/created",
+				IdempotencyKey: "graycode/runtime-task/" + taskID + "/transitioned/" + string(task.Status),
 				Provenance:     node.Provenance,
 			}); err != nil {
 				return err
@@ -562,15 +562,15 @@ func (a *accumulator) addContextObservations(observations []ContextObservation) 
 		for _, imported := range observation.Nodes {
 			target := graphcontracts.Ref{Kind: imported.Kind, ID: imported.ID}
 			edge := graphcontracts.Edge{
-				ID:        "hawk/edge/context/" + contextID + "/" + digest(subject.ID+"\x00"+target.ID),
+				ID:        "graycode/edge/context/" + contextID + "/" + digest(subject.ID+"\x00"+target.ID),
 				Kind:      graphcontracts.EdgeReferences,
 				From:      subject,
 				To:        target,
 				Scope:     a.export.Scope,
 				CreatedAt: occurredAt,
-				Provenance: a.hawkProvenance(
+				Provenance: a.graycodeProvenance(
 					contextID,
-					"hawk://context-observation/"+contextID,
+					"graycode://context-observation/"+contextID,
 				),
 				Attributes: baseAttributes("context_selection"),
 			}
@@ -628,15 +628,15 @@ func (a *accumulator) addQualityObservations(observations []QualityObservation) 
 			}
 			target := graphcontracts.Ref{Kind: imported.Kind, ID: imported.ID}
 			edge := graphcontracts.Edge{
-				ID:        "hawk/edge/quality/" + qualityID + "/" + digest(subject.ID+"\x00"+target.ID),
+				ID:        "graycode/edge/quality/" + qualityID + "/" + digest(subject.ID+"\x00"+target.ID),
 				Kind:      graphcontracts.EdgeValidatedBy,
 				From:      subject,
 				To:        target,
 				Scope:     a.export.Scope,
 				CreatedAt: occurredAt,
-				Provenance: a.hawkProvenance(
+				Provenance: a.graycodeProvenance(
 					qualityID,
-					"hawk://quality-observation/"+qualityID,
+					"graycode://quality-observation/"+qualityID,
 				),
 				Attributes: baseAttributes("quality_observation"),
 			}
@@ -702,15 +702,15 @@ func (a *accumulator) addRuntimeObservations(observations []RuntimeObservation) 
 				edgeKind = graphcontracts.EdgeValidatedBy
 			}
 			edge := graphcontracts.Edge{
-				ID:        "hawk/edge/runtime/" + id + "/" + digest(subject.ID+"\x00"+target.ID),
+				ID:        "graycode/edge/runtime/" + id + "/" + digest(subject.ID+"\x00"+target.ID),
 				Kind:      edgeKind,
 				From:      subject,
 				To:        target,
 				Scope:     a.export.Scope,
 				CreatedAt: occurredAt,
-				Provenance: a.hawkProvenance(
+				Provenance: a.graycodeProvenance(
 					id,
-					"hawk://runtime-observation/"+id,
+					"graycode://runtime-observation/"+id,
 				),
 				Attributes: baseAttributes("runtime_observation"),
 			}
@@ -728,7 +728,7 @@ func (a *accumulator) addPolicyObservations(observations []PolicyObservation) er
 		if id == "" {
 			id = strconv.Itoa(index + 1)
 		}
-		ref := graphcontracts.Ref{Kind: graphcontracts.NodePolicy, ID: "hawk/policy/" + id}
+		ref := graphcontracts.Ref{Kind: graphcontracts.NodePolicy, ID: "graycode/policy/" + id}
 		occurredAt := graphTime(observation.OccurredAt, a.generatedAt)
 		attributes := baseAttributes("policy_verdict")
 		attributes["allowed"] = strconv.FormatBool(observation.Verdict.Allowed)
@@ -748,7 +748,7 @@ func (a *accumulator) addPolicyObservations(observations []PolicyObservation) er
 			Kind:       ref.Kind,
 			Scope:      a.export.Scope,
 			CreatedAt:  occurredAt,
-			Provenance: a.hawkProvenance(id, "hawk://policy/"+id),
+			Provenance: a.graycodeProvenance(id, "graycode://policy/"+id),
 			Attributes: attributes,
 		}
 		if err := a.addNode(node); err != nil {
@@ -759,7 +759,7 @@ func (a *accumulator) addPolicyObservations(observations []PolicyObservation) er
 				return fmt.Errorf("execution graph: policy subject: %w", err)
 			}
 			if err := a.addEdge(graphcontracts.Edge{
-				ID:         "hawk/edge/" + observation.Subject.ID + "/governed-by/" + ref.ID,
+				ID:         "graycode/edge/" + observation.Subject.ID + "/governed-by/" + ref.ID,
 				Kind:       graphcontracts.EdgeGovernedBy,
 				From:       observation.Subject,
 				To:         ref,
@@ -786,7 +786,7 @@ func (a *accumulator) addVerifications(observations []VerificationObservation) e
 		if id == "" {
 			id = strconv.Itoa(index + 1)
 		}
-		ref := graphcontracts.Ref{Kind: graphcontracts.NodeQuality, ID: "hawk/verification/" + id}
+		ref := graphcontracts.Ref{Kind: graphcontracts.NodeQuality, ID: "graycode/verification/" + id}
 		occurredAt := graphTime(observation.OccurredAt, a.generatedAt)
 		attributes := baseAttributes("verification")
 		if observation.Summary != nil {
@@ -805,7 +805,7 @@ func (a *accumulator) addVerifications(observations []VerificationObservation) e
 			Kind:       ref.Kind,
 			Scope:      a.export.Scope,
 			CreatedAt:  occurredAt,
-			Provenance: a.hawkProvenance(id, "hawk://verification/"+id),
+			Provenance: a.graycodeProvenance(id, "graycode://verification/"+id),
 			Attributes: attributes,
 		}
 		if err := a.addNode(node); err != nil {
@@ -816,7 +816,7 @@ func (a *accumulator) addVerifications(observations []VerificationObservation) e
 				return fmt.Errorf("execution graph: verification subject: %w", err)
 			}
 			if err := a.addEdge(graphcontracts.Edge{
-				ID:         "hawk/edge/" + observation.Subject.ID + "/validated-by/" + ref.ID,
+				ID:         "graycode/edge/" + observation.Subject.ID + "/validated-by/" + ref.ID,
 				Kind:       graphcontracts.EdgeValidatedBy,
 				From:       observation.Subject,
 				To:         ref,
@@ -865,13 +865,13 @@ func (a *accumulator) addSwiftSessions(sessions []SwiftSessionRef, sessionRef gr
 			return fmt.Errorf("execution graph: swift session subject: %w", err)
 		}
 		if err := a.addEdge(graphcontracts.Edge{
-			ID:         "hawk/edge/" + subject.ID + "/references/" + ref.ID,
+			ID:         "graycode/edge/" + subject.ID + "/references/" + ref.ID,
 			Kind:       graphcontracts.EdgeReferences,
 			From:       subject,
 			To:         ref,
 			Scope:      a.export.Scope,
 			CreatedAt:  createdAt,
-			Provenance: a.hawkProvenance(swiftSessionID, "swift://session/"+swiftSessionID),
+			Provenance: a.graycodeProvenance(swiftSessionID, "swift://session/"+swiftSessionID),
 		}); err != nil {
 			return err
 		}
@@ -910,13 +910,13 @@ func (a *accumulator) addSwiftCheckpoints(checkpoints []SwiftCheckpointRef, sess
 			return fmt.Errorf("execution graph: swift checkpoint subject: %w", err)
 		}
 		if err := a.addEdge(graphcontracts.Edge{
-			ID:         "hawk/edge/" + subject.ID + "/references/" + ref.ID,
+			ID:         "graycode/edge/" + subject.ID + "/references/" + ref.ID,
 			Kind:       graphcontracts.EdgeReferences,
 			From:       subject,
 			To:         ref,
 			Scope:      a.export.Scope,
 			CreatedAt:  createdAt,
-			Provenance: a.hawkProvenance(checkpointID, "swift://checkpoint/"+checkpointID),
+			Provenance: a.graycodeProvenance(checkpointID, "swift://checkpoint/"+checkpointID),
 		}); err != nil {
 			return err
 		}
@@ -957,7 +957,7 @@ func (a *accumulator) addContainsEdge(
 		return nil
 	}
 	return a.addEdge(graphcontracts.Edge{
-		ID:         "hawk/edge/" + from.ID + "/contains/" + to.ID,
+		ID:         "graycode/edge/" + from.ID + "/contains/" + to.ID,
 		Kind:       graphcontracts.EdgeContains,
 		From:       from,
 		To:         to,
@@ -974,13 +974,13 @@ func (a *accumulator) addObservedEvent(
 	suffix string,
 ) error {
 	return a.addEvent(graphcontracts.Event{
-		ID:             "hawk/event/" + suffix + "/observed",
+		ID:             "graycode/event/" + suffix + "/observed",
 		Type:           graphcontracts.EventObserved,
 		Subject:        subject,
 		Scope:          a.export.Scope,
 		OccurredAt:     occurredAt,
 		CorrelationID:  subject.ID,
-		IdempotencyKey: "hawk/" + suffix + "/observed",
+		IdempotencyKey: "graycode/" + suffix + "/observed",
 		Provenance:     provenance,
 	})
 }
@@ -1030,9 +1030,9 @@ func (a *accumulator) addEvent(event graphcontracts.Event) error {
 	return nil
 }
 
-func (a *accumulator) hawkProvenance(sourceID, evidenceURI string) graphcontracts.Provenance {
+func (a *accumulator) graycodeProvenance(sourceID, evidenceURI string) graphcontracts.Provenance {
 	provenance := graphcontracts.Provenance{
-		Producer: "hawk",
+		Producer: "graycode",
 		Version:  a.producerVersion,
 		SourceID: strings.TrimSpace(sourceID),
 	}
@@ -1082,13 +1082,13 @@ func sanitizedSHA256(value string) string {
 }
 
 func sessionNodeID(sessionID string) string {
-	return "hawk/session/" + sessionID
+	return "graycode/session/" + sessionID
 }
 
 func structuredTaskNodeID(taskID string) string {
-	return "hawk/task/" + taskID
+	return "graycode/task/" + taskID
 }
 
 func toolCallNodeID(sessionID, toolUseID string) string {
-	return "hawk/tool-call/" + sessionID + "/" + toolUseID
+	return "graycode/tool-call/" + sessionID + "/" + toolUseID
 }

@@ -61,17 +61,17 @@ func TestSet(t *testing.T) {
 }
 
 func TestEnvOverride(t *testing.T) {
-	t.Setenv("HAWK_FEATURE_ENV_OVERRIDE_TEST", "1")
+	t.Setenv("GRAYCODE_FEATURE_ENV_OVERRIDE_TEST", "1")
 	// Reset the global manager to pick up the env var.
 	// Since Register is idempotent, we need to use a fresh flag name.
 	f := Register("env-override-test", false, "env override test")
 	if !Enabled(f) {
-		t.Error("expected flag enabled by env override HAWK_CODE_ENABLE_TELEMETRY=1")
+		t.Error("expected flag enabled by env override GRAYCODE_ENABLE_TELEMETRY=1")
 	}
 }
 
 func TestEnvOverrideFalse(t *testing.T) {
-	t.Setenv("HAWK_FEATURE_ENV_OVERRIDE_FALSE", "false")
+	t.Setenv("GRAYCODE_FEATURE_ENV_OVERRIDE_FALSE", "false")
 	f := Register("env-override-false", true, "env override false test")
 	if Enabled(f) {
 		t.Error("expected flag disabled by env override to false")
@@ -79,7 +79,7 @@ func TestEnvOverrideFalse(t *testing.T) {
 }
 
 func TestEnvOverrideTrue(t *testing.T) {
-	t.Setenv("HAWK_FEATURE_ENV_OVERRIDE_TRUE", "true")
+	t.Setenv("GRAYCODE_FEATURE_ENV_OVERRIDE_TRUE", "true")
 	f := Register("env-override-true", false, "env override true test")
 	if !Enabled(f) {
 		t.Error("expected flag enabled by env override to true")
@@ -151,6 +151,6 @@ func TestDefaultDaemonFlags(t *testing.T) {
 
 func init() {
 	// Ensure no stale env vars from other tests interfere.
-	os.Unsetenv("HAWK_FEATURE_SANDBOX_V2")
-	os.Unsetenv("HAWK_FEATURE_TELEMETRY_OTEL")
+	os.Unsetenv("GRAYCODE_FEATURE_SANDBOX_V2")
+	os.Unsetenv("GRAYCODE_FEATURE_TELEMETRY_OTEL")
 }

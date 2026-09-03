@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // AutoMemory manages automatic memory extraction and storage for a project.
@@ -16,7 +16,7 @@ type AutoMemory struct {
 	dir string
 }
 
-// NewAutoMemory creates a new AutoMemory rooted in Hawk's project state.
+// NewAutoMemory creates a new AutoMemory rooted in Graycode's project state.
 func NewAutoMemory(projectDir string) *AutoMemory {
 	h := sha256.Sum256([]byte(projectDir))
 	hash := fmt.Sprintf("%x", h[:8])

@@ -76,7 +76,7 @@ func TestParseRuleLine_Invalid(t *testing.T) {
 }
 
 func TestLoadFromFile(t *testing.T) {
-	content := `# Permission rules for hawk
+	content := `# Permission rules for graycode
 # Read-only tools are always allowed
 allow Read *
 allow Grep *
@@ -160,7 +160,7 @@ func TestEvaluate_BashCommands(t *testing.T) {
 	}{
 		{"go test ./...", ActionAllow},
 		{"go test -race ./pkg/...", ActionAllow},
-		{"go build -o bin/hawk .", ActionAllow},
+		{"go build -o bin/graycode .", ActionAllow},
 		{"rm -rf /etc", ActionDeny},
 		{"sudo apt install vim", ActionDeny},
 		{"curl http://example.com", ActionAsk}, // no rule matches

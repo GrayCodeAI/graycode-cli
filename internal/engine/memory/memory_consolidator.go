@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/mathutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/mathutil"
 )
 
 // RawMemory represents an unprocessed memory ingested from a session.

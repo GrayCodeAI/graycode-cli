@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/ctxmgr"
-	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/ctxmgr"
+	modelPkg "github.com/GrayCodeAI/graycode-cli/internal/provider/routing"
 )
 
 const (

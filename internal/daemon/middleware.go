@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/feature"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature"
 )
 
 // requestIDKey is the context key for the request ID.

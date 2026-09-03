@@ -19,7 +19,7 @@ type LearnContext struct {
 func BuildLearnPrompt(ctx LearnContext) string {
 	var b strings.Builder
 
-	b.WriteString("You are a skill advisor for the Hawk AI coding agent. ")
+	b.WriteString("You are a skill advisor for the Graycode AI coding agent. ")
 	b.WriteString("Analyze this project and recommend which community skills to install.\n\n")
 
 	// Project signals.
@@ -156,7 +156,7 @@ func GatherDeepSourceInfo(dir string) string {
 // BuildLearnUpdatePrompt creates a prompt to re-analyze installed skills for staleness.
 func BuildLearnUpdatePrompt(ctx LearnContext) string {
 	var b strings.Builder
-	b.WriteString("You are a skill maintenance advisor for the Hawk AI coding agent. ")
+	b.WriteString("You are a skill maintenance advisor for the Graycode AI coding agent. ")
 	b.WriteString("Re-analyze the installed skills and flag any that are outdated, redundant, or mismatched.\n\n")
 
 	b.WriteString("## Project Analysis\n")

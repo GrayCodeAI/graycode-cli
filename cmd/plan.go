@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/intelligence/planner"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/planner"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +19,7 @@ var planCmd = &cobra.Command{
 	Use:   "plan",
 	Short: "Create and manage structured development plans",
 	Long: `plan helps you create, list, and track structured development plans.
-Plans are stored in Hawk's user state directory, partitioned by project.
+Plans are stored in Graycode's user state directory, partitioned by project.
 
 Subcommands:
   create <description>   Create a new plan (generates a plan prompt)
@@ -44,7 +44,7 @@ var planCreateCmd = &cobra.Command{
 		cmd.Println("--- User ---")
 		cmd.Println(prompt.User)
 		cmd.Println()
-		cmd.Println("Once you have the LLM response, save it with an explicit output path or import it into Hawk plans.")
+		cmd.Println("Once you have the LLM response, save it with an explicit output path or import it into Graycode plans.")
 		return nil
 	},
 }
@@ -60,7 +60,7 @@ var planListCmd = &cobra.Command{
 				if planJSON {
 					fmt.Println("[]")
 				} else {
-					cmd.Println("No plans found. Create one with: hawk plan create <description>")
+					cmd.Println("No plans found. Create one with: graycode plan create <description>")
 				}
 				return nil
 			}
@@ -90,7 +90,7 @@ var planListCmd = &cobra.Command{
 		}
 
 		if len(plans) == 0 {
-			cmd.Println("No plans found. Create one with: hawk plan create <description>")
+			cmd.Println("No plans found. Create one with: graycode plan create <description>")
 			return nil
 		}
 
@@ -141,10 +141,10 @@ var planDoneCmd = &cobra.Command{
 	Use:   "done <task-id>",
 	Short: "Mark a task as completed in the most recent plan",
 	Long: `Mark a task as done by its numeric ID. This operates on the most
-recently modified plan in Hawk's user state directory for the current project.
+recently modified plan in Graycode's user state directory for the current project.
 
 To target a specific plan, set the plan name as the first argument
-followed by the task ID: hawk plan done <name> <task-id>`,
+followed by the task ID: graycode plan done <name> <task-id>`,
 	Args: cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var planPath string
@@ -198,7 +198,7 @@ func init() {
 	planShowCmd.Flags().BoolVar(&planJSON, "json", false, "output plan as JSON")
 }
 
-// resolvePlanPath converts a plan name to a file path in Hawk's user state dir.
+// resolvePlanPath converts a plan name to a file path in Graycode's user state dir.
 func resolvePlanPath(name string) string {
 	plansDir := currentProjectPlansDir()
 	// If the name already has a .json extension, use it directly.

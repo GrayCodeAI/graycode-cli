@@ -9,11 +9,11 @@ ECO_DIR="$(cd "${ROOT_DIR}/.." && pwd)"
 rm -f "${ECO_DIR}/go.work" "${ECO_DIR}/go.work.sum"
 (
   cd "${ECO_DIR}"
-  go work init ./hawk
+  go work init ./graycode
   go_version="$(awk '$1 == "go" { print $2; exit }' "${ROOT_DIR}/go.mod")"
   go work edit -go="${go_version}"
   while IFS= read -r repo; do
-    [[ "${repo}" == "hawk" ]] && continue
+    [[ "${repo}" == "graycode" ]] && continue
     go work use "./${repo}"
     module="$(awk '$1 == "module" { print $2; exit }' "${repo}/go.mod")"
     while IFS= read -r version; do

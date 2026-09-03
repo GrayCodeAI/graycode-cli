@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/fsutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/fsutil"
 )
 
 // WorkspaceContext gathers git and project info for prompt injection.

@@ -1,4 +1,4 @@
-// theme.go — Hawk's theme system.
+// theme.go — Graycode's theme system.
 //
 // Every color in the TUI is defined here as a palette struct. To change
 // a theme, edit theme_palettes.go. To add a new theme, add a palette and
@@ -14,7 +14,7 @@ import (
 	"charm.land/lipgloss/v2/compat"
 )
 
-// BrandPrimary is Hawk's fixed Talon Gold identity color. Theme accents may
+// BrandPrimary is Graycode's fixed Talon Gold identity color. Theme accents may
 // vary, but brand-bearing elements use this value across every theme.
 const BrandPrimary = "#FFD700"
 

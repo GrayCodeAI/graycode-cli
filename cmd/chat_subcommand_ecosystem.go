@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 )
 
 // ecosystemSubcommand implements the /ecosystem slash command. It
@@ -28,7 +28,7 @@ func (e *ecosystemSubcommand) Handle(m *chatModel, args []string, text string) (
 	if providerName == "" {
 		providerName = "auto"
 	}
-	m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.FormatEcosystemPanel(context.Background(), providerName, modelName)})
+	m.messages = append(m.messages, displayMsg{role: "system", content: graycodeconfig.FormatEcosystemPanel(context.Background(), providerName, modelName)})
 	return m, nil
 }
 

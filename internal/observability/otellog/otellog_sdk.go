@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
-	"github.com/GrayCodeAI/hawk/internal/identity"
+	"github.com/GrayCodeAI/graycode-cli/internal/identity"
 )
 
 // maxTimerDelayMillis is a runtime protocol limit for timer delays (Node's
@@ -118,7 +118,7 @@ func NewBackend(cfg Config) (*Backend, error) {
 	}
 	serviceName := cfg.ServiceName
 	if serviceName == "" {
-		serviceName = "hawk"
+		serviceName = "graycode"
 	}
 	serviceVersion := cfg.ServiceVersion
 	if serviceVersion == "" {
@@ -162,7 +162,7 @@ func NewBackend(cfg Config) (*Backend, error) {
 		return nil, err
 	}
 
-	const scope = "github.com/GrayCodeAI/hawk/internal/observability/otellog"
+	const scope = "github.com/GrayCodeAI/graycode-cli/internal/observability/otellog"
 	enqueue := func(record Record) {
 		logger := provider.Logger(scope)
 		if record.Channel == ChannelOps {
@@ -352,7 +352,7 @@ func attrsToKeyValues(attrs map[string]any) []log.KeyValue {
 
 // DefaultConfig returns a config populated from environment variables,
 // mirroring the oteltrace conventions: telemetry is opt-in via
-// HAWK_CODE_ENABLE_TELEMETRY=1 and the logs endpoint comes from
+// GRAYCODE_ENABLE_TELEMETRY=1 and the logs endpoint comes from
 // OTEL_EXPORTER_OTLP_LOGS_ENDPOINT. Without both, the mode stays DISABLED.
 func DefaultConfig() Config {
 	cfg := Config{
@@ -360,10 +360,10 @@ func DefaultConfig() Config {
 		URL:             os.Getenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT"),
 		Headers:         parseHeaders(os.Getenv("OTEL_EXPORTER_OTLP_HEADERS")),
 		ShutdownTimeout: DefaultShutdownTimeout,
-		ServiceName:     "hawk",
+		ServiceName:     "graycode",
 		ServiceVersion:  "0.1.0",
 	}
-	if os.Getenv("HAWK_CODE_ENABLE_TELEMETRY") == "1" && cfg.URL != "" {
+	if os.Getenv("GRAYCODE_ENABLE_TELEMETRY") == "1" && cfg.URL != "" {
 		cfg.Mode = ModeFull
 	}
 	return cfg

@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 func TestMain(m *testing.M) {
@@ -13,7 +13,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	if _, err := os.UserHomeDir(); err != nil {
-		dir, mkErr := os.MkdirTemp("", "hawk-plugin-home-*")
+		dir, mkErr := os.MkdirTemp("", "graycode-plugin-home-*")
 		if mkErr != nil {
 			os.Exit(1)
 		}

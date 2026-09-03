@@ -9,8 +9,8 @@ import (
 	reviewcontracts "github.com/GrayCodeAI/eagle/review"
 	contracts "github.com/GrayCodeAI/eagle/types"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 func setReviewTestDirs(t *testing.T) string {
@@ -22,7 +22,7 @@ func setReviewTestDirs(t *testing.T) string {
 
 func TestReviewStore_CreateAndGet(t *testing.T) {
 	dir := setReviewTestDirs(t)
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".graycode"), 0o755)
 
 	store, err := OpenReviewStore(dir)
 	if err != nil {
@@ -52,7 +52,7 @@ func TestReviewStore_CreateAndGet(t *testing.T) {
 
 func TestReviewStore_Update(t *testing.T) {
 	dir := setReviewTestDirs(t)
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".graycode"), 0o755)
 
 	store, err := OpenReviewStore(dir)
 	if err != nil {
@@ -92,7 +92,7 @@ func TestReviewStore_Update(t *testing.T) {
 
 func TestReviewStore_GetBySHA(t *testing.T) {
 	dir := setReviewTestDirs(t)
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".graycode"), 0o755)
 
 	store, err := OpenReviewStore(dir)
 	if err != nil {
@@ -114,7 +114,7 @@ func TestReviewStore_GetBySHA(t *testing.T) {
 
 func TestReviewStore_ListOpen(t *testing.T) {
 	dir := setReviewTestDirs(t)
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".graycode"), 0o755)
 
 	store, err := OpenReviewStore(dir)
 	if err != nil {
@@ -141,7 +141,7 @@ func TestReviewStore_ListOpen(t *testing.T) {
 
 func TestReviewStore_Summary(t *testing.T) {
 	dir := setReviewTestDirs(t)
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".graycode"), 0o755)
 
 	store, err := OpenReviewStore(dir)
 	if err != nil {
@@ -171,7 +171,7 @@ func TestReviewStore_Summary(t *testing.T) {
 
 func TestReviewStore_SetStatus(t *testing.T) {
 	dir := setReviewTestDirs(t)
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".graycode"), 0o755)
 
 	store, err := OpenReviewStore(dir)
 	if err != nil {
@@ -191,7 +191,7 @@ func TestReviewStore_SetStatus(t *testing.T) {
 
 func TestReviewStore_ListAll(t *testing.T) {
 	dir := setReviewTestDirs(t)
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".graycode"), 0o755)
 
 	store, err := OpenReviewStore(dir)
 	if err != nil {
@@ -222,7 +222,7 @@ func TestReviewStore_ListAll(t *testing.T) {
 
 func TestReviewStore_GetMissing(t *testing.T) {
 	dir := setReviewTestDirs(t)
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".graycode"), 0o755)
 
 	store, err := OpenReviewStore(dir)
 	if err != nil {
@@ -239,7 +239,7 @@ func TestReviewStore_GetMissing(t *testing.T) {
 func TestReviewStore_EmptyDiffToPassedLifecycle(t *testing.T) {
 	// Mirrors runReviewRun's empty-diff path: create → set running → set passed.
 	dir := setReviewTestDirs(t)
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".graycode"), 0o755)
 
 	store, err := OpenReviewStore(dir)
 	if err != nil {
@@ -278,7 +278,7 @@ func TestReviewStore_EmptyDiffToPassedLifecycle(t *testing.T) {
 
 func TestReviewStore_CloseCheckpointsWAL(t *testing.T) {
 	dir := setReviewTestDirs(t)
-	os.MkdirAll(filepath.Join(dir, ".hawk"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".graycode"), 0o755)
 
 	store, err := OpenReviewStore(dir)
 	if err != nil {
@@ -365,9 +365,9 @@ func TestAnalysisPrompts_AllTypesExist(t *testing.T) {
 	}
 }
 
-func TestHookScript_ContainsHawkReview(t *testing.T) {
-	if !strings.Contains(hookScript, "hawk review") {
-		t.Error("hook script should contain 'hawk review'")
+func TestHookScript_ContainsGraycodeReview(t *testing.T) {
+	if !strings.Contains(hookScript, "graycode review") {
+		t.Error("hook script should contain 'graycode review'")
 	}
 	if !strings.Contains(hookScript, "git rev-parse HEAD") {
 		t.Error("hook script should get HEAD sha")

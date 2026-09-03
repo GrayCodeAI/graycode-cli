@@ -10,23 +10,23 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/GrayCodeAI/eyrie/credentials"
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 )
 
 func TestFinishConfigEntry_APIKeyPaste_SavesBeforeProbe(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() {
 		credentials.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	oldTransport := http.DefaultTransport
 	http.DefaultTransport = configSaveTestTransport(http.StatusUnauthorized)
 	t.Cleanup(func() { http.DefaultTransport = oldTransport })
 
-	if _, err := hawkconfig.CredentialInferenceForProvider("xiaomi_mimo_payg"); err != nil {
+	if _, err := graycodeconfig.CredentialInferenceForProvider("xiaomi_mimo_payg"); err != nil {
 		t.Fatalf("CredentialInferenceForProvider: %v", err)
 	}
 
@@ -111,7 +111,7 @@ func TestConfigGatewaysSelect_AddKeyOpensPaste(t *testing.T) {
 		}
 	}
 	if sel < 0 {
-		t.Skip("all gateways already have keys in this environment") // TODO: https://github.com/GrayCodeAI/hawk/issues/28
+		t.Skip("all gateways already have keys in this environment") // TODO: https://github.com/GrayCodeAI/graycode-cli/issues/28
 	}
 	m.configSel = sel
 	next, _ := m.handleConfigGatewaysSelect()
@@ -134,7 +134,7 @@ func configSaveTestTransport(status int) http.RoundTripper {
 	})
 }
 
-// roundTripFunc is defined in eyrie/runtime tests; duplicate here for hawk cmd tests.
+// roundTripFunc is defined in eyrie/runtime tests; duplicate here for graycode cmd tests.
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -142,12 +142,12 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func TestHandleConfigKey_EnterOnPasteSubmits(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() {
 		credentials.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 	oldTransport := http.DefaultTransport
 	http.DefaultTransport = configSaveTestTransport(http.StatusUnauthorized)
@@ -197,12 +197,12 @@ func TestStartConfigEntry_APIKeyPasteHasNoPlaceholder(t *testing.T) {
 }
 
 func TestHandleConfigApplyCredentialsMsg_CatalogFailureDoesNotBlameProvider(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() {
 		credentials.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 	if err := store.Set(t.Context(), credentials.AccountForEnv("POOLSIDE_API_KEY"), "poolside-test-key"); err != nil {
 		t.Fatalf("store key: %v", err)
@@ -218,7 +218,7 @@ func TestHandleConfigApplyCredentialsMsg_CatalogFailureDoesNotBlameProvider(t *t
 		t.Fatalf("catalog failure blamed provider key: %q", next.configNotice)
 	}
 	if !strings.Contains(next.configNotice, "model catalog unavailable") ||
-		!strings.Contains(next.configNotice, "hawk models refresh") {
+		!strings.Contains(next.configNotice, "graycode models refresh") {
 		t.Fatalf("catalog recovery guidance missing: %q", next.configNotice)
 	}
 }
@@ -227,12 +227,12 @@ func TestHandleConfigApplyCredentialsMsg_CatalogFailureDoesNotBlameProvider(t *t
 func TestHandleConfigApplyCredentialsMsg_ValidationFailureDoesNotBlameProvider(t *testing.T) {
 	// TODO: enable once eyrie catalog fixtures pin the claude-fable-5 model state.
 	t.Skip("requires specific eyrie model catalog state (claude-fable-5)")
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() {
 		credentials.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 	if err := store.Set(t.Context(), credentials.AccountForEnv("CONCENTRATE_API_KEY"), "concentrate-test-key"); err != nil {
 		t.Fatalf("store key: %v", err)
@@ -256,12 +256,12 @@ func TestHandleConfigApplyCredentialsMsg_ValidationFailureDoesNotBlameProvider(t
 func TestHandleConfigApplyCredentialsMsg_AuthenticationFailureBlamesKey(t *testing.T) {
 	// TODO: enable once eyrie catalog fixtures pin the auth-failure model state.
 	t.Skip("requires specific eyrie model catalog state")
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
 	t.Cleanup(func() {
 		credentials.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 	if err := store.Set(t.Context(), credentials.AccountForEnv("CONCENTRATE_API_KEY"), "concentrate-test-key"); err != nil {
 		t.Fatalf("store key: %v", err)

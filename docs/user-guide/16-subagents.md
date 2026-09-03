@@ -8,7 +8,7 @@ Subagents are enabled by default.
 
 ## How Subagents Work
 
-When Hawk needs to delegate work, it spawns a child session using the `Agent` tool. The child runs with:
+When Graycode needs to delegate work, it spawns a child session using the `Agent` tool. The child runs with:
 
 - Its own context window (isolated from parent)
 - A toolset determined by its type and capability mode
@@ -74,7 +74,7 @@ This creates an isolated git worktree, preventing conflicts with the parent sess
 
 ## Personas
 
-Personas are behavioral overlays applied to subagents. Define them in `~/.hawk/settings.json`:
+Personas are behavioral overlays applied to subagents. Define them in `~/.graycode/settings.json`:
 
 ```json
 {

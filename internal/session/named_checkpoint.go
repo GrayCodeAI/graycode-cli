@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/safewrite"
+	"github.com/GrayCodeAI/graycode-cli/internal/safewrite"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17,7 +17,7 @@ import (
 // provider, cwd) by a human-friendly label. This is additive on top of the
 // existing CheckpointManager (which tracks point-in-time message/file state for
 // rollback): named checkpoints persist a complete, self-contained session so it
-// can be resumed later with `hawk resume <name>`.
+// can be resumed later with `graycode resume <name>`.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // NamedCheckpoint is the durable on-disk record of a labeled session snapshot.

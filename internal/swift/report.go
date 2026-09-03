@@ -42,7 +42,7 @@ const (
 	MaxLineBytes = 300
 )
 
-// Snapshot captures the hawk diagnostic context rendered by Build. It is
+// Snapshot captures the graycode diagnostic context rendered by Build. It is
 // deliberately engine-agnostic: callers (engine integration or the CLI) fill
 // it from their live state, and Build renders it purely.
 type Snapshot struct {
@@ -71,7 +71,7 @@ type Snapshot struct {
 	Transcript []LogEntry
 }
 
-// Build renders the snapshot as the hawk swift diagnostic markdown, mirroring
+// Build renders the snapshot as the graycode swift diagnostic markdown, mirroring
 // fx's `/swift` report structure. Every potentially secret field is masked.
 func Build(s *Snapshot) string {
 	if s == nil {
@@ -80,7 +80,7 @@ func Build(s *Snapshot) string {
 	var b strings.Builder
 	b.Reset()
 
-	b.WriteString("# hawk swift\n\n")
+	b.WriteString("# graycode swift\n\n")
 	b.WriteString("Private diagnostic report. It may include prompts, file paths, command output, and file snippets.\n")
 
 	writeSummary(&b, s)

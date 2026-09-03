@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/session"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
 )
 
 func TestResumeRecoveredSession_StartsChatFlow(t *testing.T) {
@@ -62,7 +62,7 @@ func TestResumeRecoveredSession_StartsChatFlow(t *testing.T) {
 }
 
 func TestPrepareSession_ResumeUsesRecoveryPath(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 
 	oldResumeID := resumeID
 	oldContinueFlag := continueFlag
@@ -121,7 +121,7 @@ func TestPrepareSession_ResumeUsesRecoveryPath(t *testing.T) {
 		t.Fatalf("loaded persisted messages = %d, want %d", sess.MessageCount(), len(saved.Messages))
 	}
 
-	walPath := filepath.Join(os.Getenv("HAWK_STATE_DIR"), "sessions", saved.ID+".wal")
+	walPath := filepath.Join(os.Getenv("GRAYCODE_STATE_DIR"), "sessions", saved.ID+".wal")
 	if _, err := os.Stat(walPath); !os.IsNotExist(err) {
 		t.Fatalf("expected stale WAL to be removed, stat err = %v", err)
 	}
@@ -154,7 +154,7 @@ func TestReplBuiltinResponse_ToolsAndSession(t *testing.T) {
 	sess := engine.NewSession("demo-provider", "demo-model", "system", nil)
 	sess.AddUser("hello")
 
-	toolsOut, handled, err := replBuiltinResponse("/tools", sess, hawkconfig.Settings{}, "session-1")
+	toolsOut, handled, err := replBuiltinResponse("/tools", sess, graycodeconfig.Settings{}, "session-1")
 	if err != nil {
 		t.Fatalf("/tools error = %v", err)
 	}
@@ -165,7 +165,7 @@ func TestReplBuiltinResponse_ToolsAndSession(t *testing.T) {
 		t.Fatalf("/tools output missing tool summary: %q", toolsOut)
 	}
 
-	sessionOut, handled, err := replBuiltinResponse("/session", sess, hawkconfig.Settings{}, "session-1")
+	sessionOut, handled, err := replBuiltinResponse("/session", sess, graycodeconfig.Settings{}, "session-1")
 	if err != nil {
 		t.Fatalf("/session error = %v", err)
 	}
@@ -181,7 +181,7 @@ func TestReplBuiltinResponse_ToolsAndSession(t *testing.T) {
 
 func TestReplBuiltinResponse_Models(t *testing.T) {
 	sess := engine.NewSession("openrouter", "openrouter/auto", "system", nil)
-	out, handled, err := replBuiltinResponse("/models", sess, hawkconfig.Settings{}, "session-1")
+	out, handled, err := replBuiltinResponse("/models", sess, graycodeconfig.Settings{}, "session-1")
 	if err != nil {
 		t.Fatalf("/models error = %v", err)
 	}
@@ -218,7 +218,7 @@ func TestPluginListSubcommandUsesCobraTree(t *testing.T) {
 }
 
 func TestRecoverCommand_ExecutesResumeFlow(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 
 	oldResumeID := resumeID
 	oldContinueFlag := continueFlag

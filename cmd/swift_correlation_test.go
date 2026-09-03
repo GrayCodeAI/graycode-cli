@@ -13,7 +13,7 @@ func TestNormalizeSwiftCorrelationDeterministicAndDeduplicated(t *testing.T) {
 
 	correlation := swiftCorrelation{
 		SchemaVersion:            swiftCorrelationSchemaVersion,
-		HawkSessionID:            "hawk-session",
+		GraycodeSessionID:        "graycode-session",
 		CheckpointLookupComplete: true,
 		Matches: []swiftCorrelationMatch{
 			{
@@ -26,7 +26,7 @@ func TestNormalizeSwiftCorrelationDeterministicAndDeduplicated(t *testing.T) {
 			},
 		},
 	}
-	if err := normalizeSwiftCorrelation(&correlation, "hawk-session"); err != nil {
+	if err := normalizeSwiftCorrelation(&correlation, "graycode-session"); err != nil {
 		t.Fatalf("normalizeSwiftCorrelation() error = %v", err)
 	}
 	if correlation.Matches[0].SwiftSessionID != "swift-alpha" {
@@ -44,7 +44,7 @@ func TestNormalizeSwiftCorrelationRejectsUntrustedIdentityData(t *testing.T) {
 	valid := func() swiftCorrelation {
 		return swiftCorrelation{
 			SchemaVersion:            swiftCorrelationSchemaVersion,
-			HawkSessionID:            "hawk-session",
+			GraycodeSessionID:        "graycode-session",
 			CheckpointLookupComplete: true,
 			Matches: []swiftCorrelationMatch{{
 				SwiftSessionID: "swift-session",
@@ -63,9 +63,9 @@ func TestNormalizeSwiftCorrelationRejectsUntrustedIdentityData(t *testing.T) {
 			},
 		},
 		{
-			name: "hawk identity",
+			name: "graycode identity",
 			mutate: func(value *swiftCorrelation) {
-				value.HawkSessionID = "other-session"
+				value.GraycodeSessionID = "other-session"
 			},
 		},
 		{
@@ -93,7 +93,7 @@ func TestNormalizeSwiftCorrelationRejectsUntrustedIdentityData(t *testing.T) {
 			t.Parallel()
 			value := valid()
 			test.mutate(&value)
-			if err := normalizeSwiftCorrelation(&value, "hawk-session"); err == nil {
+			if err := normalizeSwiftCorrelation(&value, "graycode-session"); err == nil {
 				t.Fatal("normalizeSwiftCorrelation() error = nil")
 			}
 		})
@@ -105,14 +105,14 @@ func TestNormalizeSwiftCorrelationDropsUnverifiedCheckpointList(t *testing.T) {
 
 	correlation := swiftCorrelation{
 		SchemaVersion:            swiftCorrelationSchemaVersion,
-		HawkSessionID:            "hawk-session",
+		GraycodeSessionID:        "graycode-session",
 		CheckpointLookupComplete: false,
 		Matches: []swiftCorrelationMatch{{
 			SwiftSessionID: "swift-session",
 			CheckpointIDs:  []string{"abc123def456"},
 		}},
 	}
-	if err := normalizeSwiftCorrelation(&correlation, "hawk-session"); err != nil {
+	if err := normalizeSwiftCorrelation(&correlation, "graycode-session"); err != nil {
 		t.Fatalf("normalizeSwiftCorrelation() error = %v", err)
 	}
 	if len(correlation.Matches) != 1 || correlation.Matches[0].CheckpointIDs == nil ||
@@ -126,7 +126,7 @@ func TestDecodeSwiftCorrelationAcceptsCompleteSwiftV1Envelope(t *testing.T) {
 
 	payload := []byte(`{
 	  "schema_version": "swift.correlation/v1",
-	  "hawk_session_id": "hawk-session",
+	  "graycode_session_id": "graycode-session",
 	  "checkpoint_lookup_complete": true,
 	  "matches": [{
 	    "swift_session_id": "swift-session",
@@ -136,7 +136,7 @@ func TestDecodeSwiftCorrelationAcceptsCompleteSwiftV1Envelope(t *testing.T) {
 	    "phase": "ENDED"
 	  }]
 	}`)
-	correlation, err := decodeSwiftCorrelation(payload, "hawk-session")
+	correlation, err := decodeSwiftCorrelation(payload, "graycode-session")
 	if err != nil {
 		t.Fatalf("decodeSwiftCorrelation() error = %v", err)
 	}

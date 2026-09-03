@@ -37,7 +37,7 @@ func (SpecVersionTool) Parameters() map[string]interface{} {
 			},
 			"include_specs": map[string]interface{}{
 				"type":        "boolean",
-				"description": "If true, include .hawk/specs/ in the commit (default true)",
+				"description": "If true, include .graycode/specs/ in the commit (default true)",
 			},
 		},
 	}
@@ -73,7 +73,7 @@ func (SpecVersionTool) Execute(ctx context.Context, input json.RawMessage) (stri
 		p.Message = generateCommitMessage(tasksContent, specContent)
 	}
 
-	specRelPath := filepath.Join(".hawk", "specs")
+	specRelPath := filepath.Join(".graycode", "specs")
 
 	var b strings.Builder
 	b.WriteString("## Spec Versioning\n\n")

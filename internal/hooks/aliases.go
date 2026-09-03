@@ -19,7 +19,7 @@ const (
 	EventUserPromptSubmit EventType = "user_prompt_submit"
 )
 
-// CanonicalEvent normalizes vendor aliases to Hawk's primary event strings
+// CanonicalEvent normalizes vendor aliases to Graycode's primary event strings
 // used by the decision-hook matcher and registry.
 func CanonicalEvent(s string) string {
 	if s == "" {

@@ -37,7 +37,7 @@ func (s Status) String() string {
 type Task struct {
 	ID           string
 	Description  string
-	Branch       string // auto-generated branch name: hawk-parallel/{ID}
+	Branch       string // auto-generated branch name: graycode-parallel/{ID}
 	WorktreePath string // filesystem path to the worktree
 	Status       Status
 	Error        error
@@ -79,7 +79,7 @@ func (p *Pool) AddTask(description string) *Task {
 	t := &Task{
 		ID:          id,
 		Description: description,
-		Branch:      fmt.Sprintf("hawk-parallel/%s", id),
+		Branch:      fmt.Sprintf("graycode-parallel/%s", id),
 		Status:      StatusPending,
 	}
 	p.tasks = append(p.tasks, t)

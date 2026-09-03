@@ -7,7 +7,7 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	tea "charm.land/bubbletea/v2"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 )
 
 func TestCopyableTranscript_IncludesInputDraft(t *testing.T) {
@@ -80,24 +80,24 @@ func TestIsCopyToClipboardKey(t *testing.T) {
 }
 
 func TestMouseEnabled_SettingsAndEnv(t *testing.T) {
-	t.Setenv("HAWK_MOUSE", "")
+	t.Setenv("GRAYCODE_MOUSE", "")
 	if !(chatModel{}).mouseEnabled() {
 		t.Fatal("expected mouse capture to default on")
 	}
 
 	disabled := false
-	m := chatModel{settings: hawkconfig.Settings{TuiMouse: &disabled}}
+	m := chatModel{settings: graycodeconfig.Settings{TuiMouse: &disabled}}
 	if m.mouseEnabled() {
 		t.Fatal("expected settings tui_mouse=false to disable capture")
 	}
 
-	t.Setenv("HAWK_MOUSE", "0")
+	t.Setenv("GRAYCODE_MOUSE", "0")
 	if m.mouseEnabled() {
-		t.Fatal("expected HAWK_MOUSE=0 to disable capture")
+		t.Fatal("expected GRAYCODE_MOUSE=0 to disable capture")
 	}
 
-	t.Setenv("HAWK_MOUSE", "1")
+	t.Setenv("GRAYCODE_MOUSE", "1")
 	if !m.mouseEnabled() {
-		t.Fatal("expected HAWK_MOUSE=1 to enable capture")
+		t.Fatal("expected GRAYCODE_MOUSE=1 to enable capture")
 	}
 }

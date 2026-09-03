@@ -9,7 +9,7 @@ import (
 
 func TestRunSessionMigrate(t *testing.T) {
 	state := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", state)
+	t.Setenv("GRAYCODE_STATE_DIR", state)
 	id := "migrate-cmd-test"
 	sessDir := filepath.Join(state, "sessions")
 	if err := os.MkdirAll(sessDir, 0o700); err != nil {
@@ -40,7 +40,7 @@ func TestRunSessionMigrate(t *testing.T) {
 
 func TestRunSessionMigrateJSON(t *testing.T) {
 	state := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", state)
+	t.Setenv("GRAYCODE_STATE_DIR", state)
 	id := "migrate-cmd-json"
 	sessDir := filepath.Join(state, "sessions")
 	_ = os.MkdirAll(sessDir, 0o700)

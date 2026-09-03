@@ -158,13 +158,13 @@ func TestAnnotationManager_InjectAnnotationsGo(t *testing.T) {
 	content := "package main\n\nfunc main() {\n}\n"
 	result := am.InjectAnnotations("main.go", content)
 
-	if !strings.Contains(result, "// [hawk:warning] Check error here") {
+	if !strings.Contains(result, "// [graycode:warning] Check error here") {
 		t.Fatalf("expected injected annotation, got:\n%s", result)
 	}
 
 	lines := strings.Split(result, "\n")
 	// The annotation should be inserted above line 2 (0-indexed: index 1).
-	if lines[1] != "// [hawk:warning] Check error here" {
+	if lines[1] != "// [graycode:warning] Check error here" {
 		t.Fatalf("expected annotation at line index 1, got %q", lines[1])
 	}
 	// Original line 2 content should now be at index 2.
@@ -180,7 +180,7 @@ func TestAnnotationManager_InjectAnnotationsPython(t *testing.T) {
 	content := "def hello():\n    pass\n"
 	result := am.InjectAnnotations("script.py", content)
 
-	if !strings.Contains(result, "# [hawk:todo] Add type hints") {
+	if !strings.Contains(result, "# [graycode:todo] Add type hints") {
 		t.Fatalf("expected python-style annotation, got:\n%s", result)
 	}
 }
@@ -192,7 +192,7 @@ func TestAnnotationManager_InjectAnnotationsJS(t *testing.T) {
 	content := "const a = 1;\nconst b = 2;\nconst c = a + b;\n"
 	result := am.InjectAnnotations("app.ts", content)
 
-	if !strings.Contains(result, "// [hawk:warning] Potential XSS") {
+	if !strings.Contains(result, "// [graycode:warning] Potential XSS") {
 		t.Fatalf("expected JS/TS-style annotation, got:\n%s", result)
 	}
 }
@@ -205,7 +205,7 @@ func TestAnnotationManager_InjectAnnotationsResolved(t *testing.T) {
 	content := "package main\n\nfunc main() {\n}\n"
 	result := am.InjectAnnotations("main.go", content)
 
-	if strings.Contains(result, "[hawk:") {
+	if strings.Contains(result, "[graycode:") {
 		t.Fatalf("resolved annotations should not be injected, got:\n%s", result)
 	}
 }
@@ -220,7 +220,7 @@ func TestAnnotationManager_InjectAnnotationsMultiple(t *testing.T) {
 
 	lines := strings.Split(result, "\n")
 	// Line 1 annotation above line1, line 3 annotation above line3 (shifted).
-	if lines[0] != "// [hawk:note] First note" {
+	if lines[0] != "// [graycode:note] First note" {
 		t.Fatalf("expected first annotation at index 0, got %q", lines[0])
 	}
 	// After inserting first annotation, original line3 is now at index 3,
@@ -228,7 +228,7 @@ func TestAnnotationManager_InjectAnnotationsMultiple(t *testing.T) {
 	// With descending sort, line 3 annotation is inserted first, then line 1.
 	// So: index 0 = annotation for L1, index 1 = "line1", index 2 = "line2",
 	// index 3 = annotation for L3, index 4 = "line3"
-	if lines[3] != "// [hawk:todo] Second note" {
+	if lines[3] != "// [graycode:todo] Second note" {
 		t.Fatalf("expected second annotation at index 3, got %q", lines[3])
 	}
 }
@@ -236,16 +236,16 @@ func TestAnnotationManager_InjectAnnotationsMultiple(t *testing.T) {
 func TestAnnotation_StripAnnotations(t *testing.T) {
 	content := `package main
 
-// [hawk:note] This is a note
+// [graycode:note] This is a note
 func main() {
-	// [hawk:warning] Watch out
+	// [graycode:warning] Watch out
 	fmt.Println("hello")
 }
 `
 	result := StripAnnotations(content)
 
-	if strings.Contains(result, "[hawk:") {
-		t.Fatalf("expected all hawk annotations stripped, got:\n%s", result)
+	if strings.Contains(result, "[graycode:") {
+		t.Fatalf("expected all graycode annotations stripped, got:\n%s", result)
 	}
 	if !strings.Contains(result, "package main") {
 		t.Fatal("expected non-annotation content preserved")
@@ -256,14 +256,14 @@ func main() {
 }
 
 func TestAnnotation_StripAnnotationsPython(t *testing.T) {
-	content := `# [hawk:todo] Add type hints
+	content := `# [graycode:todo] Add type hints
 def hello():
     pass
 `
 	result := StripAnnotations(content)
 
-	if strings.Contains(result, "[hawk:") {
-		t.Fatalf("expected hawk annotation stripped, got:\n%s", result)
+	if strings.Contains(result, "[graycode:") {
+		t.Fatalf("expected graycode annotation stripped, got:\n%s", result)
 	}
 	if !strings.Contains(result, "def hello():") {
 		t.Fatal("expected non-annotation content preserved")
@@ -282,11 +282,11 @@ func TestAnnotation_StripAnnotationsNoAnnotations(t *testing.T) {
 func TestAnnotation_DetectAnnotations(t *testing.T) {
 	content := `package main
 
-// [hawk:note] Claims struct could be simplified
+// [graycode:note] Claims struct could be simplified
 func main() {
-	// [hawk:warning] No error check after ParseToken()
+	// [graycode:warning] No error check after ParseToken()
 	token := ParseToken()
-	// [hawk:todo] Add rate limiting here
+	// [graycode:todo] Add rate limiting here
 	handle(token)
 }
 `
@@ -321,7 +321,7 @@ func main() {
 }
 
 func TestAnnotation_DetectAnnotationsPython(t *testing.T) {
-	content := "# [hawk:question] Why is this needed?\ndef func():\n    pass\n"
+	content := "# [graycode:question] Why is this needed?\ndef func():\n    pass\n"
 	anns := DetectAnnotations(content)
 	if len(anns) != 1 {
 		t.Fatalf("expected 1 annotation, got %d", len(anns))
@@ -519,10 +519,10 @@ func TestAnnotation_StripAndInjectRoundTrip(t *testing.T) {
 	original := "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"hello\")\n}\n"
 
 	injected := am.InjectAnnotations("main.go", original)
-	if !strings.Contains(injected, "[hawk:note]") {
+	if !strings.Contains(injected, "[graycode:note]") {
 		t.Fatal("expected annotations in injected content")
 	}
-	if !strings.Contains(injected, "[hawk:todo]") {
+	if !strings.Contains(injected, "[graycode:todo]") {
 		t.Fatal("expected annotations in injected content")
 	}
 

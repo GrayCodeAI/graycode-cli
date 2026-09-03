@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Create makes a new git worktree under the repo's .hawk/worktrees directory.
+// Create makes a new git worktree under the repo's .graycode/worktrees directory.
 // branch is created from HEAD if non-empty; otherwise a unique branch name is used.
 // Returns absolute path and a cleanup function (best-effort remove).
 func Create(ctx context.Context, repoDir, branch string) (path string, cleanup func(), err error) {
@@ -23,12 +23,12 @@ func Create(ctx context.Context, repoDir, branch string) (path string, cleanup f
 	if out, e := exec.CommandContext(ctx, "git", "-C", repoDir, "rev-parse", "--is-inside-work-tree").CombinedOutput(); e != nil { // #nosec G204 -- fixed git executable
 		return "", nil, fmt.Errorf("not a git repository: %s", strings.TrimSpace(string(out)))
 	}
-	base := filepath.Join(repoDir, ".hawk", "worktrees")
+	base := filepath.Join(repoDir, ".graycode", "worktrees")
 	if err := os.MkdirAll(base, 0o700); err != nil {
 		return "", nil, err
 	}
 	if branch == "" {
-		branch = fmt.Sprintf("hawk-subagent-%d", time.Now().UnixNano())
+		branch = fmt.Sprintf("graycode-subagent-%d", time.Now().UnixNano())
 	}
 	path = filepath.Join(base, branch)
 	// Remove leftover path if present.

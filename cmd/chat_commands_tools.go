@@ -8,9 +8,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
-	"github.com/GrayCodeAI/hawk/internal/plugin"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature/shellmode"
+	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // explainCode traces a file/line back to the git commit and session that created it.
@@ -109,12 +109,12 @@ func (m *chatModel) handleShellEscape(command string) (tea.Model, tea.Cmd) {
 // handleNamespacedSkill handles /vendor:skill-name invocations.
 func (m *chatModel) handleNamespacedSkill(cmd, fullText string) (tea.Model, tea.Cmd) {
 	// Parse /vendor:skill-name
-	invoke := cmd // e.g. "/hawk:go-review"
+	invoke := cmd // e.g. "/graycode:go-review"
 
 	// Search active and installed skills for matching invoke pattern
 	var matched *plugin.SmartSkill
 	for name, skill := range m.activeSkills {
-		if skill.Invoke == invoke || "/hawk:"+name == invoke {
+		if skill.Invoke == invoke || "/graycode:"+name == invoke {
 			matched = &skill
 			break
 		}
@@ -124,7 +124,7 @@ func (m *chatModel) handleNamespacedSkill(cmd, fullText string) (tea.Model, tea.
 		// Try loading from installed skills
 		skills := plugin.LoadSmartSkills(plugin.DefaultSkillDirs())
 		for i := range skills {
-			if skills[i].Invoke == invoke || "/hawk:"+skills[i].Name == invoke {
+			if skills[i].Invoke == invoke || "/graycode:"+skills[i].Name == invoke {
 				matched = &skills[i]
 				break
 			}

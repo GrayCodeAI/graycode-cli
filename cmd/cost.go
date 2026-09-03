@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	analytics "github.com/GrayCodeAI/hawk/internal/observability"
+	analytics "github.com/GrayCodeAI/graycode-cli/internal/observability"
 	"github.com/spf13/cobra"
 )
 
@@ -64,7 +64,7 @@ var costAnalyzeCmd = &cobra.Command{
 			cmd.Println("  - Model routing recommendations")
 			cmd.Println("  - Prompt caching suggestions")
 			cmd.Println()
-			cmd.Println("To track progress: https://github.com/GrayCodeAI/hawk/issues")
+			cmd.Println("To track progress: https://github.com/GrayCodeAI/graycode-cli/issues")
 			return nil
 		}
 

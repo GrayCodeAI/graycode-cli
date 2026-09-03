@@ -6,17 +6,17 @@ schema_version: 1
 # carrying its own repo-name list.
 contracts:
   eagle_version: v0.0.0-20260902153929-5877bed17503
-  portable_graph_schema: hawk.graph/v1
+  portable_graph_schema: graycode.graph/v1
   cloud_graph_schema: graycode-cloud.graph/v1
   usage_event: usage.recorded.v1
 
 repositories:
-  - directory: hawk
-    github_repo: hawk
-    product_name: Hawk
+  - directory: graycode-cli
+    github_repo: graycode-cli
+    product_name: Graycode
     kind: product
     language: go
-    module: github.com/GrayCodeAI/hawk
+    module: github.com/GrayCodeAI/graycode-cli
     workspace: true
     tracks_eagle: true
 
@@ -100,7 +100,7 @@ repositories:
 
   - directory: sparrow
     github_repo: sparrow
-    product_name: Hawk SDK for Go
+    product_name: Graycode SDK for Go
     kind: sdk
     language: go
     module: github.com/GrayCodeAI/sparrow
@@ -109,7 +109,7 @@ repositories:
 
   - directory: robin
     github_repo: robin
-    product_name: Hawk SDK for Python
+    product_name: Graycode SDK for Python
     kind: sdk
     language: python
     workspace: false
@@ -117,7 +117,7 @@ repositories:
 
   - directory: wren
     github_repo: wren
-    product_name: Hawk SDK for TypeScript
+    product_name: Graycode SDK for TypeScript
     kind: sdk
     language: typescript
     workspace: false
@@ -125,7 +125,7 @@ repositories:
 
   - directory: starling
     github_repo: starling
-    product_name: Hawk Community Skills
+    product_name: Graycode Community Skills
     kind: extension
     language: python
     workspace: false

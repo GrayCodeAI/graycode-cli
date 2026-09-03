@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 func withEnv(t *testing.T, kv map[string]string) {
@@ -26,7 +26,7 @@ func withEnv(t *testing.T, kv map[string]string) {
 func osLookup(key string) (string, bool) { return "", false }
 
 func TestConfiguredNone(t *testing.T) {
-	withEnv(t, map[string]string{"HAWK_NOTIFY_WEBHOOK_URL": "", "HAWK_NOTIFY_TELEGRAM_TOKEN": ""})
+	withEnv(t, map[string]string{"GRAYCODE_NOTIFY_WEBHOOK_URL": "", "GRAYCODE_NOTIFY_TELEGRAM_TOKEN": ""})
 	if Configured() {
 		t.Fatal("nothing configured")
 	}
@@ -43,9 +43,9 @@ func TestSendWebhookPayload(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
-	t.Setenv("HAWK_NOTIFY_WEBHOOK_URL", srv.URL)
+	t.Setenv("GRAYCODE_NOTIFY_WEBHOOK_URL", srv.URL)
 
-	if err := SendCompletion(Completion{Title: "done", Body: "built it", OK: true, Source: "hawk exec", Branch: "b1"}); err != nil {
+	if err := SendCompletion(Completion{Title: "done", Body: "built it", OK: true, Source: "graycode exec", Branch: "b1"}); err != nil {
 		t.Fatalf("SendCompletion: %v", err)
 	}
 	if got["event"] != "agent_completion" || got["title"] != "done" || got["ok"] != true || got["branch"] != "b1" {
@@ -58,7 +58,7 @@ func TestSendWebhookErrorSurfaces(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer srv.Close()
-	t.Setenv("HAWK_NOTIFY_WEBHOOK_URL", srv.URL)
+	t.Setenv("GRAYCODE_NOTIFY_WEBHOOK_URL", srv.URL)
 	err := SendCompletion(Completion{Title: "x"})
 	if err == nil || !strings.Contains(err.Error(), "webhook status 500") {
 		t.Fatalf("err = %v", err)

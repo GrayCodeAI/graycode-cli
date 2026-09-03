@@ -122,7 +122,7 @@ validate() {
 
     # Only workspace repositories are required to exist for Go workspace
     # generation. SDKs, skills, Owl, and the platform remain independent
-    # repositories and need not be checked out in a Hawk-only CI job.
+    # repositories and need not be checked out in a Graycode-only CI job.
     if [[ "${flags%%:*}" == "true" && ! -d "${ECO_DIR}/${directory}/.git" ]]; then
       echo "${directory}: workspace repository is not checked out" >&2
       failed=1

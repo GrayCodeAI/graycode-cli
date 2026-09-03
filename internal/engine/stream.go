@@ -8,20 +8,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
-	"github.com/GrayCodeAI/hawk/internal/smartrouting"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/smartrouting"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/branching"
-	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
-	"github.com/GrayCodeAI/hawk/internal/hooks"
-	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
-	"github.com/GrayCodeAI/hawk/internal/plugin"
-	"github.com/GrayCodeAI/hawk/internal/prompt"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/branching"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/lifecycle"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/hooks"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
+	"github.com/GrayCodeAI/graycode-cli/internal/prompt"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // turnContext carries the per-turn, pre-compute values that buildTurnOptions
@@ -466,7 +466,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Issue the LLM call via the ChatService. The service handles
 		// rate limit, retry, and emergency compact internally; the
 		// api.requests counter is incremented inside ChatService.Stream.
-		// Hawk records product-level latency; provider health and circuit
+		// Graycode records product-level latency; provider health and circuit
 		// breaking are owned by Eyrie's routed transport.
 		apiStart := time.Now()
 		managesResilience := clientManagesResilience(s.ChatLLM().Client())
@@ -495,9 +495,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		resolvedProvider := strings.TrimSpace(s.ChatLLM().Provider())
 		resolvedModel := strings.TrimSpace(activeModel)
 
-		// Compatibility clients retain Hawk's historical stream retry and
+		// Compatibility clients retain Graycode's historical stream retry and
 		// reasoning-only recovery. Eyrie facade clients already normalize and
-		// recover provider streams, so Hawk must consume their result exactly once.
+		// recover provider streams, so Graycode must consume their result exactly once.
 		const maxStreamRetries = 2
 		var streamErr error
 		var sawThinking bool
@@ -761,7 +761,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		}
 
 		// Compatibility-only max_tokens recovery. Eyrie's engine facade owns
-		// continuation and exposes one normalized stream to Hawk. Legacy clients
+		// continuation and exposes one normalized stream to Graycode. Legacy clients
 		// retain the historical synthetic turn so injected integrations do not
 		// change behavior while they migrate to the facade.
 		if !managesResilience && stopReason == "max_tokens" && len(toolCalls) == 0 && recoveryCount < maxRecoveryRetries {

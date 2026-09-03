@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/safety"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/safety"
 )
 
 // StartAgentLoopSpan creates a span for the agent loop iteration.

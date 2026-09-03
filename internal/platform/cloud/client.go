@@ -1,4 +1,4 @@
-// Package cloud contains Hawk's optional, fail-open HTTP integration with Hawk Cloud.
+// Package cloud contains Graycode's optional, fail-open HTTP integration with Graycode Cloud.
 package cloud
 
 import (
@@ -38,7 +38,7 @@ type UsageEvent struct {
 	OccurredAt          string `json:"occurredAt"`
 }
 
-// DeliveryContext is bounded repository and delivery metadata Hawk can sync
+// DeliveryContext is bounded repository and delivery metadata Graycode can sync
 // with its project-scoped device token.
 type DeliveryContext struct {
 	ProjectID  string `json:"projectId"`
@@ -100,9 +100,9 @@ func New(cfg Config) *Client {
 
 func (c *Client) Enabled() bool { return c.endpoint != "" && c.token != "" }
 
-func (c *Client) startDeviceLogin(ctx context.Context, label, platform, hawkVersion string) (DeviceLoginStart, error) {
+func (c *Client) startDeviceLogin(ctx context.Context, label, platform, graycodeVersion string) (DeviceLoginStart, error) {
 	var result DeviceLoginStart
-	body, err := json.Marshal(map[string]string{"label": label, "platform": platform, "hawkVersion": hawkVersion})
+	body, err := json.Marshal(map[string]string{"label": label, "platform": platform, "graycodeVersion": graycodeVersion})
 	if err != nil {
 		return result, err
 	}
@@ -117,7 +117,7 @@ func (c *Client) startDeviceLogin(ctx context.Context, label, platform, hawkVers
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return result, fmt.Errorf("hawk cloud device login start: %s", resp.Status)
+		return result, fmt.Errorf("graycode cloud device login start: %s", resp.Status)
 	}
 	return result, json.NewDecoder(resp.Body).Decode(&result)
 }
@@ -139,21 +139,21 @@ func (c *Client) pollDeviceLogin(ctx context.Context, deviceCode string) (Device
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return result, fmt.Errorf("hawk cloud device login poll: %s", resp.Status)
+		return result, fmt.Errorf("graycode cloud device login poll: %s", resp.Status)
 	}
 	return result, json.NewDecoder(resp.Body).Decode(&result)
 }
 
-func (c *Client) StartDeviceLogin(ctx context.Context, label, platform, hawkVersion string) (DeviceLoginStart, error) {
+func (c *Client) StartDeviceLogin(ctx context.Context, label, platform, graycodeVersion string) (DeviceLoginStart, error) {
 	if c.endpoint == "" {
-		return DeviceLoginStart{}, fmt.Errorf("hawk cloud endpoint is not configured")
+		return DeviceLoginStart{}, fmt.Errorf("graycode cloud endpoint is not configured")
 	}
-	return c.startDeviceLogin(ctx, label, platform, hawkVersion)
+	return c.startDeviceLogin(ctx, label, platform, graycodeVersion)
 }
 
 func (c *Client) PollDeviceLogin(ctx context.Context, deviceCode string) (DeviceLoginPoll, error) {
 	if c.endpoint == "" {
-		return DeviceLoginPoll{}, fmt.Errorf("hawk cloud endpoint is not configured")
+		return DeviceLoginPoll{}, fmt.Errorf("graycode cloud endpoint is not configured")
 	}
 	return c.pollDeviceLogin(ctx, deviceCode)
 }

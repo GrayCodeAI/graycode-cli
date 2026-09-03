@@ -527,7 +527,7 @@ func taskImplementHTTPHandler() BenchmarkTask {
 	return BenchmarkTask{
 		ID:          "go-implement-http-handler",
 		Description: "Implement a simple HTTP handler that returns JSON responses",
-		Prompt:      "Implement the HealthHandler function that returns a JSON response with status 200 and body {\"status\":\"ok\",\"service\":\"hawk\"}. Also implement NotFoundHandler that returns 404 with {\"error\":\"not found\"}.",
+		Prompt:      "Implement the HealthHandler function that returns a JSON response with status 200 and body {\"status\":\"ok\",\"service\":\"graycode\"}. Also implement NotFoundHandler that returns 404 with {\"error\":\"not found\"}.",
 		TimeLimit:   2 * time.Minute,
 		Tags:        []string{"go", "http", "handler"},
 		SetupFn: func(workDir string) error {
@@ -547,7 +547,7 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "ok",
-		"service": "hawk",
+		"service": "graycode",
 	})
 }
 
@@ -595,8 +595,8 @@ func TestHealthHandler(t *testing.T) {
 	if body["status"] != "ok" {
 		t.Errorf("status = %q, want %q", body["status"], "ok")
 	}
-	if body["service"] != "hawk" {
-		t.Errorf("service = %q, want %q", body["service"], "hawk")
+	if body["service"] != "graycode" {
+		t.Errorf("service = %q, want %q", body["service"], "graycode")
 	}
 }
 

@@ -8,8 +8,8 @@ import (
 	"time"
 
 	contracts "github.com/GrayCodeAI/eagle/policy"
-	"github.com/GrayCodeAI/hawk/internal/permissions"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/permissions"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 // PermissionRequest is sent from engine to TUI when a tool needs approval.

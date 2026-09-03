@@ -7,9 +7,9 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
 )
 
 const defaultPermissionSandbox = "workspace"
@@ -87,7 +87,7 @@ func normalizePermissionSandbox(raw string) (string, string, bool) {
 	}
 }
 
-func effectivePermissionSandbox(settings hawkconfig.Settings) string {
+func effectivePermissionSandbox(settings graycodeconfig.Settings) string {
 	if normalized, _, ok := normalizePermissionSandbox(sandboxFlag); ok && strings.TrimSpace(sandboxFlag) != "" {
 		return normalized
 	}
@@ -297,7 +297,7 @@ func permissionRulesSummary(m *chatModel) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func effectiveAllowRules(settings hawkconfig.Settings) []string {
+func effectiveAllowRules(settings graycodeconfig.Settings) []string {
 	var rules []string
 	rules = append(rules, settings.AutoAllow...)
 	rules = append(rules, settings.AllowedTools...)
@@ -305,7 +305,7 @@ func effectiveAllowRules(settings hawkconfig.Settings) []string {
 	return dedupeStrings(rules)
 }
 
-func effectiveDenyRules(settings hawkconfig.Settings) []string {
+func effectiveDenyRules(settings graycodeconfig.Settings) []string {
 	rules := append([]string{}, settings.DisallowedTools...)
 	rules = append(rules, parseToolListFromCLI(disallowedToolsFlag)...)
 	return dedupeStrings(rules)
@@ -325,7 +325,7 @@ func dedupeStrings(values []string) []string {
 	return out
 }
 
-func rebuildSessionPermissionRules(sess *engine.Session, settings hawkconfig.Settings) {
+func rebuildSessionPermissionRules(sess *engine.Session, settings graycodeconfig.Settings) {
 	if sess == nil {
 		return
 	}
@@ -356,7 +356,7 @@ func rebuildSessionPermissionRules(sess *engine.Session, settings hawkconfig.Set
 	}
 }
 
-func savePermissionSettings(scope string, settings hawkconfig.Settings, level engine.AutonomyLevel) (string, error) {
+func savePermissionSettings(scope string, settings graycodeconfig.Settings, level engine.AutonomyLevel) (string, error) {
 	scope = strings.ToLower(strings.TrimSpace(scope))
 	if scope == "" {
 		scope = "global"
@@ -371,14 +371,14 @@ func savePermissionSettings(scope string, settings hawkconfig.Settings, level en
 	case "project":
 		return "", fmt.Errorf("project-local settings writes are disabled; use scope \"global\" or an explicit --settings file")
 	case "global":
-		target := hawkconfig.LoadGlobalSettings()
+		target := graycodeconfig.LoadGlobalSettings()
 		target.AutoAllow = append([]string{}, settings.AutoAllow...)
 		target.AllowedTools = append([]string{}, settings.AllowedTools...)
 		target.DisallowedTools = append([]string{}, settings.DisallowedTools...)
 		target.Autonomy = settings.Autonomy
 		target.AutonomyExplicit = true
 		target.Sandbox = settings.Sandbox
-		if err := hawkconfig.SaveGlobal(target); err != nil {
+		if err := graycodeconfig.SaveGlobal(target); err != nil {
 			return "", err
 		}
 		return "user settings", nil

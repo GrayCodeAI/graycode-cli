@@ -6,8 +6,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine/project"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/project"
 )
 
 // contextSubcommand implements the /context slash command. It
@@ -37,7 +37,7 @@ func (c *contextSubcommand) Handle(m *chatModel, args []string, text string) (te
 		}
 		return m, nil
 	}
-	m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.BuildContextWithDirs(addDirs)})
+	m.messages = append(m.messages, displayMsg{role: "system", content: graycodeconfig.BuildContextWithDirs(addDirs)})
 	return m, nil
 }
 

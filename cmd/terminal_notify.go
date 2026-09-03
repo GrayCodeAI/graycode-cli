@@ -46,7 +46,7 @@ func sendTerminalNotification(title, body string) {
 		_, _ = fmt.Fprintf(os.Stderr, "\033]9;%s\007", body)
 	case "kitty":
 		// Kitty OSC 99 notification
-		_, _ = fmt.Fprintf(os.Stderr, "\033]99;i=hawk:d=0;%s\033\\", body)
+		_, _ = fmt.Fprintf(os.Stderr, "\033]99;i=graycode:d=0;%s\033\\", body)
 	case "ghostty":
 		// Ghostty OSC 777 notification
 		_, _ = fmt.Fprintf(os.Stderr, "\033]777;notify;%s;%s\033\\", title, body)

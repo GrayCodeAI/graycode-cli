@@ -22,7 +22,7 @@ const checkTimeout = 10 * time.Second
 // api.github.com response cannot exhaust memory.
 const maxResponseBytes = 1 << 20 // 1 MiB
 
-var updateURL = "https://api.github.com/repos/GrayCodeAI/hawk/releases/latest"
+var updateURL = "https://api.github.com/repos/GrayCodeAI/graycode-cli/releases/latest"
 
 func setUpdateURL(url string) {
 	updateURL = url
@@ -43,7 +43,7 @@ func Check(currentVersion string) (*ReleaseInfo, error) {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("User-Agent", "hawk-cli")
+	req.Header.Set("User-Agent", "graycode-cli")
 
 	client := &http.Client{Timeout: checkTimeout}
 	resp, err := client.Do(req)
@@ -132,7 +132,7 @@ func Summary(currentVersion string) string {
 		return fmt.Sprintf("Update check failed: %v", err)
 	}
 	if release == nil {
-		return fmt.Sprintf("hawk is up to date (%s)", currentVersion)
+		return fmt.Sprintf("graycode is up to date (%s)", currentVersion)
 	}
 	return fmt.Sprintf("Update available: %s -> %s\n%s\n\nRelease notes:\n%s",
 		currentVersion, release.TagName, release.URL, release.Body)

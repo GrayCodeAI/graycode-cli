@@ -17,7 +17,7 @@
 //	go run ./cmd/compat-test -matrix=stable -strict
 //	                                         # exit non-zero if any
 //	                                         # component lacks a version
-//	go run ./cmd/compat-test -check-external # advisory: compare hawk's own
+//	go run ./cmd/compat-test -check-external # advisory: compare graycode's own
 //	                                         # go.mod pins for shared leaf
 //	                                         # deps against what each
 //	                                         # sibling repo declares.
@@ -176,7 +176,7 @@ func report(mf matrixFile, m matrix, strict bool) error {
 }
 
 // findMatrixFile locates the cross-repo compatibility matrix (testdata/compatibility-matrix.json).
-// It must not pick hawk/platform-capabilities.json, which is a different document.
+// It must not pick graycode/platform-capabilities.json, which is a different document.
 func findMatrixFile() string {
 	dir, err := os.Getwd()
 	if err != nil {
@@ -184,7 +184,7 @@ func findMatrixFile() string {
 	}
 	candidates := []string{
 		"testdata/compatibility-matrix.json",
-		"hawk/testdata/compatibility-matrix.json",
+		"graycode/testdata/compatibility-matrix.json",
 	}
 	for i := 0; i < 6; i++ {
 		for _, rel := range candidates {

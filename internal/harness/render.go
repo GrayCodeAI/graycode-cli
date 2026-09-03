@@ -16,7 +16,7 @@ func RenderJSON(report *HarnessReport) ([]byte, error) {
 func RenderMarkdown(report *HarnessReport) string {
 	var sb strings.Builder
 
-	sb.WriteString("# Hawk Agent Harness Review Report\n\n")
+	sb.WriteString("# Graycode Agent Harness Review Report\n\n")
 	sb.WriteString(fmt.Sprintf("**Target Workspace:** `%s`  \n", report.TargetPath))
 	sb.WriteString(fmt.Sprintf("**Generated At:** %s  \n", report.GeneratedAt.Format(time.RFC1123)))
 	sb.WriteString(fmt.Sprintf("**Overall Harness Health Score:** **%d / 100** (%s)\n\n", report.OverallScore, report.OverallStatus))
@@ -82,7 +82,7 @@ func RenderHTML(report *HarnessReport) string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hawk Harness Evaluation Report</title>
+    <title>Graycode Harness Evaluation Report</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -208,7 +208,7 @@ func RenderHTML(report *HarnessReport) string {
 <div class="container">
     <div class="header">
         <div class="title-area">
-            <h1>Hawk Agent Harness Review</h1>
+            <h1>Graycode Agent Harness Review</h1>
             <div class="meta-info">Workspace: <code>` + report.TargetPath + `</code> | Generated: ` + report.GeneratedAt.Format(time.RFC1123) + `</div>
         </div>
         <div class="score-badge">

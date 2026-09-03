@@ -91,7 +91,7 @@ func ConnectWS(ctx context.Context, name, rawURL string, headers map[string]stri
 	if _, err := s.Call(ctx, "initialize", map[string]interface{}{
 		"protocolVersion": "2025-03-26",
 		"capabilities":    map[string]interface{}{},
-		"clientInfo":      map[string]interface{}{"name": "hawk", "version": clientVersion},
+		"clientInfo":      map[string]interface{}{"name": "graycode", "version": clientVersion},
 	}); err != nil {
 		_ = s.Close()
 		return nil, fmt.Errorf("mcp ws init: %w", err)

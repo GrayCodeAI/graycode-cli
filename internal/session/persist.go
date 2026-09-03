@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // SaveMessages serializes a slice of conversation messages to a JSON file
@@ -24,7 +24,7 @@ func SaveMessages(path string, messages []Message) error {
 	}
 
 	// Atomic write: temp file → sync → rename to avoid partial writes.
-	tmp, err := os.CreateTemp(dir, ".hawk-session-*.tmp")
+	tmp, err := os.CreateTemp(dir, ".graycode-session-*.tmp")
 	if err != nil {
 		return fmt.Errorf("create session temp file: %w", err)
 	}

@@ -8,7 +8,7 @@ import (
 )
 
 // SessionLifecycle manages the start and end of agent sessions, implementing
-// the self-improvement loop that makes hawk better over time.
+// the self-improvement loop that makes graycode better over time.
 //
 // Research basis:
 // - Reflexion (NeurIPS 2023): 91% HumanEval via episodic memory of reflections

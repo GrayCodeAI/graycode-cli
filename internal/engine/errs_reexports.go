@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/engine/errs"
+import "github.com/GrayCodeAI/graycode-cli/internal/engine/errs"
 
 type (
 	ErrorContext      = errs.ErrorContext

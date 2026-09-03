@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/conversationarc"
+	"github.com/GrayCodeAI/graycode-cli/internal/conversationarc"
 )
 
 func TestSessionArcAccessors(t *testing.T) {

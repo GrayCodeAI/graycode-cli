@@ -7,7 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/recipe"
+	"github.com/GrayCodeAI/graycode-cli/internal/recipe"
 )
 
 // recipeSubcommand implements the /recipe slash command. It
@@ -25,7 +25,7 @@ func (r *recipeSubcommand) Handle(m *chatModel, args []string, text string) (tea
 		rn := recipe.NewRunner()
 		recipes := rn.List()
 		if len(recipes) == 0 {
-			m.messages = append(m.messages, displayMsg{role: "system", content: "No recipes found in Hawk user state or .agents/recipes/"})
+			m.messages = append(m.messages, displayMsg{role: "system", content: "No recipes found in Graycode user state or .agents/recipes/"})
 		} else {
 			var list string
 			for _, r := range recipes {

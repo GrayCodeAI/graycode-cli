@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/engine/control"
+import "github.com/GrayCodeAI/graycode-cli/internal/engine/control"
 
 type (
 	LoopDetector    = control.LoopDetector

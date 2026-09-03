@@ -100,7 +100,7 @@ type EvaluateOptions struct {
 	OutputDir       string
 }
 
-// ToContractReport converts the native Hawk HarnessReport to the neutral eagle Report.
+// ToContractReport converts the native Graycode HarnessReport to the neutral eagle Report.
 func (r *HarnessReport) ToContractReport() *harnesscontracts.Report {
 	if r == nil {
 		return nil

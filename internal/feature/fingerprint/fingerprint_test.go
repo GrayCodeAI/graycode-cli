@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// repoRoot returns the hawk repo root (great-grandparent of internal/feature/fingerprint).
+// repoRoot returns the graycode repo root (great-grandparent of internal/feature/fingerprint).
 func repoRoot(t *testing.T) string {
 	t.Helper()
 	wd, err := os.Getwd()
@@ -17,7 +17,7 @@ func repoRoot(t *testing.T) string {
 	return filepath.Dir(filepath.Dir(filepath.Dir(wd)))
 }
 
-func TestGenerate_HawkRepo(t *testing.T) {
+func TestGenerate_GraycodeRepo(t *testing.T) {
 	root := repoRoot(t)
 	fp, err := Generate(root)
 	if err != nil {
@@ -57,8 +57,8 @@ func TestGenerate_HawkRepo(t *testing.T) {
 	}
 
 	// Name should be the directory name.
-	if fp.Name != "hawk" {
-		t.Errorf("expected Name='hawk', got %q", fp.Name)
+	if fp.Name != "graycode" {
+		t.Errorf("expected Name='graycode', got %q", fp.Name)
 	}
 
 	t.Logf("Fingerprint: files=%d lines=%d langs=%d deps=%d pm=%s",

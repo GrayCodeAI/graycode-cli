@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // mockClient implements ChatClient for testing without real LLM calls.

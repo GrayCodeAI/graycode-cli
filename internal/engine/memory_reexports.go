@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/engine/memory"
+import "github.com/GrayCodeAI/graycode-cli/internal/engine/memory"
 
 type (
 	KnowledgeEntry     = memory.KnowledgeEntry

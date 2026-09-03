@@ -71,12 +71,12 @@ func catalogHealthReportUncached(ctx context.Context) CatalogHealth {
 		Source: status.Source, Error: status.Error,
 	}
 	if !h.Exists && h.Error == "" {
-		h.Error = "cache missing — hawk will discover automatically on start"
+		h.Error = "cache missing — graycode will discover automatically on start"
 	}
 	return h
 }
 
-// FormatCatalogHealth returns human-readable catalog status for hawk doctor.
+// FormatCatalogHealth returns human-readable catalog status for graycode doctor.
 func FormatCatalogHealth(h CatalogHealth) string {
 	var b strings.Builder
 	b.WriteString("Model catalog (eyrie):\n")
@@ -91,7 +91,7 @@ func FormatCatalogHealth(h CatalogHealth) string {
 	}
 	b.WriteString(fmt.Sprintf("  models: %d  deployments: %d  offerings: %d\n", h.Models, h.Deployments, h.Offerings))
 	if h.Stale {
-		b.WriteString(fmt.Sprintf("  stale: yes (after %s) — hawk refreshes automatically on start\n", h.StaleAfter.UTC().Format(time.RFC3339)))
+		b.WriteString(fmt.Sprintf("  stale: yes (after %s) — graycode refreshes automatically on start\n", h.StaleAfter.UTC().Format(time.RFC3339)))
 	} else if !h.StaleAfter.IsZero() {
 		b.WriteString(fmt.Sprintf("  stale: no (until %s)\n", h.StaleAfter.UTC().Format(time.RFC3339)))
 	}
@@ -106,7 +106,7 @@ func CatalogEmptyHint(ctx context.Context) string {
 	if !HasConfiguredDeploymentCached(ctx) {
 		return "run /config to paste an API key or set up Ollama (local, no key)"
 	}
-	return "check network access, then hawk preflight or /config — hawk refreshes the catalog automatically"
+	return "check network access, then graycode preflight or /config — graycode refreshes the catalog automatically"
 }
 
 // EnsureCatalogAvailable returns an error when the production catalog cache is missing or empty.

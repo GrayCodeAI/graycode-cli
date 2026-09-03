@@ -121,7 +121,7 @@ func TestProjectMessagesFullSurface(t *testing.T) {
 	})
 	l.Append(UserMessage, Message{Content: "hello"})
 	l.Append(AssistantMsg, Message{Content: "hi there"})
-	l.Append(ContextInjected, ContextInjectedFact{Content: "Project: hawk"})
+	l.Append(ContextInjected, ContextInjectedFact{Content: "Project: graycode"})
 	l.Append(AssistantMsg, Message{Content: "what can I help with?"})
 	// Compaction: prune 2 messages, then summary
 	l.Append(CompactionStart, CompactionStartFact{Strategy: "auto"})

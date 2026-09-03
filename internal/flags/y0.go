@@ -13,9 +13,9 @@ import (
 
 // Year 0 flag names (environment variables).
 const (
-	EnvSpawnV2     = "HAWK_Y0_SPAWN_V2"
-	EnvFolderTrust = "HAWK_Y0_FOLDER_TRUST"
-	EnvMarketplace = "HAWK_Y0_MARKETPLACE"
+	EnvSpawnV2     = "GRAYCODE_Y0_SPAWN_V2"
+	EnvFolderTrust = "GRAYCODE_Y0_FOLDER_TRUST"
+	EnvMarketplace = "GRAYCODE_Y0_MARKETPLACE"
 )
 
 var (
@@ -68,13 +68,13 @@ func SpawnV2() bool {
 }
 
 // FolderTrust reports whether project folder trust gates automation.
-// Default true after PACK-03 (secure by default). Set HAWK_Y0_FOLDER_TRUST=0 to disable.
+// Default true after PACK-03 (secure by default). Set GRAYCODE_Y0_FOLDER_TRUST=0 to disable.
 func FolderTrust() bool {
 	return envEnabled(EnvFolderTrust, true)
 }
 
 // Marketplace reports whether marketplace install paths are enabled.
-// Default true after PACK-05. Set HAWK_Y0_MARKETPLACE=0 to disable remote installs.
+// Default true after PACK-05. Set GRAYCODE_Y0_MARKETPLACE=0 to disable remote installs.
 func Marketplace() bool {
 	return envEnabled(EnvMarketplace, true)
 }

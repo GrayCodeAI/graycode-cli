@@ -11,8 +11,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 type sessionSaveResultMsg struct {
@@ -85,9 +85,9 @@ func (m *chatModel) saveSessionCmd() tea.Cmd {
 
 func formatQuitResumeMessage(sessionID string) string {
 	if strings.TrimSpace(sessionID) == "" {
-		return "Thank you for using Hawk!\n"
+		return "Thank you for using Graycode!\n"
 	}
-	return fmt.Sprintf("Thank you for using Hawk!\n\nTo resume this session, run: hawk --resume %s\n", sessionID)
+	return fmt.Sprintf("Thank you for using Graycode!\n\nTo resume this session, run: graycode --resume %s\n", sessionID)
 }
 
 // handleSessionCommand dispatches session-management slash commands.

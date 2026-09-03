@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] — 2026-07-13
 
 ### Changed
-- **Hawk/Eyrie production boundary completed**: Hawk owns the product face,
+- **Graycode/Eyrie production boundary completed**: Graycode owns the product face,
   sessions, tools, permissions, and public schemas while Eyrie v0.2.1 owns
   credentials, catalog resolution, provider transport, resilience, and usage
   telemetry behind the stable `eyrie/engine` facade.
@@ -40,18 +40,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Permission system unified into two independent axes**: the old `PermissionMode` (`default`/`acceptEdits`/`bypassPermissions`/`dontAsk`/`plan`) is removed. `/autonomy` now controls the 5-tier trust ladder (`Always Ask`/`Scout`/`Builder`/`Operator`/`Autonomous`, bare `/autonomy` opens a picker), and `/spec` controls an independent, orthogonal spec-driven workflow gate (`Specify → Plan → Tasks → ApproveImplementation`, bare `/spec` opens a picker) that blocks Write/Edit/Bash regardless of trust tier — including at Autonomous. Fixes a real bug where the old Plan Mode's write-block could be silently bypassed at high autonomy tiers, since tier and mode were checked independently with no ordering guarantee.
 - **Fixed `PermissionService.SetAutonomy`/`Autonomy()`**: previously wrote to/read from a shadow field the permission engine's `CheckTool` never consulted, meaning autonomy tier changes may not have reliably taken effect. Now both read/write the same `PermissionEngine.Autonomy` field the check logic uses.
 - **`--permission-mode` CLI flag removed**; `--dangerously-skip-permissions` unchanged (now maps to the Autonomous tier). New `--dry-run` flag added as an unconditional kill switch (deny every tool call, regardless of tier or spec stage) — replaces `dontAsk`'s hard-lockout role.
-- **Version re-baselined to `0.1.0`** across `cmd/hawk/main.go`, `cmd/daemon.go`,
-  `flake.nix`, `.github/workflows/release.yml`, and the `update`/daemon test suites, aligning hawk
+- **Version re-baselined to `0.1.0`** across `cmd/graycode/main.go`, `cmd/daemon.go`,
+  `flake.nix`, `.github/workflows/release.yml`, and the `update`/daemon test suites, aligning graycode
   with the rest of the GrayCodeAI ecosystem (`eyrie`, `shrike`, `harrier`, `kestrel`, `merlin`).
-- **Architecture boundary hardening**: Hawk now owns runtime request/response DTOs, transport config/provider seams, and review/verification product-boundary contracts, with `eyrie/client` usage restricted to internal adapters and guarded in CI.
-- **`shared/types` removed**: Hawk no longer ships the old shared type path, and local boundary checks now block any attempt to reintroduce it.
+- **Architecture boundary hardening**: Graycode now owns runtime request/response DTOs, transport config/provider seams, and review/verification product-boundary contracts, with `eyrie/client` usage restricted to internal adapters and guarded in CI.
+- **`shared/types` removed**: Graycode no longer ships the old shared type path, and local boundary checks now block any attempt to reintroduce it.
 
 ### Added
-- **Spec-driven workflow (`/spec`)**: independent, orthogonal permission gate that walks the model through `Specify → Plan → Tasks`, writing real `spec.md`/`plan.md`/`tasks.md` files to `.hawk/specs/<slug>/`, and requires explicit `ApproveImplementation` approval (always prompts, at any trust tier) before Write/Edit/Bash unlock. The approval prompt shows the actual written content, not a blind yes/no.
+- **Spec-driven workflow (`/spec`)**: independent, orthogonal permission gate that walks the model through `Specify → Plan → Tasks`, writing real `spec.md`/`plan.md`/`tasks.md` files to `.graycode/specs/<slug>/`, and requires explicit `ApproveImplementation` approval (always prompts, at any trust tier) before Write/Edit/Bash unlock. The approval prompt shows the actual written content, not a blind yes/no.
 - **`/autonomy` and `/spec` picker overlays**: bare `/autonomy` or `/spec` opens an arrow-key-navigable, filterable picker (Esc/Enter) instead of requiring subcommand syntax; typed subcommands (`/autonomy tier scout`, `/spec status`, etc.) still work.
 - **Watch mode (`--watch`)**: file-watcher loop that acts on `AI!` (do-now) and `AI?` (answer) code comments. Off by default.
-- **GitHub Action** (`.github/actions/hawk`): interactive mode on `@hawk` mentions, automation mode on labeled issues/PRs, and skill dispatch for `/`-prefixed prompts.
-- **Messaging gateways**: opt-in Telegram, Discord, and Slack gateways on the daemon for chatting with hawk from messaging apps.
+- **GitHub Action** (`.github/actions/graycode`): interactive mode on `@graycode` mentions, automation mode on labeled issues/PRs, and skill dispatch for `/`-prefixed prompts.
+- **Messaging gateways**: opt-in Telegram, Discord, and Slack gateways on the daemon for chatting with graycode from messaging apps.
 - **AST repo-map** (`internal/context/repomap`): structural repository map for richer model context.
 - **Auto codebase analysis on first run** (`internal/autoinit`): opt-in seeding of project context.
 - **Auto-lint / auto-fix cycle**: runs the matching linter after edits and iterates on fixes with bounded retries (opt-in).
@@ -73,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — Round 2 ecosystem improvements (2026-06-01)
 - **Cavecrew personas** (`internal/multiagent/agents`): three new
-  built-in personas built into GrayCode Hawk
+  built-in personas built into GrayCode Graycode
   (`cavecrew-investigator`, `cavecrew-builder`, `cavecrew-reviewer`).
   Each enforces a strict output format so downstream agents can parse
   outputs mechanically:
@@ -112,7 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a command label. API: `Record`, `AggregateForSession`,
   `ListForSession`, `PruneForSession`. Scoped to a single session so
   callers can selectively compact their own history. Companion to
-  shrike's `internal/tracking.Tracker` (shrike tracks globally, hawk tracks
+  shrike's `internal/tracking.Tracker` (shrike tracks globally, graycode tracks
   per-session).
 
 ### Added — Production Hardening (top-50 OSS parity)
@@ -147,16 +147,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.0] — 2026-05-05
 
 ### Added
-- **Exec Subcommand**: `hawk exec "prompt"` — full engine non-interactive mode with `--output-format json`, `--auto` autonomy levels, `--worktree` isolation, `--agent` personas, `--session-id` resume, stdin piping
-- **Daemon Server**: `hawk daemon start/stop/status` — background HTTP server with JSON + SSE streaming on `/v1/chat`, `/v1/health`, `/v1/sessions`
-- **Mission Mode**: `hawk mission "prompt"` — multi-agent orchestration decomposing work into parallel features executed in isolated git worktrees. `--dry-run` for planning only
-- **Session Search**: `hawk search "query"` — full-text search across all saved sessions with `--json` output
-- **Custom Agents**: `hawk agent list/create/show/remove` — markdown persona definitions in `~/.hawk/agents/` with YAML frontmatter (name, description, model)
-- **Snapshot System**: Shadow git tracking of every file change. `hawk snapshot list/restore/diff` + `/snapshot` slash command. Auto-snapshots on every Write/Edit tool call
+- **Exec Subcommand**: `graycode exec "prompt"` — full engine non-interactive mode with `--output-format json`, `--auto` autonomy levels, `--worktree` isolation, `--agent` personas, `--session-id` resume, stdin piping
+- **Daemon Server**: `graycode daemon start/stop/status` — background HTTP server with JSON + SSE streaming on `/v1/chat`, `/v1/health`, `/v1/sessions`
+- **Mission Mode**: `graycode mission "prompt"` — multi-agent orchestration decomposing work into parallel features executed in isolated git worktrees. `--dry-run` for planning only
+- **Session Search**: `graycode search "query"` — full-text search across all saved sessions with `--json` output
+- **Custom Agents**: `graycode agent list/create/show/remove` — markdown persona definitions in `~/.graycode/agents/` with YAML frontmatter (name, description, model)
+- **Snapshot System**: Shadow git tracking of every file change. `graycode snapshot list/restore/diff` + `/snapshot` slash command. Auto-snapshots on every Write/Edit tool call
 - **Waza Workflows**: `/think` (plan before code), `/hunt` (root-cause diagnosis), `/check` (pre-ship review with auto-fix), `/design` (screenshot-driven UI iteration)
 - **Structured Compaction**: Summary template with Goal/Constraints/Progress/Files/Decisions/Errors/Instructions/Next sections for better intent preservation
 - **Doom Loop Detection**: Lowered threshold to 3 (from 4). Two-tier escalation: first detection injects redirect prompt, doom loop hard-stops with "ask user for help"
-- **Session Persistence for exec**: All exec runs saved to `~/.hawk/sessions/` and searchable via `hawk search`
+- **Session Persistence for exec**: All exec runs saved to `~/.graycode/sessions/` and searchable via `graycode search`
 
 ### Packages Added
 - `mission/` — Multi-agent orchestration with worktree-based parallel workers

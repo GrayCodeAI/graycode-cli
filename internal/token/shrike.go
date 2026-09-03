@@ -1,6 +1,6 @@
-// Package token is Hawk's dependency boundary for the external Shrike library.
+// Package token is Graycode's dependency boundary for the external Shrike library.
 // Generic token counting, compression, chunking, secret detection, and usage
-// tracking should enter Hawk through this package.
+// tracking should enter Graycode through this package.
 package token
 
 import (

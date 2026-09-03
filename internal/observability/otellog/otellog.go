@@ -7,7 +7,7 @@
 // (mode), config validation, and an outer shutdown deadline.
 //
 // The capture side (DSH's SessionTelemetryCoordinator, wired to a live session
-// bus) is intentionally out of scope for this port: hawk has no Cordis bus.
+// bus) is intentionally out of scope for this port: graycode has no Cordis bus.
 // Backends receive records from the host via Emit / EmitFeedback.
 package otellog
 

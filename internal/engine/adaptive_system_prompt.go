@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/routing"
 )
 
 // PromptBuildContext provides situational context for building a system prompt.
@@ -266,12 +266,12 @@ func DiffPrompts(old, new string) string {
 	return strings.TrimRight(result, "\n")
 }
 
-// DefaultSections returns the built-in prompt sections that hawk uses.
+// DefaultSections returns the built-in prompt sections that graycode uses.
 func DefaultSections(ctx PromptBuildContext) []PromptSection {
 	sections := []PromptSection{
 		{
 			Name:     "identity",
-			Content:  "You are hawk, an AI coding agent. You help developers write, debug, review, and refactor code. You operate inside the user's repository with access to tools for file manipulation, shell commands, and code search.",
+			Content:  "You are graycode, an AI coding agent. You help developers write, debug, review, and refactor code. You operate inside the user's repository with access to tools for file manipulation, shell commands, and code search.",
 			Priority: 1,
 		},
 		{

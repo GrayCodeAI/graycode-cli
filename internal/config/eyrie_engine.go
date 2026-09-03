@@ -3,7 +3,7 @@ package config
 import (
 	"context"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 )
 
 type (
@@ -19,7 +19,7 @@ func newEyrieEngine() (*gateway.Gateway, error) {
 func NewEyrieEngine() (*gateway.Gateway, error) { return newEyrieEngine() }
 
 // NewEyrieEngineForSettings composes a fresh gateway for one effective
-// Hawk settings snapshot. It performs no package-global registration and does
+// Graycode settings snapshot. It performs no package-global registration and does
 // not mutate provider environment variables.
 func NewEyrieEngineForSettings(settings Settings) (*gateway.Gateway, error) {
 	return gateway.New(context.Background(), gatewayCustomGateways(settings.CustomProviders))
@@ -140,7 +140,7 @@ func EngineDeploymentSummary(ctx context.Context, model string) (gateway.Deploym
 	return gw.DeploymentSummary(ctx, model)
 }
 
-// newEyrieEngine is Hawk's default composition root for Eyrie's stable host
+// newEyrieEngine is Graycode's default composition root for Eyrie's stable host
 // facade. Command paths that support --settings must use
 // NewEyrieEngineForSettings instead of relying on this global-settings default.
 

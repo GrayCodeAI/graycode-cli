@@ -14,12 +14,12 @@ import (
 	"unicode/utf8"
 
 	lipgloss "charm.land/lipgloss/v2"
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	aiwatch "github.com/GrayCodeAI/hawk/internal/engine/io"
-	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
-	"github.com/GrayCodeAI/hawk/internal/session"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	aiwatch "github.com/GrayCodeAI/graycode-cli/internal/engine/io"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/lifecycle"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
 )
 
 // Print mode and session persistence functions extracted from chat.go
@@ -40,7 +40,7 @@ func runPrint(text string) error {
 		return err
 	}
 
-	sess, cfgErr := newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error))
+	sess, cfgErr := newConfiguredGraycodeSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error))
 	if cfgErr != nil {
 		return cfgErr
 	}
@@ -262,7 +262,7 @@ func saveEyrieSession(id string, sess *engine.Session) {
 
 // runRepl starts an interactive REPL mode for multi-turn conversation without TUI.
 func runRepl() error {
-	fmt.Fprintln(os.Stderr, "Hawk REPL — type 'exit' or 'quit' to leave, 'help' for commands")
+	fmt.Fprintln(os.Stderr, "Graycode REPL — type 'exit' or 'quit' to leave, 'help' for commands")
 	fmt.Fprintln(os.Stderr)
 
 	systemPrompt, err := buildSystemPrompt()
@@ -281,7 +281,7 @@ func runRepl() error {
 		return err
 	}
 
-	sess, cfgErr := newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error))
+	sess, cfgErr := newConfiguredGraycodeSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error))
 	if cfgErr != nil {
 		return cfgErr
 	}
@@ -433,7 +433,7 @@ func runRepl() error {
 	}
 }
 
-func replBuiltinResponse(input string, sess *engine.Session, settings hawkconfig.Settings, sessionID string) (string, bool, error) {
+func replBuiltinResponse(input string, sess *engine.Session, settings graycodeconfig.Settings, sessionID string) (string, bool, error) {
 	switch strings.TrimSpace(input) {
 	case "/tools":
 		return builtInToolsSummary(), true, nil
@@ -452,12 +452,12 @@ func replBuiltinResponse(input string, sess *engine.Session, settings hawkconfig
 	}
 }
 
-func replModelsSummary(settings hawkconfig.Settings, sessionProvider string) (string, bool, error) {
+func replModelsSummary(settings graycodeconfig.Settings, sessionProvider string) (string, bool, error) {
 	providerName := effectiveProviderForREPL(settings, sessionProvider)
 	if providerName == "" {
-		return "No active provider selected. Set one with `hawk config provider <name>` or start REPL with `--provider`.", true, nil
+		return "No active provider selected. Set one with `graycode config provider <name>` or start REPL with `--provider`.", true, nil
 	}
-	models, err := hawkconfig.FetchModelsForProvider(providerName)
+	models, err := graycodeconfig.FetchModelsForProvider(providerName)
 	if err != nil {
 		return "", true, err
 	}
@@ -483,7 +483,7 @@ func replModelsSummary(settings hawkconfig.Settings, sessionProvider string) (st
 	return b.String(), true, nil
 }
 
-func effectiveProviderForREPL(settings hawkconfig.Settings, sessionProvider string) string {
+func effectiveProviderForREPL(settings graycodeconfig.Settings, sessionProvider string) string {
 	if provider != "" {
 		return strings.TrimSpace(provider)
 	}
@@ -508,7 +508,7 @@ func formatModelTablePlain(rows []modelTableRow) string {
 }
 
 // watchIgnoreDirs are directory names skipped when scanning for AI directives.
-var watchIgnoreDirs = []string{".git", "node_modules", "vendor", "__pycache__", ".hawk"}
+var watchIgnoreDirs = []string{".git", "node_modules", "vendor", "__pycache__", ".graycode"}
 
 // runWatch watches the working directory for AI!/AI? comment directives and
 // dispatches a targeted LLM edit for each one as files change (Aider-style

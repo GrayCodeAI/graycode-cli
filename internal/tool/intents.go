@@ -120,7 +120,7 @@ func IntentBundleSummary() []string {
 }
 
 // IntentCategoriesForTool returns the intent bundles that can promote name.
-// It is used by diagnostics and `hawk tools --json` to make the registry
+// It is used by diagnostics and `graycode tools --json` to make the registry
 // explainable without leaking prompt-matching internals.
 func IntentCategoriesForTool(name string) []string {
 	var categories []string

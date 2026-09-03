@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/relevanceprune"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/relevanceprune"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // RelevancePruneStrategy prunes context by relevance: it scores older messages

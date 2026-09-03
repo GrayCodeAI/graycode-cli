@@ -47,7 +47,7 @@ func (v *voiceSubcommand) Handle(m *chatModel, args []string, text string) (tea.
 // outcome as a voiceResultMsg handled in the update loop.
 func (v *voiceSubcommand) recordAndTranscribe() tea.Cmd {
 	return func() tea.Msg {
-		tmpFile := filepath.Join(os.TempDir(), "hawk_voice_input.wav")
+		tmpFile := filepath.Join(os.TempDir(), "graycode_voice_input.wav")
 		var recordCmd *exec.Cmd
 		if _, err := exec.LookPath("sox"); err == nil {
 			recordCmd = exec.Command("sox", "-d", tmpFile, "trim", "0", "10") // #nosec G204 -- fixed command 'sox' resolved via exec.LookPath

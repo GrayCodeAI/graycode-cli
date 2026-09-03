@@ -215,7 +215,7 @@ func (ws *WorkspaceState) HasChanged(path string) bool {
 	return currentHash != oldHash
 }
 
-// DetectExternalChanges returns files that changed outside of hawk's modifications.
+// DetectExternalChanges returns files that changed outside of graycode's modifications.
 func (ws *WorkspaceState) DetectExternalChanges() []string {
 	ws.mu.RLock()
 	defer ws.mu.RUnlock()
@@ -360,7 +360,7 @@ func (ws *WorkspaceState) BuildContextForAgent() string {
 	if len(externalChanges) > 0 {
 		b.WriteString("external_changes:\n")
 		for _, path := range externalChanges {
-			_, _ = fmt.Fprintf(&b, "  - %s (changed outside hawk)\n", path)
+			_, _ = fmt.Fprintf(&b, "  - %s (changed outside graycode)\n", path)
 		}
 	}
 

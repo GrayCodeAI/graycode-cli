@@ -11,8 +11,8 @@ import (
 	lipgloss "charm.land/lipgloss/v2"
 	"github.com/mattn/go-runewidth"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 const compactProgressBarWidth = 40

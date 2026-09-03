@@ -233,7 +233,7 @@ func (pr *PathResolver) ScanProject() error {
 		}
 		if d.IsDir() {
 			name := d.Name()
-			if name == ".git" || name == "node_modules" || name == "vendor" || name == "dist" || name == ".hawk" {
+			if name == ".git" || name == "node_modules" || name == "vendor" || name == "dist" || name == ".graycode" {
 				return filepath.SkipDir
 			}
 			return nil

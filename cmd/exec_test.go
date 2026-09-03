@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // --- Skill dispatch tests ---------------------------------------------------
@@ -134,7 +134,7 @@ func TestDetectGitHubActions_InteractiveMention(t *testing.T) {
 		"GITHUB_EVENT_NAME": "issue_comment",
 		"GITHUB_EVENT_PATH": "/tmp/event.json",
 	}
-	payload := `{"comment":{"body":"@hawk please fix the failing test"}}`
+	payload := `{"comment":{"body":"@graycode please fix the failing test"}}`
 	gha := detectGitHubActions(envFunc(env), fileFunc(payload))
 	if !gha.Active {
 		t.Fatal("expected Active=true")
@@ -156,7 +156,7 @@ func TestDetectGitHubActions_ReviewCommentMention(t *testing.T) {
 		"GITHUB_EVENT_NAME": "pull_request_review_comment",
 		"GITHUB_EVENT_PATH": "/tmp/event.json",
 	}
-	payload := `{"comment":{"body":"@Hawk explain this change"}}`
+	payload := `{"comment":{"body":"@Graycode explain this change"}}`
 	gha := detectGitHubActions(envFunc(env), fileFunc(payload))
 	if gha.Mode != GHAModeInteractive {
 		t.Errorf("expected interactive mode for review comment, got %q", gha.Mode)
@@ -223,14 +223,14 @@ func TestDetectGitHubActions_TrustFromAssociation(t *testing.T) {
 
 func TestDetectGitHubActions_TrustEnvOverride(t *testing.T) {
 	env := map[string]string{
-		"GITHUB_ACTIONS":       "true",
-		"GITHUB_EVENT_NAME":    "issues",
-		"GITHUB_EVENT_PATH":    "/tmp/event.json",
-		"HAWK_GHA_TRUST_EVENT": "1",
+		"GITHUB_ACTIONS":           "true",
+		"GITHUB_EVENT_NAME":        "issues",
+		"GITHUB_EVENT_PATH":        "/tmp/event.json",
+		"GRAYCODE_GHA_TRUST_EVENT": "1",
 	}
 	outsider := `{"issue":{"title":"t","body":"b","author_association":"NONE"}}`
 	if gha := detectGitHubActions(envFunc(env), fileFunc(outsider)); !gha.Trusted {
-		t.Error("HAWK_GHA_TRUST_EVENT=1 should trust even NONE association")
+		t.Error("GRAYCODE_GHA_TRUST_EVENT=1 should trust even NONE association")
 	}
 }
 
@@ -254,7 +254,7 @@ func TestResolveExecPrompt_Empty(t *testing.T) {
 func TestPersistExecSession(t *testing.T) {
 	// Set up temp session dir
 	dir := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", filepath.Join(dir, "state"))
+	t.Setenv("GRAYCODE_STATE_DIR", filepath.Join(dir, "state"))
 
 	persistExecSession("test-123", "claude-opus", "anthropic", "hello", "world")
 
@@ -276,7 +276,7 @@ func TestExecResult_JSON(t *testing.T) {
 		Duration:   "1.5s",
 		Model:      "test-model",
 		Worktree:   "/tmp/wt",
-		Branch:     "hawk-exec/123",
+		Branch:     "graycode-exec/123",
 	}
 	data, err := json.Marshal(r)
 	if err != nil {
@@ -292,7 +292,7 @@ func TestExecResult_JSON(t *testing.T) {
 	if decoded.Worktree != "/tmp/wt" {
 		t.Errorf("expected worktree path, got %s", decoded.Worktree)
 	}
-	if decoded.Branch != "hawk-exec/123" {
+	if decoded.Branch != "graycode-exec/123" {
 		t.Errorf("expected branch, got %s", decoded.Branch)
 	}
 }

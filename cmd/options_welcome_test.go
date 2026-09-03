@@ -7,65 +7,65 @@ import (
 	"strings"
 	"testing"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 )
 
 func isolateCredentialHome(t *testing.T) {
 	t.Helper()
 	home := t.TempDir()
-	hawkDir := filepath.Join(home, ".hawk")
-	_ = os.MkdirAll(hawkDir, 0o700)
+	graycodeDir := filepath.Join(home, ".graycode")
+	_ = os.MkdirAll(graycodeDir, 0o700)
 	t.Setenv("HOME", home)
-	t.Setenv("HAWK_CONFIG_DIR", hawkDir)
+	t.Setenv("GRAYCODE_CONFIG_DIR", graycodeDir)
 	t.Setenv("EYRIE_CONFIG_DIR", filepath.Join(home, "eyrie"))
 }
 
 func TestEffectiveModelAndProvider_ClearsWithoutCredentials(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
-	if err := hawkconfig.SetActiveProvider(ctx, "openrouter"); err != nil {
+	if err := graycodeconfig.SetActiveProvider(ctx, "openrouter"); err != nil {
 		t.Fatal(err)
 	}
-	if err := hawkconfig.SetActiveModel(ctx, "gpt-4o"); err != nil {
+	if err := graycodeconfig.SetActiveModel(ctx, "gpt-4o"); err != nil {
 		t.Fatal(err)
 	}
 
-	model, provider := effectiveModelAndProvider(hawkconfig.Settings{})
+	model, provider := effectiveModelAndProvider(graycodeconfig.Settings{})
 	if model != "" || provider != "" {
 		t.Fatalf("expected empty selection without credentials, got model=%q provider=%q", model, provider)
 	}
 }
 
 func TestEffectiveModelAndProvider_KeepsWithCredentials(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
 	_ = store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
-	hawkconfig.InvalidateConfigUICache()
-	if err := hawkconfig.SetActiveProvider(ctx, "openrouter"); err != nil {
+	graycodeconfig.InvalidateConfigUICache()
+	if err := graycodeconfig.SetActiveProvider(ctx, "openrouter"); err != nil {
 		t.Fatal(err)
 	}
-	if err := hawkconfig.SetActiveModel(ctx, "gpt-4o"); err != nil {
+	if err := graycodeconfig.SetActiveModel(ctx, "gpt-4o"); err != nil {
 		t.Fatal(err)
 	}
 
-	model, provider := effectiveModelAndProvider(hawkconfig.Settings{})
+	model, provider := effectiveModelAndProvider(graycodeconfig.Settings{})
 	if provider == "" {
 		t.Fatalf("expected provider with credentials, got model=%q provider=%q", model, provider)
 	}

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/securitylog"
+	"github.com/GrayCodeAI/graycode-cli/internal/securitylog"
 	"github.com/spf13/cobra"
 )
 
@@ -18,13 +18,13 @@ var (
 var securitylogCmd = &cobra.Command{
 	Use:   "securitylog",
 	Short: "Inspect the tamper-evident security event log",
-	Long: `Hawk records security-relevant events (permission denials, approval
+	Long: `Graycode records security-relevant events (permission denials, approval
 denials) to an append-only, HMAC-chained log. Entries are linked so that
 reordering, deletion, or alteration is detectable.
 
-  hawk securitylog            Show a summary and recent events
-  hawk securitylog show       List logged events
-  hawk securitylog verify     Verify the hash chain has not been tampered with`,
+  graycode securitylog            Show a summary and recent events
+  graycode securitylog show       List logged events
+  graycode securitylog verify     Verify the hash chain has not been tampered with`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runSecuritylogShow(cmd, 20, false)
 	},

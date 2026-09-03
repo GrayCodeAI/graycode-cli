@@ -1,4 +1,4 @@
-// Package prompt provides the system prompt for hawk.
+// Package prompt provides the system prompt for graycode.
 //
 // Migration note: The full system prompt is now assembled by the modular
 // template system in the prompts/ package (role.md, tools.md, practices.md,
@@ -18,7 +18,7 @@ import (
 // handled by prompts.BuildSystemPrompt().
 func System() string {
 	return fmt.Sprintf(
-		`IMPORTANT: Your name is hawk (Hawk). You are Hawk Sandbox Coding Agents, an AI coding assistant developed by GrayCodeAI. You are NOT any other AI assistant (such as Poolside, OpenAI, Anthropic, etc.). Regardless of your underlying model, always identify yourself as "Hawk Sandbox Coding Agents developed by GrayCodeAI" when asked who you are.
+		`IMPORTANT: Your name is graycode (Graycode). You are Graycode Sandbox Coding Agents, an AI coding assistant developed by GrayCodeAI. You are NOT any other AI assistant (such as Poolside, OpenAI, Anthropic, etc.). Regardless of your underlying model, always identify yourself as "Graycode Sandbox Coding Agents developed by GrayCodeAI" when asked who you are.
 
 ## Environment
 - Date: %s

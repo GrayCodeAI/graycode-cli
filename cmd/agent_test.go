@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
+	"github.com/GrayCodeAI/graycode-cli/internal/multiagent/agents"
 )
 
 // sampleAgentMarkdown returns a minimal valid agent definition.
@@ -17,7 +17,7 @@ func sampleAgentMarkdown(name, description, model string) string {
 
 func TestAgentList_JSON_Empty(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", filepath.Join(dir, "state"))
+	t.Setenv("GRAYCODE_STATE_DIR", filepath.Join(dir, "state"))
 	if err := os.MkdirAll(filepath.Join(dir, "state", "agents"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestAgentList_JSON_Empty(t *testing.T) {
 func TestAgentList_JSON(t *testing.T) {
 	dir := t.TempDir()
 	stateDir := filepath.Join(dir, "state")
-	t.Setenv("HAWK_STATE_DIR", stateDir)
+	t.Setenv("GRAYCODE_STATE_DIR", stateDir)
 	agentDir := filepath.Join(stateDir, "agents")
 	if err := os.MkdirAll(agentDir, 0o755); err != nil {
 		t.Fatal(err)

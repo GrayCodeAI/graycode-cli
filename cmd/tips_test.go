@@ -34,7 +34,7 @@ func TestNextTip_ReturnsNonEmpty(t *testing.T) {
 	orig := os.Getenv("HOME")
 	tmp := t.TempDir()
 	os.Setenv("HOME", tmp)
-	os.MkdirAll(filepath.Join(tmp, ".hawk"), 0o755)
+	os.MkdirAll(filepath.Join(tmp, ".graycode"), 0o755)
 	defer os.Setenv("HOME", orig)
 
 	tip := nextTip(false, "")
@@ -47,7 +47,7 @@ func TestRecordTipShown(t *testing.T) {
 	orig := os.Getenv("HOME")
 	tmp := t.TempDir()
 	os.Setenv("HOME", tmp)
-	os.MkdirAll(filepath.Join(tmp, ".hawk"), 0o755)
+	os.MkdirAll(filepath.Join(tmp, ".graycode"), 0o755)
 	defer os.Setenv("HOME", orig)
 
 	recordTipShown("slash-help")

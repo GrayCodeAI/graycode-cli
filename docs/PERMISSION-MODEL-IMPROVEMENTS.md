@@ -1,6 +1,6 @@
-# Hawk Permission Model — Improvements (2026-08-07)
+# Graycode Permission Model — Improvements (2026-08-07)
 
-This document describes the improvements made to hawk's permission, isolation,
+This document describes the improvements made to graycode's permission, isolation,
 and autonomy systems. All changes preserve the existing fail-closed architecture
 and are backward-compatible.
 
@@ -186,7 +186,7 @@ second within 1.5s lands on Supervised. Prompt auto-expires.
 
 **Problem:** Crash could leave `sandbox-*.sb` temp files behind.
 
-**Solution:** `seatbelt.go` `init()` removes orphaned `hawk-seatbelt-*.sb` files from
+**Solution:** `seatbelt.go` `init()` removes orphaned `graycode-seatbelt-*.sb` files from
 `os.TempDir()` at process startup.
 
 ---

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/executiongraph"
-	cloud "github.com/GrayCodeAI/hawk/internal/platform/cloud"
+	"github.com/GrayCodeAI/graycode-cli/internal/executiongraph"
+	cloud "github.com/GrayCodeAI/graycode-cli/internal/platform/cloud"
 	"github.com/spf13/cobra"
 )
 
@@ -22,9 +22,9 @@ func newCloudGraphCmd() *cobra.Command {
 	var missionDir string
 	syncCmd := &cobra.Command{
 		Use:   "sync [session-id]",
-		Short: "Upload a privacy-normalized execution graph to Hawk Cloud",
-		Long: `Build the same read-only execution graph as "hawk graph export", hash
-cloud-sensitive metadata, enforce Hawk Cloud's upload bounds, and upload it
+		Short: "Upload a privacy-normalized execution graph to Graycode Cloud",
+		Long: `Build the same read-only execution graph as "graycode graph export", hash
+cloud-sensitive metadata, enforce Graycode Cloud's upload bounds, and upload it
 with a deterministic idempotency key. Sync completed session snapshots: graph
 facts are immutable after acceptance. This is explicit and opt-in; local
 execution never depends on cloud synchronization.`,
@@ -50,11 +50,11 @@ execution never depends on cloud synchronization.`,
 			}
 			client, cfg, err := cloud.LoadClient()
 			if err != nil || !client.Enabled() {
-				return fmt.Errorf("hawk cloud is not connected")
+				return fmt.Errorf("graycode cloud is not connected")
 			}
 			prepared, err := cloud.PrepareGraph(export)
 			if err != nil {
-				return fmt.Errorf("prepare graph for Hawk Cloud: %w", err)
+				return fmt.Errorf("prepare graph for Graycode Cloud: %w", err)
 			}
 			result, err := client.SyncGraph(cmd.Context(), cloud.GraphSyncRequest{
 				SyncID:    prepared.SyncID,

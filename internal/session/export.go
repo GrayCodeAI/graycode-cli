@@ -815,7 +815,7 @@ func GenerateShareLink(session *ExportedSession) string {
 	}
 
 	hash := hex.EncodeToString(h.Sum(nil))
-	return fmt.Sprintf("hawk://share/%s", hash[:16])
+	return fmt.Sprintf("graycode://share/%s", hash[:16])
 }
 
 // CalculateStats computes session statistics from a slice of messages.

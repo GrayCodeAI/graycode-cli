@@ -10,8 +10,8 @@ import (
 
 func TestLoadRuntimeConfig(t *testing.T) {
 	dir := t.TempDir()
-	hawkDir := filepath.Join(dir, ".agents")
-	if err := os.MkdirAll(hawkDir, 0o755); err != nil {
+	graycodeDir := filepath.Join(dir, ".agents")
+	if err := os.MkdirAll(graycodeDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	content := `{
@@ -19,7 +19,7 @@ func TestLoadRuntimeConfig(t *testing.T) {
   "runtime_extra_deps": ["apt-get update", "pip install requests"],
   "runtime_startup_env_vars": {"FOO": "bar", "BAZ": "qux"}
 }`
-	if err := os.WriteFile(filepath.Join(hawkDir, "runtime.jsonc"), []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(graycodeDir, "runtime.jsonc"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -44,9 +44,9 @@ func TestLoadRuntimeConfigMissing(t *testing.T) {
 
 func TestLoadRuntimeConfigMalformed(t *testing.T) {
 	dir := t.TempDir()
-	hawkDir := filepath.Join(dir, ".agents")
-	_ = os.MkdirAll(hawkDir, 0o755)
-	_ = os.WriteFile(filepath.Join(hawkDir, "runtime.jsonc"), []byte("{ not json"), 0o644)
+	graycodeDir := filepath.Join(dir, ".agents")
+	_ = os.MkdirAll(graycodeDir, 0o755)
+	_ = os.WriteFile(filepath.Join(graycodeDir, "runtime.jsonc"), []byte("{ not json"), 0o644)
 	cfg := LoadRuntimeConfig(dir)
 	if !cfg.IsEmpty() {
 		t.Errorf("malformed file should fail open to empty, got %+v", cfg)
@@ -173,10 +173,10 @@ func TestDevEnvBuildEmptyConfigUnchanged(t *testing.T) {
 // are produced from a loaded config (composition check without docker).
 func TestContainerStartupEnvComposed(t *testing.T) {
 	cs := NewContainerSandbox(t.TempDir())
-	cs.SetRuntimeConfig(RuntimeConfig{RuntimeStartupEnvVars: map[string]string{"HAWK_ENV": "test"}})
+	cs.SetRuntimeConfig(RuntimeConfig{RuntimeStartupEnvVars: map[string]string{"GRAYCODE_ENV": "test"}})
 	args := cs.runtime.StartupEnvArgs()
-	if strings.Join(args, " ") != "-e HAWK_ENV=test" {
-		t.Errorf("env args = %v, want [-e HAWK_ENV=test]", args)
+	if strings.Join(args, " ") != "-e GRAYCODE_ENV=test" {
+		t.Errorf("env args = %v, want [-e GRAYCODE_ENV=test]", args)
 	}
 }
 
@@ -191,12 +191,12 @@ func TestSanitizeRuntimeConfigBlocksMaliciousDeps(t *testing.T) {
 			"",                             // blank, skipped
 		},
 		RuntimeStartupEnvVars: map[string]string{
-			"HTTP_PROXY":    "http://proxy:8080", // legit passthrough
-			"PATH":          "/evil",
-			"LD_PRELOAD":    "/evil.so",
-			"FOO_API_KEY":   "sk-secret",
-			"GIT_ASKPASS":   "/evil.sh",
-			"HAWK_REGISTRY": "example.com",
+			"HTTP_PROXY":        "http://proxy:8080", // legit passthrough
+			"PATH":              "/evil",
+			"LD_PRELOAD":        "/evil.so",
+			"FOO_API_KEY":       "sk-secret",
+			"GIT_ASKPASS":       "/evil.sh",
+			"GRAYCODE_REGISTRY": "example.com",
 		},
 	}
 	out := sanitizeRuntimeConfig(cfg, "/proj/.agents/runtime.jsonc")
@@ -205,13 +205,13 @@ func TestSanitizeRuntimeConfigBlocksMaliciousDeps(t *testing.T) {
 		t.Errorf("deps = %v, want only the legit apt-get entry", out.RuntimeExtraDeps)
 	}
 	if len(out.RuntimeStartupEnvVars) != 2 {
-		t.Errorf("env = %v, want only HTTP_PROXY + HAWK_REGISTRY", out.RuntimeStartupEnvVars)
+		t.Errorf("env = %v, want only HTTP_PROXY + GRAYCODE_REGISTRY", out.RuntimeStartupEnvVars)
 	}
 	if out.RuntimeStartupEnvVars["HTTP_PROXY"] != "http://proxy:8080" {
 		t.Errorf("HTTP_PROXY should pass through, got %v", out.RuntimeStartupEnvVars)
 	}
-	if out.RuntimeStartupEnvVars["HAWK_REGISTRY"] != "example.com" {
-		t.Errorf("HAWK_REGISTRY should pass through, got %v", out.RuntimeStartupEnvVars)
+	if out.RuntimeStartupEnvVars["GRAYCODE_REGISTRY"] != "example.com" {
+		t.Errorf("GRAYCODE_REGISTRY should pass through, got %v", out.RuntimeStartupEnvVars)
 	}
 }
 

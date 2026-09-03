@@ -225,7 +225,7 @@ func TestFormatSummary_Complete(t *testing.T) {
 		},
 		Recommendations: []string{
 			"Add `go test ./...` as your test command",
-			"Your project uses chi router — hawk can help with middleware patterns",
+			"Your project uses chi router — graycode can help with middleware patterns",
 		},
 	}
 

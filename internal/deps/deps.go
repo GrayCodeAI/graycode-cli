@@ -1,4 +1,4 @@
-// Package deps documents the dependency injection pattern used across hawk.
+// Package deps documents the dependency injection pattern used across graycode.
 //
 // # Pattern
 //

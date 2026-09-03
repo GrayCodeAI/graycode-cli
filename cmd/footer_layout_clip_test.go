@@ -9,7 +9,7 @@ import (
 
 func TestLayoutFooterRow_TokensSurviveFinishFooterLine(t *testing.T) {
 	m := chatModel{width: 70, height: 24}
-	left := lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true).Render("~/OSS2026/RealWork/graycode-eco/hawk")
+	left := lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true).Render("~/OSS2026/RealWork/graycode-eco/graycode")
 	left += " " + lipgloss.NewStyle().Foreground(statusBranchColor).Inline(true).Render("⎇ main")
 	right := lipgloss.NewStyle().Foreground(statusTokenColor).Inline(true).Render("[db] 13k")
 	right += lipgloss.NewStyle().Foreground(dimColor).Inline(true).Render(" · ")
@@ -42,7 +42,7 @@ func TestLayoutFooterRow_LeftWiderThanFooterStillShowsTokens(t *testing.T) {
 
 func TestLayoutFooterRow_ClipDoesNotDropStyledTokens(t *testing.T) {
 	m := chatModel{width: 55, height: 24}
-	left := lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true).Render("~/Desktop/OSS2026/RealWork/graycode-eco/hawk")
+	left := lipgloss.NewStyle().Foreground(statusCWDColor).Inline(true).Render("~/Desktop/OSS2026/RealWork/graycode-eco/graycode")
 	left += " " + lipgloss.NewStyle().Foreground(statusBranchColor).Inline(true).Render("⎇ feature/footer-fix")
 	dim := lipgloss.NewStyle().Foreground(dimColor).Inline(true)
 	tok := lipgloss.NewStyle().Foreground(statusTokenColor).Inline(true)

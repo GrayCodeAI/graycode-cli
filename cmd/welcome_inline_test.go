@@ -8,9 +8,9 @@ import (
 
 	"charm.land/bubbles/v2/textarea"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 type welcomeMCPStub struct {
@@ -30,7 +30,7 @@ func TestWelcomeScreenNerdIconsUnique(t *testing.T) {
 	stopped := false
 	states := []*bool{nil, &running, &stopped}
 	for i, docker := range states {
-		out := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 100, 24, docker)
+		out := buildWelcomeMessage(nil, "", nil, nil, graycodeconfig.Settings{}, 0, false, 100, 24, docker)
 		seen := make(map[rune]struct{})
 		for _, r := range out {
 			if r < 0xE000 || r > 0xF8FF {
@@ -53,7 +53,7 @@ func (s welcomeMCPStub) Execute(context.Context, json.RawMessage) (string, error
 func (s welcomeMCPStub) MCPServerName() string { return s.server }
 
 func TestBuildWelcomeMessage_InlineShowsSetupGuidance(t *testing.T) {
-	out := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 100, 24, nil)
+	out := buildWelcomeMessage(nil, "", nil, nil, graycodeconfig.Settings{}, 0, false, 100, 24, nil)
 	if !strings.Contains(out, "v") {
 		t.Fatalf("inline welcome should show version, got:\n%s", out)
 	}
@@ -63,7 +63,7 @@ func TestBuildWelcomeMessage_InlineShowsSetupGuidance(t *testing.T) {
 }
 
 func TestBuildWelcomeMessage_InlineShowsGuidance(t *testing.T) {
-	out := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 100, 24, nil)
+	out := buildWelcomeMessage(nil, "", nil, nil, graycodeconfig.Settings{}, 0, false, 100, 24, nil)
 	for _, want := range []string{"Container Starting", "Skills (0)", "AGENTS.md", "MCPs (0)"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("minimal welcome missing %q in:\n%s", want, out)
@@ -106,7 +106,7 @@ func TestBuildWelcomeMessage_InlineShowsGuidance(t *testing.T) {
 }
 
 func TestBuildWelcomeMessage_ShortTerminalUsesCompactCopy(t *testing.T) {
-	out := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 72, 20, nil)
+	out := buildWelcomeMessage(nil, "", nil, nil, graycodeconfig.Settings{}, 0, false, 72, 20, nil)
 	if strings.Contains(out, "PgUp/Dn scroll chat") || strings.Contains(out, "for new session") {
 		t.Fatalf("compact welcome should drop verbose descriptions, got:\n%s", out)
 	}
@@ -115,23 +115,23 @@ func TestBuildWelcomeMessage_ShortTerminalUsesCompactCopy(t *testing.T) {
 	}
 }
 
-func TestBuildWelcomeMessage_WideTerminalUsesHawkWordmark(t *testing.T) {
-	out := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 120, 40, nil)
+func TestBuildWelcomeMessage_WideTerminalUsesGraycodeWordmark(t *testing.T) {
+	out := buildWelcomeMessage(nil, "", nil, nil, graycodeconfig.Settings{}, 0, false, 120, 40, nil)
 	for _, want := range []string{
 		"___     ___    _________",
 		"(\\.|\\/|./)",
 		"|0\\/0|",
 	} {
 		if !strings.Contains(out, want) {
-			t.Fatalf("wide welcome missing hawk wordmark line %q in:\n%s", want, out)
+			t.Fatalf("wide welcome missing graycode wordmark line %q in:\n%s", want, out)
 		}
 	}
 }
 
-func TestBuildWelcomeMessage_HawkWordmarkBlinks(t *testing.T) {
-	out := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, true, 120, 40, nil)
+func TestBuildWelcomeMessage_GraycodeWordmarkBlinks(t *testing.T) {
+	out := buildWelcomeMessage(nil, "", nil, nil, graycodeconfig.Settings{}, 0, true, 120, 40, nil)
 	if !strings.Contains(out, "|-\\/-|") {
-		t.Fatalf("blinking welcome should close the hawk's eyes, got:\n%s", out)
+		t.Fatalf("blinking welcome should close the graycode's eyes, got:\n%s", out)
 	}
 }
 
@@ -167,7 +167,7 @@ func TestEyeBlinkTick_CyclesEyeFrameStates(t *testing.T) {
 }
 
 func TestWelcomeMessage_OneLineGapBeforeStatusLine(t *testing.T) {
-	out := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 120, 40, nil)
+	out := buildWelcomeMessage(nil, "", nil, nil, graycodeconfig.Settings{}, 0, false, 120, 40, nil)
 	lines := strings.Split(out, "\n")
 	artBottomIdx := -1
 	for i, line := range lines {

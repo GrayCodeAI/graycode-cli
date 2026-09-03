@@ -3,8 +3,8 @@ package cmd
 import (
 	lipgloss "charm.land/lipgloss/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature/shellmode"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // InputClass represents the classification of user input.

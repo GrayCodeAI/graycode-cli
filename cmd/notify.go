@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // Notification represents a single notification event.
@@ -23,7 +23,7 @@ type Notification struct {
 	Read      bool
 }
 
-// Notifier manages terminal notifications for hawk events.
+// Notifier manages terminal notifications for graycode events.
 type Notifier struct {
 	Enabled bool
 	Level   string // "all", "important", "critical"
@@ -151,7 +151,7 @@ $textNodes = $template.GetElementsByTagName('text')
 $textNodes.Item(0).AppendChild($template.CreateTextNode('%s')) | Out-Null
 $textNodes.Item(1).AppendChild($template.CreateTextNode('%s')) | Out-Null
 $toast = [Windows.UI.Notifications.ToastNotification]::new($template)
-[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('hawk').Show($toast)`,
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('graycode').Show($toast)`,
 			escapePowerShell(title), escapePowerShell(message))
 		cmd := exec.CommandContext(context.Background(), "powershell", "-Command", script) // #nosec G204 -- fixed command 'powershell'; script built from escaped internal strings
 		return cmd.Run()

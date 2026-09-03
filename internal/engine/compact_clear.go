@@ -4,7 +4,7 @@ import (
 	"context"
 	"sort"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // Two-tier context management (adopted from herm): before compacting, "clear"

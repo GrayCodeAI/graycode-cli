@@ -240,7 +240,7 @@ func (BrowserTool) Execute(ctx context.Context, input json.RawMessage) (string, 
 	case "screenshot":
 		dest := p.Path
 		if dest == "" {
-			dest = filepath.Join(os.TempDir(), fmt.Sprintf("hawk-browser-%d.png", time.Now().UnixNano()))
+			dest = filepath.Join(os.TempDir(), fmt.Sprintf("graycode-browser-%d.png", time.Now().UnixNano()))
 		}
 		if err := validatePathAllowed(ctx, dest); err != nil {
 			return "", err

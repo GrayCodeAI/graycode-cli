@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-pattern='github\.com/GrayCodeAI/hawk/(internal/|shared/types)'
+pattern='github\.com/GrayCodeAI/graycode-cli/(internal/|shared/types)'
 violations=""
 
 for repo in ../kestrel ../merlin ../shrike ../swift ../harrier ../eyrie; do
@@ -19,10 +19,10 @@ for repo in ../kestrel ../merlin ../shrike ../swift ../harrier ../eyrie; do
 done
 
 if [[ -n "${violations}" ]]; then
-      echo "forbidden Hawk imports found in sibling ecosystem repos:"
+      echo "forbidden Graycode imports found in sibling ecosystem repos:"
   echo "${violations}"
   echo
-  echo "support repos must use eagle or their own contracts, not hawk/internal or removed hawk/shared/types"
+  echo "support repos must use eagle or their own contracts, not graycode/internal or removed graycode/shared/types"
   exit 1
 fi
 

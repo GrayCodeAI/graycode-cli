@@ -12,7 +12,7 @@ repository that follows this layout. Adopted 2026-05-14.
 
 ## Pattern by repo type
 
-### Go binaries (`hawk`, `harrier`, `swift`)
+### Go binaries (`graycode`, `harrier`, `swift`)
 
 - `VERSION` at the repo root.
 - A version package (`internal/version` for binaries, or `main` itself) declares
@@ -90,7 +90,7 @@ func init() {
   pattern = "^(?P<version>[^\\s]+)"
 
   [tool.hatch.build.targets.wheel]
-  force-include = { "VERSION" = "hawk/VERSION" }
+  force-include = { "VERSION" = "graycode/VERSION" }
   ```
 - `_version.py` reads the same `VERSION` file at runtime via `pathlib`, so
   `__version__` matches the package metadata both in source checkouts and in

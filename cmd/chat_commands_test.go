@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 func TestAdditionalDirContextLoadsInstructions(t *testing.T) {
@@ -69,7 +69,7 @@ func TestLocalSlashCommands(t *testing.T) {
 	m := &chatModel{
 		session:   sess,
 		registry:  tool.NewRegistry(tool.LSTool{}),
-		settings:  hawkconfig.Settings{MCPServers: []hawkconfig.MCPServerConfig{{Name: "demo", Command: "demo-mcp"}}},
+		settings:  graycodeconfig.Settings{MCPServers: []graycodeconfig.MCPServerConfig{{Name: "demo", Command: "demo-mcp"}}},
 		sessionID: "test",
 		width:     80,
 		height:    24,
@@ -94,16 +94,16 @@ func TestLocalSlashCommands(t *testing.T) {
 func TestDiagnosticSummaries(t *testing.T) {
 	preserveCLICompilerVersionState(t)
 	version = "test-version"
-	settings := hawkconfig.Settings{
+	settings := graycodeconfig.Settings{
 		Provider: "openai",
 		Model:    "gpt-4o",
-		MCPServers: []hawkconfig.MCPServerConfig{
+		MCPServers: []graycodeconfig.MCPServerConfig{
 			{Name: "demo", Command: "demo-mcp", Args: []string{"--stdio"}},
 		},
 	}
 
 	report := doctorReport(settings)
-	if !strings.Contains(report, "Hawk doctor") || !strings.Contains(report, "Built-in tools") {
+	if !strings.Contains(report, "Graycode doctor") || !strings.Contains(report, "Built-in tools") {
 		t.Fatalf("unexpected doctor report: %s", report)
 	}
 	if summary := mcpConfigSummary(settings); !strings.Contains(summary, "demo") {

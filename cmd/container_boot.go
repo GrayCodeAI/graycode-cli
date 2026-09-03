@@ -8,8 +8,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
 )
 
 // containerStatusMsg carries container lifecycle updates to the TUI.
@@ -22,19 +22,19 @@ type containerStatusMsg struct {
 
 var dockerAvailable = sandbox.DockerAvailable
 
-// shouldUseContainer is intentionally unconditional: Hawk agent command
+// shouldUseContainer is intentionally unconditional: Graycode agent command
 // execution is Docker-only and never falls back to the host.
 func shouldUseContainer() bool {
 	return true
 }
 
-// startRequiredContainer starts Hawk's mandatory Docker sandbox. It fails
+// startRequiredContainer starts Graycode's mandatory Docker sandbox. It fails
 // closed with an actionable error; there is deliberately no host fallback.
 // Egress is restricted to a domain allowlist via NetworkProxy by default; set
-// HAWK_DISABLE_EGRESS_PROXY=1 to opt out (unrestricted bridge egress).
+// GRAYCODE_DISABLE_EGRESS_PROXY=1 to opt out (unrestricted bridge egress).
 func startRequiredContainer(projectDir string) (*sandbox.ContainerSandbox, error) {
 	var cs *sandbox.ContainerSandbox
-	if os.Getenv("HAWK_DISABLE_EGRESS_PROXY") == "1" {
+	if os.Getenv("GRAYCODE_DISABLE_EGRESS_PROXY") == "1" {
 		cs = sandbox.NewContainerSandbox(projectDir)
 	} else {
 		cs = sandbox.NewContainerSandboxWithEgressProxy(projectDir)

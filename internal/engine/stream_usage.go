@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
-	"github.com/GrayCodeAI/hawk/internal/usage"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/usage"
 
-	analytics "github.com/GrayCodeAI/hawk/internal/observability"
+	analytics "github.com/GrayCodeAI/graycode-cli/internal/observability"
 )
 
 // streamUsageLedger prevents providers that repeat their final usage on the

@@ -5,7 +5,7 @@
 # the submodule checkout), this makes no changes — it only reports.
 #
 # Typical drift: you commit changes in ../shrike, but forget `make
-# sync-submodules` + a commit in hawk to bump the external/tok pin. This
+# sync-submodules` + a commit in graycode to bump the external/tok pin. This
 # script catches that before it becomes a stale-dependency surprise in CI.
 set -euo pipefail
 
@@ -62,7 +62,7 @@ done < <(git config -f .gitmodules --get-regexp path | awk '{print $2}')
 
 if [[ $exit_code -ne 0 ]]; then
   echo
-  echo "drift detected — run 'make sync-submodules' in hawk after confirming the sibling repos are what you expect, then commit the updated external/ pins"
+  echo "drift detected — run 'make sync-submodules' in graycode after confirming the sibling repos are what you expect, then commit the updated external/ pins"
 fi
 
 exit $exit_code

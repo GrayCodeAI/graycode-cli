@@ -9,7 +9,7 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 type CodeAction struct {

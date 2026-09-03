@@ -14,7 +14,7 @@ func TestView_LineCountMatchesHeight(t *testing.T) {
 	m := chatModel{
 		height:       24,
 		width:        80,
-		welcomeCache: "HAWK LOGO\nv0.1.0",
+		welcomeCache: "GRAYCODE LOGO\nv0.1.0",
 		input:        textarea.New(),
 		viewport:     viewport.New(viewport.WithWidth(80), viewport.WithHeight(8)),
 		ghostText:    NewGhostText(),

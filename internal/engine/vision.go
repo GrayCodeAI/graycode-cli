@@ -3,12 +3,12 @@ package engine
 import (
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // ModelSupportsVision reports whether the named model can accept image content
 // blocks. eyrie carries image data on EyrieMessage.Images but does not expose a
-// per-model capability flag, so hawk gates locally on the model identifier.
+// per-model capability flag, so graycode gates locally on the model identifier.
 //
 // The check is heuristic and intentionally conservative: an unknown model is
 // treated as non-vision so that we never send image blocks a provider will

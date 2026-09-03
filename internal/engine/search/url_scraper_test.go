@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 func TestDetectURLs_HTTPAndHTTPS(t *testing.T) {
@@ -153,13 +153,13 @@ func TestExtractHTML_MetaDescription(t *testing.T) {
 }
 
 func TestExtractJSON_PrettyPrints(t *testing.T) {
-	input := `{"name":"hawk","version":"1.0","active":true}`
+	input := `{"name":"graycode","version":"1.0","active":true}`
 	result := ExtractJSON(input)
 
 	if !strings.Contains(result, "  ") {
 		t.Error("expected indented JSON output")
 	}
-	if !strings.Contains(result, `"name": "hawk"`) {
+	if !strings.Contains(result, `"name": "graycode"`) {
 		t.Error("expected formatted key-value pair")
 	}
 }
@@ -380,7 +380,7 @@ func TestFetch_HTMLContent(t *testing.T) {
 func TestFetch_JSONContent(t *testing.T) {
 	ts := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"name":"hawk","items":[1,2,3,4,5,6,7,8]}`)
+		fmt.Fprint(w, `{"name":"graycode","items":[1,2,3,4,5,6,7,8]}`)
 	}))
 	defer ts.Close()
 
@@ -456,8 +456,8 @@ func TestNewURLScraper_Defaults(t *testing.T) {
 	if s.Timeout != 15*time.Second {
 		t.Errorf("expected Timeout=15s, got %v", s.Timeout)
 	}
-	if s.UserAgent != "hawk/1.0" {
-		t.Errorf("expected UserAgent='hawk/1.0', got '%s'", s.UserAgent)
+	if s.UserAgent != "graycode/1.0" {
+		t.Errorf("expected UserAgent='graycode/1.0', got '%s'", s.UserAgent)
 	}
 	if s.Cache == nil {
 		t.Error("expected non-nil cache map")

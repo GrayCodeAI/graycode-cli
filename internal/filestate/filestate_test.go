@@ -9,7 +9,7 @@ import (
 
 func TestRewindBasicFlow(t *testing.T) {
 	state := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", state)
+	t.Setenv("GRAYCODE_STATE_DIR", state)
 	work := t.TempDir()
 	f := filepath.Join(work, "code.go")
 	if err := os.WriteFile(f, []byte("v1\n"), 0o644); err != nil {
@@ -54,7 +54,7 @@ func TestRewindBasicFlow(t *testing.T) {
 
 func TestRewindSkipsUnchangedFiles(t *testing.T) {
 	state := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", state)
+	t.Setenv("GRAYCODE_STATE_DIR", state)
 	work := t.TempDir()
 	f := filepath.Join(work, "a.txt")
 	_ = os.WriteFile(f, []byte("same"), 0o644)
@@ -75,7 +75,7 @@ func TestRewindSkipsUnchangedFiles(t *testing.T) {
 
 func TestDurableRehydration(t *testing.T) {
 	state := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", state)
+	t.Setenv("GRAYCODE_STATE_DIR", state)
 	work := t.TempDir()
 	f := filepath.Join(work, "x.txt")
 	_ = os.WriteFile(f, []byte("one"), 0o644)
@@ -126,7 +126,7 @@ func TestSanitizeSessionID(t *testing.T) {
 
 func TestEvictionCap(t *testing.T) {
 	state := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", state)
+	t.Setenv("GRAYCODE_STATE_DIR", state)
 	tr, _ := NewTracker("cap-sess", false)
 	for i := 0; i < defaultCap+10; i++ {
 		tr.BeginPrompt(i)

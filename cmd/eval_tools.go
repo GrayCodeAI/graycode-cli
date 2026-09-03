@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/feature/eval"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature/eval"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +29,7 @@ var evalToolsCmd = &cobra.Command{
 }
 
 // defaultToolUseCases is a small built-in set exercising clear positive and
-// negative tool-trigger situations against hawk's standard tools.
+// negative tool-trigger situations against graycode's standard tools.
 func defaultToolUseCases() []eval.ToolUseCase {
 	return []eval.ToolUseCase{
 		{
@@ -68,7 +68,7 @@ func defaultToolUseCases() []eval.ToolUseCase {
 }
 
 func runEvalTools(cmd *cobra.Command, _ []string) error {
-	settings := hawkconfig.LoadSettings()
+	settings := graycodeconfig.LoadSettings()
 
 	registry, err := defaultRegistry(settings)
 	if err != nil {
@@ -79,7 +79,7 @@ func runEvalTools(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	modelName, providerName := effectiveModelAndProvider(settings)
-	sess, err := newConfiguredHawkSession(settings, providerName, modelName, systemPrompt, registry, nil)
+	sess, err := newConfiguredGraycodeSession(settings, providerName, modelName, systemPrompt, registry, nil)
 	if err != nil {
 		return err
 	}

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/diffsandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/diffsandbox"
 	"github.com/spf13/cobra"
 )
 
 // sandboxInstance is a package-level sandbox for the CLI session.
-// In a real integration this would be loaded/shared from the hawk engine;
+// In a real integration this would be loaded/shared from the graycode engine;
 // for now we create a fresh sandbox rooted at the current directory.
 var (
 	sandboxInstance *diffsandbox.Sandbox

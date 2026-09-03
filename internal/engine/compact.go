@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/compact"
-	"github.com/GrayCodeAI/hawk/internal/engine/token"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/compact"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/token"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 
-	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
+	modelPkg "github.com/GrayCodeAI/graycode-cli/internal/provider/routing"
 )
 
 // ShouldAutoCompact returns true if the conversation is approaching context limits.
@@ -104,7 +104,7 @@ func (s *Session) smartCompactBody(ctx context.Context) {
 	// segment before they leave the live context. Best-effort: a persistence
 	// failure must never block or corrupt compaction itself.
 	if sessionID := s.executionGraphSessionID(); sessionID != "" && len(compactedMsgs) > 0 {
-		detail, _ := compact.ParseCompactionDetail(os.Getenv("HAWK_COMPACTION_SEGMENT_DETAIL"))
+		detail, _ := compact.ParseCompactionDetail(os.Getenv("GRAYCODE_COMPACTION_SEGMENT_DETAIL"))
 		if _, err := compact.WriteCompactionSegment(sessionID, compactedMsgs, detail); err != nil {
 			slog.Debug("compaction segment persistence skipped", "error", err)
 		}

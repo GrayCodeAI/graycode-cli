@@ -1,22 +1,22 @@
 # Production Operations Checklist
 
-Use this checklist when deploying or upgrading hawk in a production
+Use this checklist when deploying or upgrading graycode in a production
 environment. Each item links to the relevant configuration option or
 documentation section.
 
 ## Pre-Deployment
 
-- [ ] **API key is set** — `HAWK_DAEMON_API_KEY` environment variable is
+- [ ] **API key is set** — `GRAYCODE_DAEMON_API_KEY` environment variable is
   configured to a cryptographically random value (≥ 32 bytes). Do **not**
   rely on the auto-generated key for production.
   ```bash
-  export HAWK_DAEMON_API_KEY=$(openssl rand -base64 32)
+  export GRAYCODE_DAEMON_API_KEY=$(openssl rand -base64 32)
   ```
 - [ ] **Bind address** — Daemon binds to `0.0.0.0` (not just loopback) only
   when remote access is needed. A non-loopback bind requires an API key and
   native TLS; otherwise startup fails closed.
 - [ ] **TLS configured** — Enable native TLS with `--tls-cert` / `--tls-key`
-  flags. If a reverse proxy terminates TLS, keep Hawk bound to loopback or
+  flags. If a reverse proxy terminates TLS, keep Graycode bound to loopback or
   an internal-only interface and restrict that network path at the firewall;
   the daemon does not treat `X-Forwarded-Proto` as transport encryption.
 - [ ] **CORS configured** — If serving browser-based clients, set
@@ -24,14 +24,14 @@ documentation section.
   trusted origins only. Use `--cors '*'` only for development.
 - [ ] **Rate limits reviewed** — Default: 10 req/min for general API, 30 req/min
   for chat, 4 concurrent chat sessions. Tune via
-  `HAWK_DAEMON_MAX_CONCURRENT`.
+  `GRAYCODE_DAEMON_MAX_CONCURRENT`.
 - [ ] **Resource limits set** — Configure CPU/memory limits in systemd
   (`MemoryMax`, `CPUQuota`) or Kubernetes. Defaults in the systemd unit file:
   `MemoryMax=4G`, `CPUQuota=200%`.
-- [ ] **Log retention** — Daemon logs at `~/.hawk/state/daemon.log`.
+- [ ] **Log retention** — Daemon logs at `~/.graycode/state/daemon.log`.
   Configure log rotation (logrotate, journald retention) to prevent disk
   exhaustion.
-- [ ] **State directory backed up** — The `~/.hawk/state/` directory contains
+- [ ] **State directory backed up** — The `~/.graycode/state/` directory contains
   the PID file, API key pin file, audit log, and session state. Back up the
   audit log key (`securitylog/sel.key`) — **losing it makes all historical
   audit entries unverifiable**.
@@ -40,17 +40,17 @@ documentation section.
 
 ## Observability
 
-- [ ] **Telemetry enabled (optional)** — Set `HAWK_CODE_ENABLE_TELEMETRY=1`
+- [ ] **Telemetry enabled (optional)** — Set `GRAYCODE_ENABLE_TELEMETRY=1`
   and configure `OTEL_EXPORTER_OTLP_ENDPOINT` to send traces to your OTLP
   collector. Telemetry is opt-in by default.
 - [ ] **Prometheus scraping** — If using Prometheus, configure a scrape
   target for `http://<daemon>:4590/v1/metrics` with authentication:
   ```yaml
   scrape_configs:
-    - job_name: 'hawk-daemon'
-      bearer_token: '<HAWK_DAEMON_API_KEY>'
+    - job_name: 'graycode-daemon'
+      bearer_token: '<GRAYCODE_DAEMON_API_KEY>'
       static_configs:
-        - targets: ['hawk-daemon:4590']
+        - targets: ['graycode-daemon:4590']
       metrics_path: '/v1/metrics'
   ```
 - [ ] **Health/readiness probes** — Configure in your orchestrator:
@@ -62,13 +62,13 @@ documentation section.
 ## Security Hardening
 
 - [ ] **API key rotated** — The API key is written to a pinned file at
-  `~/.hawk/state/daemon.key` for convenience. **Remove this file in
+  `~/.graycode/state/daemon.key` for convenience. **Remove this file in
   production** or ensure it has `0600` permissions and is not world-readable.
 - [ ] **Audit log verification** — Periodically verify the audit log
   integrity:
   ```bash
   # The Verify function checks the HMAC chain
-  go run ./cmd/hawk securitylog verify
+  go run ./cmd/graycode securitylog verify
   ```
 - [ ] **Security headers** — Verify `X-Content-Type-Options`,
   `X-Frame-Options`, and `Content-Security-Policy` headers are present
@@ -79,7 +79,7 @@ documentation section.
 - [ ] **No CGO** — The binary is built with `CGO_ENABLED=0` for a static binary.
   Verify the deployed binary has no dynamic library dependencies:
   ```bash
-  ldd /usr/local/bin/hawk  # should say "not a dynamic executable"
+  ldd /usr/local/bin/graycode  # should say "not a dynamic executable"
   ```
 
 ## Post-Deployment
@@ -97,7 +97,7 @@ documentation section.
   ```
 - [ ] **Metrics test** — Verify the metrics endpoint:
   ```bash
-  curl -H "X-API-Key: $HAWK_DAEMON_API_KEY" http://localhost:4590/v1/metrics
+  curl -H "X-API-Key: $GRAYCODE_DAEMON_API_KEY" http://localhost:4590/v1/metrics
   ```
 - [ ] **Version check** — Verify the deployed version matches expectations:
   ```bash
@@ -106,10 +106,10 @@ documentation section.
 
 ## Upgrade Procedure
 
-1. **Back up state** — Copy `~/.hawk/state/` to a safe location.
+1. **Back up state** — Copy `~/.graycode/state/` to a safe location.
 2. **Drain traffic** — Remove the daemon from load balancer rotation or
    stop sending new requests.
-3. **Install new binary** — Replace the binary and run `hawk daemon start`
+3. **Install new binary** — Replace the binary and run `graycode daemon start`
    with the same configuration.
 4. **Verify health** — Check `GET /v1/health` and `GET /v1/ready`.
 5. **Verify metrics** — Check `GET /v1/metrics` for expected counters.

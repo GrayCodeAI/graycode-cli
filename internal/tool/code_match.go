@@ -10,7 +10,7 @@ import (
 )
 
 // CodeMatchTool performs structural, AST-level code search using tree-sitter
-// query patterns — the hawk counterpart to cocoindex-code's by-example
+// query patterns — the graycode counterpart to cocoindex-code's by-example
 // structural grep. Patterns are tree-sitter query S-expressions over the
 // language grammar, e.g. for Go:
 //

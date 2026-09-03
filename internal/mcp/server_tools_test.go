@@ -13,7 +13,7 @@ import (
 // ---------------------------------------------------------------------------
 
 func TestRegisterDefaultTools_RegistersAllSevenTools(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	RegisterDefaultTools(server, nil)
 
 	// Send tools/list
@@ -27,13 +27,13 @@ func TestRegisterDefaultTools_RegistersAllSevenTools(t *testing.T) {
 	tools := result["tools"].([]interface{})
 
 	expectedNames := map[string]bool{
-		"hawk_chat":          false,
-		"hawk_search":        false,
-		"hawk_memory_recall": false,
-		"hawk_memory_store":  false,
-		"hawk_review":        false,
-		"hawk_scan":          false,
-		"hawk_compress":      false,
+		"graycode_chat":          false,
+		"graycode_search":        false,
+		"graycode_memory_recall": false,
+		"graycode_memory_store":  false,
+		"graycode_review":        false,
+		"graycode_scan":          false,
+		"graycode_compress":      false,
 	}
 
 	for _, raw := range tools {
@@ -55,11 +55,11 @@ func TestRegisterDefaultTools_RegistersAllSevenTools(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// hawk_chat tool
+// graycode_chat tool
 // ---------------------------------------------------------------------------
 
-func TestHawkChatTool_ValidPrompt(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeChatTool_ValidPrompt(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	executor := func(ctx context.Context, name string, params json.RawMessage) (string, error) {
 		if name != "agent" {
 			return "", fmt.Errorf("expected agent, got %s", name)
@@ -68,36 +68,36 @@ func TestHawkChatTool_ValidPrompt(t *testing.T) {
 	}
 	RegisterDefaultTools(server, executor)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_chat","arguments":{"prompt":"hello"}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_chat","arguments":{"prompt":"hello"}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertNoError(t, resp)
 	assertResponseContains(t, resp, "chat response")
 }
 
-func TestHawkChatTool_EmptyPrompt(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeChatTool_EmptyPrompt(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	RegisterDefaultTools(server, nil)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_chat","arguments":{"prompt":""}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_chat","arguments":{"prompt":""}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertIsError(t, resp)
 }
 
-func TestHawkChatTool_MissingPrompt(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeChatTool_MissingPrompt(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	RegisterDefaultTools(server, nil)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_chat","arguments":{}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_chat","arguments":{}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertIsError(t, resp)
 }
 
 // ---------------------------------------------------------------------------
-// hawk_search tool
+// graycode_search tool
 // ---------------------------------------------------------------------------
 
-func TestHawkSearchTool_ValidQuery(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeSearchTool_ValidQuery(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	executor := func(ctx context.Context, name string, params json.RawMessage) (string, error) {
 		if name != "code_search" {
 			return "", fmt.Errorf("expected code_search, got %s", name)
@@ -106,27 +106,27 @@ func TestHawkSearchTool_ValidQuery(t *testing.T) {
 	}
 	RegisterDefaultTools(server, executor)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_search","arguments":{"query":"auth middleware"}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_search","arguments":{"query":"auth middleware"}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertNoError(t, resp)
 	assertResponseContains(t, resp, "search results")
 }
 
-func TestHawkSearchTool_EmptyQuery(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeSearchTool_EmptyQuery(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	RegisterDefaultTools(server, nil)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_search","arguments":{"query":""}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_search","arguments":{"query":""}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertIsError(t, resp)
 }
 
 // ---------------------------------------------------------------------------
-// hawk_memory_recall tool
+// graycode_memory_recall tool
 // ---------------------------------------------------------------------------
 
-func TestHawkMemoryRecallTool_ValidQuery(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeMemoryRecallTool_ValidQuery(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	executor := func(ctx context.Context, name string, params json.RawMessage) (string, error) {
 		if name != "core_memory" {
 			return "", fmt.Errorf("expected core_memory, got %s", name)
@@ -135,75 +135,75 @@ func TestHawkMemoryRecallTool_ValidQuery(t *testing.T) {
 	}
 	RegisterDefaultTools(server, executor)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_memory_recall","arguments":{"query":"last decision"}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_memory_recall","arguments":{"query":"last decision"}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertNoError(t, resp)
 	assertResponseContains(t, resp, "recalled memory")
 }
 
-func TestHawkMemoryRecallTool_WithNamespace(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeMemoryRecallTool_WithNamespace(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	executor := func(ctx context.Context, name string, params json.RawMessage) (string, error) {
 		return "namespaced result", nil
 	}
 	RegisterDefaultTools(server, executor)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_memory_recall","arguments":{"query":"test","namespace":"project"}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_memory_recall","arguments":{"query":"test","namespace":"project"}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertNoError(t, resp)
 	assertResponseContains(t, resp, "namespaced result")
 }
 
-func TestHawkMemoryRecallTool_EmptyQuery(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeMemoryRecallTool_EmptyQuery(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	RegisterDefaultTools(server, nil)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_memory_recall","arguments":{"query":""}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_memory_recall","arguments":{"query":""}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertIsError(t, resp)
 }
 
 // ---------------------------------------------------------------------------
-// hawk_memory_store tool
+// graycode_memory_store tool
 // ---------------------------------------------------------------------------
 
-func TestHawkMemoryStoreTool_ValidInput(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeMemoryStoreTool_ValidInput(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	executor := func(ctx context.Context, name string, params json.RawMessage) (string, error) {
 		return "stored", nil
 	}
 	RegisterDefaultTools(server, executor)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_memory_store","arguments":{"key":"decision-1","content":"use Go for backend"}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_memory_store","arguments":{"key":"decision-1","content":"use Go for backend"}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertNoError(t, resp)
 	assertResponseContains(t, resp, "stored")
 }
 
-func TestHawkMemoryStoreTool_MissingKey(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeMemoryStoreTool_MissingKey(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	RegisterDefaultTools(server, nil)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_memory_store","arguments":{"content":"some content"}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_memory_store","arguments":{"content":"some content"}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertIsError(t, resp)
 }
 
-func TestHawkMemoryStoreTool_MissingContent(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeMemoryStoreTool_MissingContent(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	RegisterDefaultTools(server, nil)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_memory_store","arguments":{"key":"some-key"}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_memory_store","arguments":{"key":"some-key"}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertIsError(t, resp)
 }
 
 // ---------------------------------------------------------------------------
-// hawk_review tool
+// graycode_review tool
 // ---------------------------------------------------------------------------
 
-func TestHawkReviewTool_WithPath(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeReviewTool_WithPath(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	executor := func(ctx context.Context, name string, params json.RawMessage) (string, error) {
 		if name != "code_review" {
 			return "", fmt.Errorf("expected code_review, got %s", name)
@@ -212,40 +212,40 @@ func TestHawkReviewTool_WithPath(t *testing.T) {
 	}
 	RegisterDefaultTools(server, executor)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_review","arguments":{"path":"internal/mcp/server.go"}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_review","arguments":{"path":"internal/mcp/server.go"}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertNoError(t, resp)
 	assertResponseContains(t, resp, "review result")
 }
 
-func TestHawkReviewTool_WithDiff(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeReviewTool_WithDiff(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	executor := func(ctx context.Context, name string, params json.RawMessage) (string, error) {
 		return "diff review", nil
 	}
 	RegisterDefaultTools(server, executor)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_review","arguments":{"diff":"+func New() {}"}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_review","arguments":{"diff":"+func New() {}"}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertNoError(t, resp)
 	assertResponseContains(t, resp, "diff review")
 }
 
-func TestHawkReviewTool_NeitherPathNorDiff(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeReviewTool_NeitherPathNorDiff(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	RegisterDefaultTools(server, nil)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_review","arguments":{}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_review","arguments":{}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertIsError(t, resp)
 }
 
 // ---------------------------------------------------------------------------
-// hawk_scan tool
+// graycode_scan tool
 // ---------------------------------------------------------------------------
 
-func TestHawkScanTool_ValidPath(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeScanTool_ValidPath(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	executor := func(ctx context.Context, name string, params json.RawMessage) (string, error) {
 		if name != "security_scan" {
 			return "", fmt.Errorf("expected security_scan, got %s", name)
@@ -254,23 +254,23 @@ func TestHawkScanTool_ValidPath(t *testing.T) {
 	}
 	RegisterDefaultTools(server, executor)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_scan","arguments":{"path":"."}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_scan","arguments":{"path":"."}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertNoError(t, resp)
 	assertResponseContains(t, resp, "scan result")
 }
 
-func TestHawkScanTool_MissingPath(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeScanTool_MissingPath(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	RegisterDefaultTools(server, nil)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_scan","arguments":{}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_scan","arguments":{}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertIsError(t, resp)
 }
 
-func TestHawkScanTool_WithSeverity(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeScanTool_WithSeverity(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	executor := func(ctx context.Context, name string, params json.RawMessage) (string, error) {
 		var input struct {
 			Path     string `json:"path"`
@@ -284,18 +284,18 @@ func TestHawkScanTool_WithSeverity(t *testing.T) {
 	}
 	RegisterDefaultTools(server, executor)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_scan","arguments":{"path":".","severity":"high"}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_scan","arguments":{"path":".","severity":"high"}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertNoError(t, resp)
 	assertResponseContains(t, resp, "high severity scan")
 }
 
 // ---------------------------------------------------------------------------
-// hawk_compress tool
+// graycode_compress tool
 // ---------------------------------------------------------------------------
 
-func TestHawkCompressTool_ValidText(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeCompressTool_ValidText(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	executor := func(ctx context.Context, name string, params json.RawMessage) (string, error) {
 		if name != "compress" {
 			return "", fmt.Errorf("expected compress, got %s", name)
@@ -304,23 +304,23 @@ func TestHawkCompressTool_ValidText(t *testing.T) {
 	}
 	RegisterDefaultTools(server, executor)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_compress","arguments":{"text":"long text to compress"}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_compress","arguments":{"text":"long text to compress"}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertNoError(t, resp)
 	assertResponseContains(t, resp, "compressed text")
 }
 
-func TestHawkCompressTool_EmptyText(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeCompressTool_EmptyText(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	RegisterDefaultTools(server, nil)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_compress","arguments":{"text":""}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_compress","arguments":{"text":""}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertIsError(t, resp)
 }
 
-func TestHawkCompressTool_WithRatio(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+func TestGraycodeCompressTool_WithRatio(t *testing.T) {
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	executor := func(ctx context.Context, name string, params json.RawMessage) (string, error) {
 		var input struct {
 			Text  string  `json:"text"`
@@ -334,7 +334,7 @@ func TestHawkCompressTool_WithRatio(t *testing.T) {
 	}
 	RegisterDefaultTools(server, executor)
 
-	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hawk_compress","arguments":{"text":"some text","ratio":0.5}}}` + "\n"
+	req := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"graycode_compress","arguments":{"text":"some text","ratio":0.5}}}` + "\n"
 	resp := sendRequest(t, server, req)
 	assertNoError(t, resp)
 	assertResponseContains(t, resp, "ratio compressed")
@@ -382,7 +382,7 @@ func TestDelegateToExecutor_ExecutorError(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestToolSchemas_HaveRequiredFields(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "test"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "test"})
 	RegisterDefaultTools(server, nil)
 
 	req := `{"jsonrpc":"2.0","id":1,"method":"tools/list"}` + "\n"

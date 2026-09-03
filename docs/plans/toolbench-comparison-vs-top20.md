@@ -1,17 +1,17 @@
-# Toolbench Comparison: hawk vs the Top-20 OSS Coding Agents (2026)
+# Toolbench Comparison: graycode vs the Top-20 OSS Coding Agents (2026)
 
 > Status: analysis complete
-> Scope: built-in tool inventory of hawk and the leading open-source coding agents
+> Scope: built-in tool inventory of graycode and the leading open-source coding agents
 > Related issue: browser/screenshot automation gap
 
 ## Executive summary
 
-hawk ships **69 built-in agent tools** — more than any top-20 OSS rival — and covers every capability category the leader board demands (file I/O, shell, web, search, memory, planning, MCP, sub-agents). The only genuine gaps versus the field are:
+graycode ships **69 built-in agent tools** — more than any top-20 OSS rival — and covers every capability category the leader board demands (file I/O, shell, web, search, memory, planning, MCP, sub-agents). The only genuine gaps versus the field are:
 
 1. **Browser / computer-use automation** — now closed (see this plan's outcome).
-2. **IDE surfaces** — Cline/Continue/Zed are editor-native; hawk remains terminal-first by design.
+2. **IDE surfaces** — Cline/Continue/Zed are editor-native; graycode remains terminal-first by design.
 
-hawk's tool count exceeds the field (OpenCode ~10, Claude Code 18, Qwen Code ~26, Codex ~9+), but count alone is not the point: hawk matches **Qwen Code** tool-for-tool *and* adds a spec/planning suite, persistent core memory, impact/codegraph/git tools, and an in-tree linter toolchain (`nilaway`, `revive`) that the others leave to MCP.
+graycode's tool count exceeds the field (OpenCode ~10, Claude Code 18, Qwen Code ~26, Codex ~9+), but count alone is not the point: graycode matches **Qwen Code** tool-for-tool *and* adds a spec/planning suite, persistent core memory, impact/codegraph/git tools, and an in-tree linter toolchain (`nilaway`, `revive`) that the others leave to MCP.
 
 ## Top-20 OSS coding agents by tool surface (2026 star snapshots)
 
@@ -19,7 +19,7 @@ Star counts are approximate (GitHub, ~July 2026): OpenCode ~172k, Gemini CLI ~99
 
 | Agent | Built-in tools | Categories covered |
 |---|---|---|
-| hawk | **69** (+Power, +MCP) | all |
+| graycode | **69** (+Power, +MCP) | all |
 | Qwen Code | 26 + computer_use | all; computer use, cron, worktree |
 | Claude Code | 18 | all; notebook_edit, skills, hooks |
 | Kilo Code | ~15 + Playwright MCP | all + browser via MCP |
@@ -36,7 +36,7 @@ Star counts are approximate (GitHub, ~July 2026): OpenCode ~172k, Gemini CLI ~99
 | Continue | ~10 | editor |
 | Plandex | ~5 | planning + git |
 
-## hawk's current tool set
+## graycode's current tool set
 
 See `cmd/chat_tools.go` for the registry construction.
 
@@ -48,23 +48,23 @@ Spec/planning suite (`plan`, `spec_*`, `approve_implementation`, `clarify`, `con
 
 ## The browser gap and how it was closed
 
-Every browser-native competitor drives a real browser: Cline bundles Puppeteer, Kilo bundles the Playwright MCP server, Codex CLI ships a Chrome extension + in-app browser, Qwen Code exposes `computer_use_*`, OpenManus embeds browser/crawl4ai. hawk previously had only file/shell/web tools.
+Every browser-native competitor drives a real browser: Cline bundles Puppeteer, Kilo bundles the Playwright MCP server, Codex CLI ships a Chrome extension + in-app browser, Qwen Code exposes `computer_use_*`, OpenManus embeds browser/crawl4ai. graycode previously had only file/shell/web tools.
 
-**Outcome:** added `internal/tool/browser.go` and `internal/tool/screenshot.go`, exposed through hawk's existing `tool.Tool` interface:
+**Outcome:** added `internal/tool/browser.go` and `internal/tool/screenshot.go`, exposed through graycode's existing `tool.Tool` interface:
 
 - `BrowserTool` — headless-Chrome CDP driver with actions `navigate`, `content` (text/HTML, selector-scoped), `screenshot`, `click`, `type` (with clear), `title`, `location`, `close`. Risk level `high`; URL scheme validation restricts to `http(s)` (localhost/LAN included).
 - `ScreenshotTool` — single-shot full-page PNG capture to a path (defaults to a temp file).
 
-Implementation uses `github.com/chromedp/chromedp` v0.16.0, the canonical pure-Go Chrome DevTools client, and reuses hawk's existing `validatePathAllowed` guard for the output path. A lazily-allocated, mutex-guarded browser process is shared across calls (closed via `Browser … action:"close"` or `releaseBrowser()` in tests).
+Implementation uses `github.com/chromedp/chromedp` v0.16.0, the canonical pure-Go Chrome DevTools client, and reuses graycode's existing `validatePathAllowed` guard for the output path. A lazily-allocated, mutex-guarded browser process is shared across calls (closed via `Browser … action:"close"` or `releaseBrowser()` in tests).
 
-A live end-to-end test (`TestBrowserLive`, opt-in via `HAWK_LIVE_BROWSER=1`) navigates `example.com`, captures a screenshot, and reads the page title against a real Chrome install — it passes.
+A live end-to-end test (`TestBrowserLive`, opt-in via `GRAYCODE_LIVE_BROWSER=1`) navigates `example.com`, captures a screenshot, and reads the page title against a real Chrome install — it passes.
 
 ## Category parity vs the field
 
-| Category | hawk | Field leaders |
+| Category | graycode | Field leaders |
 |---|---|---|
-| File ops | read/write/edit/structured/multi/notebook (Go) | Claude Code/Qwen have notebook_edit; hawk has it |
-| Search | grep/glob/ls + LSP + code_search/code_graph | OpenCode LSP; hawk code_graph exceeds |
+| File ops | read/write/edit/structured/multi/notebook (Go) | Claude Code/Qwen have notebook_edit; graycode has it |
+| Search | grep/glob/ls + LSP + code_search/code_graph | OpenCode LSP; graycode code_graph exceeds |
 | Shell | bash (+PowerShell on Windows) + monitor/kill/wait | all |
 | Web | web_fetch/web_search/agentic_fetch/download | all |
 | Memory | **persistent core_memory_\* (Harrier)** | only Qwen/Claude have persistence |
@@ -77,10 +77,10 @@ A live end-to-end test (`TestBrowserLive`, opt-in via `HAWK_LIVE_BROWSER=1`) nav
 ## Remaining deltas (out of scope here)
 
 - VS Code / JetBrains extension (planned in `docs/IMPLEMENTATION-ROADMAP.md`).
-- Auto-commit-per-edit discipline à la Aider (hawk uses AGENTS.md branch rules instead).
+- Auto-commit-per-edit discipline à la Aider (graycode uses AGENTS.md branch rules instead).
 
 ## Verification
 
 - `go build ./internal/tool/... ./cmd/...` — clean after adding the tools.
-- `go test ./internal/tool/` — unit tests pass; live browser test passes with `HAWK_LIVE_BROWSER=1`.
+- `go test ./internal/tool/` — unit tests pass; live browser test passes with `GRAYCODE_LIVE_BROWSER=1`.
 - `/tools` REPL command now reports essential/optional breakdown (enhanced in this change; see `cmd/diagnostics.go`).

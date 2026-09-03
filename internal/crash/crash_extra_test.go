@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const testEnvStateDir = "HAWK_STATE_DIR"
+const testEnvStateDir = "GRAYCODE_STATE_DIR"
 
 // --- WriteReport tests ---
 
@@ -112,7 +112,7 @@ func TestFormatReport_FullFields(t *testing.T) {
 	}
 
 	result := formatReport(r)
-	if !strings.Contains(result, "hawk crash report") {
+	if !strings.Contains(result, "graycode crash report") {
 		t.Error("report should have header")
 	}
 	if !strings.Contains(result, "1.2.3") {

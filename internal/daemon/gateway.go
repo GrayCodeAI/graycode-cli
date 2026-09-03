@@ -11,11 +11,11 @@ import (
 	"sync"
 )
 
-// forwardToHawk posts a prompt to the daemon's /v1/chat endpoint and returns the
+// forwardToGraycode posts a prompt to the daemon's /v1/chat endpoint and returns the
 // assistant reply. daemonAddr must include a scheme (e.g. "http://127.0.0.1:4590").
 // apiKey, when non-empty, is sent as a Bearer token. Shared by the Discord and
 // Slack gateways; Telegram keeps its own method for backwards compatibility.
-func forwardToHawk(ctx context.Context, client *http.Client, daemonAddr, apiKey, prompt string) (string, error) {
+func forwardToGraycode(ctx context.Context, client *http.Client, daemonAddr, apiKey, prompt string) (string, error) {
 	payload, _ := json.Marshal(map[string]string{"prompt": prompt})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, daemonAddr+"/v1/chat", strings.NewReader(string(payload)))
 	if err != nil {
@@ -41,7 +41,7 @@ func forwardToHawk(ctx context.Context, client *http.Client, daemonAddr, apiKey,
 }
 
 // Gateway is a bidirectional messaging bridge between an external chat platform
-// (Telegram, Discord, Slack, ...) and the hawk daemon. Implementations forward
+// (Telegram, Discord, Slack, ...) and the graycode daemon. Implementations forward
 // inbound messages to the daemon's /v1/chat endpoint and relay the reply back.
 type Gateway interface {
 	// Name returns a short identifier for the gateway (e.g. "telegram").

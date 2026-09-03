@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/lsp"
+	"github.com/GrayCodeAI/graycode-cli/internal/lsp"
 )
 
 // LSPStatusTool lists configured language servers and their state.

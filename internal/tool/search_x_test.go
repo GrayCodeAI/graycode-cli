@@ -25,7 +25,7 @@ func TestSearchXBasic(t *testing.T) {
 	defer func() { xAISearchBaseURL = oldBase }()
 	t.Setenv("XAI_API_KEY", "k")
 
-	out, err := SearchXTool{}.Execute(context.Background(), json.RawMessage(`{"query":"hawk ai"}`))
+	out, err := SearchXTool{}.Execute(context.Background(), json.RawMessage(`{"query":"graycode ai"}`))
 	if err != nil {
 		t.Fatal(err)
 	}

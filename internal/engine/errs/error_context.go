@@ -410,7 +410,7 @@ func NewErrorContext() *ErrorContext {
 		},
 	}
 
-	ec.Patterns["hawk_old_str_not_found"] = &ErrorHelp{
+	ec.Patterns["graycode_old_str_not_found"] = &ErrorHelp{
 		Pattern:     regexp.MustCompile(`old_str not found`),
 		Title:       "Edit target string not found",
 		Explanation: "The text specified in old_str does not exist in the file. The file may have been modified since it was last read, or the string may contain whitespace or encoding differences.",
@@ -427,7 +427,7 @@ func NewErrorContext() *ErrorContext {
 		AutoFix: "Re-read the target file and retry with the exact current content",
 	}
 
-	ec.Patterns["hawk_file_too_large"] = &ErrorHelp{
+	ec.Patterns["graycode_file_too_large"] = &ErrorHelp{
 		Pattern:     regexp.MustCompile(`file too large`),
 		Title:       "File exceeds size limit",
 		Explanation: "The file is too large to be processed in a single operation. This protects against accidentally loading very large files into memory.",
@@ -444,7 +444,7 @@ func NewErrorContext() *ErrorContext {
 		AutoFix: "Use head_tail or line-range reads to process the file in parts",
 	}
 
-	ec.Patterns["hawk_budget_exceeded"] = &ErrorHelp{
+	ec.Patterns["graycode_budget_exceeded"] = &ErrorHelp{
 		Pattern:     regexp.MustCompile(`budget exceeded`),
 		Title:       "Token or cost budget exceeded",
 		Explanation: "The session has consumed more tokens or cost than the configured budget allows. This is a safety limit to prevent runaway costs.",
@@ -455,12 +455,12 @@ func NewErrorContext() *ErrorContext {
 			"Check for loops that may be inflating token usage",
 		},
 		Examples: []string{
-			"hawk --budget 10.00  # set a higher budget",
+			"graycode --budget 10.00  # set a higher budget",
 			"/compact  # reduce context size",
 		},
 	}
 
-	ec.Patterns["hawk_tool_not_found"] = &ErrorHelp{
+	ec.Patterns["graycode_tool_not_found"] = &ErrorHelp{
 		Pattern:     regexp.MustCompile(`(tool not found|unknown tool)`),
 		Title:       "Tool not found",
 		Explanation: "The requested tool does not exist in the current tool registry. It may be misspelled or not available in this configuration.",
@@ -475,7 +475,7 @@ func NewErrorContext() *ErrorContext {
 		},
 	}
 
-	ec.Patterns["hawk_sandbox_violation"] = &ErrorHelp{
+	ec.Patterns["graycode_sandbox_violation"] = &ErrorHelp{
 		Pattern:     regexp.MustCompile(`(sandbox violation|operation not permitted by sandbox)`),
 		Title:       "Sandbox security violation",
 		Explanation: "The operation was blocked by the sandbox security policy. The command attempted to access a resource outside the allowed scope.",
@@ -483,7 +483,7 @@ func NewErrorContext() *ErrorContext {
 			"Check which paths are allowed by the sandbox configuration",
 			"Request permission for the specific operation",
 			"Verify the file is within the project directory",
-			"Check sandbox settings in Hawk user settings",
+			"Check sandbox settings in Graycode user settings",
 		},
 		Examples: []string{
 			"// Ensure operations target files within the project root",

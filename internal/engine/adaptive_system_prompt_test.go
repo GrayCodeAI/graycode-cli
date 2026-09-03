@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/routing"
 )
 
 func TestNewSystemPromptBuilder(t *testing.T) {
@@ -24,7 +24,7 @@ func TestNewSystemPromptBuilder(t *testing.T) {
 func TestAddSection(t *testing.T) {
 	b := NewSystemPromptBuilder("", 5000)
 
-	b.AddSection(PromptSection{Name: "identity", Content: "You are hawk.", Priority: 1})
+	b.AddSection(PromptSection{Name: "identity", Content: "You are graycode.", Priority: 1})
 	b.AddSection(PromptSection{Name: "safety", Content: "Be safe.", Priority: 1})
 
 	if len(b.Sections) != 2 {
@@ -32,11 +32,11 @@ func TestAddSection(t *testing.T) {
 	}
 
 	// Adding same name replaces
-	b.AddSection(PromptSection{Name: "identity", Content: "You are hawk v2.", Priority: 1})
+	b.AddSection(PromptSection{Name: "identity", Content: "You are graycode v2.", Priority: 1})
 	if len(b.Sections) != 2 {
 		t.Fatalf("expected 2 sections after replace, got %d", len(b.Sections))
 	}
-	if b.Sections[0].Content != "You are hawk v2." {
+	if b.Sections[0].Content != "You are graycode v2." {
 		t.Errorf("expected updated content, got %q", b.Sections[0].Content)
 	}
 }
@@ -302,7 +302,7 @@ func TestEstimateStringTokens(t *testing.T) {
 
 func TestFormatPrompt(t *testing.T) {
 	sections := []PromptSection{
-		{Name: "identity", Content: "You are hawk."},
+		{Name: "identity", Content: "You are graycode."},
 		{Name: "safety", Content: "Be safe."},
 	}
 
@@ -317,7 +317,7 @@ func TestFormatPrompt(t *testing.T) {
 	if !strings.Contains(result, "## safety") {
 		t.Error("expected safety section header")
 	}
-	if !strings.Contains(result, "You are hawk.") {
+	if !strings.Contains(result, "You are graycode.") {
 		t.Error("expected identity content")
 	}
 	if !strings.Contains(result, "Be safe.") {

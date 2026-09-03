@@ -12,7 +12,7 @@ type ProjectContext struct {
 	Loaded     map[string]string // filename → content
 }
 
-// ProjectContextFiles are the files hawk auto-loads for project context.
+// ProjectContextFiles are the files graycode auto-loads for project context.
 var ProjectContextFiles = []string{
 	"AGENTS.md",
 	"PROJECT_CONTEXT.md",
@@ -60,7 +60,7 @@ func (pc *ProjectContext) HasContext() bool {
 	return false
 }
 
-// InitPrompt returns a prompt for hawk to generate initial project-context.md.
+// InitPrompt returns a prompt for graycode to generate initial project-context.md.
 func (pc *ProjectContext) InitPrompt() string {
 	return `Analyze this project and generate a PROJECT_CONTEXT.md file with:
 

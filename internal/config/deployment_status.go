@@ -10,7 +10,7 @@ func ResolveCanonicalModel(model string) string {
 	return CanonicalModelID(context.Background(), strings.TrimSpace(model))
 }
 
-// DeploymentStatusReport returns hawk deployment routing diagnostics.
+// DeploymentStatusReport returns graycode deployment routing diagnostics.
 func DeploymentStatusReport(ctx context.Context, activeModel string) (string, error) {
 	engine, err := newEyrieEngine()
 	if err != nil {

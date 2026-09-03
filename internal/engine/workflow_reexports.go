@@ -3,7 +3,7 @@ package engine
 import (
 	"context"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/workflow"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/workflow"
 )
 
 // Types from workflow sub-package.

@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 )
 
 // pathSubcommand implements the /path slash command. It prints
@@ -17,7 +17,7 @@ func (p *pathSubcommand) Aliases() []string   { return nil }
 func (p *pathSubcommand) Description() string { return "show developer path (HOME, GOROOT, etc.)" }
 func (p *pathSubcommand) Usage() string       { return "" }
 func (p *pathSubcommand) Handle(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-	m.messages = append(m.messages, displayMsg{role: "system", content: hawkconfig.FormatDeveloperPathReport(context.Background())})
+	m.messages = append(m.messages, displayMsg{role: "system", content: graycodeconfig.FormatDeveloperPathReport(context.Background())})
 	return m, nil
 }
 

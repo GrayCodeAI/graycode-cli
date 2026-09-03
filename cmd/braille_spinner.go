@@ -10,43 +10,43 @@ import (
 type SpinnerStyle string
 
 const (
-	SpinnerBraille     SpinnerStyle = "braille"
-	SpinnerBrailleWave SpinnerStyle = "braillewave"
-	SpinnerHawk        SpinnerStyle = "hawk"
-	SpinnerHawkQuad    SpinnerStyle = "hawkquad"
-	SpinnerDNA         SpinnerStyle = "dna"
-	SpinnerScan        SpinnerStyle = "scan"
-	SpinnerPulse       SpinnerStyle = "pulse"
-	SpinnerSnake       SpinnerStyle = "snake"
-	SpinnerOrbit       SpinnerStyle = "orbit"
-	SpinnerWing        SpinnerStyle = "wing"   // ⫷⫸ — two-frame wing flap
-	SpinnerTalons      SpinnerStyle = "talons" // ⩤⩥⩦⩧ — four-frame talon cycle
-	SpinnerRandom      SpinnerStyle = "random"
+	SpinnerBraille      SpinnerStyle = "braille"
+	SpinnerBrailleWave  SpinnerStyle = "braillewave"
+	SpinnerGraycode     SpinnerStyle = "graycode"
+	SpinnerGraycodeQuad SpinnerStyle = "graycodequad"
+	SpinnerDNA          SpinnerStyle = "dna"
+	SpinnerScan         SpinnerStyle = "scan"
+	SpinnerPulse        SpinnerStyle = "pulse"
+	SpinnerSnake        SpinnerStyle = "snake"
+	SpinnerOrbit        SpinnerStyle = "orbit"
+	SpinnerWing         SpinnerStyle = "wing"   // ⫷⫸ — two-frame wing flap
+	SpinnerTalons       SpinnerStyle = "talons" // ⩤⩥⩦⩧ — four-frame talon cycle
+	SpinnerRandom       SpinnerStyle = "random"
 )
 
-// hawkSpinnerGlyphs is the default TUI spinner — partial-circle compass (smooth, readable).
-var hawkSpinnerGlyphs = []string{"◐", "◓", "◑", "◒"}
+// graycodeSpinnerGlyphs is the default TUI spinner — partial-circle compass (smooth, readable).
+var graycodeSpinnerGlyphs = []string{"◐", "◓", "◑", "◒"}
 
-// hawkQuadBlockGlyphs is the legacy QUADBLOCK animation (kept for tests / bubbles compat).
-var hawkQuadBlockGlyphs = []string{"▛", "▜", "▟", "▙"}
+// graycodeQuadBlockGlyphs is the legacy QUADBLOCK animation (kept for tests / bubbles compat).
+var graycodeQuadBlockGlyphs = []string{"▛", "▜", "▟", "▙"}
 
 // spinnerFrames maps style names to their animation frames.
 var spinnerFrames = map[SpinnerStyle][]string{
-	SpinnerBraille:     {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
-	SpinnerBrailleWave: {"⠁⠂⠄⡀", "⠂⠄⡀⢀", "⠄⡀⢀⠠", "⡀⢀⠠⠐", "⢀⠠⠐⠈", "⠠⠐⠈⠁", "⠐⠈⠁⠂", "⠈⠁⠂⠄"},
-	SpinnerHawk:        hawkSpinnerGlyphs,
-	SpinnerHawkQuad:    hawkQuadBlockGlyphs,
-	SpinnerDNA:         {"⠋⠉⠙⠚", "⠉⠙⠚⠒", "⠙⠚⠒⠂", "⠚⠒⠂⠂", "⠒⠂⠂⠒", "⠂⠂⠒⠲", "⠂⠒⠲⠴", "⠒⠲⠴⠤", "⠲⠴⠤⠄", "⠴⠤⠄⠋", "⠤⠄⠋⠉", "⠄⠋⠉⠙"},
-	SpinnerScan:        {"⡇⠀⠀⠀", "⣿⠀⠀⠀", "⢸⡇⠀⠀", "⠀⣿⠀⠀", "⠀⢸⡇⠀", "⠀⠀⣿⠀", "⠀⠀⢸⡇", "⠀⠀⠀⣿", "⠀⠀⠀⢸", "⠀⠀⠀⠀"},
-	SpinnerPulse:       {"⠀", "⠄", "⠆", "⠇", "⡇", "⣇", "⣧", "⣷", "⣿", "⣷", "⣧", "⣇", "⡇", "⠇", "⠆", "⠄"},
-	SpinnerSnake:       {"⠈⠁", "⠈⠑", "⠈⠱", "⠈⡱", "⢁⡱", "⢁⡰", "⢁⡠", "⢁⡀", "⢁⠀", "⠁⠀"},
-	SpinnerOrbit:       {"⢄", "⢂", "⢁", "⡁", "⡈", "⡐", "⡠", "⣀", "⢠", "⢐", "⢈", "⢁"},
-	SpinnerWing:        {"⫷", "⫸"},
-	SpinnerTalons:      {"⩤", "⩥", "⩦", "⩧"},
+	SpinnerBraille:      {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
+	SpinnerBrailleWave:  {"⠁⠂⠄⡀", "⠂⠄⡀⢀", "⠄⡀⢀⠠", "⡀⢀⠠⠐", "⢀⠠⠐⠈", "⠠⠐⠈⠁", "⠐⠈⠁⠂", "⠈⠁⠂⠄"},
+	SpinnerGraycode:     graycodeSpinnerGlyphs,
+	SpinnerGraycodeQuad: graycodeQuadBlockGlyphs,
+	SpinnerDNA:          {"⠋⠉⠙⠚", "⠉⠙⠚⠒", "⠙⠚⠒⠂", "⠚⠒⠂⠂", "⠒⠂⠂⠒", "⠂⠂⠒⠲", "⠂⠒⠲⠴", "⠒⠲⠴⠤", "⠲⠴⠤⠄", "⠴⠤⠄⠋", "⠤⠄⠋⠉", "⠄⠋⠉⠙"},
+	SpinnerScan:         {"⡇⠀⠀⠀", "⣿⠀⠀⠀", "⢸⡇⠀⠀", "⠀⣿⠀⠀", "⠀⢸⡇⠀", "⠀⠀⣿⠀", "⠀⠀⢸⡇", "⠀⠀⠀⣿", "⠀⠀⠀⢸", "⠀⠀⠀⠀"},
+	SpinnerPulse:        {"⠀", "⠄", "⠆", "⠇", "⡇", "⣇", "⣧", "⣷", "⣿", "⣷", "⣧", "⣇", "⡇", "⠇", "⠆", "⠄"},
+	SpinnerSnake:        {"⠈⠁", "⠈⠑", "⠈⠱", "⠈⡱", "⢁⡱", "⢁⡰", "⢁⡠", "⢁⡀", "⢁⠀", "⠁⠀"},
+	SpinnerOrbit:        {"⢄", "⢂", "⢁", "⡁", "⡈", "⡐", "⡠", "⣀", "⢠", "⢐", "⢈", "⢁"},
+	SpinnerWing:         {"⫷", "⫸"},
+	SpinnerTalons:       {"⩤", "⩥", "⩦", "⩧"},
 }
 
-// hawkTypingDots is the number of trailing typing-indicator dots.
-const hawkTypingDots = 3
+// graycodeTypingDots is the number of trailing typing-indicator dots.
+const graycodeTypingDots = 3
 
 // BrailleSpinner renders the glyph frame (◐◓◑◒) and a 20-color wave on the
 // whole status strip: glyph → verb → ▪▫▫.
@@ -57,7 +57,7 @@ type BrailleSpinner struct {
 	frame     int // glyph animation frame (mod len(frames))
 	wavePhase int // 0..19 flowing color wave (glyph + verb + dots)
 	text      string
-	dots      int // 0..hawkTypingDots-1 — position of the highlighted dot
+	dots      int // 0..graycodeTypingDots-1 — position of the highlighted dot
 	running   bool
 	stopCh    chan struct{}
 }
@@ -65,7 +65,7 @@ type BrailleSpinner struct {
 // NewBrailleSpinner creates a spinner with the given style and label text.
 func NewBrailleSpinner(style SpinnerStyle, text string) *BrailleSpinner {
 	if style == SpinnerRandom {
-		styles := []SpinnerStyle{SpinnerHawk, SpinnerBraille, SpinnerBrailleWave, SpinnerDNA, SpinnerScan, SpinnerPulse, SpinnerSnake, SpinnerOrbit}
+		styles := []SpinnerStyle{SpinnerGraycode, SpinnerBraille, SpinnerBrailleWave, SpinnerDNA, SpinnerScan, SpinnerPulse, SpinnerSnake, SpinnerOrbit}
 		style = styles[rand.Intn(len(styles))] // #nosec G404 -- non-cryptographic use (random spinner style selection)
 	}
 	frames := spinnerFrames[style]
@@ -110,7 +110,7 @@ func (s *BrailleSpinner) Tick() string {
 	s.mu.Lock()
 	s.frame++
 	s.wavePhase = (s.wavePhase + 1) % spinnerWaveLen
-	s.dots = (s.dots + 1) % hawkTypingDots
+	s.dots = (s.dots + 1) % graycodeTypingDots
 	s.mu.Unlock()
 	return s.Frame()
 }

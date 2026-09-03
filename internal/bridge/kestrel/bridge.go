@@ -8,16 +8,16 @@ import (
 	graphcontracts "github.com/GrayCodeAI/eagle/graph"
 	reviewcontracts "github.com/GrayCodeAI/eagle/review"
 	eagletypes "github.com/GrayCodeAI/eagle/types"
-	"github.com/GrayCodeAI/hawk/internal/graphjournal"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 	kestrelLib "github.com/GrayCodeAI/kestrel"
 	kestrelgraph "github.com/GrayCodeAI/kestrel/graph"
 	"github.com/GrayCodeAI/kestrel/qualitygraph"
 	kestrelreview "github.com/GrayCodeAI/kestrel/review"
 )
 
-// EyrieAdapter implements kestrel's Provider interface using hawk's eyrie client.
-// It translates between kestrel.Message/kestrel.ChatOpts and Hawk runtime DTOs.
+// EyrieAdapter implements kestrel's Provider interface using graycode's eyrie client.
+// It translates between kestrel.Message/kestrel.ChatOpts and Graycode runtime DTOs.
 type EyrieAdapter struct {
 	client   types.ChatProvider
 	provider string
@@ -70,7 +70,7 @@ func (a *EyrieAdapter) Chat(ctx context.Context, messages []kestrelLib.Message, 
 	}, nil
 }
 
-// Bridge connects hawk to the kestrel code-review library.
+// Bridge connects graycode to the kestrel code-review library.
 // If initialization fails, all operations degrade gracefully and return
 // empty results rather than errors.
 type Bridge struct {
@@ -90,7 +90,7 @@ type GraphObservation struct {
 	MaxFindings int
 }
 
-// NewBridge creates a bridge to the kestrel library using the given Hawk
+// NewBridge creates a bridge to the kestrel library using the given Graycode
 // transport client and provider name. Additional kestrel options (model,
 // concerns, etc.) are applied to all operations.
 func NewBridge(c types.ChatProvider, provider string, opts ...kestrelLib.Option) *Bridge {
@@ -218,7 +218,7 @@ func (b *Bridge) Improve(ctx context.Context, diff string) (*kestrelLib.ImproveR
 }
 
 // The following helpers convert Kestrel's vendored contract types into
-// Hawk's eagle/* contract types (and the reverse for scope). The definitions
+// Graycode's eagle/* contract types (and the reverse for scope). The definitions
 // are byte-identical, so conversion is a field-by-field copy at the boundary.
 
 func toKestrelScope(s graphcontracts.Scope) kestrelgraph.Scope {

@@ -19,7 +19,7 @@ ENV GOPRIVATE=github.com/GrayCodeAI/* \
 # Build-time provenance (passed by .github/workflows/docker.yml or `docker build
 # --build-arg VERSION=... --build-arg COMMIT=... --build-arg BUILD_DATE=...`).
 # Default to "dev"/"none"/"unknown" so plain `docker build .` still produces a
-# runnable image — matching the cmd/hawk/main.go ldflags fallbacks.
+# runnable image — matching the cmd/graycode/main.go ldflags fallbacks.
 ARG VERSION=dev
 ARG COMMIT=none
 ARG BUILD_DATE=unknown
@@ -46,20 +46,20 @@ RUN --mount=type=cache,target=/go/pkg/mod \
       -X main.Version=${VERSION} \
       -X main.Commit=${COMMIT} \
       -X main.BuildDate=${BUILD_DATE}" \
-    -o hawk ./cmd/hawk
+    -o graycode ./cmd/graycode
 
-# Runtime stage — Alpine (hawk requires git + bash for workspace operations; distroless excluded)
+# Runtime stage — Alpine (graycode requires git + bash for workspace operations; distroless excluded)
 FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
 
 RUN apk upgrade --no-cache && \
     apk add --no-cache ca-certificates git bash tini && \
-    adduser -D -u 1000 -h /home/hawk hawk
+    adduser -D -u 1000 -h /home/graycode graycode
 
-COPY --from=builder /build/hawk /usr/local/bin/hawk
+COPY --from=builder /build/graycode /usr/local/bin/graycode
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
-USER hawk
+USER graycode
 WORKDIR /workspace
 
-ENTRYPOINT ["tini", "--", "hawk"]
+ENTRYPOINT ["tini", "--", "graycode"]
 CMD ["--help"]

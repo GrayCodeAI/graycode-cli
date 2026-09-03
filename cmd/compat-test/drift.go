@@ -9,23 +9,23 @@ import (
 )
 
 // trackedPins are the shared leaf dependencies most likely to drift silently:
-// a consumer (merlin, kestrel, ...) can pin an older version than what hawk's
+// a consumer (merlin, kestrel, ...) can pin an older version than what graycode's
 // own go.mod requires, and Go's minimal version selection will silently pull
-// in hawk's newer version at build time without the consumer's own CI ever
+// in graycode's newer version at build time without the consumer's own CI ever
 // having tested it. See docs/compatibility.md.
 var trackedPins = []string{
 	"github.com/GrayCodeAI/eagle",
 	"github.com/GrayCodeAI/falcon",
 }
 
-// checkDrift compares hawk's own go.mod requirements for trackedPins against
-// what each sibling repo (a peer checkout of a hawk dependency in the shared
+// checkDrift compares graycode's own go.mod requirements for trackedPins against
+// what each sibling repo (a peer checkout of a graycode dependency in the shared
 // workspace) declares for the same modules in its own go.mod. It never fails —
 // this is advisory, printed for humans/CI logs to notice, not a build gate.
 func checkDrift(repoRoot string) error {
-	hawkRequires, err := readRequires(filepath.Join(repoRoot, "go.mod"))
+	graycodeRequires, err := readRequires(filepath.Join(repoRoot, "go.mod"))
 	if err != nil {
-		return fmt.Errorf("read hawk go.mod: %w", err)
+		return fmt.Errorf("read graycode go.mod: %w", err)
 	}
 
 	workspaceDir := filepath.Join(repoRoot, "..")
@@ -46,18 +46,18 @@ func checkDrift(repoRoot string) error {
 			continue // sibling not a Go module / no go.mod — skip silently
 		}
 		for _, pin := range trackedPins {
-			hawkVer, hawkHas := hawkRequires[pin]
+			graycodeVer, graycodeHas := graycodeRequires[pin]
 			consumerVer, consumerHas := consumerRequires[pin]
-			if !hawkHas || !consumerHas || hawkVer == consumerVer {
+			if !graycodeHas || !consumerHas || graycodeVer == consumerVer {
 				continue
 			}
 			drifted++
-			fmt.Printf("  %-22s requires %s@%s, hawk requires %s@%s\n",
-				e.Name(), pin, consumerVer, pin, hawkVer)
+			fmt.Printf("  %-22s requires %s@%s, graycode requires %s@%s\n",
+				e.Name(), pin, consumerVer, pin, graycodeVer)
 		}
 	}
 	if drifted == 0 {
-		fmt.Println("  OK — no drift between hawk's pins and sibling consumers")
+		fmt.Println("  OK — no drift between graycode's pins and sibling consumers")
 	}
 	return nil
 }

@@ -77,7 +77,7 @@ const minPackRun = 3
 var chunkFactKeys = []string{"turn", "step", "chunk"}
 
 // classifyChunk determines whether an assistant.chunk WireEvent can enter a
-// text-chunk pack. Hawk's ChunkFact is text-only (no index), so every
+// text-chunk pack. Graycode's ChunkFact is text-only (no index), so every
 // non-empty ChunkFact with the canonical three keys (text) or four keys
 // (text+kind) is packable. Returns nil for events that cannot pack (empty
 // chunk, non-canonical keys, or non-chunk types).

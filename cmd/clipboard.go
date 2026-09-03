@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // copyResult describes where the copied content ended up.
@@ -68,7 +68,7 @@ func copyToClipboardNative(text string) error {
 }
 
 // copyToFallbackFile writes the given text to a timestamped file in the
-// hawk state directory when the system clipboard is unavailable. This
+// graycode state directory when the system clipboard is unavailable. This
 // ensures the user can still recover copied content from SSH sessions,
 // containers, or headless environments.
 func copyToFallbackFile(text string) (string, error) {

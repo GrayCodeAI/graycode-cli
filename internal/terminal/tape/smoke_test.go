@@ -17,7 +17,7 @@ func TestRecordReplaySmoke(t *testing.T) {
 		t.Fatal(err)
 	}
 	clk := &fakeClock{t: 1_700_000_000_000}
-	w, err := NewWriter(f, 120, 40, "hawk-test", clk)
+	w, err := NewWriter(f, 120, 40, "graycode-test", clk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestRecordReplaySmoke(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse recorded tape: %v", err)
 	}
-	if tp.Header.Cols != 120 || tp.Header.Rows != 40 || tp.Header.Version != "hawk-test" {
+	if tp.Header.Cols != 120 || tp.Header.Rows != 40 || tp.Header.Version != "graycode-test" {
 		t.Fatalf("bad header: %+v", tp.Header)
 	}
 	r, snap := ReplayTape(tp)

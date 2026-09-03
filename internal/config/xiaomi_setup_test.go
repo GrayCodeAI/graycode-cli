@@ -10,7 +10,7 @@ import (
 func TestSetXiaomiTokenPlanRegion_ClearsStaleBaseHost(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("GRAYCODE_CONFIG_DIR", dir)
 	t.Setenv("EYRIE_CONFIG_DIR", dir)
 	t.Setenv("XIAOMI_MIMO_TOKEN_PLAN_BASE_URL", "https://caller-owned.example.test/v1")
 	cfg := &eyriecfg.ProviderConfig{
@@ -40,7 +40,7 @@ func TestSetXiaomiTokenPlanRegion_ClearsStaleBaseHost(t *testing.T) {
 func TestNeedsXiaomiTokenPlanRegion_InvalidAndMissing(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("GRAYCODE_CONFIG_DIR", dir)
 	t.Setenv("EYRIE_CONFIG_DIR", dir)
 
 	if !NeedsXiaomiTokenPlanRegion(ProviderXiaomiTokenPlan) {

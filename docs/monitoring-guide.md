@@ -1,6 +1,6 @@
 # Monitoring Guide
 
-This guide covers how to monitor hawk's daemon and CLI for production health,
+This guide covers how to monitor graycode's daemon and CLI for production health,
 performance, and security.
 
 ## 1. Daemon Health & Readiness
@@ -31,7 +31,7 @@ Returns aggregated usage statistics (sessions, messages, tool calls, cost)
 for the last N days (default 30, `?days=30`).
 
 ```bash
-curl -H "X-API-Key: $HAWK_DAEMON_API_KEY" \
+curl -H "X-API-Key: $GRAYCODE_DAEMON_API_KEY" \
   http://localhost:4590/v1/stats
 ```
 
@@ -43,7 +43,7 @@ The daemon exposes metrics in Prometheus text exposition format at
 `GET /v1/metrics`. This endpoint requires authentication.
 
 ```bash
-curl -H "X-API-Key: $HAWK_DAEMON_API_KEY" \
+curl -H "X-API-Key: $GRAYCODE_DAEMON_API_KEY" \
   http://localhost:4590/v1/metrics
 ```
 
@@ -51,9 +51,9 @@ Available metrics:
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| `hawk_daemon_active_sessions` | gauge | Number of active daemon sessions |
-| `hawk_daemon_chat_concurrency_used` | gauge | Number of in-use chat concurrency slots |
-| `hawk_daemon_uptime_seconds` | gauge | Daemon uptime in seconds |
+| `graycode_daemon_active_sessions` | gauge | Number of active daemon sessions |
+| `graycode_daemon_chat_concurrency_used` | gauge | Number of in-use chat concurrency slots |
+| `graycode_daemon_uptime_seconds` | gauge | Daemon uptime in seconds |
 | `http_requests_total` | counter | Total HTTP requests received |
 | `http_request_duration_ms` | histogram | HTTP request duration in milliseconds |
 | `http_rate_limited_total` | counter | Number of requests rejected by rate limiter |
@@ -70,9 +70,9 @@ text format.
 Telemetry is **opt-in**. Enable it by setting:
 
 ```bash
-export HAWK_CODE_ENABLE_TELEMETRY=1
+export GRAYCODE_ENABLE_TELEMETRY=1
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-hawk daemon start
+graycode daemon start
 ```
 
 The daemon will automatically:
@@ -80,31 +80,31 @@ The daemon will automatically:
 - Initialize the OTel SDK with a batch span processor (5s batch interval).
 - Export traces to the OTLP endpoint (`OTEL_EXPORTER_OTLP_ENDPOINT`).
 - Send swift headers from `OTEL_EXPORTER_OTLP_HEADERS`.
-- Set the service name (default: `hawk-code`) and version.
+- Set the service name (default: `graycode`) and version.
 
 ### Configuration
 
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
-| `HAWK_CODE_ENABLE_TELEMETRY` | `0` | Set to `1` to enable OTP telemetry |
+| `GRAYCODE_ENABLE_TELEMETRY` | `0` | Set to `1` to enable OTP telemetry |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | _(empty)_ | OTLP collector endpoint |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` | OTLP transport protocol |
 | `OTEL_EXPORTER_OTLP_HEADERS` | _(empty)_ | Comma-separated `key=value` headers |
-| `HAWK_CODE_OTEL_SHUTDOWN_TIMEOUT_MS` | `2000` | Shutdown timeout in milliseconds |
+| `GRAYCODE_OTEL_SHUTDOWN_TIMEOUT_MS` | `2000` | Shutdown timeout in milliseconds |
 
 ### OTel Conventions
 
-hawk follows the OpenTelemetry semantic conventions for traces. See
+graycode follows the OpenTelemetry semantic conventions for traces. See
 [docs/OTEL-CONVENTIONS.md](OTEL-CONVENTIONS.md) for span naming and attribute
 details.
 
 ## 4. Structured Logging
 
-The daemon writes structured SLOG logs to `~/.hawk/state/daemon.log` by
+The daemon writes structured SLOG logs to `~/.graycode/state/daemon.log` by
 default. Control the log level via:
 
 ```bash
-hawk daemon start --log-level DEBUG
+graycode daemon start --log-level DEBUG
 ```
 
 Or via environment variable:
@@ -127,13 +127,13 @@ All daemon log entries include:
 ### Audit log
 
 Security-relevant events (auth failures, tool executions) are written to a
-tamper-evident log at `~/.hawk/state/securitylog/security_events.jsonl`.
+tamper-evident log at `~/.graycode/state/securitylog/security_events.jsonl`.
 
 Verify the audit log integrity:
 
 ```bash
 # The securitylog package provides a verify command
-go run ./cmd/hawk securitylog verify
+go run ./cmd/graycode securitylog verify
 ```
 
 ## 5. Prometheus Scraping
@@ -142,12 +142,12 @@ go run ./cmd/hawk securitylog verify
 
 ```yaml
 services:
-  hawk:
-    image: ghcr.io/graycodeai/hawk-daemon:latest
+  graycode:
+    image: ghcr.io/graycodeai/graycode-daemon:latest
     ports:
       - "4590:4590"
     environment:
-      - HAWK_DAEMON_API_KEY=secret
+      - GRAYCODE_DAEMON_API_KEY=secret
     labels:
       - "prometheus.io/scrape=true"
       - "prometheus.io/port=4590"
@@ -160,14 +160,14 @@ services:
 apiVersion: v1
 kind: Service
 metadata:
-  name: hawk-daemon
+  name: graycode-daemon
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/port: "4590"
     prometheus.io/path: "/v1/metrics"
 spec:
   selector:
-    app: hawk-daemon
+    app: graycode-daemon
   ports:
     - port: 4590
       targetPort: 4590
@@ -175,18 +175,18 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hawk-daemon
+  name: graycode-daemon
 spec:
   template:
     spec:
       containers:
-        - name: hawk
-          image: ghcr.io/graycodeai/hawk-daemon:latest
+        - name: graycode
+          image: ghcr.io/graycodeai/graycode-daemon:latest
           env:
-            - name: HAWK_DAEMON_API_KEY
+            - name: GRAYCODE_DAEMON_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: hawk-secret
+                  name: graycode-secret
                   key: api-key
           ports:
             - containerPort: 4590
@@ -208,26 +208,26 @@ spec:
 
 | Alert | Condition | Severity |
 |-------|-----------|----------|
-| Daemon down | `hawk_daemon_uptime_seconds` does not increase for 2+ minutes | critical |
+| Daemon down | `graycode_daemon_uptime_seconds` does not increase for 2+ minutes | critical |
 | High request latency | `histogram_quantile(0.95, http_request_duration_ms)` > 10000ms for 5 minutes | warning |
 | Rate limit saturation | `rate(http_rate_limited_total[5m])` > 10/s | warning |
 | Auth failures | `rate(auth_denied_total[5m])` > 5/s | critical (possible brute force) |
-| High concurrency | `hawk_daemon_chat_concurrency_used` sustained at max for 5+ minutes | warning |
-| No active sessions | `hawk_daemon_active_sessions` = 0 during business hours | warning |
+| High concurrency | `graycode_daemon_chat_concurrency_used` sustained at max for 5+ minutes | warning |
+| No active sessions | `graycode_daemon_active_sessions` = 0 during business hours | warning |
 
 ## 7. Systemd Logging
 
 When running under systemd, logs from stderr/stdout are captured by journald:
 
 ```bash
-journalctl -u hawk-daemon -f
+journalctl -u graycode-daemon -f
 ```
 
 The daemon also writes its own structured log to
-`~/.hawk/state/daemon.log`:
+`~/.graycode/state/daemon.log`:
 
 ```bash
-tail -f ~/.hawk/state/daemon.log
+tail -f ~/.graycode/state/daemon.log
 ```
 
 ## 8. Feature Flags
@@ -236,7 +236,7 @@ Feature flags allow runtime configuration without restarts. They are
 controlled via environment variables:
 
 ```bash
-export HAWK_FEATURE_<FLAG_NAME>=1
+export GRAYCODE_FEATURE_<FLAG_NAME>=1
 ```
 
 | Flag | Default | Description |
@@ -251,5 +251,5 @@ export HAWK_FEATURE_<FLAG_NAME>=1
 List all registered flags:
 
 ```bash
-hawk features
+graycode features
 ```

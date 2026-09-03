@@ -71,7 +71,7 @@ func TestDetector_CheckStaleness_TimeThreshold(t *testing.T) {
 
 	// Record a rule used 10 days ago.
 	d.RecordRuleUsed("old-rule", time.Now().Add(-10*24*time.Hour))
-	d.RecordRulePath("old-rule", ".hawk/rules/old-rule.md")
+	d.RecordRulePath("old-rule", ".graycode/rules/old-rule.md")
 
 	// Record a rule used just now.
 	d.RecordRuleUsed("fresh-rule", time.Now())
@@ -85,7 +85,7 @@ func TestDetector_CheckStaleness_TimeThreshold(t *testing.T) {
 	if stale[0].ID != "old-rule" {
 		t.Errorf("expected old-rule to be stale, got %q", stale[0].ID)
 	}
-	if stale[0].Path != ".hawk/rules/old-rule.md" {
+	if stale[0].Path != ".graycode/rules/old-rule.md" {
 		t.Errorf("expected path, got %q", stale[0].Path)
 	}
 	if stale[0].DaysSinceUsed < 9 || stale[0].DaysSinceUsed > 11 {
@@ -112,13 +112,13 @@ func TestFormatReport_WithRules(t *testing.T) {
 	stale := []StaleRule{
 		{
 			ID:            "naming-rule",
-			Path:          ".hawk/rules/naming.md",
+			Path:          ".graycode/rules/naming.md",
 			LastUsed:      time.Now().Add(-15 * 24 * time.Hour),
 			DaysSinceUsed: 15,
 		},
 		{
 			ID:                 "error-rule",
-			Path:               ".hawk/rules/errors.md",
+			Path:               ".graycode/rules/errors.md",
 			LastUsed:           time.Now().Add(-5 * 24 * time.Hour),
 			DaysSinceUsed:      5,
 			ContradictionCount: 4,

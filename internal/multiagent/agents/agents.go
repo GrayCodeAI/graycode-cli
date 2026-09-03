@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // Agent is a user-defined persona with a custom system prompt.
-// Stored as markdown files with YAML frontmatter in Hawk user state.
+// Stored as markdown files with YAML frontmatter in Graycode user state.
 type Agent struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -29,7 +29,7 @@ type Agent struct {
 //	---
 //	You are a code reviewer...
 func Load(path string) (*Agent, error) {
-	data, err := os.ReadFile(path) // #nosec G304 -- path is from agentDirs()/ListAll enumeration of Hawk's own persona dir, or an explicit caller-supplied agent file path
+	data, err := os.ReadFile(path) // #nosec G304 -- path is from agentDirs()/ListAll enumeration of Graycode's own persona dir, or an explicit caller-supplied agent file path
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func Parse(content, filePath string) (*Agent, error) {
 	return agent, nil
 }
 
-// ListAll discovers all agent definitions from Hawk user state.
+// ListAll discovers all agent definitions from Graycode user state.
 func ListAll() ([]*Agent, error) {
 	var agents []*Agent
 

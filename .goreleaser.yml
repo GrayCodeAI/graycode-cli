@@ -2,17 +2,17 @@
 # Source of truth: .shared-templates/.goreleaser.yml.tmpl
 #
 # Placeholders rendered per repo:
-#   hawk      — short repo name (e.g. hawk, harrier, swift)
+#   graycode      — short repo name (e.g. graycode, harrier, swift)
 #   ./     — main package path (e.g. ./ or ./cmd/harrier)
 #   AI coding agent — reads, writes, and runs code in your terminal  — short single-line description for brew/nfpms
 #   main   — Go package path holding Version vars
-#                      (e.g. main or github.com/GrayCodeAI/hawk/internal/version)
+#                      (e.g. main or github.com/GrayCodeAI/graycode-cli/internal/version)
 #
 # Repos with PRO/special features (e.g. swift's macOS notarization, shrike's
 # nfpms) extend this template with extra sections instead of replacing it.
 
 version: 2
-project_name: hawk
+project_name: graycode
 
 # ---------------------------------------------------------------------------
 # Pre-build hooks — keep go.mod tidy and verified.
@@ -27,9 +27,9 @@ before:
 # rather than the build host's clock.
 # ---------------------------------------------------------------------------
 builds:
-  - id: hawk
-    main: ./cmd/hawk
-    binary: hawk
+  - id: graycode
+    main: ./cmd/graycode
+    binary: graycode
     env:
       - CGO_ENABLED=0
     goos:
@@ -121,7 +121,7 @@ changelog:
 
 # ---------------------------------------------------------------------------
 # Homebrew — publishes a formula to GrayCodeAI/homebrew-tap so users can
-# `brew install graycodeai/tap/hawk`. Requires HOMEBREW_TAP_TOKEN or
+# `brew install graycodeai/tap/graycode`. Requires HOMEBREW_TAP_TOKEN or
 # TAP_GITHUB_TOKEN in the release workflow (both already wired there).
 # ---------------------------------------------------------------------------
 brews:
@@ -130,13 +130,13 @@ brews:
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
-    homepage: "https://github.com/GrayCodeAI/hawk"
+    homepage: "https://github.com/GrayCodeAI/graycode-cli"
     description: "AI coding agent — reads, writes, and runs code in your terminal"
     license: "MIT"
     install: |
-      bin.install "hawk"
+      bin.install "graycode"
     test: |
-      system "#{bin}/hawk", "--version"
+      system "#{bin}/graycode", "--version"
 
 # ---------------------------------------------------------------------------
 # Release — auto-detect prereleases (rc/beta tags). Created on the repo
@@ -158,9 +158,9 @@ release:
   prerelease: auto
   name_template: "v{{ .Version }}"
   header: |
-    ## hawk v{{ .Version }}
+    ## graycode v{{ .Version }}
 
     AI coding agent — reads, writes, and runs code in your terminal
   footer: |
 
-    **Full changelog:** https://github.com/GrayCodeAI/hawk/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full changelog:** https://github.com/GrayCodeAI/graycode-cli/compare/{{ .PreviousTag }}...{{ .Tag }}

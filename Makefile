@@ -1,16 +1,16 @@
 # Canonical GrayCodeAI Makefile for Go binary repos.
 # Source of truth: .shared-templates/Makefile.binary.tmpl at the eco root.
-# Placeholders rendered per repo: hawk, ..
+# Placeholders rendered per repo: graycode, ..
 
 # ---------------------------------------------------------------------------
 # Project metadata
 # ---------------------------------------------------------------------------
-NAME      := hawk
-MAIN_PKG  := ./cmd/hawk
+NAME      := graycode
+MAIN_PKG  := ./cmd/graycode
 
 # ---------------------------------------------------------------------------
 # Versioning — sourced from VERSION file; falls back to git describe.
-# See https://github.com/GrayCodeAI/hawk/blob/main/docs/versioning.md.
+# See https://github.com/GrayCodeAI/graycode-cli/blob/main/docs/versioning.md.
 # ---------------------------------------------------------------------------
 VERSION ?= $(shell v=$$(cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]'); if [ -n "$$v" ]; then echo "$$v"; else git describe --tags --always --dirty 2>/dev/null || echo "dev"; fi)
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
@@ -112,10 +112,10 @@ fmt: ## Format source files (gofumpt + goimports).
 vet: ## Run go vet.
 	go vet ./...
 
-contracts-guard: ## Fail on any legacy imports of removed hawk/shared/types.
+contracts-guard: ## Fail on any legacy imports of removed graycode/shared/types.
 	bash ./scripts/check-shared-types-imports.sh
 
-ecosystem-guard: ## Fail if external ecosystem repos import hawk/internal or removed hawk/shared/types.
+ecosystem-guard: ## Fail if external ecosystem repos import graycode/internal or removed graycode/shared/types.
 	bash ./scripts/check-ecosystem-boundaries.sh
 
 eyrie-client-guard: ## Fail on any production eyrie/client import.
@@ -124,10 +124,10 @@ eyrie-client-guard: ## Fail on any production eyrie/client import.
 eyrie-engine-guard: ## Require all production Eyrie imports to use the stable engine facade.
 	bash ./scripts/check-eyrie-engine-boundary.sh
 
-peer-guard: ## Fail if support engines import each other instead of depending only on Hawk contracts.
+peer-guard: ## Fail if support engines import each other instead of depending only on Graycode contracts.
 	bash ./scripts/check-support-repo-coupling.sh
 
-internal-layers-guard: ## Enforce one-way dependencies across stable Hawk internal layers.
+internal-layers-guard: ## Enforce one-way dependencies across stable Graycode internal layers.
 	bash ./scripts/check-internal-layer-imports.sh
 
 package-boundaries-guard: ## Enforce AST/package-graph boundaries with file/line diagnostics.
@@ -164,7 +164,7 @@ ci: tidy fmt vet boundaries lint test-race security api-validate ## Run everythi
 	@echo "All CI checks passed."
 
 smoke: ## Quick build + doctor + ecosystem verification.
-	./scripts/smoke-hawk.sh
+	./scripts/smoke-graycode.sh
 
 path: ## Verify developer path (setup, security, milestone tests).
 	./scripts/verify-developer-path.sh
@@ -188,7 +188,7 @@ workspace: ## Regenerate the ecosystem root go.work from ecosystem.yaml.
 	@bash ./scripts/generate-workspace.sh
 
 setup: workspace ## Set up local development environment and development tools.
-	@echo "=== Setting up hawk development environment ==="
+	@echo "=== Setting up graycode development environment ==="
 	@echo "✓ go.work generated and synced from ecosystem.yaml"
 	@echo ""
 	@echo "=== Environment check ==="
@@ -214,7 +214,7 @@ help: ## Show this help.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 # ---------------------------------------------------------------------------
-# Compatibility matrix (hawk-specific extension to the canonical template).
+# Compatibility matrix (graycode-specific extension to the canonical template).
 # Validates compatibility-matrix.json and reports the resolved versions for
 # a chosen matrix entry. Wired into the compatibility-test workflow.
 # ---------------------------------------------------------------------------
@@ -226,7 +226,7 @@ compat-test: ## Validate testdata/compatibility-matrix.json and report the 'next
 compat-check: ## Strict validation — non-zero exit if any component lacks a version.
 	@go run ./cmd/compat-test -matrix=next -strict -file=testdata/compatibility-matrix.json
 
-compat-drift: ## Advisory: report pin drift between Hawk and sibling repositories. Never fails.
+compat-drift: ## Advisory: report pin drift between Graycode and sibling repositories. Never fails.
 	@go run ./cmd/compat-test -check-external -file=testdata/compatibility-matrix.json
 
 .PHONY: hooks sync

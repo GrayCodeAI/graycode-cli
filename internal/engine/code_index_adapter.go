@@ -1,8 +1,8 @@
 package engine
 
 import (
-	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
-	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/repomap"
 )
 
 // harrierCodeIndexer adapts *memory.HarrierBridge to repomap.CodeIndexer. The two

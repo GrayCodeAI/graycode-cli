@@ -56,7 +56,7 @@ func dumpSignal(sig syscall.Signal, reason string) {
 	timestamp := now().UTC().Format("20060102T150405.000Z")
 	filename := fmt.Sprintf("crash-signal-%s-%s.txt", sig, timestamp)
 	path := filepath.Join(dir, filename)
-	content := fmt.Sprintf("hawk signal report\nsignal:     %s\nreason:     %s\ntimestamp:  %s\n\n%s\n",
+	content := fmt.Sprintf("graycode signal report\nsignal:     %s\nreason:     %s\ntimestamp:  %s\n\n%s\n",
 		sig, reason, timestamp, stacks)
 	_ = os.WriteFile(path, []byte(content), 0o600)
 }

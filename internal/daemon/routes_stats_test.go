@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	analytics "github.com/GrayCodeAI/hawk/internal/observability"
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	analytics "github.com/GrayCodeAI/graycode-cli/internal/observability"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 func TestDaemon_Stats_Aggregation(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 
 	now := time.Now()
 	traces := []*analytics.SessionTrace{
@@ -79,7 +79,7 @@ func TestDaemon_Stats_Aggregation(t *testing.T) {
 }
 
 func TestDaemon_Stats_DaysParam(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 
 	old := &analytics.SessionTrace{
 		SessionID: "old", StartTime: time.Now().AddDate(0, 0, -10), Model: "m", MessageCount: 1,
@@ -120,7 +120,7 @@ func TestDaemon_Stats_DaysParam(t *testing.T) {
 }
 
 func TestDaemon_Stats_Empty(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 
 	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
 	addr := startTestDaemon(t, srv)

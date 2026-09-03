@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // BenchmarkResult holds the result of a single benchmark run.
@@ -41,9 +41,9 @@ func RunAll(projectDir string) (*BenchmarkSuite, error) {
 		suite.Results = append(suite.Results, shrikeResults...)
 	}
 
-	// Run hawk build benchmark
-	if hawkResult, err := runHawkBuildBench(projectDir); err == nil {
-		suite.Results = append(suite.Results, hawkResult)
+	// Run graycode build benchmark
+	if graycodeResult, err := runGraycodeBuildBench(projectDir); err == nil {
+		suite.Results = append(suite.Results, graycodeResult)
 	}
 
 	return suite, nil
@@ -103,21 +103,21 @@ func runShrikeBench(projectDir string) ([]BenchmarkResult, error) {
 	return []BenchmarkResult{result}, nil
 }
 
-// runHawkBuildBench measures hawk build time.
-func runHawkBuildBench(projectDir string) (BenchmarkResult, error) {
-	hawkDir := filepath.Join(projectDir)
-	if _, err := os.Stat(filepath.Join(hawkDir, "go.mod")); err != nil {
-		return BenchmarkResult{}, fmt.Errorf("hawk not found")
+// runGraycodeBuildBench measures graycode build time.
+func runGraycodeBuildBench(projectDir string) (BenchmarkResult, error) {
+	graycodeDir := filepath.Join(projectDir)
+	if _, err := os.Stat(filepath.Join(graycodeDir, "go.mod")); err != nil {
+		return BenchmarkResult{}, fmt.Errorf("graycode not found")
 	}
 
 	start := time.Now()
 	cmd := exec.CommandContext(context.Background(), "go", "build", "-o", "/dev/null", ".")
-	cmd.Dir = hawkDir
+	cmd.Dir = graycodeDir
 	err := cmd.Run()
 	duration := time.Since(start)
 
 	return BenchmarkResult{
-		Name:     "hawk/build",
+		Name:     "graycode/build",
 		Duration: duration,
 		Score:    float64(duration.Milliseconds()),
 		Metric:   "time",

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 )
 
 func TestDisplayVersion_FromVERSIONFile(t *testing.T) {
@@ -29,12 +29,12 @@ func TestDisplayVersion_ReleaseBuild(t *testing.T) {
 }
 
 func TestChatConnectionStatus_NoCredentials(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	m := chatModel{session: nil}
@@ -45,12 +45,12 @@ func TestChatConnectionStatus_NoCredentials(t *testing.T) {
 }
 
 func TestChatBottomRightStatus_NoCredentials(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	m := chatModel{inputIndicator: &InputIndicator{}}

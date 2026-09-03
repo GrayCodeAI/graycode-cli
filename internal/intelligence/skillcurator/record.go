@@ -3,7 +3,7 @@ package skillcurator
 import (
 	"path/filepath"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // RecordSkillUsage is a best-effort, non-blocking integration point for the

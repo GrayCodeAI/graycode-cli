@@ -12,7 +12,7 @@ func TestView_PinsWelcomeAboveViewport(t *testing.T) {
 	m := chatModel{
 		height:       24,
 		width:        80,
-		welcomeCache: "HAWK LOGO\nv0.1.0",
+		welcomeCache: "GRAYCODE LOGO\nv0.1.0",
 		input:        textarea.New(),
 		viewport:     viewport.New(viewport.WithWidth(80), viewport.WithHeight(8)),
 		ghostText:    NewGhostText(),
@@ -21,7 +21,7 @@ func TestView_PinsWelcomeAboveViewport(t *testing.T) {
 	m.viewDirty = true
 	m.updateViewportContent()
 	got := m.View().Content
-	if !strings.Contains(got, "HAWK LOGO") {
+	if !strings.Contains(got, "GRAYCODE LOGO") {
 		t.Fatalf("welcome should be pinned at top, got prefix: %q", got[:min(40, len(got))])
 	}
 	if !strings.Contains(got, "Docker:") {
@@ -33,20 +33,20 @@ func TestPrimeInitialViewportContent_RendersWelcomeBeforeFirstFrame(t *testing.T
 	m := chatModel{
 		height:       24,
 		width:        80,
-		welcomeCache: "HAWK LOGO\nv0.1.0",
+		welcomeCache: "GRAYCODE LOGO\nv0.1.0",
 		input:        textarea.New(),
 		viewport:     viewport.New(viewport.WithWidth(80), viewport.WithHeight(8)),
 		ghostText:    NewGhostText(),
 	}
 	m = m.withSyncedLayout()
 
-	if strings.Contains(m.viewport.View(), "HAWK LOGO") {
+	if strings.Contains(m.viewport.View(), "GRAYCODE LOGO") {
 		t.Fatal("expected empty initial viewport before priming")
 	}
 
 	m.primeInitialViewportContent()
 
-	if !strings.Contains(m.viewport.View(), "HAWK LOGO") {
+	if !strings.Contains(m.viewport.View(), "GRAYCODE LOGO") {
 		t.Fatalf("expected primed viewport to include welcome content, got %q", m.viewport.View())
 	}
 }

@@ -58,10 +58,10 @@ func TestConfig_TierUnmarshalDefaultsToWorkspace(t *testing.T) {
 	}
 }
 
-// --- DefaultHawkPolicy tier ---
+// --- DefaultGraycodePolicy tier ---
 
-func TestDefaultHawkPolicy_TierWorkspace(t *testing.T) {
-	p := DefaultHawkPolicy("/tmp/work", TierWorkspace)
+func TestDefaultGraycodePolicy_TierWorkspace(t *testing.T) {
+	p := DefaultGraycodePolicy("/tmp/work", TierWorkspace)
 	if p.Security != TierWorkspace {
 		t.Errorf("Tier = %q, want %q", p.Security, TierWorkspace)
 	}
@@ -73,8 +73,8 @@ func TestDefaultHawkPolicy_TierWorkspace(t *testing.T) {
 	}
 }
 
-func TestDefaultHawkPolicy_TierStrict(t *testing.T) {
-	p := DefaultHawkPolicy("/tmp/work", TierStrict)
+func TestDefaultGraycodePolicy_TierStrict(t *testing.T) {
+	p := DefaultGraycodePolicy("/tmp/work", TierStrict)
 	if p.Security != TierStrict {
 		t.Errorf("Tier = %q, want %q", p.Security, TierStrict)
 	}
@@ -89,9 +89,9 @@ func TestDefaultHawkPolicy_TierStrict(t *testing.T) {
 	}
 }
 
-func TestDefaultHawkPolicy_TierOff(t *testing.T) {
+func TestDefaultGraycodePolicy_TierOff(t *testing.T) {
 	// TierOff is the legacy behavior: allow everything.
-	p := DefaultHawkPolicy("/tmp/work", TierOff)
+	p := DefaultGraycodePolicy("/tmp/work", TierOff)
 	if p.Security != TierOff {
 		t.Errorf("Tier = %q, want %q", p.Security, TierOff)
 	}
@@ -103,11 +103,11 @@ func TestDefaultHawkPolicy_TierOff(t *testing.T) {
 	}
 }
 
-func TestDefaultHawkPolicy_EmptyTierFallsBackToOff(t *testing.T) {
+func TestDefaultGraycodePolicy_EmptyTierFallsBackToOff(t *testing.T) {
 	// Empty tier (legacy config) → TierOff behavior. This is the
 	// silent-preserve migration: a user with no Tier field keeps
 	// the old default-deny-nothing behavior.
-	p := DefaultHawkPolicy("/tmp/work", "")
+	p := DefaultGraycodePolicy("/tmp/work", "")
 	if p.AllowWrite != true {
 		t.Error("empty Tier: AllowWrite = false, want true (silent preserve)")
 	}
@@ -116,10 +116,10 @@ func TestDefaultHawkPolicy_EmptyTierFallsBackToOff(t *testing.T) {
 	}
 }
 
-func TestDefaultHawkPolicy_UnknownTierFallsBackToOff(t *testing.T) {
+func TestDefaultGraycodePolicy_UnknownTierFallsBackToOff(t *testing.T) {
 	// Unknown tier values fall back to TierOff rather than silently
 	// applying a wrong policy.
-	p := DefaultHawkPolicy("/tmp/work", Tier("nonsense"))
+	p := DefaultGraycodePolicy("/tmp/work", Tier("nonsense"))
 	if p.AllowWrite != true {
 		t.Error("unknown Tier: AllowWrite = false, want true (fallback to TierOff)")
 	}
@@ -142,7 +142,7 @@ func TestTierConstants(t *testing.T) {
 	}
 }
 
-func TestDefaultHawkPolicy_NetworkByTier(t *testing.T) {
+func TestDefaultGraycodePolicy_NetworkByTier(t *testing.T) {
 	cases := []struct {
 		tier Tier
 		want bool
@@ -155,7 +155,7 @@ func TestDefaultHawkPolicy_NetworkByTier(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(string(tc.tier), func(t *testing.T) {
-			p := DefaultHawkPolicy("/tmp/work", tc.tier)
+			p := DefaultGraycodePolicy("/tmp/work", tc.tier)
 			if p.AllowNetwork != tc.want {
 				t.Errorf("AllowNetwork = %v, want %v", p.AllowNetwork, tc.want)
 			}
@@ -166,10 +166,10 @@ func TestDefaultHawkPolicy_NetworkByTier(t *testing.T) {
 	}
 }
 
-// --- DefaultHawkPolicy always populates the path lists ---
+// --- DefaultGraycodePolicy always populates the path lists ---
 
-func TestDefaultHawkPolicy_PathsPopulated(t *testing.T) {
-	p := DefaultHawkPolicy("/tmp/work", TierWorkspace)
+func TestDefaultGraycodePolicy_PathsPopulated(t *testing.T) {
+	p := DefaultGraycodePolicy("/tmp/work", TierWorkspace)
 	if len(p.ReadablePaths) == 0 {
 		t.Error("ReadablePaths is empty")
 	}
@@ -194,10 +194,10 @@ func TestDefaultHawkPolicy_PathsPopulated(t *testing.T) {
 // so a future refactor that accidentally restores the legacy
 // default will fail. ---
 
-func TestDefaultHawkPolicy_NewDefaultDeniesProcess(t *testing.T) {
+func TestDefaultGraycodePolicy_NewDefaultDeniesProcess(t *testing.T) {
 	// The new default is TierWorkspace (set in DefaultConfig).
 	// TierWorkspace MUST deny AllowProcess.
-	workspace := DefaultHawkPolicy("/tmp/work", TierWorkspace)
+	workspace := DefaultGraycodePolicy("/tmp/work", TierWorkspace)
 	if workspace.AllowProcess {
 		t.Error("TierWorkspace allows process exec; this is the legacy TierOff behavior. The new default is supposed to be safer.")
 	}

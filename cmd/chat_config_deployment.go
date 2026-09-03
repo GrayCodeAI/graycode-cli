@@ -9,9 +9,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 type configApplyCredentialsMsg struct {
@@ -24,39 +24,39 @@ type configApplyCredentialsMsg struct {
 
 func firstRunModelProvider(m chatModel) string {
 	ctx := context.Background()
-	if p := strings.TrimSpace(m.configModelProvider); p != "" && hawkconfig.HasStoredCredentialForProvider(ctx, p) {
+	if p := strings.TrimSpace(m.configModelProvider); p != "" && graycodeconfig.HasStoredCredentialForProvider(ctx, p) {
 		return p
 	}
 	if m.session != nil {
-		if p := strings.TrimSpace(m.session.Provider()); p != "" && hawkconfig.HasStoredCredentialForProvider(ctx, p) {
+		if p := strings.TrimSpace(m.session.Provider()); p != "" && graycodeconfig.HasStoredCredentialForProvider(ctx, p) {
 			return p
 		}
 	}
-	if p := strings.TrimSpace(hawkconfig.ActiveGateway(ctx)); p != "" && hawkconfig.HasStoredCredentialForProvider(ctx, p) {
+	if p := strings.TrimSpace(graycodeconfig.ActiveGateway(ctx)); p != "" && graycodeconfig.HasStoredCredentialForProvider(ctx, p) {
 		return p
 	}
-	if p := hawkconfig.DefaultModelProviderFilter(ctx); p != "" && hawkconfig.HasStoredCredentialForProvider(ctx, p) {
+	if p := graycodeconfig.DefaultModelProviderFilter(ctx); p != "" && graycodeconfig.HasStoredCredentialForProvider(ctx, p) {
 		return p
 	}
-	for _, p := range hawkconfig.AllSetupGateways() {
-		if hawkconfig.HasStoredCredentialForProvider(ctx, p) {
+	for _, p := range graycodeconfig.AllSetupGateways() {
+		if graycodeconfig.HasStoredCredentialForProvider(ctx, p) {
 			return p
 		}
 	}
 	return ""
 }
 
-func saveProviderKeyAsync(inference hawkconfig.CredentialInference, secret string) tea.Cmd {
+func saveProviderKeyAsync(inference graycodeconfig.CredentialInference, secret string) tea.Cmd {
 	return saveCredentialAsync(inference, secret)
 }
 
 func saveOllamaAsync(baseURL string) tea.Cmd {
 	return func() tea.Msg {
-		inference, err := hawkconfig.LocalCredentialInference(configProviderOllama)
+		inference, err := graycodeconfig.LocalCredentialInference(configProviderOllama)
 		if err != nil {
 			return configApplyCredentialsMsg{err: err}
 		}
-		inf := hawkconfig.CredentialInference{
+		inf := graycodeconfig.CredentialInference{
 			ProviderID:   inference.ProviderID,
 			DeploymentID: inference.DeploymentID,
 			EnvVar:       inference.EnvVar,
@@ -66,22 +66,22 @@ func saveOllamaAsync(baseURL string) tea.Cmd {
 	}
 }
 
-func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string) tea.Cmd {
+func saveCredentialAsync(inference graycodeconfig.CredentialInference, secret string) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		if err := hawkconfig.SaveCredential(ctx, inference, secret); err != nil {
+		if err := graycodeconfig.SaveCredential(ctx, inference, secret); err != nil {
 			return configApplyCredentialsMsg{
 				err:          err,
 				providerID:   inference.ProviderID,
 				deploymentID: inference.DeploymentID,
 			}
 		}
-		hawkconfig.InvalidateConfigUICache()
-		hawkconfig.RefreshConfigCredSnapshot(ctx)
-		result, err := hawkconfig.ApplyEyrieCredentialsForProvider(ctx, inference.ProviderID)
-		if err != nil && hawkconfig.IsCatalogCacheRequired(err) {
-			if refreshErr := hawkconfig.RefreshCatalogAfterCredentials(ctx, nil); refreshErr == nil {
-				result, err = hawkconfig.ApplyEyrieCredentialsForProvider(ctx, inference.ProviderID)
+		graycodeconfig.InvalidateConfigUICache()
+		graycodeconfig.RefreshConfigCredSnapshot(ctx)
+		result, err := graycodeconfig.ApplyEyrieCredentialsForProvider(ctx, inference.ProviderID)
+		if err != nil && graycodeconfig.IsCatalogCacheRequired(err) {
+			if refreshErr := graycodeconfig.RefreshCatalogAfterCredentials(ctx, nil); refreshErr == nil {
+				result, err = graycodeconfig.ApplyEyrieCredentialsForProvider(ctx, inference.ProviderID)
 			} else {
 				err = fmt.Errorf("%w; automatic catalog refresh failed: %w", err, refreshErr)
 			}
@@ -94,7 +94,7 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 			}
 		}
 
-		entries, listErr := hawkconfig.ListEngineModels(ctx, inference.ProviderID, false)
+		entries, listErr := graycodeconfig.ListEngineModels(ctx, inference.ProviderID, false)
 		if listErr != nil {
 			return configApplyCredentialsMsg{
 				err:          listErr,
@@ -104,7 +104,7 @@ func saveCredentialAsync(inference hawkconfig.CredentialInference, secret string
 		}
 		opts := configModelOptionsFromEyrie(entries)
 		return configApplyCredentialsMsg{
-			summary:      hawkconfig.FormatApplyCredentialsSummary(result),
+			summary:      graycodeconfig.FormatApplyCredentialsSummary(result),
 			providerID:   inference.ProviderID,
 			deploymentID: inference.DeploymentID,
 			modelOptions: opts,
@@ -134,15 +134,15 @@ func (m chatModel) startConfigURLInput(defaultURL string) (chatModel, tea.Cmd) {
 	m.configInput.EchoMode = textinput.EchoNormal
 	m.configInput.SetStyles(textinput.Styles{
 		Focused: textinput.StyleState{
-			Prompt: lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Prompt: lipgloss.NewStyle().Foreground(graycodeColor).Bold(true),
 			Text:   lipgloss.NewStyle().Foreground(textPrimary),
 		},
 		Blurred: textinput.StyleState{
-			Prompt: lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Prompt: lipgloss.NewStyle().Foreground(graycodeColor).Bold(true),
 			Text:   lipgloss.NewStyle().Foreground(textPrimary),
 		},
 		Cursor: textinput.CursorStyle{
-			Color: hawkColor,
+			Color: graycodeColor,
 		},
 	})
 	m.configInput.Focus()
@@ -152,27 +152,27 @@ func (m chatModel) startConfigURLInput(defaultURL string) (chatModel, tea.Cmd) {
 func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg) (chatModel, tea.Cmd) {
 	m.configSaving = false
 	ctx := context.Background()
-	hawkconfig.RefreshConfigCredSnapshot(ctx)
+	graycodeconfig.RefreshConfigCredSnapshot(ctx)
 	m = m.refreshConfigGatewayRows()
 	if msg.err != nil {
 		m.invalidateConnStatus()
 		if msg.providerID == configProviderOllama {
 			return m.returnToOllamaURLAfterError(msg.err)
 		}
-		notice := sanitizeConfigNotice(hawkconfig.FormatConfigProviderError(msg.providerID, msg.err))
-		saved := hawkconfig.HasStoredCredentialForProvider(ctx, msg.providerID) ||
+		notice := sanitizeConfigNotice(graycodeconfig.FormatConfigProviderError(msg.providerID, msg.err))
+		saved := graycodeconfig.HasStoredCredentialForProvider(ctx, msg.providerID) ||
 			strings.Contains(strings.ToLower(msg.err.Error()), "key saved in keychain")
 		if saved {
-			if hawkconfig.IsCatalogCacheRequired(msg.err) {
+			if graycodeconfig.IsCatalogCacheRequired(msg.err) {
 				notice = "Key saved in " + credentialsStoreLabel() + " — model catalog unavailable: " + notice
-				notice += " · run hawk models refresh"
+				notice += " · run graycode models refresh"
 			} else if configCredentialRejected(msg.err) {
 				notice = "Key saved in " + credentialsStoreLabel() + " — provider rejected this key: " + notice
 			} else {
 				notice = "Key saved in " + credentialsStoreLabel() + " — catalog refresh failed: " + notice
 			}
-			if !hawkconfig.IsCatalogCacheRequired(msg.err) && !strings.Contains(strings.ToLower(notice), "refresh") {
-				notice += " · press r on " + hawkconfig.GatewayDisplayName(msg.providerID) + " to retry"
+			if !graycodeconfig.IsCatalogCacheRequired(msg.err) && !strings.Contains(strings.ToLower(notice), "refresh") {
+				notice += " · press r on " + graycodeconfig.GatewayDisplayName(msg.providerID) + " to retry"
 			}
 		} else {
 			notice = "Could not save key — " + notice
@@ -206,11 +206,11 @@ func (m chatModel) handleConfigApplyCredentialsMsg(msg configApplyCredentialsMsg
 		if idx := next.configGatewayRowIndex(post); idx >= 0 {
 			next.configSel = idx
 		}
-		next.configNotice = "Key updated for " + hawkconfig.GatewayDisplayName(post)
+		next.configNotice = "Key updated for " + graycodeconfig.GatewayDisplayName(post)
 		return next, cmd
 	}
 	if msg.providerID == configProviderOllama {
-		_ = hawkconfig.SetGlobalSetting("provider", configProviderOllama)
+		_ = graycodeconfig.SetGlobalSetting("provider", configProviderOllama)
 		next.syncSessionSelection()
 	}
 	next.configGuideAfterKey = false
@@ -253,9 +253,9 @@ func configCredentialRejected(err error) bool {
 }
 
 func (m chatModel) rebuildSessionTransport() (chatModel, tea.Cmd) {
-	m.settings = hawkconfig.LoadSettings()
+	m.settings = graycodeconfig.LoadSettings()
 	m.syncSessionSelection()
-	selection := hawkconfig.EffectiveSelectionWithSettings(context.Background(), m.settings, hawkconfig.SelectionOptions{
+	selection := graycodeconfig.EffectiveSelectionWithSettings(context.Background(), m.settings, graycodeconfig.SelectionOptions{
 		ProviderOverride: firstNonEmptyTrimmed(m.session.Provider(), m.settings.Provider),
 		ModelOverride:    firstNonEmptyTrimmed(m.session.Model(), m.settings.Model),
 	})

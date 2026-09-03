@@ -1,16 +1,16 @@
 # Theming and Appearance Customization
 
-Hawk draws all TUI colors from a central theme. You can switch themes while running, follow your operating system's light or dark appearance, and adjust scroll speed and compact mode through slash commands or settings.
+Graycode draws all TUI colors from a central theme. You can switch themes while running, follow your operating system's light or dark appearance, and adjust scroll speed and compact mode through slash commands or settings.
 
 ---
 
 ## Available Themes
 
-Hawk includes 17 built-in themes, plus an `auto` option that follows your system appearance:
+Graycode includes 17 built-in themes, plus an `auto` option that follows your system appearance:
 
 | Theme | Description |
 |-------|-------------|
-| **dark** | Neutral dark base with Hawk's Talon Gold accent. Default theme. |
+| **dark** | Neutral dark base with Graycode's Talon Gold accent. Default theme. |
 | **dracula** | The Dracula color scheme with muted violet surfaces. |
 | **nord** | Arctic cold blue palette. |
 | **gruvbox** | Warm retro browns with olive-green accent. |
@@ -37,7 +37,7 @@ Theme names are case-insensitive.
 
 ### In the TUI
 
-Run the `/theme` slash command to open the theme picker. As you move through the list with the arrow keys, Hawk previews each theme in real time:
+Run the `/theme` slash command to open the theme picker. As you move through the list with the arrow keys, Graycode previews each theme in real time:
 
 ```
 /theme
@@ -54,7 +54,7 @@ Submitting `/theme` on its own opens the picker.
 
 ### Via Settings
 
-Set the theme in `~/.hawk/settings.json`:
+Set the theme in `~/.graycode/settings.json`:
 
 ```json
 {
@@ -66,7 +66,7 @@ Set the theme in `~/.hawk/settings.json`:
 
 ## Auto Theme (System Appearance)
 
-Set `theme: "auto"` to have Hawk follow your operating system's light/dark appearance and switch themes automatically:
+Set `theme: "auto"` to have Graycode follow your operating system's light/dark appearance and switch themes automatically:
 
 ```json
 {
@@ -93,13 +93,13 @@ By default, dark mode maps to the **dark** theme and light mode maps to the **li
 | **Windows** | Reads the system personalization registry via PowerShell. |
 | **SSH / headless** | Defaults to dark theme when detection fails. |
 
-Once running, Hawk checks for appearance changes when you explicitly switch themes (no continuous polling to avoid resource drain).
+Once running, Graycode checks for appearance changes when you explicitly switch themes (no continuous polling to avoid resource drain).
 
 ---
 
 ## Color Support Detection
 
-On startup, Hawk detects your terminal's color capability:
+On startup, Graycode detects your terminal's color capability:
 
 | Level | Description |
 |-------|-------------|
@@ -107,7 +107,7 @@ On startup, Hawk detects your terminal's color capability:
 | **256-color** | Indexed palette. Colors are mapped to the nearest index. |
 | **16-color** | ANSI names only. Colors map to the closest ANSI color. |
 
-When `COLORTERM=truecolor` is set, Hawk uses truecolor mode. When `TERM` contains `256color`, it uses 256-color mode. When `NO_COLOR` is set, Hawk renders in monochrome.
+When `COLORTERM=truecolor` is set, Graycode uses truecolor mode. When `TERM` contains `256color`, it uses 256-color mode. When `NO_COLOR` is set, Graycode renders in monochrome.
 
 ---
 
@@ -192,7 +192,7 @@ View terminal configuration recommendations and current capabilities:
 /terminal-setup
 ```
 
-This shows detected color support, current settings, and tips for optimal Hawk experience.
+This shows detected color support, current settings, and tips for optimal Graycode experience.
 
 ---
 

@@ -7,8 +7,8 @@ import (
 
 	agentcontracts "github.com/GrayCodeAI/eagle/agent"
 
-	"github.com/GrayCodeAI/hawk/internal/taskruntime"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/taskruntime"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 // BackgroundTask represents an async subagent task running in the background.

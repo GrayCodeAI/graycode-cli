@@ -3,11 +3,11 @@
 #
 # Placeholders rendered per repo (ALL-CAPS, distinct from goreleaser's own
 # `{{.Version}}`-style Go template fields, which are left as-is below):
-#   {{NAME}}        — short repo name (e.g. hawk, harrier, swift)
+#   {{NAME}}        — short repo name (e.g. graycode, harrier, swift)
 #   {{MAIN_PKG}}    — main package path (e.g. ./ or ./cmd/harrier)
 #   {{DESCRIPTION}} — short single-line description for brew/nfpms
 #   {{VERSION_PKG}} — Go package path holding Version vars
-#                     (e.g. main or github.com/GrayCodeAI/hawk/internal/version)
+#                     (e.g. main or github.com/GrayCodeAI/graycode-cli/internal/version)
 #
 # Repos with PRO/special features (e.g. swift's macOS notarization, shrike's
 # nfpms) extend this template with extra sections instead of replacing it.

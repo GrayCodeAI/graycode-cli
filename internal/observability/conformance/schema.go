@@ -1,7 +1,7 @@
 // Package conformance verifies that emitted telemetry spans always match the
 // documented OpenTelemetry schema (docs/OTEL-CONVENTIONS.md and the eyrie
 // gen_ai.* semantic-convention constants), so the schema cannot silently drift
-// across Hawk and its independent ecosystem repositories.
+// across Graycode and its independent ecosystem repositories.
 //
 // The schema is declarative and typed per span: a span name (or prefix
 // pattern), the required and optional attribute keys, and whether the span is
@@ -52,9 +52,9 @@ type SpanDef struct {
 // Schema is the ordered set of span definitions.
 type Schema []SpanDef
 
-// HawkSchema is the schema covering every span hawk emits via the starters in
+// GraycodeSchema is the schema covering every span graycode emits via the starters in
 // internal/observability/oteltrace/spans.go.
-var HawkSchema = Schema{
+var GraycodeSchema = Schema{
 	{NamePattern: "agent_loop", RequiredAttrs: []string{"provider", "model", "message_count"}},
 	{NamePattern: "tool.*", RequiredAttrs: []string{"tool.name", "tool.id"}},
 	{NamePattern: "compact.*", RequiredAttrs: []string{"compact.strategy", "compact.tokens_before"}},

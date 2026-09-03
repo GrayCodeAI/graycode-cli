@@ -14,7 +14,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 const maxPluginOutputBytes = 8 << 20
@@ -62,25 +62,25 @@ type PluginTool struct {
 
 // ToolManifest is the manifest loaded from plugin.json for subprocess-based plugins.
 type ToolManifest struct {
-	Name           string         `json:"name"`
-	Version        string         `json:"version"`
-	Description    string         `json:"description"`
-	Author         string         `json:"author"`
-	Tools          []ManifestTool `json:"tools"`
-	Permissions    []string       `json:"permissions"`
-	MinHawkVersion string         `json:"min_hawk_version"`
+	Name               string         `json:"name"`
+	Version            string         `json:"version"`
+	Description        string         `json:"description"`
+	Author             string         `json:"author"`
+	Tools              []ManifestTool `json:"tools"`
+	Permissions        []string       `json:"permissions"`
+	MinGraycodeVersion string         `json:"min_graycode_version"`
 }
 
 // WasmManifest is the manifest for WASM-based plugins.
 type WasmManifest struct {
-	Name           string        `json:"name"`
-	Version        string        `json:"version"`
-	Description    string        `json:"description"`
-	Author         string        `json:"author"`
-	Tools          []WasmToolDef `json:"tools"`
-	Permissions    []string      `json:"permissions"`
-	MinHawkVersion string        `json:"min_hawk_version"`
-	WasmPath       string        `json:"wasm_path"` // relative path to .wasm file
+	Name               string        `json:"name"`
+	Version            string        `json:"version"`
+	Description        string        `json:"description"`
+	Author             string        `json:"author"`
+	Tools              []WasmToolDef `json:"tools"`
+	Permissions        []string      `json:"permissions"`
+	MinGraycodeVersion string        `json:"min_graycode_version"`
+	WasmPath           string        `json:"wasm_path"` // relative path to .wasm file
 }
 
 // WasmToolDef defines a tool in a WASM plugin manifest.
@@ -116,7 +116,7 @@ type SecurityIssue struct {
 }
 
 // NewPluginManager creates a new PluginManager with the given directories.
-// If no directories are provided, defaults to Hawk user state.
+// If no directories are provided, defaults to Graycode user state.
 func NewPluginManager(dirs ...string) *PluginManager {
 	if len(dirs) == 0 {
 		dirs = []string{
@@ -354,7 +354,7 @@ func Validate(manifest *ToolManifest) []string {
 // ParseManifest reads and parses a plugin.json file from the given plugin directory.
 func ParseManifest(pluginDir string) (*ToolManifest, error) {
 	path := filepath.Join(pluginDir, "plugin.json")
-	data, err := os.ReadFile(path) // #nosec G304 -- pluginDir is a locally installed plugin directory under a Hawk-managed plugins root, not raw external input
+	data, err := os.ReadFile(path) // #nosec G304 -- pluginDir is a locally installed plugin directory under a Graycode-managed plugins root, not raw external input
 	if err != nil {
 		return nil, fmt.Errorf("read manifest: %w", err)
 	}
@@ -584,7 +584,7 @@ func isTextContent(data []byte) bool {
 // ParseWasmManifest reads and parses a plugin.json file for a WASM plugin.
 func ParseWasmManifest(pluginDir string) (*WasmManifest, error) {
 	path := filepath.Join(pluginDir, "plugin.json")
-	data, err := os.ReadFile(path) // #nosec G304 -- pluginDir is a locally installed plugin directory under a Hawk-managed plugins root, not raw external input
+	data, err := os.ReadFile(path) // #nosec G304 -- pluginDir is a locally installed plugin directory under a Graycode-managed plugins root, not raw external input
 	if err != nil {
 		return nil, fmt.Errorf("read manifest: %w", err)
 	}

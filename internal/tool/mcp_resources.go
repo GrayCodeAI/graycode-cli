@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/GrayCodeAI/hawk/internal/mcp"
+	"github.com/GrayCodeAI/graycode-cli/internal/mcp"
 )
 
 type ListMcpResourcesTool struct{}

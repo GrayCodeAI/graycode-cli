@@ -81,7 +81,7 @@ func (ac *AutoCommitter) generateMessage(description string) string {
 		if len(description) > 72 {
 			description = description[:69] + "..."
 		}
-		return "hawk: " + description
+		return "graycode: " + description
 	}
-	return fmt.Sprintf("hawk: auto-commit %s", time.Now().Format("15:04:05"))
+	return fmt.Sprintf("graycode: auto-commit %s", time.Now().Format("15:04:05"))
 }

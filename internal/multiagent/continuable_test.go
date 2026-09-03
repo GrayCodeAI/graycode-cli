@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
 )
 
 type echoTestProvider struct {
@@ -61,7 +61,7 @@ func TestContinuable_LifecycleAndFIFOOrder(t *testing.T) {
 		ParentSessionID: parentID,
 		Provider:        "test-echo",
 		Label:           "Worker Subagent",
-		Model:           "hawk-code-1",
+		Model:           "graycode-1",
 		InitialPrompt:   "initial turn",
 		Depth:           2,
 	}

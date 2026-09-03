@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 	"github.com/spf13/cobra"
 )
 
@@ -22,13 +22,13 @@ var (
 var learnCmd = &cobra.Command{
 	Use:   "learn",
 	Short: "Manage lessons learned across sessions",
-	Long: `Hawk persists lessons from failures (and manual entries) so future
+	Long: `Graycode persists lessons from failures (and manual entries) so future
 sessions avoid repeating them. Lessons are injected into the system prompt.
 
-  hawk learn                      List recent lessons
-  hawk learn add                  Add a lesson manually
-  hawk learn prompt <context>     Print the lesson-extraction prompt for a context
-  hawk learn clear                Remove all lessons`,
+  graycode learn                      List recent lessons
+  graycode learn add                  Add a lesson manually
+  graycode learn prompt <context>     Print the lesson-extraction prompt for a context
+  graycode learn clear                Remove all lessons`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runLearnList(cmd)
 	},
@@ -94,7 +94,7 @@ func runLearnList(cmd *cobra.Command) error {
 	si := engine.NewSelfImprover()
 	lessons := si.Lessons("")
 	if len(lessons) == 0 {
-		cmd.Println("No lessons yet. Add one with: hawk learn add --what ... --lesson ...")
+		cmd.Println("No lessons yet. Add one with: graycode learn add --what ... --lesson ...")
 		return nil
 	}
 

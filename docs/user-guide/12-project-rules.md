@@ -1,12 +1,12 @@
 # Project Rules (AGENTS.md)
 
-Project rules let you configure Hawk per project or directory. By placing an AGENTS.md file in your repository, you can set coding conventions, build instructions, and style guides that Hawk follows automatically.
+Project rules let you configure Graycode per project or directory. By placing an AGENTS.md file in your repository, you can set coding conventions, build instructions, and style guides that Graycode follows automatically.
 
 ---
 
 ## Supported File Names
 
-Hawk checks for these filenames in each directory (from repo root to CWD):
+Graycode checks for these filenames in each directory (from repo root to CWD):
 
 - `AGENTS.md`
 - `Agents.md`
@@ -14,26 +14,26 @@ Hawk checks for these filenames in each directory (from repo root to CWD):
 - `Claude.md`
 - `AGENT.md`
 
-Hawk loads all matching files. Deeper files take precedence when instructions conflict.
+Graycode loads all matching files. Deeper files take precedence when instructions conflict.
 
 ---
 
 ## Rules Directories
 
-Hawk also scans for `*.md` files in rules directories:
+Graycode also scans for `*.md` files in rules directories:
 
 | Location | Purpose |
 |----------|---------|
-| `<dir>/.hawk/rules/` | Always scanned |
+| `<dir>/.graycode/rules/` | Always scanned |
 | `<dir>/.claude/rules/` | Claude compatibility |
 
 ---
 
 ## How Discovery Works
 
-Hawk scans rules in this order:
+Graycode scans rules in this order:
 
-1. **Global rules**: `~/.hawk/AGENTS.md` (applies to all projects)
+1. **Global rules**: `~/.graycode/AGENTS.md` (applies to all projects)
 2. **Repo rules**: Every directory from git root to CWD (inclusive)
 3. **CWD-only**: If not in a git repo, only current directory
 
@@ -49,7 +49,7 @@ my-monorepo/
       AGENTS.md             # "Use Express. Follow REST conventions."
 ```
 
-When Hawk runs in `packages/frontend/`, it loads all instructions. The frontend-specific rules appear later and take precedence.
+When Graycode runs in `packages/frontend/`, it loads all instructions. The frontend-specific rules appear later and take precedence.
 
 ---
 
@@ -108,7 +108,7 @@ my-monorepo/
 For one-off rules without editing files:
 
 ```bash
-hawk --rules "Always use TypeScript" -p "Implement feature"
+graycode --rules "Always use TypeScript" -p "Implement feature"
 ```
 
 ---

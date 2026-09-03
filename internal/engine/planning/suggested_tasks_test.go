@@ -103,21 +103,21 @@ func TestFormatTasks(t *testing.T) {
 			Title:    "Resolve merge conflict in src/auth.go",
 			Priority: 1,
 			Category: "fix",
-			Command:  `hawk exec "resolve the merge conflict"`,
+			Command:  `graycode exec "resolve the merge conflict"`,
 		},
 		{
 			ID:       "t2",
 			Title:    "Fix failing TestValidateToken",
 			Priority: 2,
 			Category: "test",
-			Command:  `hawk exec "fix the failing test"`,
+			Command:  `graycode exec "fix the failing test"`,
 		},
 		{
 			ID:       "t3",
 			Title:    "Document exported function ParseConfig",
 			Priority: 4,
 			Category: "docs",
-			Command:  `hawk exec "add godoc to ParseConfig"`,
+			Command:  `graycode exec "add godoc to ParseConfig"`,
 		},
 	}
 
@@ -142,7 +142,7 @@ func TestFormatTasks(t *testing.T) {
 	if !strings.Contains(result, "[docs]") {
 		t.Fatal("expected docs category")
 	}
-	if !strings.Contains(result, "Run: hawk exec") {
+	if !strings.Contains(result, "Run: graycode exec") {
 		t.Fatal("expected Run: command")
 	}
 	// Red circle for priority 1
@@ -338,7 +338,7 @@ func TestSuggestedTaskStruct(t *testing.T) {
 		Category:    "fix",
 		Source:      "test",
 		Actionable:  true,
-		Command:     `hawk exec "fix the bug"`,
+		Command:     `graycode exec "fix the bug"`,
 	}
 
 	if task.ID != "abc123" {

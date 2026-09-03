@@ -1,4 +1,4 @@
-// Package types provides Hawk-owned runtime types and shared compatibility aliases.
+// Package types provides Graycode-owned runtime types and shared compatibility aliases.
 // Severity, TokenSeverity, and AuditSeverity are forwarded from eagle/types.
 // Provider-facing compatibility now lives in explicit adapters inside internal/types/client.go.
 package types

@@ -1,15 +1,15 @@
 ---
-description: Extending hawk — how to write AGENTS.md files, custom specialists, skills, hooks, MCP servers, and plugins.
+description: Extending graycode — how to write AGENTS.md files, custom specialists, skills, hooks, MCP servers, and plugins.
 globs: "*.go, *.js, *.md, *.json, *.toml, *.yaml, *.yml"
 alwaysApply: false
 ---
 
-# Extending hawk
+# Extending graycode
 
-hawk is an open-source code intelligence platform. It lives in the `graycode-eco`
+graycode is an open-source code intelligence platform. It lives in the `graycode-eco`
 workspace alongside the ecosystem repos that power it (`eyrie`, `eagle`,
 `shrike`, `harrier`, `swift`, `kestrel`, `merlin`). This document describes how to extend
-hawk with custom tools, skills, hooks, and integrations.
+graycode with custom tools, skills, hooks, and integrations.
 
 ## Development workflow
 
@@ -17,7 +17,7 @@ When starting any new work (feature, fix, refactor, chore), always create a feat
 
 ## 1. Drop a project `AGENTS.md`
 
-When hawk starts in a directory, it looks for project-level instructions and injects them into the system prompt. The lookup walks from your current working directory **up to the nearest git root** and reads the first matching file at each level — general rules at the repo root, more specific rules in sub-trees. Files are labeled with their directory in the prompt (e.g. `## Project guidelines (services/api/AGENTS.md)`).
+When graycode starts in a directory, it looks for project-level instructions and injects them into the system prompt. The lookup walks from your current working directory **up to the nearest git root** and reads the first matching file at each level — general rules at the repo root, more specific rules in sub-trees. Files are labeled with their directory in the prompt (e.g. `## Project guidelines (services/api/AGENTS.md)`).
 
 Accepted file names, in priority order at each level:
 
@@ -29,7 +29,7 @@ Accepted file names, in priority order at each level:
 
 Matching is **case-insensitive** on the basename, so `AGENTS.md`, `Agents.md`, and `agents.md` resolve to the same file on Windows and macOS. The git-tracked filename in this repo is `AGENTS.md` — keep that on case-sensitive filesystems (Linux, the WSL filesystem, or a CI runner) to match what the loader looks for.
 
-Both files use the same format. YAML frontmatter is optional; the markdown body is loaded as instructions for the agent. hawk reads the file once at session start, so changes take effect on the next launch — not mid-session.
+Both files use the same format. YAML frontmatter is optional; the markdown body is loaded as instructions for the agent. graycode reads the file once at session start, so changes take effect on the next launch — not mid-session.
 
 ```markdown
 # Project conventions for <your project>
@@ -42,26 +42,26 @@ Both files use the same format. YAML frontmatter is optional; the markdown body 
 
 Tips:
 
-- Keep each file under ~8 KiB. hawk caps the **total** across all matched files at 32 KiB; everything past the cap is dropped.
+- Keep each file under ~8 KiB. graycode caps the **total** across all matched files at 32 KiB; everything past the cap is dropped.
 - Re-state rules in the imperative voice: "Run `make lint`", not "you should consider running the linter".
 - Don't put secrets, model IDs, or environment-specific paths in `AGENTS.md`. Use config files for those.
-- In a monorepo, drop a narrower `AGENTS.md` in each sub-tree (e.g. `services/api/AGENTS.md`). hawk picks those up automatically when you launch from inside the sub-tree.
+- In a monorepo, drop a narrower `AGENTS.md` in each sub-tree (e.g. `services/api/AGENTS.md`). graycode picks those up automatically when you launch from inside the sub-tree.
 - A YAML frontmatter block (`---\n...\n---`) at the top is preserved verbatim in the injected prompt but is not parsed for `globs:` or `alwaysApply:` scoping today — keep the body self-contained.
 
 ### Personal guidelines, across every project
 
-For preferences that follow *you*, not a specific repo (tone, tooling habits, workflow), drop a `ZERO.md` in your user config directory: `~/.hawk/ZERO.md` on Linux/macOS, `%AppData%\hawk\ZERO.md` on Windows — the same directory as config files and your personal specialists. Same format and 8 KiB cap as the project files above, and the same case-insensitive basename match.
+For preferences that follow *you*, not a specific repo (tone, tooling habits, workflow), drop a `ZERO.md` in your user config directory: `~/.graycode/ZERO.md` on Linux/macOS, `%AppData%\graycode\ZERO.md` on Windows — the same directory as config files and your personal specialists. Same format and 8 KiB cap as the project files above, and the same case-insensitive basename match.
 
 This file is injected as its own `## User guidelines` section, before the project's `AGENTS.md`/`ZERO.md`, and is labeled as personal preference in the prompt: project guidelines are the later, more specific instruction and take precedence over it when the two conflict.
 
 ## 2. Custom specialists
 
-Specialists are hawk's sub-agents. Three scopes, in priority order:
+Specialists are graycode's sub-agents. Three scopes, in priority order:
 
 | Scope | Path | Shared? |
 | --- | --- | --- |
-| Built-in | compiled into hawk | yes |
-| User | `~/.hawk/specialists/*.md` | no — your machine only |
+| Built-in | compiled into graycode | yes |
+| User | `~/.graycode/specialists/*.md` | no — your machine only |
 | Project | `./.zero/specialists/*.md` | yes — the repo team |
 
 Project overrides user overrides built-in when names collide.
@@ -89,33 +89,33 @@ Reply with one JSON object per finding: `{"file", "line", "severity", "message",
 CLI management:
 
 ```bash
-hawk specialist list
-hawk specialist show api-reviewer
-hawk specialist create api-reviewer \
+graycode specialist list
+graycode specialist show api-reviewer
+graycode specialist create api-reviewer \
     --project \
     --description "Reviews API changes" \
     --tools read-only,plan \
     --prompt "$(cat api-reviewer.md)"
-hawk specialist edit api-reviewer --project
-hawk specialist delete api-reviewer --project
-hawk specialist path                       # prints the resolved specialists directory
+graycode specialist edit api-reviewer --project
+graycode specialist delete api-reviewer --project
+graycode specialist path                       # prints the resolved specialists directory
 ```
 
 ## 3. Skills
 
-hawk ships **no bundled skills** by default. Skills are markdown instruction
+graycode ships **no bundled skills** by default. Skills are markdown instruction
 files that extend agent capabilities, sourced from the separate
 `GrayCodeAI/starling` repo and installed on demand:
 
 ```bash
-hawk skills search <query>          # find skills in starling
-hawk skills install <owner/repo> [skill-name]   # install after user approval
-hawk skills list                    # list installed skills
-hawk skills remove <name>
+graycode skills search <query>          # find skills in starling
+graycode skills install <owner/repo> [skill-name]   # install after user approval
+graycode skills list                    # list installed skills
+graycode skills remove <name>
 ```
 
 Installed skills live in user or project scope:
-- User-scoped: `~/.hawk/skills/`
+- User-scoped: `~/.graycode/skills/`
 - Project-scoped: `./.zero/skills/` or `./skills/`
 
 A skill manifest:
@@ -144,56 +144,56 @@ Hooks allow custom commands to run at specific lifecycle points:
 - `sessionEnd` — runs at session teardown
 
 ```bash
-hawk hook add beforeReview --command "lint-check"
-hawk hook remove beforeReview
-hawk hook list
+graycode hook add beforeReview --command "lint-check"
+graycode hook remove beforeReview
+graycode hook list
 ```
 
 ## 5. MCP integration
 
-MCP (Model Context Protocol) servers can expose tools to hawk:
+MCP (Model Context Protocol) servers can expose tools to graycode:
 
 ```bash
-hawk mcp add --name server --url http://localhost:8080
-hawk mcp remove server
-hawk mcp list
+graycode mcp add --name server --url http://localhost:8080
+graycode mcp remove server
+graycode mcp list
 ```
 
 ## 6. Plugins
 
-Plugins extend hawk with custom tools and capabilities:
+Plugins extend graycode with custom tools and capabilities:
 
 ```bash
-hawk plugin add --name my-plugin --path ./my-plugin
-hawk plugin remove my-plugin
-hawk plugin list
+graycode plugin add --name my-plugin --path ./my-plugin
+graycode plugin remove my-plugin
+graycode plugin list
 ```
 
 ## 7. Verification
 
-hawk includes a self-verification system to validate local changes before contributing:
+graycode includes a self-verification system to validate local changes before contributing:
 
 ```bash
-hawk verify
-hawk verify --fix
+graycode verify
+graycode verify --fix
 ```
 
 ## Development
 
 ```bash
 make lint
-hawk verify
+graycode verify
 ```
 
 ### Architecture note: cross-repo contracts
 
-Legacy `hawk/shared/types` has been removed. Cross-repo severity and finding contracts now live in `github.com/GrayCodeAI/eagle` (`eagle/types`) — extensions and support repos must import that module instead of Hawk internals.
+Legacy `graycode/shared/types` has been removed. Cross-repo severity and finding contracts now live in `github.com/GrayCodeAI/eagle` (`eagle/types`) — extensions and support repos must import that module instead of Graycode internals.
 
 ### Architecture note: provider ownership
 
 Implement provider protocols, adapters, catalog metadata, credential mappings, and
-provider contract tests in `../eyrie` (the eyrie sibling repo) first. Hawk consumes providers only
-through Eyrie's stable engine facade; Hawk changes should be limited to host UX
+provider contract tests in `../eyrie` (the eyrie sibling repo) first. Graycode consumes providers only
+through Eyrie's stable engine facade; Graycode changes should be limited to host UX
 and facade integration. Concentrate AI is a pay-as-you-go gateway implemented
 with its native Responses API (`/v1/responses`) under the
 `concentrate-payg` deployment.
@@ -201,7 +201,7 @@ with its native Responses API (`/v1/responses`) under the
 <!-- gitnexus:start -->
 ## GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **hawk** (97743 symbols, 322940 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **graycode** (97743 symbols, 322940 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
@@ -225,10 +225,10 @@ This project is indexed by GitNexus as **hawk** (97743 symbols, 322940 relations
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/hawk/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/hawk/clusters` | All functional areas |
-| `gitnexus://repo/hawk/processes` | All execution flows |
-| `gitnexus://repo/hawk/process/{name}` | Step-by-step execution swift |
+| `gitnexus://repo/graycode/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/graycode/clusters` | All functional areas |
+| `gitnexus://repo/graycode/processes` | All execution flows |
+| `gitnexus://repo/graycode/process/{name}` | Step-by-step execution swift |
 
 ## CLI
 
@@ -245,10 +245,10 @@ This project is indexed by GitNexus as **hawk** (97743 symbols, 322940 relations
 
 ### Workspace workflow (sibling repos)
 
-hawk depends on ecosystem repos (`eyrie`, `eagle`, etc.) as independent sibling repos in the `graycode-eco` workspace. Hawk's `go.work` lists them as `../<repo>`, so local changes in any sibling are automatically picked up by hawk. Each sibling is its own git repo, versioned and released independently.
+graycode depends on ecosystem repos (`eyrie`, `eagle`, etc.) as independent sibling repos in the `graycode-eco` workspace. Graycode's `go.work` lists them as `../<repo>`, so local changes in any sibling are automatically picked up by graycode. Each sibling is its own git repo, versioned and released independently.
 
-1. Edit + test in `../<repo>` — run its tests, run `make test` in hawk
+1. Edit + test in `../<repo>` — run its tests, run `make test` in graycode
 2. Push from the sibling: `git push origin <branch>`
 3. Open a PR in the sibling repo → merge to `main`
-4. Ensure hawk's `go.mod` pins a version that resolves to (or is an ancestor of) the sibling's `main` — run `make sync` to verify parity
-5. No pointer commits: hawk resolves the sibling via `go.work` for local dev and via the pinned `go.mod` version for standalone/module-mode builds (Docker, released consumers)
+4. Ensure graycode's `go.mod` pins a version that resolves to (or is an ancestor of) the sibling's `main` — run `make sync` to verify parity
+5. No pointer commits: graycode resolves the sibling via `go.work` for local dev and via the pinned `go.mod` version for standalone/module-mode builds (Docker, released consumers)

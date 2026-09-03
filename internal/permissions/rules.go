@@ -39,9 +39,9 @@ func NewRuleSet() *RuleSet {
 	}
 }
 
-// LoadFromFile parses a .hawk/rules file and populates the RuleSet.
+// LoadFromFile parses a .graycode/rules file and populates the RuleSet.
 func (rs *RuleSet) LoadFromFile(path string) error {
-	f, err := os.Open(path) // #nosec G304 -- path is the caller-supplied .hawk/rules config path, not external input
+	f, err := os.Open(path) // #nosec G304 -- path is the caller-supplied .graycode/rules config path, not external input
 	if err != nil {
 		return fmt.Errorf("open rules file: %w", err)
 	}
@@ -243,7 +243,7 @@ func (rs *RuleSet) RemoveRule(index int) error {
 	return nil
 }
 
-// SaveToFile writes the rules to a file in the .hawk/rules format.
+// SaveToFile writes the rules to a file in the .graycode/rules format.
 func (rs *RuleSet) SaveToFile(path string) error {
 	rs.mu.RLock()
 	defer rs.mu.RUnlock()
@@ -254,7 +254,7 @@ func (rs *RuleSet) SaveToFile(path string) error {
 		return fmt.Errorf("create directory: %w", err)
 	}
 
-	f, err := os.Create(path) // #nosec G304 -- path is caller-supplied .hawk/rules file location, not external untrusted input
+	f, err := os.Create(path) // #nosec G304 -- path is caller-supplied .graycode/rules file location, not external untrusted input
 	if err != nil {
 		return fmt.Errorf("create rules file: %w", err)
 	}

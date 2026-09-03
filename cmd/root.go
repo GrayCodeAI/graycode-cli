@@ -10,14 +10,14 @@ import (
 	"strings"
 	"time"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
-	"github.com/GrayCodeAI/hawk/internal/onboarding"
-	"github.com/GrayCodeAI/hawk/internal/plugin"
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/update"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
+	"github.com/GrayCodeAI/graycode-cli/internal/onboarding"
+	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/update"
 	"github.com/spf13/cobra"
 )
 
@@ -87,33 +87,33 @@ func SetBuildDate(d string) {
 }
 
 func registeredProviderCount() int {
-	return hawkconfig.RegisteredProviderCount()
+	return graycodeconfig.RegisteredProviderCount()
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "hawk [prompt]",
+	Use:   "graycode [prompt]",
 	Short: "AI coding agent powered by eyrie",
-	Long: fmt.Sprintf(`hawk is an AI coding agent that reads, writes, and runs code in your terminal.
+	Long: fmt.Sprintf(`graycode is an AI coding agent that reads, writes, and runs code in your terminal.
 
 It connects to %d first-class LLM providers through eyrie, executes tools (file I/O, shell,
 git, web search), and manages sessions — all from a keyboard-driven TUI or
 headless mode for scripts and CI.
 
 Quick orientation:
-  hawk                     Start interactive TUI
-  hawk -p "prompt"         One-shot: send prompt, print response, exit
-  hawk exec "task"         Autonomous multi-turn execution
-  hawk path                Check environment readiness
-  hawk doctor              Run diagnostics
-  hawk config              Manage settings and credentials
+  graycode                     Start interactive TUI
+  graycode -p "prompt"         One-shot: send prompt, print response, exit
+  graycode exec "task"         Autonomous multi-turn execution
+  graycode path                Check environment readiness
+  graycode doctor              Run diagnostics
+  graycode config              Manage settings and credentials
 
 API keys are stored in the OS keychain (macOS Keychain / Linux keyring).
-Run hawk and use /config to set up your first provider.`, registeredProviderCount()),
-	Example: `  hawk
-  hawk -p "explain this repo"
-  hawk exec "fix failing tests"
-  hawk preflight
-  hawk path`,
+Run graycode and use /config to set up your first provider.`, registeredProviderCount()),
+	Example: `  graycode
+  graycode -p "explain this repo"
+  graycode exec "fix failing tests"
+  graycode preflight
+  graycode path`,
 	Args:          cobra.ArbitraryArgs,
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -147,10 +147,10 @@ Run hawk and use /config to set up your first provider.`, registeredProviderCoun
 
 		if printMode || promptFlag != "" || inputFormat == "stream-json" || replFlag || watchFlag {
 			// Credential migration is deferred until a path that actually
-			// uses credentials: `hawk path`, `hawk version`, auto-skill and
+			// uses credentials: `graycode path`, `graycode version`, auto-skill and
 			// other cold commands no longer construct the eyrie engine
 			// (M17 — was ~1.8s on every root command).
-			logMigrateProviderSecretsError(logger.Default(), hawkconfig.MigrateProviderSecrets())
+			logMigrateProviderSecretsError(logger.Default(), graycodeconfig.MigrateProviderSecrets())
 			if promptFlag == "" && !replFlag && !watchFlag {
 				stdinPrompt, err := readPromptFromStdin(inputFormat)
 				if err != nil {
@@ -169,7 +169,7 @@ Run hawk and use /config to set up your first provider.`, registeredProviderCoun
 			// the TUI, so gate them identically: untrusted folders block
 			// project automation.
 			if tr := engine.ProjectTrust(""); tr.Blocked {
-				return fmt.Errorf("cannot start: folder not trusted (%s)\nProject-scoped hooks, MCP servers, and custom specialists are blocked.\nRun 'hawk trust add' to trust this folder before running hawk", tr.Path)
+				return fmt.Errorf("cannot start: folder not trusted (%s)\nProject-scoped hooks, MCP servers, and custom specialists are blocked.\nRun 'graycode trust add' to trust this folder before running graycode", tr.Path)
 			}
 			if replFlag {
 				return runRepl()
@@ -205,11 +205,11 @@ Run hawk and use /config to set up your first provider.`, registeredProviderCoun
 		}
 
 		// TUI path uses credentials — run the one-time hygiene pass here.
-		logMigrateProviderSecretsError(logger.Default(), hawkconfig.MigrateProviderSecrets())
+		logMigrateProviderSecretsError(logger.Default(), graycodeconfig.MigrateProviderSecrets())
 
 		// Folder trust check — block starting CLI in an untrusted directory
 		if tr := engine.ProjectTrust(""); tr.Blocked {
-			return fmt.Errorf("cannot start CLI: folder not trusted (%s)\nProject-scoped hooks, MCP servers, and custom specialists are blocked.\nRun 'hawk trust add' to trust this folder before starting hawk", tr.Path)
+			return fmt.Errorf("cannot start CLI: folder not trusted (%s)\nProject-scoped hooks, MCP servers, and custom specialists are blocked.\nRun 'graycode trust add' to trust this folder before starting graycode", tr.Path)
 		}
 
 		// Launch TUI — use /config to set API keys; eyrie supplies providers and models
@@ -309,7 +309,7 @@ func init() {
 // In a terminal, it requires typing the full confirmation token (not a single
 // key) so a stray keystroke or terminal-escape trickery cannot confirm it. In
 // non-interactive mode (CI, scripts), it requires the
-// HAWK_DANGEROUSLY_SKIP_PERMISSIONS=1 environment variable.
+// GRAYCODE_DANGEROUSLY_SKIP_PERMISSIONS=1 environment variable.
 func confirmDangerousSkipPermissions() error {
 	if isStdinTerminal() {
 		fmt.Fprintf(os.Stderr, "Type %s to confirm skipping permission prompts: ", dangerSkipConfirmToken)
@@ -324,8 +324,8 @@ func confirmDangerousSkipPermissions() error {
 		return nil
 	}
 	// Non-interactive: require explicit env var override.
-	if os.Getenv("HAWK_DANGEROUSLY_SKIP_PERMISSIONS") != "1" {
-		return fmt.Errorf("--dangerously-skip-permissions requires HAWK_DANGEROUSLY_SKIP_PERMISSIONS=1 in non-interactive mode")
+	if os.Getenv("GRAYCODE_DANGEROUSLY_SKIP_PERMISSIONS") != "1" {
+		return fmt.Errorf("--dangerously-skip-permissions requires GRAYCODE_DANGEROUSLY_SKIP_PERMISSIONS=1 in non-interactive mode")
 	}
 	return nil
 }
@@ -349,31 +349,31 @@ var completionCmd = &cobra.Command{
 	Long: `To load completions:
 
 Bash:
-  source <(hawk completion bash)
+  source <(graycode completion bash)
   # To load completions for each session, execute once:
   # Linux:
-  hawk completion bash > /etc/bash_completion.d/hawk
+  graycode completion bash > /etc/bash_completion.d/graycode
   # macOS:
-  hawk completion bash > /usr/local/etc/bash_completion.d/hawk
+  graycode completion bash > /usr/local/etc/bash_completion.d/graycode
 
 Zsh:
-  source <(hawk completion zsh)
+  source <(graycode completion zsh)
   # To load completions for each session, execute once:
-  hawk completion zsh > "${fpath[1]}/_hawk"
+  graycode completion zsh > "${fpath[1]}/_graycode"
 
 Fish:
-  hawk completion fish | source
+  graycode completion fish | source
   # To load completions for each session, execute once:
-  hawk completion fish > ~/.config/fish/completions/hawk.fish
+  graycode completion fish > ~/.config/fish/completions/graycode.fish
 
 PowerShell:
-  hawk completion powershell | Out-String | Invoke-Expression
+  graycode completion powershell | Out-String | Invoke-Expression
   # To load completions for every new session, run:
-  hawk completion powershell > hawk.ps1
+  graycode completion powershell > graycode.ps1
   # and source this file from your PowerShell profile.
 
 JSON:
-  hawk completion json
+  graycode completion json
   # Print a machine-readable command/flag spec for IDE integration.
 `,
 	DisableFlagsInUseLine: true,
@@ -407,17 +407,17 @@ var completionInstallCmd = &cobra.Command{
 	Long: `Install the shell completion script to the standard location for your OS.
 
 Bash:
-  hawk completion install bash
-  # Installs to ~/.local/share/bash-completion/completions/hawk (Linux)
-  # or /opt/homebrew/etc/bash_completion.d/hawk (macOS Homebrew)
+  graycode completion install bash
+  # Installs to ~/.local/share/bash-completion/completions/graycode (Linux)
+  # or /opt/homebrew/etc/bash_completion.d/graycode (macOS Homebrew)
 
 Zsh:
-  hawk completion install zsh
-  # Installs to the first directory in $fpath (e.g. /usr/local/share/zsh/site-functions/_hawk)
+  graycode completion install zsh
+  # Installs to the first directory in $fpath (e.g. /usr/local/share/zsh/site-functions/_graycode)
 
 Fish:
-  hawk completion install fish
-  # Installs to ~/.config/fish/completions/hawk.fish`,
+  graycode completion install fish
+  # Installs to ~/.config/fish/completions/graycode.fish`,
 	DisableFlagsInUseLine: true,
 	ValidArgs:             []string{"bash", "zsh", "fish"},
 	Args:                  cobra.ExactArgs(1),
@@ -458,8 +458,8 @@ Fish:
 
 var updateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "Check for hawk updates",
-	Long:  "Check GitHub for a newer hawk release and print upgrade instructions.",
+	Short: "Check for graycode updates",
+	Long:  "Check GitHub for a newer graycode release and print upgrade instructions.",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ver := version
@@ -481,13 +481,13 @@ API keys and secrets are never included.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var b strings.Builder
-		b.WriteString("## hawk bug report\n\n")
+		b.WriteString("## graycode bug report\n\n")
 		b.WriteString(fmt.Sprintf("- **Version:** %s\n", versionLine()))
 		b.WriteString(fmt.Sprintf("- **Platform:** %s\n", update.Platform()))
 		b.WriteString(fmt.Sprintf("- **Go:** %s\n", runtime.Version()))
 		b.WriteString(fmt.Sprintf("- **OS/Arch:** %s/%s\n", runtime.GOOS, runtime.GOARCH))
 		b.WriteString("\n## Doctor output\n\n```\n")
-		settings := hawkconfig.LoadSettings()
+		settings := graycodeconfig.LoadSettings()
 		b.WriteString(doctorReport(settings))
 		b.WriteString("\n```\n")
 		cmd.Print(b.String())
@@ -505,7 +505,7 @@ var versionJSON bool
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print hawk version",
+	Short: "Print graycode version",
 	Run: func(cmd *cobra.Command, args []string) {
 		if versionJSON {
 			info := versionInfo{Version: DisplayVersion()}
@@ -542,7 +542,7 @@ var setupCmd = &cobra.Command{
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Interactive onboarding wizard for first-time setup",
-	Long:  "Launch the interactive setup wizard to configure credentials, select providers/models, and initialize hawk.",
+	Long:  "Launch the interactive setup wizard to configure credentials, select providers/models, and initialize graycode.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		onboarding.Welcome(version)
 		return onboarding.RunSetup()
@@ -591,7 +591,7 @@ var preflightCmd = &cobra.Command{
 			ctx, cancel = context.WithTimeout(ctx, limit)
 			defer cancel()
 		}
-		r := hawkconfig.EnginePreflightReportWithSettings(ctx, settings, hawkconfig.EnginePreflightOptions{VerifyLive: preflightLiveFlag})
+		r := graycodeconfig.EnginePreflightReportWithSettings(ctx, settings, graycodeconfig.EnginePreflightOptions{VerifyLive: preflightLiveFlag})
 		if preflightJSON {
 			out, err := json.MarshalIndent(r, "", "  ")
 			if err != nil {
@@ -599,13 +599,13 @@ var preflightCmd = &cobra.Command{
 			}
 			cmd.Println(string(out))
 		} else {
-			cmd.Println(hawkconfig.FormatEnginePreflight(r))
+			cmd.Println(graycodeconfig.FormatEnginePreflight(r))
 		}
 		if !r.Ready {
 			if preflightLiveFlag {
 				return fmt.Errorf("live preflight failed — check the selected provider credential and network access")
 			}
-			return fmt.Errorf("preflight failed — run hawk and complete /config")
+			return fmt.Errorf("preflight failed — run graycode and complete /config")
 		}
 		return nil
 	},
@@ -619,13 +619,13 @@ var configCmd = &cobra.Command{
 			switch args[0] {
 			case "get":
 				if len(args) != 2 {
-					return fmt.Errorf("usage: hawk config get <key>")
+					return fmt.Errorf("usage: graycode config get <key>")
 				}
 				settings, err := loadEffectiveSettings()
 				if err != nil {
 					return err
 				}
-				value, ok := hawkconfig.SettingValue(settings, args[1])
+				value, ok := graycodeconfig.SettingValue(settings, args[1])
 				if !ok {
 					return fmt.Errorf("unsupported setting key %q", args[1])
 				}
@@ -633,27 +633,27 @@ var configCmd = &cobra.Command{
 				return nil
 			case "set":
 				if len(args) < 3 {
-					return fmt.Errorf("usage: hawk config set <key> <value>")
+					return fmt.Errorf("usage: graycode config set <key> <value>")
 				}
-				if err := hawkconfig.SetGlobalSetting(args[1], strings.Join(args[2:], " ")); err != nil {
+				if err := graycodeconfig.SetGlobalSetting(args[1], strings.Join(args[2:], " ")); err != nil {
 					return err
 				}
 				cmd.Println("updated", args[1])
 				return nil
 			case "provider":
 				if len(args) < 2 {
-					return fmt.Errorf("usage: hawk config provider <name>")
+					return fmt.Errorf("usage: graycode config provider <name>")
 				}
-				if err := hawkconfig.SetGlobalSetting("provider", strings.Join(args[1:], " ")); err != nil {
+				if err := graycodeconfig.SetGlobalSetting("provider", strings.Join(args[1:], " ")); err != nil {
 					return err
 				}
 				cmd.Println("updated provider")
 				return nil
 			case "model":
 				if len(args) < 2 {
-					return fmt.Errorf("usage: hawk config model <name>")
+					return fmt.Errorf("usage: graycode config model <name>")
 				}
-				if err := hawkconfig.SetGlobalSetting("model", strings.Join(args[1:], " ")); err != nil {
+				if err := graycodeconfig.SetGlobalSetting("model", strings.Join(args[1:], " ")); err != nil {
 					return err
 				}
 				cmd.Println("updated model")
@@ -663,13 +663,13 @@ var configCmd = &cobra.Command{
 				return nil
 			case "routing-preview":
 				if len(args) < 2 {
-					return fmt.Errorf("usage: hawk config routing-preview <model>")
+					return fmt.Errorf("usage: graycode config routing-preview <model>")
 				}
 				settings, err := loadEffectiveSettings()
 				if err != nil {
 					return err
 				}
-				out, err := hawkconfig.RoutingPreviewJSONWithSettings(cmd.Context(), settings, strings.Join(args[1:], " "))
+				out, err := graycodeconfig.RoutingPreviewJSONWithSettings(cmd.Context(), settings, strings.Join(args[1:], " "))
 				if err != nil {
 					return err
 				}
@@ -690,10 +690,10 @@ var configCmd = &cobra.Command{
 
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
-	Short: "Show MCP configuration; run or register hawk as an MCP server",
-	Long: "With no subcommand, summarizes the MCP servers hawk connects to (consumes).\n" +
-		"  hawk mcp serve   — run hawk itself as an MCP server over stdio\n" +
-		"  hawk mcp config  — print the JSON block to register hawk in Claude Desktop/Cursor/Windsurf",
+	Short: "Show MCP configuration; run or register graycode as an MCP server",
+	Long: "With no subcommand, summarizes the MCP servers graycode connects to (consumes).\n" +
+		"  graycode mcp serve   — run graycode itself as an MCP server over stdio\n" +
+		"  graycode mcp config  — print the JSON block to register graycode in Claude Desktop/Cursor/Windsurf",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		settings, err := loadEffectiveSettings()
 		if err != nil {
@@ -775,7 +775,7 @@ var (
 var researchCmd = &cobra.Command{
 	Use:   "research [flags] <metric-command>",
 	Short: "Autonomous research loop (Karpathy autoresearch pattern)",
-	Long:  "hawk research --grep '^val_bpb:' --direction lower 'uv run train.py'",
+	Long:  "graycode research --grep '^val_bpb:' --direction lower 'uv run train.py'",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return fmt.Errorf("metric command is required")
@@ -855,9 +855,9 @@ var recoverCmd = &cobra.Command{
 and offer to resume them. If a session-id is provided, resume that specific session.
 
 Examples:
-  hawk recover              # List interrupted sessions
-  hawk recover abc123       # Resume specific session
-  hawk --recover            # Auto-resume most recent interrupted session`,
+  graycode recover              # List interrupted sessions
+  graycode recover abc123       # Resume specific session
+  graycode --recover            # Auto-resume most recent interrupted session`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {
 			s, note, err := session.ResumeSession(args[0])
@@ -875,8 +875,8 @@ Examples:
 		cmd.Println(session.FormatRecoveryCandidates(candidates))
 
 		if len(candidates) > 0 {
-			cmd.Println("Resume with: hawk recover <id>")
-			cmd.Println("Or launch TUI with: hawk --recover")
+			cmd.Println("Resume with: graycode recover <id>")
+			cmd.Println("Or launch TUI with: graycode --recover")
 		}
 		return nil
 	},
@@ -892,12 +892,12 @@ func resumeRecoveredSession(ctx context.Context, sessionID string) error {
 }
 
 // logMigrateProviderSecretsError surfaces a non-nil error from
-// hawkconfig.MigrateProviderSecrets via the structured logger.
+// graycodeconfig.MigrateProviderSecrets via the structured logger.
 //
 // MigrateProviderSecrets is a one-time hygiene pass that strips API keys
 // from the on-disk provider.json (a known-bad location — see AGENTS.md).
 // If it fails, the keys remain in the file and the user must be told so
-// they can run hawk /config to move them to the OS keychain. Previously
+// they can run graycode /config to move them to the OS keychain. Previously
 // the error was silently discarded (cmd/root.go:114), so a failure left
 // the user with secrets in plaintext and no indication that anything was
 // wrong.
@@ -910,7 +910,7 @@ func logMigrateProviderSecretsError(l *logger.Logger, err error) {
 		return
 	}
 	l.Warn(
-		"provider secret migration failed; API keys may remain in provider.json. Run `hawk /config` to move them to the OS keychain.",
+		"provider secret migration failed; API keys may remain in provider.json. Run `graycode /config` to move them to the OS keychain.",
 		map[string]interface{}{"err": err.Error()},
 	)
 }

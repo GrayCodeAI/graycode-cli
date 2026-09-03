@@ -13,7 +13,7 @@ func TestLayoutFooterRow_StyledStringsAlignRight(t *testing.T) {
 	tokenStyle := lipgloss.NewStyle().Foreground(statusTokenColor).Inline(true)
 	dim := lipgloss.NewStyle().Foreground(dimColor).Inline(true)
 
-	left := cwdStyle.Render("~/hawk") + " " + cwdStyle.Render("⎇ main")
+	left := cwdStyle.Render("~/graycode") + " " + cwdStyle.Render("⎇ main")
 	right := tokenStyle.Render("[db] 13k") + dim.Render(" · ") + tokenStyle.Render("$0.00")
 	width := 80
 

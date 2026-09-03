@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/tool"
+import "github.com/GrayCodeAI/graycode-cli/internal/tool"
 
 // DefaultToolPipeline returns the standard tool interception pipeline for a session.
 // It is intentionally empty today: every phase the pipeline is meant to observe —

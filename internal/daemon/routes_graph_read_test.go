@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/executiongraph"
+	"github.com/GrayCodeAI/graycode-cli/internal/executiongraph"
 )
 
 func getGraphRead(t *testing.T, addr, path string) *http.Response {

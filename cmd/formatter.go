@@ -9,12 +9,12 @@ import (
 
 	"golang.org/x/term"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // stdoutIsTerminal reports whether stdout is connected to a terminal (TTY).
 // When stdout is a pipe or file — which is exactly the case when an agent or
-// shell script captures hawk's output — this is false, and color/Unicode
+// shell script captures graycode's output — this is false, and color/Unicode
 // chrome must be suppressed so the payload stays clean. It is a var so tests
 // can override it.
 var stdoutIsTerminal = func() bool {

@@ -9,7 +9,7 @@ import (
 	lipgloss "charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 var reviewTUICmd = &cobra.Command{
@@ -127,11 +127,11 @@ func (m reviewTUIModel) View() tea.View {
 	selected := lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("236"))
 
 	var b strings.Builder
-	b.WriteString(header.Render("  hawk review") + dim.Render("  j/k:nav  enter:expand  c:close  f:fix  r:refresh  q:quit") + "\n")
+	b.WriteString(header.Render("  graycode review") + dim.Render("  j/k:nav  enter:expand  c:close  f:fix  r:refresh  q:quit") + "\n")
 	b.WriteString(strings.Repeat("─", reviewMin(m.width, 80)) + "\n")
 
 	if len(m.reviews) == 0 {
-		b.WriteString("\n  No reviews yet. Run 'hawk review init' to get started.\n")
+		b.WriteString("\n  No reviews yet. Run 'graycode review init' to get started.\n")
 		v := tea.View{Content: b.String()}
 		v.AltScreen = true
 		return v

@@ -72,5 +72,5 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ### Git commits
 
 - Never add `Co-authored-by:` or `Co-Authored-By:` trailers.
-- Commits list only the human author — do not attribute Cursor, hawk, or other AI tools as co-authors.
+- Commits list only the human author — do not attribute Cursor, graycode, or other AI tools as co-authors.
 - If a tool suggests a co-author trailer, omit it.

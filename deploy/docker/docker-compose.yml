@@ -1,7 +1,7 @@
-name: hawk
+name: graycode
 
 services:
-  hawk:
+  graycode:
     build:
       context: ../../
       dockerfile: Dockerfile
@@ -11,7 +11,7 @@ services:
         VERSION: ${VERSION:-dev}
         COMMIT: ${COMMIT:-none}
         BUILD_DATE: ${BUILD_DATE:-unknown}
-    image: ghcr.io/graycodeai/hawk:dev
+    image: ghcr.io/graycodeai/graycode:dev
     # Override the Dockerfile's default `CMD ["--help"]` so the container
     # actually runs the HTTP/SSE daemon. `--host 0.0.0.0` is required for
     # the published port to be reachable from outside the container.
@@ -19,9 +19,9 @@ services:
     ports:
       - "4590:4590"
     environment:
-      - HAWK_DAEMON_API_KEY=${HAWK_DAEMON_API_KEY:-}
-      - HAWK_DAEMON_PORT=4590
-      - HAWK_DAEMON_HOST=0.0.0.0
+      - GRAYCODE_DAEMON_API_KEY=${GRAYCODE_DAEMON_API_KEY:-}
+      - GRAYCODE_DAEMON_PORT=4590
+      - GRAYCODE_DAEMON_HOST=0.0.0.0
     env_file:
       - path: ../../.env.example
         required: false

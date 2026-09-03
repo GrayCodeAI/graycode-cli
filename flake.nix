@@ -1,5 +1,5 @@
 {
-  description = "Hawk - AI coding agent powered by eyrie";
+  description = "Graycode - AI coding agent powered by eyrie";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -53,8 +53,8 @@
           ) siblings)}
         '';
 
-        hawk = pkgs.buildGoModule rec {
-          pname = "hawk";
+        graycode = pkgs.buildGoModule rec {
+          pname = "graycode";
           version = "0.1.0";
 
           src = ./.;
@@ -96,7 +96,7 @@
 
           meta = with lib; {
             description = "AI coding agent that reads, writes, and runs code in your terminal";
-            homepage = "https://github.com/GrayCodeAI/hawk";
+            homepage = "https://github.com/GrayCodeAI/graycode-cli";
             license = licenses.mit;
             maintainers = [ ];
           };
@@ -104,8 +104,8 @@
       in
       {
         packages = {
-          default = hawk;
-          inherit hawk;
+          default = graycode;
+          inherit graycode;
         };
 
         devShells.default = pkgs.mkShell {
@@ -119,14 +119,14 @@
           ];
 
           shellHook = ''
-            echo "Hawk development shell"
+            echo "Graycode development shell"
             echo "Go version: $(go version)"
           '';
         };
 
         apps.default = {
           type = "app";
-          program = "${hawk}/bin/hawk";
+          program = "${graycode}/bin/graycode";
         };
       });
 }

@@ -8,8 +8,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/GrayCodeAI/hawk/internal/fsutil"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/fsutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // Named profiles from the Year 0 plan.
@@ -60,14 +60,14 @@ type Effective struct {
 	DenyGlobs    []string
 }
 
-// UserSandboxTOMLPath is ~/.hawk/sandbox.toml (or HAWK_CONFIG_DIR).
+// UserSandboxTOMLPath is ~/.graycode/sandbox.toml (or GRAYCODE_CONFIG_DIR).
 func UserSandboxTOMLPath() string {
 	return filepath.Join(storage.ConfigDir(), "sandbox.toml")
 }
 
-// ProjectSandboxTOMLPath is <project>/.hawk/sandbox.toml.
+// ProjectSandboxTOMLPath is <project>/.graycode/sandbox.toml.
 func ProjectSandboxTOMLPath(projectRoot string) string {
-	return filepath.Join(projectRoot, ".hawk", "sandbox.toml")
+	return filepath.Join(projectRoot, ".graycode", "sandbox.toml")
 }
 
 // LoadTOML reads a sandbox.toml file. Missing file returns empty config.

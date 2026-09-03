@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // Compile-time check: ContainerSandbox implements tool.ContainerExecutor.
@@ -82,7 +82,7 @@ type ContainerSandbox struct {
 	// The empty value reproduces the prior behavior.
 	runtime RuntimeConfig
 	// networkMode is the Docker network mode: "bridge" (default), "none", or
-	// "isolated" (per-container network). HAWK_CONTAINER_NETWORK env var still
+	// "isolated" (per-container network). GRAYCODE_CONTAINER_NETWORK env var still
 	// overrides when set.
 	networkMode string
 	// isolatedNetName is the per-container Docker network name when networkMode
@@ -158,7 +158,7 @@ func (c *ContainerSandbox) CredentialGate() *CredentialGate {
 
 // SetNetworkMode sets the container network mode: "bridge" (default), "none"
 // (no network), or "isolated" (per-container Docker network so concurrent
-// containers can't probe each other). The env var HAWK_CONTAINER_NETWORK still
+// containers can't probe each other). The env var GRAYCODE_CONTAINER_NETWORK still
 // overrides when set at Start time.
 func (c *ContainerSandbox) SetNetworkMode(mode string) {
 	c.mu.Lock()
@@ -222,7 +222,7 @@ func (c *ContainerSandbox) Start(ctx context.Context) error {
 	// For isolated networking, create a per-container Docker network so
 	// concurrent containers cannot reach each other.
 	if c.networkMode == "isolated" {
-		netName := "hawk-net-" + name
+		netName := "graycode-net-" + name
 		_, _ = exec.CommandContext(ctx, "docker", "network", "create", "--driver", "bridge", netName).CombinedOutput() // #nosec G204 -- fixed docker binary; netName derived from container name
 		c.isolatedNetName = netName
 	}
@@ -282,7 +282,7 @@ func (c *ContainerSandbox) SetupCredentials() error {
 
 func (c *ContainerSandbox) dockerRunArgs(name, attachDir, cacheDir string) []string {
 	// Called from Start which already holds c.mu; read networkMode without re-locking.
-	netMode := strings.TrimSpace(os.Getenv("HAWK_CONTAINER_NETWORK"))
+	netMode := strings.TrimSpace(os.Getenv("GRAYCODE_CONTAINER_NETWORK"))
 	if netMode == "" {
 		mode := c.networkMode
 		if mode != "" {
@@ -461,7 +461,7 @@ func (c *ContainerSandbox) BuildFromDockerfile(ctx context.Context, dockerfile s
 	c.mu.Unlock()
 
 	hash := sha256.Sum256([]byte(dockerfile))
-	tag := fmt.Sprintf("hawk-sandbox:%x", hash[:6])
+	tag := fmt.Sprintf("graycode-sandbox:%x", hash[:6])
 
 	dfPath := filepath.Join(storage.ProjectStateDir(c.projectDir), "Dockerfile")
 	if err := os.MkdirAll(filepath.Dir(dfPath), 0o750); err != nil {
@@ -491,7 +491,7 @@ func (c *ContainerSandbox) HotSwap(ctx context.Context) error {
 
 func (c *ContainerSandbox) containerName() string {
 	hash := sha256.Sum256([]byte(c.projectDir))
-	return fmt.Sprintf("hawk-%x", hash[:4])
+	return fmt.Sprintf("graycode-%x", hash[:4])
 }
 
 func resolveImage(projectDir string) string {
@@ -500,8 +500,8 @@ func resolveImage(projectDir string) string {
 		content, err := os.ReadFile(dfPath) // #nosec G304 -- dfPath is derived from the project's own state dir, not external input
 		if err == nil && len(content) > 0 {
 			hash := sha256.Sum256(content)
-			return fmt.Sprintf("hawk-sandbox:%x", hash[:6])
+			return fmt.Sprintf("graycode-sandbox:%x", hash[:6])
 		}
 	}
-	return defaultHawkImage()
+	return defaultGraycodeImage()
 }

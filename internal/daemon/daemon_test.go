@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 func startTestDaemon(t *testing.T, srv *Server) string {
@@ -238,7 +238,7 @@ func TestDaemon_RejectsUnknownFields(t *testing.T) {
 }
 
 func TestDaemon_Chat_WithEngine(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	factory := func(req ChatRequest) (*engine.Session, error) {
 		sess := engine.NewSession("", "test-model", "you are helpful", nil)
 		if err := sess.SetMaxTurns(1); err != nil {
@@ -315,7 +315,7 @@ func postDaemonChat(t *testing.T, addr string, request ChatRequest, accept strin
 }
 
 func TestDaemon_ChatPersistsRetrievableSessionAndRequestMetadata(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	requestedCWD := t.TempDir()
 	canonicalCWD, err := canonicalSessionCWD(requestedCWD)
 	if err != nil {
@@ -336,8 +336,8 @@ func TestDaemon_ChatPersistsRetrievableSessionAndRequestMetadata(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("POST /v1/chat status = %d, want 200", resp.StatusCode)
 	}
-	if chat.SessionID == "" || resp.Header.Get("X-Hawk-Session-ID") != chat.SessionID {
-		t.Fatalf("session ID response/header mismatch: body=%q header=%q", chat.SessionID, resp.Header.Get("X-Hawk-Session-ID"))
+	if chat.SessionID == "" || resp.Header.Get("X-Graycode-Session-ID") != chat.SessionID {
+		t.Fatalf("session ID response/header mismatch: body=%q header=%q", chat.SessionID, resp.Header.Get("X-Graycode-Session-ID"))
 	}
 
 	factoryReq := <-seen
@@ -371,7 +371,7 @@ func TestDaemon_ChatPersistsRetrievableSessionAndRequestMetadata(t *testing.T) {
 }
 
 func TestDaemon_ChatContinuationReusesDurableSession(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	requestedCWD := t.TempDir()
 	seen := make(chan ChatRequest, 2)
 	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, daemonTestSessionFactory(seen))
@@ -419,7 +419,7 @@ func TestDaemon_ChatContinuationReusesDurableSession(t *testing.T) {
 }
 
 func TestDaemon_ChatRejectsMissingContinuation(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, daemonTestSessionFactory(nil))
 	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
@@ -432,7 +432,7 @@ func TestDaemon_ChatRejectsMissingContinuation(t *testing.T) {
 }
 
 func TestDaemon_ChatDoesNotMisreportCorruptContinuationAsMissing(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	if err := os.MkdirAll(storage.SessionsDir(), 0o750); err != nil {
 		t.Fatal(err)
 	}
@@ -460,7 +460,7 @@ func TestDaemon_ChatDoesNotMisreportCorruptContinuationAsMissing(t *testing.T) {
 }
 
 func TestDaemon_ChatRejectsUnsafeSessionIDAndInvalidCWD(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, daemonTestSessionFactory(nil))
 	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
@@ -479,7 +479,7 @@ func TestDaemon_ChatRejectsUnsafeSessionIDAndInvalidCWD(t *testing.T) {
 }
 
 func TestDaemon_ChatSSEExposesRetrievableSessionID(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, daemonTestSessionFactory(nil))
 	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
@@ -490,7 +490,7 @@ func TestDaemon_ChatSSEExposesRetrievableSessionID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read SSE response: %v", err)
 	}
-	id := resp.Header.Get("X-Hawk-Session-ID")
+	id := resp.Header.Get("X-Graycode-Session-ID")
 	if resp.StatusCode != http.StatusOK || id == "" || !strings.Contains(string(body), `"session_id":"`+id+`"`) {
 		t.Fatalf("SSE status=%d id=%q body=%q", resp.StatusCode, id, body)
 	}

@@ -6,7 +6,7 @@ import (
 
 func TestNeedsSetup_AlwaysFalseForTUI(t *testing.T) {
 	if NeedsSetup() {
-		t.Error("NeedsSetup() should be false; use /config or hawk setup instead")
+		t.Error("NeedsSetup() should be false; use /config or graycode setup instead")
 	}
 }
 

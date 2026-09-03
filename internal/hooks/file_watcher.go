@@ -177,7 +177,7 @@ func relPath(abs string) string {
 }
 
 func shouldIgnore(path string) bool {
-	ignored := []string{".git", ".hawk/specs", "node_modules", ".DS_Store", "vendor"}
+	ignored := []string{".git", ".graycode/specs", "node_modules", ".DS_Store", "vendor"}
 	for _, p := range ignored {
 		if strings.Contains(path, string(os.PathSeparator)+p+string(os.PathSeparator)) ||
 			strings.HasPrefix(path, p+string(os.PathSeparator)) {

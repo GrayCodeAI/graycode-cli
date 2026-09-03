@@ -7,9 +7,9 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 )
 
 func chatModelForConfigPasteTest() chatModel {
@@ -37,12 +37,12 @@ func TestConfigGatewayRows_UsesPanelCacheUntilInvalidated(t *testing.T) {
 
 func TestConfigGatewayRowsKeepRegistryOrderAfterKeySaved(t *testing.T) {
 	isolateCredentialHome(t)
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	m := chatModel{}
@@ -50,7 +50,7 @@ func TestConfigGatewayRowsKeepRegistryOrderAfterKeySaved(t *testing.T) {
 	if err := store.Set(t.Context(), gateway.AccountForEnv("CONCENTRATE_API_KEY"), "test-key-1234567890"); err != nil {
 		t.Fatal(err)
 	}
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	after := m.loadConfigGatewayRows()
 
 	if len(after) != len(before) {
@@ -65,12 +65,12 @@ func TestConfigGatewayRowsKeepRegistryOrderAfterKeySaved(t *testing.T) {
 
 func TestConfigGatewaysView_RequiresKeyForModelCounts(t *testing.T) {
 	isolateCredentialHome(t)
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	m := chatModel{configTab: configTabGateways}
@@ -87,12 +87,12 @@ func TestConfigGatewaysView_RequiresKeyForModelCounts(t *testing.T) {
 }
 
 func TestConfigGatewaysView_ShowsSaveOrProbeNotice(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	m := chatModel{
@@ -109,17 +109,17 @@ func TestConfigGatewaysView_ShowsSaveOrProbeNotice(t *testing.T) {
 }
 
 func TestConfigGatewayRefreshTargetIndex_UsesSelectedRow(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 	if err := store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatalf("store.Set: %v", err)
 	}
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 
 	sess := engine.NewSession("", "", "", nil)
 	sess.SetProvider("openrouter")
@@ -138,17 +138,17 @@ func TestConfigGatewayRefreshTargetIndex_UsesSelectedRow(t *testing.T) {
 }
 
 func TestConfigGatewayRefreshTargetIndex_UsesFocusOnRefreshRow(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 	if err := store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatalf("store.Set: %v", err)
 	}
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 
 	rows := []configGatewayRow{
 		{ID: "openai", DisplayName: "OpenAI", HasKey: false},
@@ -162,17 +162,17 @@ func TestConfigGatewayRefreshTargetIndex_UsesFocusOnRefreshRow(t *testing.T) {
 }
 
 func TestFocusConfigActiveGateway_SelectsActiveRow(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 	if err := store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatalf("store.Set: %v", err)
 	}
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 
 	sess := engine.NewSession("", "", "", nil)
 	sess.SetProvider("openrouter")
@@ -196,19 +196,19 @@ func TestFocusConfigActiveGateway_SelectsActiveRow(t *testing.T) {
 }
 
 func TestHandleConfigGatewaysSelect_TokenPlanNoKeyShowsRegion(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	m := chatModel{configTab: configTabGateways}
 	rows := m.configGatewayRows()
 	idx := -1
 	for i, row := range rows {
-		if row.ID == hawkconfig.ProviderXiaomiTokenPlan {
+		if row.ID == graycodeconfig.ProviderXiaomiTokenPlan {
 			idx = i
 			break
 		}
@@ -221,18 +221,18 @@ func TestHandleConfigGatewaysSelect_TokenPlanNoKeyShowsRegion(t *testing.T) {
 	if next.configEntry != configEntryXiaomiRegion {
 		t.Fatalf("entry = %q, want xiaomi region picker", next.configEntry)
 	}
-	if next.configProvider != hawkconfig.ProviderXiaomiTokenPlan {
+	if next.configProvider != graycodeconfig.ProviderXiaomiTokenPlan {
 		t.Fatalf("provider = %q", next.configProvider)
 	}
 }
 
 func TestHandleConfigGatewaysSelect_NoKeyStartsPaste(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	m := chatModelForConfigPasteTest()
@@ -243,7 +243,7 @@ func TestHandleConfigGatewaysSelect_NoKeyStartsPaste(t *testing.T) {
 	}
 	sel := 0
 	for i, row := range gwRows {
-		if row.ID == hawkconfig.ProviderXiaomiTokenPlan {
+		if row.ID == graycodeconfig.ProviderXiaomiTokenPlan {
 			continue
 		}
 		sel = i

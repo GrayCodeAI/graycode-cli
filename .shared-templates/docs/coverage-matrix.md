@@ -8,7 +8,7 @@ repo's threshold, update both the CI file and this table in the same PR.**
 
 | Repo | Threshold | Mechanism |
 |---|---|---|
-| `hawk` | 60% | inline `bc` check in `ci.yml` |
+| `graycode` | 60% | inline `bc` check in `ci.yml` |
 | `eyrie` | 60% | inline `bc` check in `ci.yml` |
 | `harrier` | 49% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
 | `shrike` | 38% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |

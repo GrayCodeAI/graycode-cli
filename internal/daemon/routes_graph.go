@@ -9,8 +9,8 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/GrayCodeAI/hawk/internal/executiongraph"
-	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/executiongraph"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
 )
 
 const (
@@ -26,7 +26,7 @@ type GraphRequest struct {
 	GeneratedAt        time.Time
 }
 
-// GraphFactory projects one persisted session into Hawk's portable graph.
+// GraphFactory projects one persisted session into Graycode's portable graph.
 type GraphFactory func(context.Context, GraphRequest) (executiongraph.Export, error)
 
 // handleGetSessionGraph handles GET /v1/sessions/{id}/graph.

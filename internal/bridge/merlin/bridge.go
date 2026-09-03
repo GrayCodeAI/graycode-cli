@@ -8,14 +8,14 @@ import (
 	graphcontracts "github.com/GrayCodeAI/eagle/graph"
 	eagletypes "github.com/GrayCodeAI/eagle/types"
 	verifycontracts "github.com/GrayCodeAI/eagle/verify"
-	"github.com/GrayCodeAI/hawk/internal/graphjournal"
+	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
 	merlinLib "github.com/GrayCodeAI/merlin"
 	merlingraph "github.com/GrayCodeAI/merlin/graph"
 	"github.com/GrayCodeAI/merlin/qualitygraph"
 	merlinverify "github.com/GrayCodeAI/merlin/verify"
 )
 
-// Bridge connects hawk to the merlin site-auditing library.
+// Bridge connects graycode to the merlin site-auditing library.
 // If initialization fails, all operations degrade gracefully and return
 // empty results rather than errors.
 type Bridge struct {
@@ -24,7 +24,7 @@ type Bridge struct {
 	ready   bool
 }
 
-// GraphObservation identifies an opt-in Hawk quality-graph journal record.
+// GraphObservation identifies an opt-in Graycode quality-graph journal record.
 type GraphObservation struct {
 	SessionID   string
 	ToolCallID  string
@@ -137,7 +137,7 @@ func (b *Bridge) RunContractsObserved(
 	return toEagleReport(contractReport), nil
 }
 
-// The following helpers convert Merlin's vendored contract types into Hawk's
+// The following helpers convert Merlin's vendored contract types into Graycode's
 // eagle/* contract types (and the reverse for scope). The definitions are
 // byte-identical, so conversion is a field-by-field copy at the boundary.
 

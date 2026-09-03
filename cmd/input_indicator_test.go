@@ -3,7 +3,7 @@ package cmd
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature/shellmode"
 )
 
 func TestInputIndicator_Classify(t *testing.T) {

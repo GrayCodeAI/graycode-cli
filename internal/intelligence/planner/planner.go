@@ -1,6 +1,6 @@
 // Package planner implements structured planning that generates artifacts before
 // coding begins. It produces a Plan containing tasks, design notes, and risk
-// analysis, and can persist/load plans as JSON files under Hawk user state.
+// analysis, and can persist/load plans as JSON files under Graycode user state.
 package planner
 
 import (
@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // Plan represents a structured development plan.
@@ -40,7 +40,7 @@ type PlanPrompt struct {
 }
 
 // Generate creates a PlanPrompt from a feature description and repository context.
-// This is a template -- the actual LLM call happens in hawk's engine.
+// This is a template -- the actual LLM call happens in graycode's engine.
 func Generate(description string, repoContext string) *PlanPrompt {
 	system := `You are a senior software architect. Given a feature description and repository context, produce a structured development plan in JSON format.
 
@@ -105,7 +105,7 @@ func ParsePlan(response string) (*Plan, error) {
 	return &plan, nil
 }
 
-// Save writes the plan to Hawk project state.
+// Save writes the plan to Graycode project state.
 // Returns the path of the saved file.
 func Save(dir string, plan *Plan) (string, error) {
 	plansDir := storage.PlansDir(dir)

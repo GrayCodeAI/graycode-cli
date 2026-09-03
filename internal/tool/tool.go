@@ -11,17 +11,17 @@ import (
 
 	agentcontracts "github.com/GrayCodeAI/eagle/agent"
 
-	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
-	"github.com/GrayCodeAI/hawk/internal/lint"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
+	"github.com/GrayCodeAI/graycode-cli/internal/lint"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // AgentSpawnFn is the typed subagent entrypoint (Year 0 PACK-02).
 // Implementations must honor SpawnRequest fields after Normalize.
 type AgentSpawnFn func(ctx context.Context, req agentcontracts.SpawnRequest) (agentcontracts.SpawnResult, error)
 
-// Tool is the interface every hawk tool implements.
+// Tool is the interface every graycode tool implements.
 type Tool interface {
 	Name() string
 	Description() string
@@ -348,7 +348,7 @@ func (r *Registry) Filter(allow []string) *Registry {
 	return NewRegistry(filtered...)
 }
 
-// EyrieTools converts model-visible tools to Hawk runtime tool definitions.
+// EyrieTools converts model-visible tools to Graycode runtime tool definitions.
 // When lazy model surface is enabled, only promoted/essential tools are listed.
 func (r *Registry) EyrieTools() []types.EyrieTool {
 	r.mu.RLock()

@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // SelfHealer implements a wolverine-inspired self-healing execution loop.
@@ -458,7 +458,7 @@ func (sh *SelfHealer) RunScript(ctx context.Context, path string) (stdout, stder
 func (sh *SelfHealer) runCommand(ctx context.Context, command string) (stdout, stderr string, exitCode int, err error) {
 	// Route model-generated shell through the same safety stack the Bash
 	// tool enforces. Without this, a jailbroken model could read
-	// ~/.hawk/provider.json, fork-bomb, or rm -rf from a "fix" attempt.
+	// ~/.graycode/provider.json, fork-bomb, or rm -rf from a "fix" attempt.
 	if reason := tool.CommandReferencesSensitivePath(command); reason != "" {
 		return "", "", -1, fmt.Errorf("self-heal: command references sensitive path (%s): %s", reason, command)
 	}

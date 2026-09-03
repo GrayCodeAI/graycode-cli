@@ -59,7 +59,7 @@ done
 if [ -f "$SUBPKG/aliases.go" ]; then
   # Remove the import of engine
   sed -i '' '/^import/d' "$SUBPKG/aliases.go"
-  sed -i '' '/^[[:space:]]*"github.com\/GrayCodeAI\/hawk\/internal\/engine"/d' "$SUBPKG/aliases.go"
+  sed -i '' '/^[[:space:]]*"github.com\/GrayCodeAI\/graycode\/internal\/engine"/d' "$SUBPKG/aliases.go"
   sed -i '' '/^[[:space:]]*)/d' "$SUBPKG/aliases.go"
   # Update type aliases: engine.Xxx -> Xxx
   sed -i '' 's/= engine\./=/g' "$SUBPKG/aliases.go"
@@ -78,7 +78,7 @@ REEXPORT="engine/${SUBPKG}_reexports.go"
   echo "// See docs/plans/engine-refactor-plan.md."
   echo "package engine"
   echo ""
-  echo "import \"github.com/GrayCodeAI/hawk/internal/engine/$SUBPKG\""
+  echo "import \"github.com/GrayCodeAI/graycode-cli/internal/engine/$SUBPKG\""
   echo ""
   # Extract type aliases from the original aliases.go - but with names that match the engine-package naming
   # For each type alias "type Foo = engine.BarFoo", create "type BarFoo = subpkg.Foo"

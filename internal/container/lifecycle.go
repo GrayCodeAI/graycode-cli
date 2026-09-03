@@ -1,4 +1,4 @@
-// Package container provides Docker container lifecycle management for hawk's
+// Package container provides Docker container lifecycle management for graycode's
 // sandboxed execution environments. It wraps the Docker CLI to start, stop,
 // inspect, and rebuild containers.
 package container

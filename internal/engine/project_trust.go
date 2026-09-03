@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/hawk/internal/flags"
-	"github.com/GrayCodeAI/hawk/internal/trust"
+	"github.com/GrayCodeAI/graycode-cli/internal/flags"
+	"github.com/GrayCodeAI/graycode-cli/internal/trust"
 )
 
 // ProjectTrustStatus summarizes folder-trust for the working directory.
@@ -51,7 +51,7 @@ func TrustProject(path, reason string) error {
 		return err
 	}
 	if reason == "" {
-		reason = "user approved via hawk"
+		reason = "user approved via graycode"
 	}
 	return store.Trust(path, reason)
 }
@@ -91,5 +91,5 @@ func (t ProjectTrustStatus) Detail() string {
 	if t.Trusted {
 		return fmt.Sprintf("Project trusted: %s\nProject hooks, MCP, and plugins may load.", t.Path)
 	}
-	return fmt.Sprintf("Project NOT trusted: %s\nProject-scoped hooks/MCP/plugins are blocked (RCE mitigation).\nRun: /trust add   or   hawk trust add", t.Path)
+	return fmt.Sprintf("Project NOT trusted: %s\nProject-scoped hooks/MCP/plugins are blocked (RCE mitigation).\nRun: /trust add   or   graycode trust add", t.Path)
 }

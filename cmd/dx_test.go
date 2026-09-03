@@ -7,15 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 func TestDoctorOutputContainsSections(t *testing.T) {
 	preserveCLICompilerVersionState(t)
 	version = "test-dx-version"
-	settings := hawkconfig.Settings{
+	settings := graycodeconfig.Settings{
 		Provider: "openai",
 		Model:    "gpt-4o",
 	}
@@ -23,7 +23,7 @@ func TestDoctorOutputContainsSections(t *testing.T) {
 	out := doctorOutput(settings)
 
 	sections := []string{
-		"Hawk Doctor",
+		"Graycode Doctor",
 		"Go version:",
 		"OS:",
 		"Arch:",
@@ -50,10 +50,10 @@ func TestDoctorOutputContainsSections(t *testing.T) {
 func TestDoctorOutputWithMCPServers(t *testing.T) {
 	preserveCLICompilerVersionState(t)
 	version = "test-dx-version"
-	settings := hawkconfig.Settings{
+	settings := graycodeconfig.Settings{
 		Provider: "anthropic",
 		Model:    "claude-sonnet-4-20250514",
-		MCPServers: []hawkconfig.MCPServerConfig{
+		MCPServers: []graycodeconfig.MCPServerConfig{
 			{Name: "test-mcp", Command: "test-cmd"},
 		},
 	}
@@ -134,7 +134,7 @@ func TestExportMarkdownCreatesFile(t *testing.T) {
 	defer os.Chdir(origDir)
 
 	messages := []displayMsg{
-		{role: "user", content: "Hello hawk"},
+		{role: "user", content: "Hello graycode"},
 		{role: "assistant", content: "Hello! How can I help?"},
 		{role: "system", content: "System message here"},
 		{role: "welcome", content: "Should be skipped"},
@@ -155,10 +155,10 @@ func TestExportMarkdownCreatesFile(t *testing.T) {
 	}
 
 	content := string(data)
-	if !strings.Contains(content, "# Hawk Session: test-export-id") {
+	if !strings.Contains(content, "# Graycode Session: test-export-id") {
 		t.Errorf("export missing session header")
 	}
-	if !strings.Contains(content, "Hello hawk") {
+	if !strings.Contains(content, "Hello graycode") {
 		t.Errorf("export missing user message")
 	}
 	if !strings.Contains(content, "Hello! How can I help?") {

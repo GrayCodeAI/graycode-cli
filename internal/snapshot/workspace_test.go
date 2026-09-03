@@ -602,11 +602,11 @@ func TestRestore_PreservesGitDir(t *testing.T) {
 
 func TestNewSnapshotStore_DefaultDir(t *testing.T) {
 	stateDir := filepath.Join(t.TempDir(), "state")
-	t.Setenv("HAWK_STATE_DIR", stateDir)
+	t.Setenv("GRAYCODE_STATE_DIR", stateDir)
 
 	store := NewSnapshotStore("")
 	// L2: the default path is now user-state-relative so
-	// state stops leaking into <cwd>/.hawk/ when hawk is run from
+	// state stops leaking into <cwd>/.graycode/ when graycode is run from
 	// inside a Go project root.
 	expected := filepath.Join(stateDir, "snapshots")
 	if store.Dir != expected {

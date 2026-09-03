@@ -5,14 +5,14 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // Env vars exported to plugin hooks and child processes (Year 0 PACK-04).
 const (
-	EnvPluginRoot = "HAWK_PLUGIN_ROOT"
-	EnvPluginData = "HAWK_PLUGIN_DATA"
-	EnvPluginName = "HAWK_PLUGIN_NAME"
+	EnvPluginRoot = "GRAYCODE_PLUGIN_ROOT"
+	EnvPluginData = "GRAYCODE_PLUGIN_DATA"
+	EnvPluginName = "GRAYCODE_PLUGIN_NAME"
 )
 
 // PluginDataDir returns the durable data directory for a plugin.
@@ -37,7 +37,7 @@ func pluginHookEnv(pluginRoot, pluginName string, data map[string]interface{}) [
 		EnvPluginName+"="+pluginName,
 	)
 	for k, v := range data {
-		env = append(env, fmt.Sprintf("HAWK_%s=%v", k, v))
+		env = append(env, fmt.Sprintf("GRAYCODE_%s=%v", k, v))
 	}
 	return env
 }

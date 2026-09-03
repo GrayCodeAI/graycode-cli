@@ -12,20 +12,20 @@ import (
 
 	graphcontracts "github.com/GrayCodeAI/eagle/graph"
 	policycontracts "github.com/GrayCodeAI/eagle/policy"
-	"github.com/GrayCodeAI/hawk/internal/executiongraph"
-	"github.com/GrayCodeAI/hawk/internal/fsutil"
-	"github.com/GrayCodeAI/hawk/internal/graphjournal"
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/taskruntime"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/executiongraph"
+	"github.com/GrayCodeAI/graycode-cli/internal/fsutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/taskruntime"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 	"github.com/spf13/cobra"
 )
 
 func newExecutionGraphCmd() *cobra.Command {
 	graphCmd := &cobra.Command{
 		Use:   "graph",
-		Short: "Merlin Hawk's portable execution graph",
-		Long: `Project Hawk-owned sessions, task requests, structured tasks, runtime tasks,
+		Short: "Merlin Graycode's portable execution graph",
+		Long: `Project Graycode-owned sessions, task requests, structured tasks, runtime tasks,
 tool calls, policy observations, verification results, and explicit Swift
 checkpoint links into the shared graph contract.
 
@@ -39,7 +39,7 @@ truth for scheduling, tools, policy, verification, persistence, and tracing.`,
 	var missionDir string
 	exportCmd := &cobra.Command{
 		Use:   "export [session-id]",
-		Short: "Export a Hawk session or mission as graph JSON",
+		Short: "Export a Graycode session or mission as graph JSON",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var export executiongraph.Export
@@ -320,12 +320,12 @@ func loadRuntimeGraphObservations(
 	for _, entry := range entries {
 		subject := graphcontracts.Ref{
 			Kind: graphcontracts.NodeExecution,
-			ID:   "hawk/session/" + saved.ID,
+			ID:   "graycode/session/" + saved.ID,
 		}
 		if _, ok := toolCallIDs[entry.ToolCallID]; ok && entry.ToolCallID != "" {
 			subject = graphcontracts.Ref{
 				Kind: graphcontracts.NodeExecution,
-				ID:   "hawk/tool-call/" + saved.ID + "/" + entry.ToolCallID,
+				ID:   "graycode/tool-call/" + saved.ID + "/" + entry.ToolCallID,
 			}
 		}
 		if entry.Policy != nil {

@@ -1,9 +1,9 @@
-// Package gateway is Hawk's single boundary to Eyrie's provider runtime. It is
-// the only package that imports Eyrie; everything else speaks the hawk-owned
+// Package gateway is Graycode's single boundary to Eyrie's provider runtime. It is
+// the only package that imports Eyrie; everything else speaks the graycode-owned
 // Provider interface and the internal/types DTOs.
 //
-// hawk = product face (UX/agent/sessions) · eyrie = provider engine
-// One-way dependency only: eyrie never imports hawk. See README ecosystems.
+// graycode = product face (UX/agent/sessions) · eyrie = provider engine
+// One-way dependency only: eyrie never imports graycode. See README ecosystems.
 package gateway
 
 import (
@@ -13,12 +13,12 @@ import (
 
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/eyrie/llm"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
-// Provider is Hawk's hawk-owned view of the Eyrie engine: a composition of the
+// Provider is Graycode's graycode-owned view of the Eyrie engine: a composition of the
 // role interfaces below. It wraps the concrete *eyrieengine.Engine (whose fields
-// are unexported and therefore not directly mockable) so Hawk tests can inject a
+// are unexported and therefore not directly mockable) so Graycode tests can inject a
 // stub. Splitting into roles lets callers and stubs depend only on the facet they
 // use (e.g. the ChatClient path needs only Generator); Provider stays the full
 // surface so nothing that depends on it breaks.
@@ -315,10 +315,10 @@ func (p *engineProvider) CompactNative(ctx context.Context, req eyrieengine.Nati
 	return p.eng.CompactNative(ctx, req)
 }
 
-// translateProvider bridges the hawk-owned ChatClient port to the Generator and
+// translateProvider bridges the graycode-owned ChatClient port to the Generator and
 // NativeCompactor roles. It needs no other Provider facet. The type conversions
 // here (internal/types <-> eyrieengine.*) are the single, centralized
-// translation point — Hawk's conversation DTOs never leak past it.
+// translation point — Graycode's conversation DTOs never leak past it.
 type translateProvider struct {
 	generator Generator
 	compactor NativeCompactor
@@ -373,7 +373,7 @@ func (c *translateProvider) StreamChatContinue(ctx context.Context, messages []t
 	return llm.NewStreamResult(events, "", closeFn), nil
 }
 
-// ManagesResilience tells Hawk not to add provider retry, continuation, or
+// ManagesResilience tells Graycode not to add provider retry, continuation, or
 // protocol-recovery layers around Eyrie's routed transport.
 func (c *translateProvider) ManagesResilience() bool { return true }
 
@@ -440,7 +440,7 @@ func toEngineRequest(messages []types.EyrieMessage, opts types.ChatOptions, cont
 	return request
 }
 
-// ToEngineMessages returns the messages unchanged: hawk, the engine, and the
+// ToEngineMessages returns the messages unchanged: graycode, the engine, and the
 // client all speak the canonical contract message type, so no per-field
 // conversion is needed. It is exposed for the session layer (e.g. native
 // compaction), which translates without reaching into the raw engine.

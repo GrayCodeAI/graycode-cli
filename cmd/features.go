@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/feature"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature"
 	"github.com/spf13/cobra"
 )
 
@@ -20,14 +20,14 @@ capabilities without code changes or restarts (some changes may require
 a daemon restart).
 
 Override a flag via environment variable:
-    HAWK_FEATURE_<FLAG_NAME>=1 hawk daemon start
+    GRAYCODE_FEATURE_<FLAG_NAME>=1 graycode daemon start
 
 Show a specific flag:
-    hawk features get <flag-name>`,
+    graycode features get <flag-name>`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 && args[0] == "get" {
 			if len(args) < 2 {
-				return fmt.Errorf("usage: hawk features get <flag-name>")
+				return fmt.Errorf("usage: graycode features get <flag-name>")
 			}
 			f, ok := feature.Info(args[1])
 			if !ok {
@@ -37,7 +37,7 @@ Show a specific flag:
 			fmt.Printf("Default:     %v\n", f.DefaultValue())
 			fmt.Printf("Current:     %v\n", feature.EnabledByName(args[1]))
 			fmt.Printf("Description: %s\n", f.Description())
-			envVar := "HAWK_FEATURE_" + strings.ReplaceAll(strings.ToUpper(args[1]), "-", "_")
+			envVar := "GRAYCODE_FEATURE_" + strings.ReplaceAll(strings.ToUpper(args[1]), "-", "_")
 			fmt.Printf("Env var:     %s\n", envVar)
 			return nil
 		}
@@ -62,7 +62,7 @@ Show a specific flag:
 			if f != nil {
 				fmt.Printf("    default: %v\n", f.DefaultValue())
 				fmt.Printf("    description: %s\n", f.Description())
-				envVar := "HAWK_FEATURE_" + strings.ReplaceAll(strings.ToUpper(name), "-", "_")
+				envVar := "GRAYCODE_FEATURE_" + strings.ReplaceAll(strings.ToUpper(name), "-", "_")
 				fmt.Printf("    env: %s\n", envVar)
 			}
 			fmt.Println()

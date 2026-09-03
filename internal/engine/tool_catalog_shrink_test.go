@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 func bloatedTools() []types.EyrieTool {
@@ -33,7 +33,7 @@ func bloatedTools() []types.EyrieTool {
 }
 
 func TestShrinkEyrieToolsDisabledByDefault(t *testing.T) {
-	t.Setenv("HAWK_TOOL_SHRINK", "")
+	t.Setenv("GRAYCODE_TOOL_SHRINK", "")
 	in := bloatedTools()
 	out := shrinkEyrieTools(in)
 	if len(out) != len(in) || out[0].Description != in[0].Description {
@@ -42,8 +42,8 @@ func TestShrinkEyrieToolsDisabledByDefault(t *testing.T) {
 }
 
 func TestShrinkEyrieToolsEnabledReducesAndPreservesNames(t *testing.T) {
-	t.Setenv("HAWK_TOOL_SHRINK", "1")
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_TOOL_SHRINK", "1")
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	in := bloatedTools()
 	out := shrinkEyrieTools(in)
 	if len(out) != 2 {
@@ -65,8 +65,8 @@ func TestShrinkEyrieToolsEnabledReducesAndPreservesNames(t *testing.T) {
 }
 
 func TestBuildOptionsAppliesShrink(t *testing.T) {
-	t.Setenv("HAWK_TOOL_SHRINK", "1")
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_TOOL_SHRINK", "1")
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	c := &ChatService{}
 	opts := c.BuildOptions("sys", "m", 100, bloatedTools())
 	if len(opts.Tools) != 2 || opts.Tools[0].Name != "read_file" {
@@ -79,8 +79,8 @@ func TestBuildOptionsAppliesShrink(t *testing.T) {
 
 func TestOriginalCatalogPersistedForRecovery(t *testing.T) {
 	stateDir := t.TempDir()
-	t.Setenv("HAWK_TOOL_SHRINK", "1")
-	t.Setenv("HAWK_STATE_DIR", stateDir)
+	t.Setenv("GRAYCODE_TOOL_SHRINK", "1")
+	t.Setenv("GRAYCODE_STATE_DIR", stateDir)
 	in := bloatedTools()
 	_ = shrinkEyrieTools(in)
 	matches, err := filepath.Glob(stateDir + "/tool-catalog-originals/*.json")

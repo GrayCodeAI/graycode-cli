@@ -73,7 +73,7 @@ type PermissionFact struct {
 }
 
 // ApprovalAskedFact records that a gated action reached the approval gate.
-// Hawk fields are the primary model (turn/step/tool/category/question); DSH
+// Graycode fields are the primary model (turn/step/tool/category/question); DSH
 // parity fields (ID, CallID, Reason) are optional extensions for cross-platform log reading.
 type ApprovalAskedFact struct {
 	Turn     int    `json:"turn,omitempty"`
@@ -87,7 +87,7 @@ type ApprovalAskedFact struct {
 }
 
 // ApprovalDecidedFact records the outcome of an approval gate decision.
-// Hawk fields are the primary model (turn/step/tool/category/allowed/message);
+// Graycode fields are the primary model (turn/step/tool/category/allowed/message);
 // DSH parity fields (ID, Outcome) are optional extensions.
 type ApprovalDecidedFact struct {
 	Turn     int    `json:"turn,omitempty"`
@@ -102,7 +102,7 @@ type ApprovalDecidedFact struct {
 }
 
 // ApprovalPolicyFact records whether a category is covered by the active policy.
-// DSH parity: PresetName and Source fields added alongside Hawk's Category/Covered.
+// DSH parity: PresetName and Source fields added alongside Graycode's Category/Covered.
 type ApprovalPolicyFact struct {
 	Category string `json:"category,omitempty"`
 	Covered  bool   `json:"covered"`

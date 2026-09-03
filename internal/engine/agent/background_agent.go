@@ -8,7 +8,7 @@ import (
 
 	agentcontracts "github.com/GrayCodeAI/eagle/agent"
 
-	"github.com/GrayCodeAI/hawk/internal/taskruntime"
+	"github.com/GrayCodeAI/graycode-cli/internal/taskruntime"
 )
 
 // BackgroundAgentPool manages async sub-agents that run in the background.

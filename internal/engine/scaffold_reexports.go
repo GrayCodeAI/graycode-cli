@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/engine/scaffold"
+import "github.com/GrayCodeAI/graycode-cli/internal/engine/scaffold"
 
 type (
 	Template         = scaffold.Template

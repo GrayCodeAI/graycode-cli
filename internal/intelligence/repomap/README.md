@@ -1,6 +1,6 @@
 # `internal/intelligence/repomap/`
 
-> Deep code-analysis engine for hawk: language-aware symbol extraction,
+> Deep code-analysis engine for graycode: language-aware symbol extraction,
 > static analysis, search, quality signals, API scanning, and incremental
 > indexing. Distinct from `internal/context/repomap`, which is the narrow
 > prompt-injection shim used by the context layer.
@@ -19,7 +19,7 @@ parsed-symbol substrate.
 
 The package is stdlib-only at its core (`go/parser`, `go/ast`, `go/token`,
 `encoding/*`). The only third-party dependency is `github.com/fsnotify
-/fsnotify` for file watching; hawk's `internal/scoring` and
+/fsnotify` for file watching; graycode's `internal/scoring` and
 `internal/ui/icons` are pulled in where they are used. Tree-sitter is
 deliberately not required: Go is parsed with `go/ast` and other languages
 are handled by an enhanced regex extractor with scope tracking.
@@ -199,7 +199,7 @@ are:
   is consulted by `parseFileSymbols` in `repomap.go` and is cleared on
   process exit.
 - **Persistent incremental cache** (`incremental_map.go`): JSON file at
-  `<cacheDir>/repomap-cache.json` (typically `.hawk/repomap-cache.json`)
+  `<cacheDir>/repomap-cache.json` (typically `.graycode/repomap-cache.json`)
   keyed by SHA-256 of file content. `IncrementalReindex` diffs the
   project tree against the cached hash set and re-parses only changed
   files.
@@ -271,7 +271,7 @@ are:
 
 `internal/context/repomap` is a much narrower package - essentially just
 `RepoMap(root, budget) (string, error)`. It is the prompt-injection shim
-that hawk's context layer calls when it needs a budgeted overview for the
+that graycode's context layer calls when it needs a budgeted overview for the
 system prompt. It does its own AST parsing, PageRank pass, and rendering
 and shares no code with this package beyond the name.
 

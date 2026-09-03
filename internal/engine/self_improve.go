@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // maxSelfImproveEntries caps the persisted lesson store so a long-lived
@@ -157,7 +157,7 @@ func (si *SelfImprover) save() error {
 // LearnPrompt generates a prompt that asks a model to extract a lesson from a
 // failed interaction. It is the canonical instruction block used by the
 // engine's Reflector (via buildReflectionPrompt) and surfaced by the
-// `hawk learn` CLI. The response format matches parseReflectionEntry.
+// `graycode learn` CLI. The response format matches parseReflectionEntry.
 func LearnPrompt(context string) string {
 	prompt := "A task just failed or produced a suboptimal result. Extract a lesson.\n\n"
 	if context != "" {

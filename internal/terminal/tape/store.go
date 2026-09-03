@@ -1,4 +1,4 @@
-// Package tape: hawk-native tape status + commit checkpoint (not an fx
+// Package tape: graycode-native tape status + commit checkpoint (not an fx
 // feature — fx exposes no `tape status`/`tape commit`). Status summarizes a
 // tape's header, frame mix, and footprint; commit copies a validated tape into
 // a named immutable location with a content hash so a session can be recalled
@@ -90,14 +90,14 @@ type commitMeta struct {
 
 // DefaultTapesDir returns where committed tapes are stored by default.
 func DefaultTapesDir() string {
-	if d := os.Getenv("HAWK_TAPES_DIR"); d != "" {
+	if d := os.Getenv("GRAYCODE_TAPES_DIR"); d != "" {
 		return d
 	}
 	base, err := os.UserConfigDir()
 	if err != nil {
 		base = "."
 	}
-	return filepath.Join(base, "hawk", "tapes")
+	return filepath.Join(base, "graycode", "tapes")
 }
 
 // ValidCommitName reports whether name is a safe tape commit filename.

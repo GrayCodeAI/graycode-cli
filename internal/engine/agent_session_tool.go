@@ -9,14 +9,14 @@ import (
 
 	agentcontracts "github.com/GrayCodeAI/eagle/agent"
 
-	engagent "github.com/GrayCodeAI/hawk/internal/engine/agent"
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
-	"github.com/GrayCodeAI/hawk/internal/gitworktree"
-	"github.com/GrayCodeAI/hawk/internal/hooks"
-	"github.com/GrayCodeAI/hawk/internal/prompts"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	engagent "github.com/GrayCodeAI/graycode-cli/internal/engine/agent"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/gitworktree"
+	"github.com/GrayCodeAI/graycode-cli/internal/hooks"
+	"github.com/GrayCodeAI/graycode-cli/internal/prompts"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 // WireAgentTool sets up typed sub-agent spawning via SpawnController.
@@ -55,7 +55,7 @@ func (s *Session) spawnSubAgentRequest(ctx context.Context, req agentcontracts.S
 			Agent:         string(mode),
 			Depth:         depth,
 			Mode:          "one-shot",
-			Provider:      "hawk",
+			Provider:      "graycode",
 			Label:         truncateSummary(norm.Prompt, 200),
 			AgentProvider: s.ChatLLM().Provider(),
 			AgentModel:    s.ChatLLM().Model(),

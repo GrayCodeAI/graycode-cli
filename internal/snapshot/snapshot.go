@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // Tracker maintains a shadow git repository that records every file change
@@ -38,9 +38,9 @@ type FileDiff struct {
 }
 
 // New creates a Tracker for the given project directory.
-// The shadow git repository lives under Hawk's user state snapshots directory
-// rather than under projectDir, so that running hawk from inside a Go project
-// root no longer creates a nested <cwd>/cmd/.hawk/ tree at runtime.
+// The shadow git repository lives under Graycode's user state snapshots directory
+// rather than under projectDir, so that running graycode from inside a Go project
+// root no longer creates a nested <cwd>/cmd/.graycode/ tree at runtime.
 func New(projectDir string) *Tracker {
 	return &Tracker{
 		projectDir: projectDir,
@@ -66,10 +66,10 @@ func (t *Tracker) Init() error {
 	if err := t.gitWork("init"); err != nil {
 		return err
 	}
-	if err := t.gitWork("config", "user.email", "hawk@snapshot"); err != nil {
+	if err := t.gitWork("config", "user.email", "graycode@snapshot"); err != nil {
 		return fmt.Errorf("config email: %w", err)
 	}
-	if err := t.gitWork("config", "user.name", "hawk-snapshot"); err != nil {
+	if err := t.gitWork("config", "user.name", "graycode-snapshot"); err != nil {
 		return fmt.Errorf("config name: %w", err)
 	}
 	if err := t.gitWork("config", "commit.gpgsign", "false"); err != nil {

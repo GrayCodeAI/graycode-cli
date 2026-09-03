@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 func TestBrailleSpinner_Tick(t *testing.T) {
@@ -29,7 +29,7 @@ func TestBrailleSpinner_Tick(t *testing.T) {
 
 func TestBrailleSpinner_AllStyles(t *testing.T) {
 	styles := []SpinnerStyle{
-		SpinnerBraille, SpinnerBrailleWave, SpinnerHawk, SpinnerDNA,
+		SpinnerBraille, SpinnerBrailleWave, SpinnerGraycode, SpinnerDNA,
 		SpinnerScan, SpinnerPulse, SpinnerSnake, SpinnerOrbit,
 		SpinnerWing, SpinnerTalons,
 	}
@@ -50,14 +50,14 @@ func TestBrailleSpinner_Random(t *testing.T) {
 	}
 }
 
-func TestHawkSpinner_Frames(t *testing.T) {
-	if len(hawkSpinnerGlyphs) != 4 {
-		t.Fatalf("expected 4 compass glyphs, got %d", len(hawkSpinnerGlyphs))
+func TestGraycodeSpinner_Frames(t *testing.T) {
+	if len(graycodeSpinnerGlyphs) != 4 {
+		t.Fatalf("expected 4 compass glyphs, got %d", len(graycodeSpinnerGlyphs))
 	}
-	if hawkSpinnerGlyphs[0] != "◐" {
-		t.Fatalf("expected first compass frame ◐, got %q", hawkSpinnerGlyphs[0])
+	if graycodeSpinnerGlyphs[0] != "◐" {
+		t.Fatalf("expected first compass frame ◐, got %q", graycodeSpinnerGlyphs[0])
 	}
-	s := NewBrailleSpinner(SpinnerHawk, "Working")
+	s := NewBrailleSpinner(SpinnerGraycode, "Working")
 	f0 := s.Frame()
 	if !strings.Contains(f0, "◐") {
 		t.Fatalf("expected compass glyph, got %q", f0)
@@ -70,20 +70,20 @@ func TestHawkSpinner_Frames(t *testing.T) {
 	}
 }
 
-func TestHawkQuadBlock_LegacyFrames(t *testing.T) {
-	s := NewBrailleSpinner(SpinnerHawkQuad, "Working")
+func TestGraycodeQuadBlock_LegacyFrames(t *testing.T) {
+	s := NewBrailleSpinner(SpinnerGraycodeQuad, "Working")
 	if !strings.Contains(s.Frame(), "▛") {
 		t.Fatalf("expected QuadBlock glyph, got %q", s.Frame())
 	}
 }
 
-func TestHawkAnimatedDots_PresentInFrame(t *testing.T) {
-	s := NewBrailleSpinner(SpinnerHawk, "Crafting")
+func TestGraycodeAnimatedDots_PresentInFrame(t *testing.T) {
+	s := NewBrailleSpinner(SpinnerGraycode, "Crafting")
 	f := s.Frame()
 	// Three progress dots ride after the verb: one bright, two dim.
 	total := strings.Count(f, icons.CircleFilled()) + strings.Count(f, icons.CircleOutline())
-	if total != hawkTypingDots {
-		t.Errorf("expected %d trailing circle-dots, got %d in %q", hawkTypingDots, total, f)
+	if total != graycodeTypingDots {
+		t.Errorf("expected %d trailing circle-dots, got %d in %q", graycodeTypingDots, total, f)
 	}
 	// Tick advances the highlighted dot position.
 	idxBefore := s.dots

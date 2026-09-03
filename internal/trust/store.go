@@ -1,7 +1,7 @@
 // Package trust implements folder trust for project automation (Year 0 PACK-03).
 //
 // Untrusted project directories must not load project-scoped hooks, MCP servers,
-// LSP configs, or plugins. User-global state under the Hawk config/state dirs
+// LSP configs, or plugins. User-global state under the Graycode config/state dirs
 // remains available without per-folder trust.
 package trust
 
@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/flags"
-	"github.com/GrayCodeAI/hawk/internal/fsutil"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/flags"
+	"github.com/GrayCodeAI/graycode-cli/internal/fsutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // Entry records when and why a path was trusted.
@@ -33,7 +33,7 @@ type Store struct {
 	Entries map[string]Entry `json:"entries"`
 }
 
-// DefaultPath returns the trust store path under Hawk state.
+// DefaultPath returns the trust store path under Graycode state.
 func DefaultPath() string {
 	return filepath.Join(storage.StateDir(), "folder-trust.json")
 }
@@ -154,10 +154,10 @@ func AllowProjectAutomation(projectRoot string) error {
 		return nil
 	}
 	abs, _ := canonicalize(projectRoot)
-	return fmt.Errorf("folder trust: project %q is not trusted — run `hawk trust add %s` to allow project hooks/MCP/plugins", abs, abs)
+	return fmt.Errorf("folder trust: project %q is not trusted — run `graycode trust add %s` to allow project hooks/MCP/plugins", abs, abs)
 }
 
-// IsProjectPath reports whether path is under a project tree (not Hawk user state/config).
+// IsProjectPath reports whether path is under a project tree (not Graycode user state/config).
 func IsProjectPath(path string) bool {
 	abs, err := canonicalize(path)
 	if err != nil {
@@ -178,7 +178,7 @@ func IsProjectPath(path string) bool {
 // RequiresFolderTrust reports whether path is a project-automation location
 // that must be trusted before load (hooks/plugins/MCP under the repo).
 // Generic temp dirs used in tests are not gated — only well-known project
-// automation roots like <repo>/.hawk/plugins.
+// automation roots like <repo>/.graycode/plugins.
 func RequiresFolderTrust(path string) bool {
 	abs, err := canonicalize(path)
 	if err != nil {
@@ -189,10 +189,10 @@ func RequiresFolderTrust(path string) bool {
 	}
 	sep := string(filepath.Separator)
 	markers := []string{
-		sep + ".hawk" + sep + "plugins",
-		sep + ".hawk" + sep + "hooks",
-		sep + ".hawk" + sep + "mcp",
-		sep + ".hawk" + sep + "skills",
+		sep + ".graycode" + sep + "plugins",
+		sep + ".graycode" + sep + "hooks",
+		sep + ".graycode" + sep + "mcp",
+		sep + ".graycode" + sep + "skills",
 		sep + ".agents" + sep + "hooks",
 		sep + ".agents" + sep + "plugins",
 		sep + ".agents" + sep + "skills",
@@ -205,7 +205,7 @@ func RequiresFolderTrust(path string) bool {
 		if strings.Contains(abs, m) || strings.HasSuffix(abs, m) {
 			return true
 		}
-		// also when path ends with .hawk/plugins etc.
+		// also when path ends with .graycode/plugins etc.
 		if strings.HasSuffix(abs, filepath.FromSlash(strings.TrimPrefix(m, sep))) {
 			return true
 		}
@@ -215,7 +215,7 @@ func RequiresFolderTrust(path string) bool {
 
 // AllowLoadPath gates loading automation from path.
 // User-global config/state paths always pass. Project automation roots
-// (.hawk/plugins, .hawk/hooks, …) need trust when enforcement is enabled.
+// (.graycode/plugins, .graycode/hooks, …) need trust when enforcement is enabled.
 func AllowLoadPath(path string) error {
 	if !Enabled() {
 		return nil

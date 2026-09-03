@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/env"
+	"github.com/GrayCodeAI/graycode-cli/internal/env"
 )
 
 // writeFileWithPerm writes content to a path with the given permissions.
@@ -104,7 +104,7 @@ func RunSeatbelted(ctx context.Context, command string, policy *SeatbeltPolicy) 
 	profile := GenerateSeatbeltProfile(policy)
 
 	// Write the profile to a temp file.
-	tmpFile, err := os.CreateTemp("", "hawk-seatbelt-*.sb")
+	tmpFile, err := os.CreateTemp("", "graycode-seatbelt-*.sb")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create seatbelt profile temp file: %w", err)
 	}
@@ -133,7 +133,7 @@ func RunSeatbelted(ctx context.Context, command string, policy *SeatbeltPolicy) 
 
 // seatbeltTempFilePrefix is the glob prefix used to find orphaned seatbelt
 // temp files left behind by a previous session that did not shut down cleanly.
-const seatbeltTempFilePrefix = "hawk-seatbelt-"
+const seatbeltTempFilePrefix = "graycode-seatbelt-"
 
 // init removes orphaned seatbelt temp files from previous sessions. A crash
 // (SIGKILL, panic, OOM) can bypass Sandbox.Close(), which is the only cleanup
@@ -184,7 +184,7 @@ func getCachedProfile(security Security) (string, error) {
 	}
 	profile := GenerateSeatbeltProfile(policy)
 
-	tmpFile, err := exec.Command("mktemp", "-t", "hawk-seatbelt").Output() // #nosec G204 -- fixed mktemp invocation
+	tmpFile, err := exec.Command("mktemp", "-t", "graycode-seatbelt").Output() // #nosec G204 -- fixed mktemp invocation
 	if err != nil {
 		return "", fmt.Errorf("mktemp: %w", err)
 	}

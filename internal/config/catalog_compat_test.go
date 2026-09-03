@@ -9,7 +9,7 @@ import (
 )
 
 // CompiledCatalogV1 is retained only for lower-level migration/security tests.
-// Production Hawk code consumes engine DTOs exclusively.
+// Production Graycode code consumes engine DTOs exclusively.
 func CompiledCatalogV1() *catalog.CompiledCatalog {
 	compiled, err := catalog.LoadCatalog(context.Background(), catalog.LoadCatalogOptions{CachePath: catalog.DefaultCachePath()})
 	if err == nil && compiled != nil {

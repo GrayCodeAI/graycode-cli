@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/engine/io"
+import "github.com/GrayCodeAI/graycode-cli/internal/engine/io"
 
 type (
 	ClipboardMonitor  = io.ClipboardMonitor

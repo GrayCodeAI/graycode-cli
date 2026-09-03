@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/token"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/token"
 )
 
 // elisionNotice computes a verified-facts suffix for a truncation marker from

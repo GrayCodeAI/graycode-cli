@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 func TestSQLiteGraphLedger_PersistsAcrossReopen(t *testing.T) {
@@ -17,10 +17,10 @@ func TestSQLiteGraphLedger_PersistsAcrossReopen(t *testing.T) {
 		SyncID:        "sync-1",
 		ProjectID:     "proj",
 		SessionID:     "sess",
-		SchemaVersion: "hawk.graph/v1",
+		SchemaVersion: "graycode.graph/v1",
 		Digest:        "abc123",
 		Facts:         4,
-		GraphJSON:     `{"schema_version":"hawk.graph/v1","nodes":[]}`,
+		GraphJSON:     `{"schema_version":"graycode.graph/v1","nodes":[]}`,
 		ReceivedAt:    time.Now().UTC(),
 	}
 
@@ -55,7 +55,7 @@ func TestSQLiteGraphLedger_PersistsAcrossReopen(t *testing.T) {
 	if got.Digest != "abc123" || got.Facts != 4 || got.GraphJSON != rec.GraphJSON {
 		t.Fatalf("retained record mismatch: %+v", got)
 	}
-	if got.ProjectID != "proj" || got.SessionID != "sess" || got.SchemaVersion != "hawk.graph/v1" {
+	if got.ProjectID != "proj" || got.SessionID != "sess" || got.SchemaVersion != "graycode.graph/v1" {
 		t.Fatalf("retained metadata mismatch: %+v", got)
 	}
 	if got.ReceivedAt.IsZero() {

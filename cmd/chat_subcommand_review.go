@@ -3,7 +3,7 @@ package cmd
 import (
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 )
 
 // reviewSubcommand implements the /review slash command. It

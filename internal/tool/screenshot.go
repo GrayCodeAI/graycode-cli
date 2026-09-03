@@ -51,7 +51,7 @@ func (ScreenshotTool) Execute(ctx context.Context, input json.RawMessage) (strin
 
 	dest := p.Path
 	if dest == "" {
-		dest = filepath.Join(os.TempDir(), fmt.Sprintf("hawk-screenshot-%d.png", time.Now().UnixNano()))
+		dest = filepath.Join(os.TempDir(), fmt.Sprintf("graycode-screenshot-%d.png", time.Now().UnixNano()))
 	}
 	if err := validatePathAllowed(ctx, dest); err != nil {
 		return "", err

@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
 )
 
 func TestFormatStatusSnapshot(t *testing.T) {
 	snapshot := buildStatusSnapshot()
 	formatted := formatStatusSnapshot(snapshot)
-	for _, expected := range []string{"Hawk status", "Schema: 1", "Secrets redacted: true"} {
+	for _, expected := range []string{"Graycode status", "Schema: 1", "Secrets redacted: true"} {
 		if !strings.Contains(formatted, expected) {
 			t.Errorf("status output missing %q: %s", expected, formatted)
 		}

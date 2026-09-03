@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/feature/taste"
-	"github.com/GrayCodeAI/hawk/internal/plugin"
-	"github.com/GrayCodeAI/hawk/internal/system/staleness"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature/taste"
+	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
+	"github.com/GrayCodeAI/graycode-cli/internal/system/staleness"
 )
 
 func gitOutput(args ...string) (string, error) {
@@ -73,7 +73,7 @@ func additionalDirContext(dir string) (string, string, error) {
 	}
 	var b strings.Builder
 	b.WriteString("Additional directory: " + abs)
-	if md := hawkconfig.LoadAgentsMDFrom(abs); md != "" {
+	if md := graycodeconfig.LoadAgentsMDFrom(abs); md != "" {
 		b.WriteString("\nAdditional directory instructions (" + abs + "):\n" + md)
 	}
 	return abs, b.String(), nil
@@ -129,7 +129,7 @@ func sessionStats(sess *engine.Session, id string) string {
 }
 
 func hooksSummary() string {
-	return "Hooks: pre_query, post_query, pre_tool, post_tool, session_start, session_end, permission_ask, error\nConfigure in Hawk user settings"
+	return "Hooks: pre_query, post_query, pre_tool, post_tool, session_start, session_end, permission_ask, error\nConfigure in Graycode user settings"
 }
 
 func pluginsSummary(rt *plugin.Runtime) string {

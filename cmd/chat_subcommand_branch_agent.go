@@ -5,17 +5,17 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
-// branchAgentSubcommand creates a hawk/agent-* branch from main/master.
+// branchAgentSubcommand creates a graycode/agent-* branch from main/master.
 type branchAgentSubcommand struct{}
 
 func (c *branchAgentSubcommand) Name() string      { return "branch-agent" }
 func (c *branchAgentSubcommand) Aliases() []string { return []string{"agent-branch"} }
 func (c *branchAgentSubcommand) Description() string {
-	return "create hawk/agent-* branch if on main/master"
+	return "create graycode/agent-* branch if on main/master"
 }
 func (c *branchAgentSubcommand) Usage() string { return "/branch-agent" }
 

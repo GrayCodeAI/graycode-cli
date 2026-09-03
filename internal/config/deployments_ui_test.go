@@ -3,7 +3,7 @@ package config
 import "testing"
 
 func TestDeploymentRoutingLabel(t *testing.T) {
-	t.Setenv("HAWK_DEPLOYMENT_ROUTING", "")
+	t.Setenv("GRAYCODE_DEPLOYMENT_ROUTING", "")
 	enabled := true
 	if DeploymentRoutingLabel(Settings{DeploymentRouting: &enabled}) != "on" {
 		t.Fatal("expected on")

@@ -1,7 +1,7 @@
 // Package swiftbridge provides a Go library bridge that wraps swift's
-// functionality for use by hawk, replacing the subprocess-based approach.
+// functionality for use by graycode, replacing the subprocess-based approach.
 //
-// Since swift and hawk are separate Go modules, this package uses
+// Since swift and graycode are separate Go modules, this package uses
 // interface-based decoupling. The bridge defines thin interfaces that
 // swift types satisfy, avoiding a direct go.mod dependency.
 package swiftbridge

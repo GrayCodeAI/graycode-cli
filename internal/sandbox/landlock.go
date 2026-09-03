@@ -8,7 +8,7 @@ package sandbox
 //
 // Research basis: Landlock is the most underappreciated isolation technology.
 // It works without root, without Docker, without any external tool, and adds
-// near-zero overhead. This should be hawk's default Linux isolation.
+// near-zero overhead. This should be graycode's default Linux isolation.
 //
 // Security guarantees:
 // - Agent can only read/write within allowed paths

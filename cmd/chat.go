@@ -25,24 +25,24 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
-	"github.com/GrayCodeAI/hawk/internal/codegraph"
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
-	"github.com/GrayCodeAI/hawk/internal/feature/taste"
-	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
-	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
-	"github.com/GrayCodeAI/hawk/internal/plugin"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/startup"
-	hawkstorage "github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/system/staleness"
-	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/bridge/sessioncapture"
+	"github.com/GrayCodeAI/graycode-cli/internal/codegraph"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature/shellmode"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature/taste"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/repomap"
+	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/startup"
+	graycodestorage "github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/system/staleness"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 
-	"github.com/GrayCodeAI/hawk/internal/conversationarc"
+	"github.com/GrayCodeAI/graycode-cli/internal/conversationarc"
 )
 
 // Types, styles, and model struct are in chat_model.go
@@ -51,7 +51,7 @@ import (
 // Tool-registry construction (essential/optional tools) is in chat_tools.go
 // The Bubble Tea event loop (Update, applyPromptArrowKey) is in chat_update.go
 
-const workInputPlaceholder = `Ask Hawk to inspect, edit, or run something... (Shift+Enter for newline, ? for help)`
+const workInputPlaceholder = `Ask Graycode to inspect, edit, or run something... (Shift+Enter for newline, ? for help)`
 
 func genID() string {
 	b := make([]byte, 8)
@@ -72,7 +72,7 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 	}
 	if sessionIDFlag != "" && (resumeID != "" || continueFlag) {
 		// --session-id is ignored when --resume or --continue is also given.
-		fmt.Fprintf(os.Stderr, "hawk: --session-id ignored during resume/continue\n")
+		fmt.Fprintf(os.Stderr, "graycode: --session-id ignored during resume/continue\n")
 	}
 	if resumeID == "" && !continueFlag {
 		return id, nil, nil
@@ -106,7 +106,7 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 	return saved.ID, saved, nil
 }
 
-func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkconfig.Settings, registry *tool.Registry) (chatModel, error) {
+func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings graycodeconfig.Settings, registry *tool.Registry) (chatModel, error) {
 	startup.MarkPhase("newChatModel:total")
 
 	startup.MarkPhase("newChatModel:ui-init")
@@ -126,15 +126,15 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 			CursorLine:  lipgloss.NewStyle(),
 			Base:        lipgloss.NewStyle().Foreground(textPrimary),
 			Placeholder: lipgloss.NewStyle().Foreground(textPlaceholder),
-			Prompt:      lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Prompt:      lipgloss.NewStyle().Foreground(graycodeColor).Bold(true),
 		},
 		Blurred: textarea.StyleState{
 			Base:        lipgloss.NewStyle().Foreground(textPlaceholder),
 			Placeholder: lipgloss.NewStyle().Foreground(textPlaceholder),
-			Prompt:      lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Prompt:      lipgloss.NewStyle().Foreground(graycodeColor).Bold(true),
 		},
 		Cursor: textarea.CursorStyle{
-			Color: hawkColor,
+			Color: graycodeColor,
 		},
 	})
 	ta.Prompt = icons.ChevronRight() + " "
@@ -146,8 +146,8 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	ci.EchoMode = textinput.EchoNormal
 
 	sp := spinner.New()
-	sp.Spinner = spinner.Spinner{Frames: hawkSpinnerFrames, FPS: hawkSpinnerFrameInterval}
-	sp.Style = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	sp.Spinner = spinner.Spinner{Frames: graycodeSpinnerFrames, FPS: graycodeSpinnerFrameInterval}
+	sp.Style = lipgloss.NewStyle().Foreground(graycodeColor).Bold(true)
 	startup.EndPhase("newChatModel:ui-init")
 
 	startup.MarkPhase("newChatModel:effectiveModelAndProvider")
@@ -158,9 +158,9 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	startup.MarkPhase("newChatModel:defaultRegistry")
 	startup.EndPhase("newChatModel:defaultRegistry")
 
-	startup.MarkPhase("newChatModel:newHawkSession")
-	sess := newStartupHawkSession(selection, systemPrompt, registry)
-	startup.EndPhase("newChatModel:newHawkSession")
+	startup.MarkPhase("newChatModel:newGraycodeSession")
+	sess := newStartupGraycodeSession(selection, systemPrompt, registry)
+	startup.EndPhase("newChatModel:newGraycodeSession")
 
 	startup.MarkPhase("newChatModel:configureSession")
 	if cfgErr := prepareInteractiveSessionStartup(sess, settings); cfgErr != nil {
@@ -184,7 +184,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 
 	// Initialize conversation DAG for branching support
 	startup.MarkPhase("newChatModel:dag")
-	graphPath := filepath.Join(hawkstorage.SessionsDir(), "conversations", sid+".json")
+	graphPath := filepath.Join(graycodestorage.SessionsDir(), "conversations", sid+".json")
 	if graph, err := session.OpenConversationGraph(graphPath, sid); err == nil {
 		sess.SetConversationGraph(graph)
 	}
@@ -246,7 +246,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	m.contextualHelp = NewContextualHelp()
 	m.modeManager = shellmode.NewModeManager()
 	m.modeManager.LoadPersistedMode()
-	m.brailleSpinner = NewBrailleSpinner(SpinnerHawk, "")
+	m.brailleSpinner = NewBrailleSpinner(SpinnerGraycode, "")
 	m.brailleSpinner.SetLabel(m.spinnerVerb)
 	startup.EndPhase("newChatModel:lacy-features")
 
@@ -297,7 +297,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	// Prefetch live models for the active provider so footer ctx/pricing stay current.
 	go func() {
 		providerName := effectiveProvider
-		entries, _ := hawkconfig.ListEngineModels(context.Background(), providerName, false)
+		entries, _ := graycodeconfig.ListEngineModels(context.Background(), providerName, false)
 		opts := configModelOptionsFromEyrie(entries)
 		if len(opts) > 0 {
 			modelCacheMu.Lock()
@@ -324,7 +324,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	m.welcomeCache = buildWelcomeMessageWithSnapshot(sess, sid, registry, saved, settings, 0, connectedMCPCount(registry), 0, initWidth, initHeight, nil, quickSnapshot, false, "")
 	m.messages = append(m.messages, displayMsg{role: "welcome", content: m.welcomeCache})
 	// First-session control-plane tip (skip when resuming history or when quiet env var is set).
-	if saved == nil && os.Getenv("HAWK_QUIET_START") == "" && os.Getenv("HAWK_SUPPRESS_HINTS") == "" && os.Getenv("HAWK_QUIET") == "" {
+	if saved == nil && os.Getenv("GRAYCODE_QUIET_START") == "" && os.Getenv("GRAYCODE_SUPPRESS_HINTS") == "" && os.Getenv("GRAYCODE_QUIET") == "" {
 		m.messages = append(m.messages, displayMsg{role: "system", content: controlPlaneOnboardingHint(sess)})
 	}
 	startup.EndPhase("newChatModel:welcome")
@@ -401,7 +401,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	// the initial UI.
 	go func(currentSessionID string) {
 		if recovered := session.CheckForRecovery(); len(recovered) > 0 {
-			walDir := hawkstorage.SessionsDir()
+			walDir := graycodestorage.SessionsDir()
 			for _, rid := range recovered {
 				if rid == currentSessionID {
 					continue // current session WAL
@@ -417,7 +417,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 	// Warm footer data and the model catalog after the first frame.
 	go func(model chatModel) {
 		startup.MarkPhase("newChatModel:ui-cache-warm")
-		hawkconfig.RefreshConfigCredSnapshot(context.Background())
+		graycodeconfig.RefreshConfigCredSnapshot(context.Background())
 		// Network reachability runs off the startup critical path: an offline
 		// machine stalls here (background) instead of before first paint.
 		if msg := checkNetworkReachability(model.settings); msg != "" {
@@ -537,7 +537,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings hawkco
 }
 
 // refreshInputPlaceholder updates the input placeholder based on the current
-// container lifecycle. Hawk never executes agent tools directly on the host.
+// container lifecycle. Graycode never executes agent tools directly on the host.
 func (m *chatModel) refreshInputPlaceholder() {
 	work := engine.WorkModeAct
 	if m.session != nil {
@@ -638,7 +638,7 @@ func runChat() error {
 
 	// One-time, gated codebase analysis for projects with no context file.
 	// Runs in the background and never blocks startup; fully opt-out via
-	// HAWK_DISABLE_AUTO_INIT. No-op for projects that already have context.
+	// GRAYCODE_DISABLE_AUTO_INIT. No-op for projects that already have context.
 	maybeAutoInit(context.Background())
 
 	ref := &progRef{}
@@ -647,7 +647,7 @@ func runChat() error {
 		err  error
 	}
 	type startupSettingsResult struct {
-		settings hawkconfig.Settings
+		settings graycodeconfig.Settings
 		err      error
 	}
 	type startupRegistryResult struct {
@@ -772,7 +772,7 @@ func runChat() error {
 		fmt.Print(formatQuitResumeMessage(fm.sessionID))
 		return nil
 	}
-	hawkC := ansiOrange
+	graycodeC := ansiOrange
 	rst := ansiReset
 
 	fmt.Print(fm.welcomeCache)
@@ -780,10 +780,10 @@ func runChat() error {
 	for _, msg := range fm.messages {
 		switch msg.role {
 		case "user":
-			fmt.Println(hawkC + "█" + rst + "  " + msg.content)
+			fmt.Println(graycodeC + "█" + rst + "  " + msg.content)
 			fmt.Println()
 		case "assistant":
-			fmt.Println(hawkC + icons.Robot() + " " + rst + msg.content)
+			fmt.Println(graycodeC + icons.Robot() + " " + rst + msg.content)
 			fmt.Println()
 		case "system":
 			fmt.Println(dimStyle.Render("●  " + msg.content))
@@ -815,12 +815,12 @@ func runChat() error {
 	border := strings.Repeat("─", viewWidth)
 	borderStyle := lipgloss.NewStyle().Foreground(borderDim)
 	fmt.Println(borderStyle.Render(border))
-	fmt.Println(lipgloss.NewStyle().Foreground(hawkColor).Bold(true).Render(">") + " ")
+	fmt.Println(lipgloss.NewStyle().Foreground(graycodeColor).Bold(true).Render(">") + " ")
 	fmt.Println(borderStyle.Render(border))
 	fmt.Println(dimStyle.Render("? for help"))
 
 	if fm.sessionID != "" {
-		fmt.Println(dimStyle.Render(fmt.Sprintf("To resume this session, run: hawk --resume %s", fm.sessionID)))
+		fmt.Println(dimStyle.Render(fmt.Sprintf("To resume this session, run: graycode --resume %s", fm.sessionID)))
 	}
 	return nil
 }

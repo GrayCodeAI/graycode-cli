@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
-// BuildChatProvider adapts Hawk's engine-backed session client to the smaller
+// BuildChatProvider adapts Graycode's engine-backed session client to the smaller
 // provider contract used by host integrations such as Kestrel. Model resolution,
 // credentials, routing, and transport remain owned by Eyrie's engine facade.
 func BuildChatProvider(ctx context.Context, selection gateway.Selection, legacyProvider string) (types.ChatProvider, string, error) {
@@ -28,7 +28,7 @@ func BuildChatProvider(ctx context.Context, selection gateway.Selection, legacyP
 	}, provider, nil
 }
 
-// engineChatProvider keeps compatibility-only provider behavior at Hawk's
+// engineChatProvider keeps compatibility-only provider behavior at Graycode's
 // integration edge while all generation goes through the engine ChatClient.
 type engineChatProvider struct {
 	client   ChatClient

@@ -164,7 +164,7 @@ func tryCloneFile(src, dst string) (int64, bool) {
 // SupportsCloneFile reports whether a quick probe clone succeeds on the
 // filesystem containing dir (used by callers to log/choose strategies).
 func SupportsCloneFile(dir string) bool {
-	probeSrc := filepath.Join(dir, ".hawk-fastcopy-probe")
+	probeSrc := filepath.Join(dir, ".graycode-fastcopy-probe")
 	if err := os.WriteFile(probeSrc, []byte("probe"), 0o600); err != nil {
 		return false
 	}

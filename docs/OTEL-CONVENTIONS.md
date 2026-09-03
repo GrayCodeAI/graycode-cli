@@ -1,7 +1,7 @@
 # graycode-eco OpenTelemetry Semantic Conventions for AI Agent Spans
 
 Status: Draft / shared spec
-Applies to: hawk, eyrie, harrier, shrike, swift
+Applies to: graycode, eyrie, harrier, shrike, swift
 
 This document defines the **ecosystem-wide** OpenTelemetry (OTel) semantic
 conventions that every graycode-eco repo should follow when emitting spans for AI
@@ -23,7 +23,7 @@ Eyrie owns provider-call instrumentation behind its `eyrie/engine` facade.
 Its lower provider layer contains the reference OTel decorator for chat and
 stream calls: it starts a client span, records provider/model/usage attributes,
 sets status from the result, and ends a streamed span on completion. That
-decorator is an Eyrie implementation detail; Hawk must not import or compose it
+decorator is an Eyrie implementation detail; Graycode must not import or compose it
 directly.
 
 - `eyrie/internal/observability/observability.go` provides a stdlib-only,
@@ -34,9 +34,9 @@ directly.
   of hard-coding strings. A pinning test
   (`genai_semconv_test.go`) guards the exact key values.
 
-When adding tracing to Hawk, propagate swift context through the Engine call and
+When adding tracing to Graycode, propagate swift context through the Engine call and
 use the attribute keys in this document. Eyrie wraps provider operations;
-Hawk wraps product turns and tools. Harrier, Shrike, and Swift instrument only their
+Graycode wraps product turns and tools. Harrier, Shrike, and Swift instrument only their
 own operations.
 
 ## Span kinds and names
@@ -113,8 +113,8 @@ Mapping:
 
 - **eyrie** — owns provider/model/usage spans behind `eyrie/engine`; align
   attribute keys to `gen_ai.*` over time.
-- **hawk** — daemon/orchestrator. Already has OTel hooks
-  (`HAWK_CODE_ENABLE_TELEMETRY`, `HAWK_CODE_OTEL_SHUTDOWN_TIMEOUT_MS`). Emit
+- **graycode** — daemon/orchestrator. Already has OTel hooks
+  (`GRAYCODE_ENABLE_TELEMETRY`, `GRAYCODE_OTEL_SHUTDOWN_TIMEOUT_MS`). Emit
   `agent.id` and `session.id` on agent-turn spans; propagate them downstream to
   eyrie via context so provider spans inherit the same IDs.
 - **harrier** — memory service. Add `embeddings` spans with `gen_ai.system` +

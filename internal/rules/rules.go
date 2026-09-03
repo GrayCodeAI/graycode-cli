@@ -1,5 +1,5 @@
 // Package rules provides import/export of AI coding rules between different
-// tool formats (hawk, Cursor, Claude Code, Copilot, Gemini).
+// tool formats (graycode, Cursor, Claude Code, Copilot, Gemini).
 package rules
 
 import (
@@ -11,7 +11,7 @@ import (
 type Format string
 
 const (
-	FormatHawk       Format = "hawk"       // .agents/rules/*.md
+	FormatGraycode   Format = "graycode"   // .agents/rules/*.md
 	FormatCursor     Format = "cursor"     // .cursorrules or .cursor/rules/*.mdc
 	FormatClaudeCode Format = "claudecode" // CLAUDE.md
 	FormatCopilot    Format = "copilot"    // .github/copilot-instructions.md
@@ -27,7 +27,7 @@ type Rule struct {
 
 // allFormats lists every supported format in detection order.
 var allFormats = []Format{
-	FormatHawk,
+	FormatGraycode,
 	FormatCursor,
 	FormatClaudeCode,
 	FormatCopilot,
@@ -69,8 +69,8 @@ func Detect(dir string) map[Format]string {
 // Import reads rules from the given format in dir and returns them.
 func Import(dir string, from Format) ([]Rule, error) {
 	switch from {
-	case FormatHawk:
-		return readHawk(dir)
+	case FormatGraycode:
+		return readGraycode(dir)
 	case FormatCursor:
 		return readCursor(dir)
 	case FormatClaudeCode:
@@ -87,8 +87,8 @@ func Import(dir string, from Format) ([]Rule, error) {
 // Export writes rules to the target format inside dir.
 func Export(dir string, to Format, rules []Rule) error {
 	switch to {
-	case FormatHawk:
-		return writeHawk(dir, rules)
+	case FormatGraycode:
+		return writeGraycode(dir, rules)
 	case FormatCursor:
 		return writeCursor(dir, rules)
 	case FormatClaudeCode:
@@ -114,7 +114,7 @@ func (e *UnsupportedFormatError) Error() string {
 // formatCandidates returns file/directory paths to probe for a given format.
 func formatCandidates(dir string, f Format) []string {
 	switch f {
-	case FormatHawk:
+	case FormatGraycode:
 		return []string{filepath.Join(dir, ".agents", "rules")}
 	case FormatCursor:
 		return []string{
@@ -134,7 +134,7 @@ func formatCandidates(dir string, f Format) []string {
 // hasFormatExt checks if a filename has the right extension for the given format.
 func hasFormatExt(name string, f Format) bool {
 	switch f {
-	case FormatHawk:
+	case FormatGraycode:
 		return filepath.Ext(name) == ".md"
 	case FormatCursor:
 		return filepath.Ext(name) == ".mdc"

@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/GrayCodeAI/hawk/internal/fsutil"
-	"github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/trust"
+	"github.com/GrayCodeAI/graycode-cli/internal/fsutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/trust"
 )
 
 // Scope identifies a plugin discovery scope.
@@ -18,7 +18,7 @@ const (
 	ScopeManaged Scope = "managed"
 	// ScopeUser is the per-user plugins directory.
 	ScopeUser Scope = "user"
-	// ScopeProject is project-local .hawk/plugins (requires folder trust).
+	// ScopeProject is project-local .graycode/plugins (requires folder trust).
 	ScopeProject Scope = "project"
 )
 
@@ -47,8 +47,8 @@ type ScopeDir struct {
 func DiscoverScopeDirs(projectRoot string) []ScopeDir {
 	var out []ScopeDir
 
-	// Managed: HAWK_MANAGED_PLUGINS or config managed/plugins
-	if m := os.Getenv("HAWK_MANAGED_PLUGINS"); m != "" {
+	// Managed: GRAYCODE_MANAGED_PLUGINS or config managed/plugins
+	if m := os.Getenv("GRAYCODE_MANAGED_PLUGINS"); m != "" {
 		for _, p := range filepath.SplitList(m) {
 			if p == "" {
 				continue
@@ -72,7 +72,7 @@ func DiscoverScopeDirs(projectRoot string) []ScopeDir {
 		projectRoot, _ = os.Getwd()
 	}
 	if projectRoot != "" {
-		proj := filepath.Join(projectRoot, ".hawk", "plugins")
+		proj := filepath.Join(projectRoot, ".graycode", "plugins")
 		if st, err := os.Stat(proj); err == nil && st.IsDir() {
 			if err := trust.AllowLoadPath(proj); err == nil {
 				out = append(out, ScopeDir{Scope: ScopeProject, Path: proj})

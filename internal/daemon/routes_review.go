@@ -19,7 +19,7 @@ const reviewArgMaxLen = 4096
 
 var reviewArgCharset = regexp.MustCompile(`^[^\x00-\x1f\x7f]*$`)
 
-// reviewSem bounds the number of concurrent `hawk review run` subprocesses
+// reviewSem bounds the number of concurrent `graycode review run` subprocesses
 // spawned by POST /v1/review so an authenticated caller cannot exhaust CPU
 // or memory by firing unbounded review jobs.
 var reviewSem = make(chan struct{}, maxConcurrentReviews)
@@ -91,7 +91,7 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Trigger review asynchronously via hawk review run.
+	// Trigger review asynchronously via graycode review run.
 	go func() {
 		args := []string{"review", "run", req.SHA, "--background"}
 		if req.Model != "" {
@@ -100,7 +100,7 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 		if req.Concerns != "" {
 			args = append(args, "--concerns", req.Concerns)
 		}
-		_ = exec.CommandContext(context.Background(), "hawk", args...).Run() // #nosec G204 -- binary is fixed "hawk"; args are validated (SHA regex, no "--" prefix, printable charset)
+		_ = exec.CommandContext(context.Background(), "graycode", args...).Run() // #nosec G204 -- binary is fixed "graycode"; args are validated (SHA regex, no "--" prefix, printable charset)
 	}()
 
 	resp := ReviewResponse{
@@ -112,8 +112,8 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleReviewStatus(w http.ResponseWriter, _ *http.Request) {
-	// Run hawk review status and return output.
-	out, err := exec.CommandContext(context.Background(), "hawk", "review", "status").Output()
+	// Run graycode review status and return output.
+	out, err := exec.CommandContext(context.Background(), "graycode", "review", "status").Output()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return

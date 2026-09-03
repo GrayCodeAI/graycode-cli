@@ -1,0 +1,22 @@
+{
+    "version": "0.0.0-development",
+    "license": "Apache-2.0",
+    "files": [
+        "bin/",
+        "THIRD_PARTY_NOTICES.md"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "name": "@graycodeai/graycode-linux-arm64",
+    "description": "linux-arm64 binary for @graycodeai/graycode. Do not install directly; install @graycodeai/graycode instead.",
+    "os": [
+        "linux"
+    ],
+    "cpu": [
+        "arm64"
+    ],
+    "bin": {
+        "graycode": "bin/graycode"
+    }
+}

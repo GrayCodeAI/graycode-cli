@@ -4,41 +4,41 @@ import (
 	"fmt"
 	"strings"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/errhint"
-	"github.com/GrayCodeAI/hawk/internal/hawkerr"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/errhint"
+	"github.com/GrayCodeAI/graycode-cli/internal/graycodeerr"
 )
 
 // friendlyErrorMessage returns the user-friendly message for an error.
-// Delegates to the shared hawkerr.ClassifyErrorMessage for the base message,
+// Delegates to the shared graycodeerr.ClassifyErrorMessage for the base message,
 // then enriches specific cases with dynamic hints that require the config
-// package (hawkerr can't import internal/config without a cycle).
+// package (graycodeerr can't import internal/config without a cycle).
 func friendlyErrorMessage(err error) string {
-	msg := hawkerr.ClassifyErrorMessage(err)
+	msg := graycodeerr.ClassifyErrorMessage(err)
 
 	if err == nil {
 		return msg
 	}
 
-	ec := hawkerr.ClassifyError(err)
+	ec := graycodeerr.ClassifyError(err)
 	low := strings.ToLower(err.Error())
 
 	switch ec.ExitCode {
-	case hawkerr.ExitNotFound:
+	case graycodeerr.ExitNotFound:
 		// Enrich model-not-found errors with concrete examples from the catalog.
 		if strings.Contains(low, "model") || strings.Contains(low, "unknown") ||
 			strings.Contains(low, "does not exist") {
-			ex1, ex2 := hawkconfig.ExampleModelHints()
+			ex1, ex2 := graycodeconfig.ExampleModelHints()
 			msg = fmt.Sprintf(
 				"Model not found. Check your model name with /model.\n  Examples from the eyrie catalog: %s, %s\n  Use /models to list all models, or /config to change provider.",
 				ex1, ex2,
 			)
 		}
-	case hawkerr.ExitAuth:
+	case graycodeerr.ExitAuth:
 		msg += "\n  Check your API key with /config. Keys can expire or be revoked."
-	case hawkerr.ExitNetwork:
+	case graycodeerr.ExitNetwork:
 		msg += "\n  Check your internet connection. If you're behind a proxy, configure it with /config."
-	case hawkerr.ExitTimeout:
+	case graycodeerr.ExitTimeout:
 		msg += "\n  The request took too long. Try again, or use /model to switch to a faster provider."
 	}
 

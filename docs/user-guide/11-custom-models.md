@@ -1,12 +1,12 @@
 # Custom Models
 
-Hawk connects to custom model endpoints through Eyrie for alternative providers, self-hosted models, and overriding built-in settings.
+Graycode connects to custom model endpoints through Eyrie for alternative providers, self-hosted models, and overriding built-in settings.
 
 ---
 
 ## Supported Providers
 
-Hawk works with any LLM provider. Built-in support includes:
+Graycode works with any LLM provider. Built-in support includes:
 
 | Provider | ID | Key |
 |----------|-----|-----|
@@ -24,7 +24,7 @@ Hawk works with any LLM provider. Built-in support includes:
 ### CLI Flag
 
 ```bash
-hawk -m gpt-4o -p "Hello"
+graycode -m gpt-4o -p "Hello"
 ```
 
 ### Slash Command
@@ -39,7 +39,7 @@ In the TUI:
 ### Config Default
 
 ```json
-// ~/.hawk/settings.json
+// ~/.graycode/settings.json
 {
   "default_provider": "openai",
   "default_model": "gpt-4o"
@@ -50,7 +50,7 @@ In the TUI:
 
 ## Configuring Custom Models
 
-Add custom models in `~/.hawk/settings.json`:
+Add custom models in `~/.graycode/settings.json`:
 
 ```json
 {
@@ -73,7 +73,7 @@ Add custom models in `~/.hawk/settings.json`:
 
 ### Credential Resolution
 
-Hawk resolves credentials in this order:
+Graycode resolves credentials in this order:
 
 1. Per-model `api_key` field
 2. Environment variable (`env_key`)
@@ -130,8 +130,8 @@ ollama pull llama-3.1-70b
 Enable deployment-aware routing to use Eyrie's model catalog:
 
 ```bash
-export HAWK_DEPLOYMENT_ROUTING=true
-hawk
+export GRAYCODE_DEPLOYMENT_ROUTING=true
+graycode
 ```
 
 Or in settings:

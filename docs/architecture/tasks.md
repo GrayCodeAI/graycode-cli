@@ -1,7 +1,7 @@
-# Hawk Architecture - Implementation Tasks
+# Graycode Architecture - Implementation Tasks
 
 > **Historical.** This was the initial architecture implementation checklist.
-> It is superseded by `hawk-architecture-v1-definition-of-done.md`, which
+> It is superseded by `graycode-architecture-v1-definition-of-done.md`, which
 > reflects the current shipping bar. Kept for record; do not use as a
 > current TODO list.
 

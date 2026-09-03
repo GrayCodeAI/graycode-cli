@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/env"
-	homepkg "github.com/GrayCodeAI/hawk/internal/home"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/env"
+	homepkg "github.com/GrayCodeAI/graycode-cli/internal/home"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
 )
 
 // dangerousCommands are commands that should ALWAYS be blocked.
@@ -104,7 +104,7 @@ var (
 	ifsInjectionRe          = regexp.MustCompile(`\$IFS|\$\{[^}]*IFS`)
 	procEnvironRe           = regexp.MustCompile(`/proc/.*environ`)
 	envDumpRe               = regexp.MustCompile(`(?i)(^|[;&|]\s*|\s)(printenv|env)(\s|$)`)
-	hawkEnvReadRe           = regexp.MustCompile(`(?i)\b(cat|type|head|less|more|dd)\b[^\n;|]*\.hawk/(env|\.env)\b`)
+	graycodeEnvReadRe       = regexp.MustCompile(`(?i)\b(cat|type|head|less|more|dd)\b[^\n;|]*\.graycode/(env|\.env)\b`)
 	apiKeyEchoRe            = regexp.MustCompile(`(?i)\becho\s+[^\n;|]*\$?(ANTHROPIC|OPENAI|OPENROUTER|GEMINI|GROK|XAI)_API_KEY`)
 	ansiCQuotingRe          = regexp.MustCompile(`\$'[^']*'`)
 	localeQuotingRe         = regexp.MustCompile(`\$"[^"]*"`)
@@ -576,8 +576,8 @@ func (BashTool) Execute(ctx context.Context, input json.RawMessage) (string, err
 	if envDumpRe.MatchString(p.Command) {
 		return "", fmt.Errorf("blocked: dumping environment variables can expose API keys")
 	}
-	if hawkEnvReadRe.MatchString(p.Command) {
-		return "", fmt.Errorf("blocked: reading ~/.hawk env files can expose API keys")
+	if graycodeEnvReadRe.MatchString(p.Command) {
+		return "", fmt.Errorf("blocked: reading ~/.graycode env files can expose API keys")
 	}
 	if apiKeyEchoRe.MatchString(p.Command) {
 		return "", fmt.Errorf("blocked: echoing API key environment variables is not allowed")

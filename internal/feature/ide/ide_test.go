@@ -4,8 +4,8 @@ import "testing"
 
 func TestDefaultManifest(t *testing.T) {
 	m := DefaultManifest()
-	if m.Name != "hawk" {
-		t.Fatalf("expected name 'hawk', got %q", m.Name)
+	if m.Name != "graycode" {
+		t.Fatalf("expected name 'graycode', got %q", m.Name)
 	}
 	if len(m.Contributes.Commands) == 0 {
 		t.Fatal("expected commands")

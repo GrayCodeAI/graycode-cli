@@ -8,7 +8,7 @@ import (
 )
 
 func TestWelcomeToBanner_TOAligned(t *testing.T) {
-	to := composeHawkBlockLines("TO")
+	to := composeGraycodeBlockLines("TO")
 	if len(to) != 5 {
 		t.Fatalf("expected 5 rows, got %d", len(to))
 	}
@@ -48,10 +48,10 @@ func TestWelcomeToPhraseLinesContainSingleRowPhrase(t *testing.T) {
 	}
 }
 
-func TestWelcomeWordLines_SameWGlyphAsHAWK(t *testing.T) {
-	w := strings.TrimRight(hawkBlockGlyphs['W'][0], " ")
+func TestWelcomeWordLines_SameWGlyphAsGRAYCODE(t *testing.T) {
+	w := strings.TrimRight(graycodeBlockGlyphs['W'][0], " ")
 	if !strings.HasPrefix(welcomeWordLines[0], w) {
-		t.Fatalf("W row should start with hawk logo glyph:\nwelcome: %q\nhawk W:  %q",
+		t.Fatalf("W row should start with graycode logo glyph:\nwelcome: %q\ngraycode W:  %q",
 			welcomeWordLines[0], w)
 	}
 }

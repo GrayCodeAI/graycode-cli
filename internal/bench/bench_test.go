@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // taskFixture is a minimal SWE-bench-style task: an instruction plus the set
@@ -23,7 +23,7 @@ type taskFixture struct {
 // sWEbenchSmokeTasks is a small curated fixture set exercising the common
 // agent shapes: read+edit, planning, and a no-op task. Kept tiny so the bench
 // stays a compile+smoke gate (real SWE-bench evaluation uses real providers
-// and is gated by HAWK_BENCH_PROVIDER / HAWK_BENCH_API_KEY, which is why this
+// and is gated by GRAYCODE_BENCH_PROVIDER / GRAYCODE_BENCH_API_KEY, which is why this
 // test only runs when that env is set — see TestBenchmark_SWE_benchHeadless).
 var sWEbenchSmokeTasks = []taskFixture{
 	{
@@ -81,13 +81,13 @@ func runTask(t *testing.B, fix taskFixture, events []types.EyrieStreamEvent) (te
 }
 
 // TestBenchmark_SWE_benchHeadless is a compile + smoke gate for the headless
-// agent loop. It is skipped unless HAWK_BENCH_HEADLESS=1 is set so it never
+// agent loop. It is skipped unless GRAYCODE_BENCH_HEADLESS=1 is set so it never
 // runs in CI by default (it uses a stub provider). Real provider-backed SWE
-// harness execution lives in bench_suite.go and is invoked via `hawk bench`.
+// harness execution lives in bench_suite.go and is invoked via `graycode bench`.
 func TestBenchmark_SWE_benchHeadless(t *testing.T) {
-	if v := os.Getenv("HAWK_BENCH_HEADLESS"); v != "1" {
+	if v := os.Getenv("GRAYCODE_BENCH_HEADLESS"); v != "1" {
 		// TODO: track scheduling the headless benchmark smoke in CI.
-		t.Skip("set HAWK_BENCH_HEADLESS=1 to run agent-loop benchmark smoke")
+		t.Skip("set GRAYCODE_BENCH_HEADLESS=1 to run agent-loop benchmark smoke")
 	}
 	b := &testing.B{}
 	for _, fix := range sWEbenchSmokeTasks {

@@ -10,7 +10,7 @@ import (
 	lipgloss "charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 var reviewStatusCmd = &cobra.Command{
@@ -71,7 +71,7 @@ func runReviewStatus(_ *cobra.Command, _ []string) error {
 		total += v
 	}
 	if total == 0 {
-		fmt.Println("No reviews yet. Run 'hawk review init' to start.")
+		fmt.Println("No reviews yet. Run 'graycode review init' to start.")
 		return nil
 	}
 

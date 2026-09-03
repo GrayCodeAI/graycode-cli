@@ -6,7 +6,7 @@ import (
 	"time"
 
 	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	"github.com/GrayCodeAI/hawk/internal/graphjournal"
+	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
 )
 
 func TestNewBridge(t *testing.T) {
@@ -39,7 +39,7 @@ func TestBridge_Ready(t *testing.T) {
 }
 
 func TestRunContractsObservedRecordsQualityGraph(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	observedAt := time.Date(2026, time.July, 25, 12, 0, 0, 0, time.UTC)
 	b := &Bridge{}
 

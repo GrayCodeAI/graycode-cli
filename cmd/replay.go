@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/GrayCodeAI/hawk/internal/terminal/tape"
+	"github.com/GrayCodeAI/graycode-cli/internal/terminal/tape"
 )
 
 var (
@@ -22,7 +22,7 @@ var replayCmd = &cobra.Command{
 	Use:   "replay <tape.fxtape>",
 	Short: "Replay a recorded terminal capture (fxtape)",
 	Long: `Replay a terminal capture recorded by the FX_RECORD tape writer (the
-binary fxtape format from vercel-labs/fx, which hawk's tape package reads
+binary fxtape format from vercel-labs/fx, which graycode's tape package reads
 byte-for-byte compatibly). Feeds the recorded stdout bytes into a virtual
 terminal grid and prints the final visible snapshot.
 

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/routing"
 )
 
 const testProvider = "anthropic"

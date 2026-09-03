@@ -18,7 +18,7 @@ func sampleSnapshot() *Snapshot {
 		Sandbox:        "default",
 		Workspace:      "/Users/me/repo",
 		SessionID:      "sess-01",
-		SessionDir:     "/tmp/hawk-sess-01",
+		SessionDir:     "/tmp/graycode-sess-01",
 		PID:            4242,
 		Terminal:       "120x30",
 		Env:            []string{"HOME=/Users/me", "HOST=box", "API_TOKEN=sk-ant-abcdefABCDEF1234"},
@@ -43,7 +43,7 @@ func TestBuildSections(t *testing.T) {
 	t.Parallel()
 	out := Build(sampleSnapshot())
 	for _, want := range []string{
-		"# hawk swift",
+		"# graycode swift",
 		"Private diagnostic report.",
 		"## Summary",
 		"## Current State",
@@ -76,7 +76,7 @@ func TestBuildSections(t *testing.T) {
 func TestBuildEmpty(t *testing.T) {
 	t.Parallel()
 	out := Build(nil)
-	if !strings.HasPrefix(out, "# hawk swift") {
+	if !strings.HasPrefix(out, "# graycode swift") {
 		t.Errorf("Build(nil) header missing")
 	}
 }

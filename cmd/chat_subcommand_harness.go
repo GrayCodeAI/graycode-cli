@@ -6,7 +6,7 @@ import (
 	"os"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/GrayCodeAI/hawk/internal/harness"
+	"github.com/GrayCodeAI/graycode-cli/internal/harness"
 )
 
 type harnessSubcommand struct{}
@@ -29,7 +29,7 @@ func (h *harnessSubcommand) Handle(m *chatModel, args []string, text string) (te
 		return m.startPromptCommand("/harness", prompt)
 	}
 
-	prompt := fmt.Sprintf("I ran a Hawk Agent Harness Review on this repository (%s).\n\nOverall Score: %d/100 (%s)\nPrioritized Findings (%d):\n\n%s\n\nPlease help me address the highest priority findings to improve our AI coding harness.",
+	prompt := fmt.Sprintf("I ran a Graycode Agent Harness Review on this repository (%s).\n\nOverall Score: %d/100 (%s)\nPrioritized Findings (%d):\n\n%s\n\nPlease help me address the highest priority findings to improve our AI coding harness.",
 		report.TargetPath, report.OverallScore, report.OverallStatus, len(report.Findings), harness.RenderMarkdown(report))
 
 	return m.startPromptCommand("/harness", prompt)

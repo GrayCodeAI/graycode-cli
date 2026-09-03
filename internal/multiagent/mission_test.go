@@ -156,10 +156,10 @@ func TestMission_Run_RetryUsesAttemptSuffixedBranch(t *testing.T) {
 	if seen[0] == seen[1] {
 		t.Errorf("branch must differ per attempt, both %q", seen[0])
 	}
-	if want := "hawk-mission/" + m.ID + "/f1/attempt-1"; seen[0] != want {
+	if want := "graycode-mission/" + m.ID + "/f1/attempt-1"; seen[0] != want {
 		t.Errorf("attempt 1 branch = %q, want %q", seen[0], want)
 	}
-	if want := "hawk-mission/" + m.ID + "/f1/attempt-2"; seen[1] != want {
+	if want := "graycode-mission/" + m.ID + "/f1/attempt-2"; seen[1] != want {
 		t.Errorf("attempt 2 branch = %q, want %q", seen[1], want)
 	}
 	if m.Features[0].Branch != seen[1] {

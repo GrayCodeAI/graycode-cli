@@ -2,16 +2,16 @@
 set -e
 
 # Versioned install target.
-# By default the binary is installed under $HAWK_HOME/bin (default ~/.hawk/bin).
-# Override with HAWK_HOME env var, or pass --prefix <dir> as the first flag.
-HAWK_HOME="${HAWK_HOME:-$HOME/.hawk}"
+# By default the binary is installed under $GRAYCODE_HOME/bin (default ~/.graycode/bin).
+# Override with GRAYCODE_HOME env var, or pass --prefix <dir> as the first flag.
+GRAYCODE_HOME="${GRAYCODE_HOME:-$HOME/.graycode}"
 if [ "$1" = "--prefix" ]; then
-  HAWK_HOME="$2"
+  GRAYCODE_HOME="$2"
   shift 2
 fi
 
-REPO="GrayCodeAI/hawk"
-BINARY="hawk"
+REPO="GrayCodeAI/graycode-cli"
+BINARY="graycode"
 
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
@@ -39,7 +39,7 @@ fi
 
 ARCHIVE_NAME="${BINARY}_${LATEST}_${OS}_${ARCH}.${ARCHIVE_EXT}"
 URL="https://github.com/$REPO/releases/download/v${LATEST}/${ARCHIVE_NAME}"
-echo "Downloading hawk v${LATEST} for ${OS}/${ARCH}..."
+echo "Downloading graycode v${LATEST} for ${OS}/${ARCH}..."
 
 TMP=$(mktemp -d)
 ARCHIVE="$TMP/${ARCHIVE_NAME}"
@@ -146,25 +146,25 @@ VERSION=$(printf '%s' "$LATEST" | sed 's/^v//')
 # falling back to checksum-only verification otherwise. Versioned install is a
 # prerequisite for safe in-place self-update tooling: once installs land at a
 # stable versioned path + symlink, a future updater can swap the link without
-# ever replacing a binary a running hawk has mmap'd (same SIGKILL rationale).
+# ever replacing a binary a running graycode has mmap'd (same SIGKILL rationale).
 #
 # Windows lacks reliable non-admin symlinks, so the launcher is a plain copy.
 
-BINDIR="$HAWK_HOME/bin"
+BINDIR="$GRAYCODE_HOME/bin"
 mkdir -p "$BINDIR"
 
 if [ "$OS" = "windows" ]; then
-  mv -f "$TMP/$BIN_NAME" "$BINDIR/hawk-$VERSION.exe"
-  cp -f "$BINDIR/hawk-$VERSION.exe" "$BINDIR/hawk.exe"
+  mv -f "$TMP/$BIN_NAME" "$BINDIR/graycode-$VERSION.exe"
+  cp -f "$BINDIR/graycode-$VERSION.exe" "$BINDIR/graycode.exe"
   echo ""
-  echo "Installed hawk v$VERSION to $BINDIR/hawk-$VERSION.exe"
-  echo "Linked launcher: $BINDIR/hawk.exe"
+  echo "Installed graycode v$VERSION to $BINDIR/graycode-$VERSION.exe"
+  echo "Linked launcher: $BINDIR/graycode.exe"
 else
-  mv -f "$TMP/$BIN_NAME" "$BINDIR/hawk-$VERSION"
-  ln -sf "hawk-$VERSION" "$BINDIR/hawk.tmp" \
-    && mv -f "$BINDIR/hawk.tmp" "$BINDIR/hawk"
+  mv -f "$TMP/$BIN_NAME" "$BINDIR/graycode-$VERSION"
+  ln -sf "graycode-$VERSION" "$BINDIR/graycode.tmp" \
+    && mv -f "$BINDIR/graycode.tmp" "$BINDIR/graycode"
   echo ""
-  echo "Installed hawk v$VERSION to $BINDIR/hawk-$VERSION (linked: $BINDIR/hawk)"
+  echo "Installed graycode v$VERSION to $BINDIR/graycode-$VERSION (linked: $BINDIR/graycode)"
 fi
 
 rm -rf "$TMP"
@@ -172,5 +172,5 @@ echo ""
 echo "Add $BINDIR to your PATH if it is not already, e.g."
 echo "  export PATH=\"\$PATH:$BINDIR\""
 echo ""
-echo "Restart any running hawk sessions to pick up the new binary — the old"
+echo "Restart any running graycode sessions to pick up the new binary — the old"
 echo "process keeps running the previous version until it is restarted."

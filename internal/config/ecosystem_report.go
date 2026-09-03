@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
-	"github.com/GrayCodeAI/hawk/internal/token"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
+	"github.com/GrayCodeAI/graycode-cli/internal/token"
 )
 
 // EcosystemReport is the structured view of the ecosystem panel.
@@ -63,7 +63,7 @@ func BuildEcosystemReport(ctx context.Context, provider, model string) Ecosystem
 
 	// shrike
 	r.Shrike.Embedded = true
-	r.Shrike.SampleTokens = token.CountTokensFast("hawk context compression pipeline")
+	r.Shrike.SampleTokens = token.CountTokensFast("graycode context compression pipeline")
 
 	return r
 }
@@ -79,7 +79,7 @@ func FormatEcosystemPanel(ctx context.Context, provider, model string) string {
 	if cat.Exists {
 		eyrieLine += fmt.Sprintf("catalog %d models", cat.Models)
 	} else {
-		eyrieLine += "catalog missing (run hawk models refresh)"
+		eyrieLine += "catalog missing (run graycode models refresh)"
 	}
 	pre := EnginePreflightReport(ctx)
 	if pre.Ready {
@@ -109,7 +109,7 @@ func FormatEcosystemPanel(ctx context.Context, provider, model string) string {
 	}
 
 	// shrike — token counting and context compression (always embedded)
-	sample := token.CountTokensFast("hawk context compression pipeline")
+	sample := token.CountTokensFast("graycode context compression pipeline")
 	b.WriteString(fmt.Sprintf("  shrike: embedded · token/compress pipeline OK (sample=%d tokens)\n", sample))
 
 	return strings.TrimRight(b.String(), "\n")

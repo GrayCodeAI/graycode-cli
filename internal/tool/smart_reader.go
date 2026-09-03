@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/token"
+	"github.com/GrayCodeAI/graycode-cli/internal/token"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -744,7 +744,7 @@ func mergeSections(sections []ReadSection, lines []string) []ReadSection {
 // SmartReaderTool: Tool interface implementation
 // ──────────────────────────────────────────────────────────────────────────────
 
-// SmartReaderTool exposes SmartReader as a hawk tool.
+// SmartReaderTool exposes SmartReader as a graycode tool.
 type SmartReaderTool struct {
 	reader *SmartReader
 }

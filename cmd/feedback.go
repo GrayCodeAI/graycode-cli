@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -37,17 +37,17 @@ type FeedbackReport struct {
 
 var feedbackCmd = &cobra.Command{
 	Use:   "feedback [message]",
-	Short: "Submit feedback about hawk",
-	Long: `Capture feedback about your hawk experience. By default, opens a
+	Short: "Submit feedback about graycode",
+	Long: `Capture feedback about your graycode experience. By default, opens a
 GitHub issue template URL in your browser. Use --local to save feedback
-to Hawk's user state directory for later submission.
+to Graycode's user state directory for later submission.
 
 Categories: bug, feature, ux, performance, other
 
 Examples:
-  hawk feedback "The completion is slow"
-  hawk feedback --category bug "Crash when using /compact"
-  hawk feedback --local "Wish it could do X"`,
+  graycode feedback "The completion is slow"
+  graycode feedback --category bug "Crash when using /compact"
+  graycode feedback --local "Wish it could do X"`,
 	Args: cobra.MinimumNArgs(0),
 	RunE: runFeedback,
 }
@@ -141,7 +141,7 @@ func openFeedbackIssue(report FeedbackReport) error {
 	bodyBuilder.WriteString(fmt.Sprintf("- **Timestamp:** %s\n", report.Timestamp))
 
 	issueURL := fmt.Sprintf(
-		"https://github.com/GrayCodeAI/hawk/issues/new?title=%s&body=%s&labels=%s",
+		"https://github.com/GrayCodeAI/graycode-cli/issues/new?title=%s&body=%s&labels=%s",
 		url.QueryEscape(title),
 		url.QueryEscape(bodyBuilder.String()),
 		url.QueryEscape(report.Category),

@@ -1,0 +1,42 @@
+[Unit]
+Description=Graycode Daemon (code intelligence server)
+Documentation=https://docs.graycode.ai
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Replace with your installed binary path. When installed via the package
+# manager, the binary is typically at /usr/local/bin/graycode.
+ExecStart=/usr/local/bin/graycode daemon start \
+  --host 127.0.0.1 \
+  --port 4590 \
+  --api-key ${GRAYCODE_DAEMON_API_KEY} \
+  --log-level INFO
+# For production, bind to 0.0.0.0 behind a TLS-terminating reverse proxy:
+#   ExecStart=/usr/local/bin/graycode daemon start --host 0.0.0.0 --port 4590 --api-key ${GRAYCODE_DAEMON_API_KEY} --tls-cert /etc/graycode/tls.crt --tls-key /etc/graycode/tls.key
+Restart=always
+RestartSec=5
+TimeoutStopSec=10
+
+# Security hardening (mirror the sandbox ethos at the process level).
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=%h/.graycode/state /tmp
+# Read-only access to config and tool directories.
+ReadOnlyPaths=%h/.graycode
+
+# Resource limits.
+LimitNOFILE=65536
+MemoryMax=4G
+CPUQuota=200%
+
+# Environment.
+Environment=GRAYCODE_DAEMON_API_KEY=
+Environment=GRAYCODE_ENABLE_TELEMETRY=0
+Environment=GRAYCODE_DAEMON_MAX_CONCURRENT=4
+
+[Install]
+WantedBy=multi-user.target
