@@ -10,7 +10,7 @@ proposal. See also `gateway-architecture.md` (human-readable version),
 flowchart LR
     subgraph CLI["graycode-cli"]
         TUI["chat · exec · review\nagent loop · sessions"]
-        ENG["eyrie engine\n(compiled in)"]
+        ENG["graycode-router engine\n(compiled in)"]
     end
 
     subgraph ROUTER["graycode-router"]
@@ -32,7 +32,7 @@ Wires, with evidence:
 
 | From → To | Mechanism | Evidence |
 |---|---|---|
-| CLI → Router | Go module dep, in-process construction | `go.mod` requires `github.com/GrayCodeAI/eyrie`; `internal/provider/gateway/gateway.go` is the sole importer |
+| CLI → Router | Go module dep, in-process construction | `go.mod` requires `github.com/GrayCodeAI/graycode-router`; `internal/provider/gateway/gateway.go` is the sole importer |
 | CLI → Platform | Opt-in HTTPS (login, usage, graph sync) | `internal/platform/cloud/client.go`; `Enabled()` requires endpoint + token; no default URL |
 | Router → CLI | none | router `go.mod`/`go.sum` contain zero graycode-cli refs |
 | Router ↔ Platform | none | no imports, package deps, or API calls either direction |
