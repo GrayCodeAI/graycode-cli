@@ -9,12 +9,12 @@ RUN apk upgrade --no-cache && \
 WORKDIR /build
 
 # GrayCodeAI engine modules are published and pinned in go.mod at tagged or
-# commit-pseudo versions, resolved from the module proxy. The committed
+# commit-pseudo versions. Pins whose repositories no longer exist resolve from
+# the committed third_party/modproxy (copied in via COPY . . below); everything
+# else resolves from the public proxy with direct-VCS fallback. The committed
 # go.work (which references sibling checkouts ../<repo>) is excluded from the
 # build context, so build in module mode (no go.work) against those pins.
-ENV GOPRIVATE=github.com/GrayCodeAI/* \
-    GONOSUMDB=github.com/GrayCodeAI/* \
-    GONOSUMCHECK=1
+ENV GOPROXY=file:///build/third_party/modproxy,https://proxy.golang.org,direct
 
 # Build-time provenance (passed by .github/workflows/docker.yml or `docker build
 # --build-arg VERSION=... --build-arg COMMIT=... --build-arg BUILD_DATE=...`).

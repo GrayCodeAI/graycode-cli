@@ -11,9 +11,8 @@ RUN apk upgrade --no-cache && \
 
 WORKDIR /build
 
-ENV GOPRIVATE=github.com/GrayCodeAI/* \
-    GONOSUMDB=github.com/GrayCodeAI/* \
-    GONOSUMCHECK=1
+# Module resolution is file-proxy-first (see Dockerfile); no GOPRIVATE override.
+ENV GOPROXY=file:///build/third_party/modproxy,https://proxy.golang.org,direct
 
 ARG VERSION=dev
 ARG COMMIT=none
