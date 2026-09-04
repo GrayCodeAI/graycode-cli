@@ -357,7 +357,7 @@ func expandCommandPathVariables(command string) string {
 	}{
 		{name: "HOME", value: home.MustDir()},
 		{name: "GRAYCODE_CONFIG_DIR", value: strings.TrimSpace(env.Getenv("GRAYCODE_CONFIG_DIR"))},
-		{name: "EYRIE_CONFIG_DIR", value: strings.TrimSpace(env.Getenv("EYRIE_CONFIG_DIR"))},
+		{name: "GRAYCODE_ROUTER_CONFIG_DIR", value: strings.TrimSpace(env.Getenv("GRAYCODE_ROUTER_CONFIG_DIR"))},
 	} {
 		if item.value == "" {
 			continue
@@ -377,11 +377,11 @@ func expandCommandPathVariables(command string) string {
 // the file tools.
 func CommandReferencesSensitivePath(command string) string {
 	// Do not try to emulate every shell parameter-expansion form here. An
-	// EYRIE_CONFIG_DIR reference is itself sensitive because the variable
+	// GRAYCODE_ROUTER_CONFIG_DIR reference is itself sensitive because the variable
 	// identifies the credential-bearing provider-state directory. This also
-	// closes modifier forms such as ${EYRIE_CONFIG_DIR%/}/provider.json.
-	if strings.Contains(command, "EYRIE_CONFIG_DIR") {
-		return "command references EYRIE_CONFIG_DIR, blocked for security"
+	// closes modifier forms such as ${GRAYCODE_ROUTER_CONFIG_DIR%/}/provider.json.
+	if strings.Contains(command, "GRAYCODE_ROUTER_CONFIG_DIR") {
+		return "command references GRAYCODE_ROUTER_CONFIG_DIR, blocked for security"
 	}
 	if !strings.ContainsAny(command, "/.") {
 		return ""
@@ -412,7 +412,7 @@ func CommandReferencesSensitivePath(command string) string {
 			}
 		}
 		// Keep Bash aligned with the Read/Edit/Write path policy, including a
-		// provider.json rooted at EYRIE_CONFIG_DIR. ResolvePath also handles
+		// provider.json rooted at GRAYCODE_ROUTER_CONFIG_DIR. ResolvePath also handles
 		// relative custom config directories and symlinked parents.
 		if reason := IsSensitivePath(tok); reason != "" {
 			return "command references a sensitive path: " + reason

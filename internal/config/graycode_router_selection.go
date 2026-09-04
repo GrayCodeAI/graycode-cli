@@ -13,9 +13,9 @@ type (
 )
 
 // EffectiveSelection resolves persisted selection and optional host overrides
-// through Eyrie's host-neutral engine contract.
+// through GraycodeRouter's host-neutral engine contract.
 func EffectiveSelection(ctx context.Context, opts SelectionOptions) Selection {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return Selection{}
 	}
@@ -23,60 +23,60 @@ func EffectiveSelection(ctx context.Context, opts SelectionOptions) Selection {
 }
 
 func EffectiveSelectionWithSettings(ctx context.Context, settings Settings, opts SelectionOptions) Selection {
-	engine, err := NewEyrieEngineForSettings(settings)
+	engine, err := NewGraycodeRouterEngineForSettings(settings)
 	if err != nil {
 		return Selection{}
 	}
 	return engine.EffectiveSelection(ctx, opts)
 }
 
-// ActiveModel returns the selected model from eyrie provider.json (not graycode settings).
+// ActiveModel returns the selected model from graycode-router provider.json (not graycode settings).
 func ActiveModel(ctx context.Context) string {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return ""
 	}
 	return engine.ActiveSelection(ctx).Model
 }
 
-// ActiveProvider returns the selected provider from eyrie provider.json.
+// ActiveProvider returns the selected provider from graycode-router provider.json.
 func ActiveProvider(ctx context.Context) string {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return ""
 	}
 	return engine.ActiveSelection(ctx).Provider
 }
 
-// ActiveProviderID canonicalizes a host-facing provider/gateway id through Eyrie runtime.
+// ActiveProviderID canonicalizes a host-facing provider/gateway id through GraycodeRouter runtime.
 func ActiveProviderID(provider string) string {
 	return gateway.NormalizeProviderID(provider)
 }
 
-// SetActiveModel persists model selection to eyrie provider.json.
+// SetActiveModel persists model selection to graycode-router provider.json.
 func SetActiveModel(ctx context.Context, modelID string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return err
 	}
 	return engine.SetActiveModel(ctx, modelID)
 }
 
-// SetActiveProvider persists provider selection to eyrie provider.json.
+// SetActiveProvider persists provider selection to graycode-router provider.json.
 func SetActiveProvider(ctx context.Context, provider string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return err
 	}
@@ -90,14 +90,14 @@ func SetActiveSelection(ctx context.Context, provider, modelID string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return err
 	}
 	return engine.SetSelection(ctx, provider, modelID)
 }
 
-// migrateStoredModelProvider moves model/provider from ~/.graycode/settings.json into eyrie once.
+// migrateStoredModelProvider moves model/provider from ~/.graycode/settings.json into graycode-router once.
 func migrateStoredModelProvider(s *Settings) {
 	if s == nil {
 		return
@@ -109,7 +109,7 @@ func migrateStoredModelProvider(s *Settings) {
 	activeProvider := strings.TrimSpace(ActiveProvider(ctx))
 	changed := false
 
-	// Existing Eyrie state is authoritative. Otherwise migrate a stored pair
+	// Existing GraycodeRouter state is authoritative. Otherwise migrate a stored pair
 	// in one validated write so a rejected model cannot strand only the
 	// provider in the destination or silently erase the user's source value.
 	if activeModel != "" {

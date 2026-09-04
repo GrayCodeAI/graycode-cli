@@ -118,7 +118,7 @@ implements field-by-field merging with explicit precedence rules.
 ### Credential storage
 
 API keys and secrets are stored in the OS secret store (macOS Keychain,
-Linux secret service, Windows Credential Manager) via the `eyrie/credentials`
+Linux secret service, Windows Credential Manager) via the `graycode-router/credentials`
 package. They are never written to `settings.json`, `.env`, or any file
 in the repository. The `/config` command manages credential storage
 interactively.

@@ -109,7 +109,7 @@ func configNoticeStyle(notice string) lipgloss.Style {
 		strings.Contains(n, "unauthorized"):
 		return lipgloss.NewStyle().Foreground(errorCoral)
 	case strings.HasPrefix(notice, "Refreshed"),
-		strings.HasPrefix(notice, "Eyrie:"),
+		strings.HasPrefix(notice, "GraycodeRouter:"),
 		strings.Contains(notice, "Removed API key"),
 		strings.Contains(notice, "Setup complete"),
 		strings.Contains(n, "key saved"),

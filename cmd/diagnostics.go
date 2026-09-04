@@ -53,7 +53,7 @@ func doctorReport(settings graycodeconfig.Settings) string {
 	// Ecosystem versions
 	b.WriteString("\nEcosystem versions:\n")
 	for _, component := range []struct{ directory, product string }{
-		{directory: "eyrie", product: "Eyrie"},
+		{directory: "graycode-router", product: "GraycodeRouter"},
 		{directory: "harrier", product: "Harrier"},
 		{directory: "shrike", product: "Shrike"},
 		{directory: "kestrel", product: "Kestrel"},

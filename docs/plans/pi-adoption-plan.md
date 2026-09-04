@@ -34,14 +34,14 @@ The audit found that graycode already provides the foundation for most Pi featur
 
 | Pi package | Graycode implementation | Current decision |
 |---|---|---|
-| `pi-ai` (multi-provider) | sibling `eyrie` client + engine facade + catalog + router + credentials | Keep graycode (broader) |
+| `pi-ai` (multi-provider) | sibling `graycode-router` client + engine facade + catalog + router + credentials | Keep graycode (broader) |
 | `pi-agent-core` (agent loop) | `internal/engine` | Keep graycode |
 | `pi-coding-agent` (CLI) | `cmd` TUI + CLI + daemon | Keep graycode |
 | `pi-session-backends` (storage) | `internal/session` JSONL + zstd + WAL + SQLite index, sibling `swift` (Swift) | Keep graycode |
 | `pi-server` (RPC) | `internal/daemon` + `internal/acp` + `internal/mcp` | Keep graycode (broader) |
 | Permissions/sandbox | `internal/engine/safety` + `internal/sandbox` (seatbelt/landlock/seccomp/ACL/netproxy) | Keep graycode (native, ahead) |
 | `pi-tui` differential rendering | Bubble Tea v2 full-frame redraw | Adopt line-diff engine |
-| `pi-telemetry` conformance | `docs/OTEL-CONVENTIONS.md`, eyrie `genai_semconv` pinning | Adopt conformance suite |
+| `pi-telemetry` conformance | `docs/OTEL-CONVENTIONS.md`, graycode-router `genai_semconv` pinning | Adopt conformance suite |
 | `pi-evals` agent-level eval | `internal/feature/eval` (model benchmark only) | Adopt agent-runtime eval |
 
 ## Priority Model
@@ -63,10 +63,10 @@ ecosystem repositories.
 ### Scope and ownership
 
 - Primary implementation: `internal/observability` and
-  `eyrie/internal/observability` (the canonical `genai_semconv`
+  `graycode-router/internal/observability` (the canonical `genai_semconv`
   constants and their pinning test).
 - Shared schema constants: sibling `eagle` if a cross-repo
-  contract is needed, otherwise keep them in eyrie as today.
+  contract is needed, otherwise keep them in graycode-router as today.
 - No changes to `internal/mcp`, `internal/sandbox`, or `internal/daemon`.
 
 ### Required behavior
@@ -82,7 +82,7 @@ ecosystem repositories.
    - asserts sensitive attributes never carry raw prompt/response text,
    - asserts parent/child span relationships and settlement semantics,
    - is runner-independent (usable from any Go test harness).
-4. Wire the conformance harness into the graycode and eyrie test suites so CI
+4. Wire the conformance harness into the graycode and graycode-router test suites so CI
    enforces the contract.
 5. Keep the conformance layer passive and non-throwing: malformed or unreadable
    telemetry payloads must not break agent execution.
@@ -93,7 +93,7 @@ ecosystem repositories.
 - A deliberate schema drift (adding a span or attribute) fails the conformance
   test until the schema is updated.
 - No raw prompt/response text appears in recorded attributes.
-- The conformance harness runs green in graycode and eyrie CI.
+- The conformance harness runs green in graycode and graycode-router CI.
 
 ## P0: Agent-Runtime Eval Harness
 
@@ -273,7 +273,7 @@ Every implementation phase must preserve:
 - Eval runs the real tool loop end-to-end in an isolated dir.
 - Daemon and ACP parity for leased sessions.
 - fxtape recording/replay across the new renderer.
-- Cross-repo telemetry conformance in graycode and eyrie CI.
+- Cross-repo telemetry conformance in graycode and graycode-router CI.
 
 ### Security tests
 
@@ -310,7 +310,7 @@ updating the Graycode pointer.
 
 - [x] Define the typed span/attribute schema.
 - [x] Implement the conformance harness.
-- [x] Wire graycode and eyrie CI.
+- [x] Wire graycode and graycode-router CI.
 - [x] Add schema-drift regression tests.
 
 ### Milestone 2: Agent-runtime eval (P0)

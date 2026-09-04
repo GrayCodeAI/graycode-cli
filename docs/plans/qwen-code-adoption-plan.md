@@ -5,14 +5,14 @@ Status: Implemented selectively in the current Graycode feature branch.
 ## Guardrails
 
 Qwen Code is Apache-2.0 TypeScript software with a Gemini-shaped core. Graycode
-will independently reimplement behavioral contracts in Go, preserve the Eyrie
+will independently reimplement behavioral contracts in Go, preserve the GraycodeRouter
 provider boundary, and retain Graycode's event-sourced sessions and OS sandbox.
 No Qwen source or dependency is vendored.
 
 ## Existing Graycode Capabilities
 
 Graycode already has durable sessions, event logging, WAL/recovery, branching,
-review contracts, provider routing in Eyrie, MCP integration, skills, memory,
+review contracts, provider routing in GraycodeRouter, MCP integration, skills, memory,
 context compaction, policy snapshots, subagents, daemon security, and
 filesystem/process sandboxing. These systems will not be duplicated.
 

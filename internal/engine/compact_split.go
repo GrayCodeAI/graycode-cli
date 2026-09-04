@@ -21,7 +21,7 @@ import (
 // average token count of the tail, with a 2000-token floor to avoid false
 // positives. A single message exceeding this budget is treated as an
 // oversized turn.
-func turnTokenBudget(tail []types.EyrieMessage) int {
+func turnTokenBudget(tail []types.GraycodeRouterMessage) int {
 	if len(tail) == 0 {
 		return 0
 	}
@@ -131,7 +131,7 @@ func (s *Session) splitTurnCompact(ctx context.Context) {
 	// Reconstruct messages: summary + tail from oversized turn onward
 	// Keep the second half of the oversized message + everything after
 	// (its first half is covered by phase2Summary above).
-	remaining := append([]types.EyrieMessage(nil), raw[splitPoint:]...)
+	remaining := append([]types.GraycodeRouterMessage(nil), raw[splitPoint:]...)
 	if len(remaining) > 0 {
 		first := remaining[0]
 		first.Content = secondHalfRunes(first.Content)
@@ -141,8 +141,8 @@ func (s *Session) splitTurnCompact(ctx context.Context) {
 		remaining[0] = first
 	}
 
-	keep := make([]types.EyrieMessage, 0, len(remaining)+2)
-	keep = append(keep, types.EyrieMessage{
+	keep := make([]types.GraycodeRouterMessage, 0, len(remaining)+2)
+	keep = append(keep, types.GraycodeRouterMessage{
 		Role:    "user",
 		Content: combined.String() + "\n\n[Continue from the recent messages below.]",
 	})
@@ -150,7 +150,7 @@ func (s *Session) splitTurnCompact(ctx context.Context) {
 	// message; adjacent assistant messages are rejected by OpenAI-compat
 	// providers.
 	if len(remaining) == 0 || remaining[0].Role != "assistant" {
-		keep = append(keep, types.EyrieMessage{
+		keep = append(keep, types.GraycodeRouterMessage{
 			Role:    "assistant",
 			Content: "Understood. I have the context from the summary above. Continuing.",
 		})
@@ -170,12 +170,12 @@ func secondHalfRunes(s string) string {
 }
 
 // generatePartialSummary generates an LLM summary for a subset of messages.
-func (s *Session) generatePartialSummary(ctx context.Context, messages []types.EyrieMessage) string {
+func (s *Session) generatePartialSummary(ctx context.Context, messages []types.GraycodeRouterMessage) string {
 	if len(messages) == 0 {
 		return ""
 	}
 
-	var summaryMsgs []types.EyrieMessage
+	var summaryMsgs []types.GraycodeRouterMessage
 	compactPrompt := BuildCompactPrompt(CompactPartial)
 	var content strings.Builder
 	content.WriteString(compactPrompt)
@@ -191,7 +191,7 @@ func (s *Session) generatePartialSummary(ctx context.Context, messages []types.E
 		}
 	}
 
-	summaryMsgs = append(summaryMsgs, types.EyrieMessage{
+	summaryMsgs = append(summaryMsgs, types.GraycodeRouterMessage{
 		Role:    "user",
 		Content: content.String(),
 	})
@@ -215,7 +215,7 @@ func (s *Session) generatePartialSummary(ctx context.Context, messages []types.E
 }
 
 // summarizeOversizedTurn summarizes the content of a single oversized message.
-func (s *Session) summarizeOversizedTurn(ctx context.Context, msg types.EyrieMessage) string {
+func (s *Session) summarizeOversizedTurn(ctx context.Context, msg types.GraycodeRouterMessage) string {
 	content := msg.Content
 	if content == "" {
 		// If it's a tool result, use that
@@ -234,8 +234,8 @@ func (s *Session) summarizeOversizedTurn(ctx context.Context, msg types.EyrieMes
 		halfLen = 4000
 	}
 
-	var summaryMsgs []types.EyrieMessage
-	summaryMsgs = append(summaryMsgs, types.EyrieMessage{
+	var summaryMsgs []types.GraycodeRouterMessage
+	summaryMsgs = append(summaryMsgs, types.GraycodeRouterMessage{
 		Role: "user",
 		Content: BuildCompactPrompt(CompactUpTo) + "\n\nSummarize the key information from this content prefix (the rest will be retained verbatim):\n\n" +
 			msg.Role + ": " + truncateRunes(content, halfLen),

@@ -11,12 +11,12 @@ import (
 // save context tokens. It collapses:
 //   - 3+ consecutive tool_results with similar content into a summary
 //   - Repeated error messages into a count
-func CollapseRepeatedMessages(msgs []types.EyrieMessage) []types.EyrieMessage {
+func CollapseRepeatedMessages(msgs []types.GraycodeRouterMessage) []types.GraycodeRouterMessage {
 	if len(msgs) < 3 {
 		return msgs
 	}
 
-	result := make([]types.EyrieMessage, 0, len(msgs))
+	result := make([]types.GraycodeRouterMessage, 0, len(msgs))
 
 	i := 0
 	for i < len(msgs) {
@@ -30,7 +30,7 @@ func CollapseRepeatedMessages(msgs []types.EyrieMessage) []types.EyrieMessage {
 			runLen := j - i
 			if runLen >= 2 {
 				errText := extractErrorText(msgs[i])
-				result = append(result, types.EyrieMessage{
+				result = append(result, types.GraycodeRouterMessage{
 					Role:        msgs[i].Role,
 					Content:     fmt.Sprintf("[Error repeated %d times: %s]", runLen, errText),
 					ToolResults: msgs[i].ToolResults,
@@ -52,7 +52,7 @@ func CollapseRepeatedMessages(msgs []types.EyrieMessage) []types.EyrieMessage {
 				result = append(result, msgs[i])
 				toolName := toolResultSource(msgs[i])
 				collapsed := runLen - 2
-				result = append(result, types.EyrieMessage{
+				result = append(result, types.GraycodeRouterMessage{
 					Role:    "user",
 					Content: fmt.Sprintf("[Similar output from %s — %d results collapsed]", toolName, collapsed),
 					ToolResults: []types.ToolResult{{
@@ -76,7 +76,7 @@ func CollapseRepeatedMessages(msgs []types.EyrieMessage) []types.EyrieMessage {
 // isSimilarToolResult checks whether two tool_result messages are similar
 // enough to collapse. Two results are similar if they come from the same tool
 // and their content shares the same first line or prefix (up to 100 chars).
-func isSimilarToolResult(a, b types.EyrieMessage) bool {
+func isSimilarToolResult(a, b types.GraycodeRouterMessage) bool {
 	if len(a.ToolResults) == 0 || len(b.ToolResults) == 0 {
 		return false
 	}
@@ -88,7 +88,7 @@ func isSimilarToolResult(a, b types.EyrieMessage) bool {
 }
 
 // toolResultSource extracts the tool name from a tool_result message.
-func toolResultSource(msg types.EyrieMessage) string {
+func toolResultSource(msg types.GraycodeRouterMessage) string {
 	if len(msg.ToolResults) > 0 && msg.ToolResults[0].ToolUseID != "" {
 		return msg.ToolResults[0].ToolUseID
 	}
@@ -108,7 +108,7 @@ func contentPrefix(s string, n int) string {
 }
 
 // isErrorMessage returns true if a message appears to be an error.
-func isErrorMessage(msg types.EyrieMessage) bool {
+func isErrorMessage(msg types.GraycodeRouterMessage) bool {
 	if len(msg.ToolResults) > 0 && msg.ToolResults[0].IsError {
 		return true
 	}
@@ -117,7 +117,7 @@ func isErrorMessage(msg types.EyrieMessage) bool {
 }
 
 // extractErrorText extracts the error text from an error message.
-func extractErrorText(msg types.EyrieMessage) string {
+func extractErrorText(msg types.GraycodeRouterMessage) string {
 	if len(msg.ToolResults) > 0 && msg.ToolResults[0].IsError {
 		return msg.ToolResults[0].Content
 	}

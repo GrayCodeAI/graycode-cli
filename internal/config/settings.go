@@ -27,12 +27,12 @@ func fetchModelsViaRuntime(ctx context.Context, provider string) ([]EngineModel,
 }
 
 // Settings holds graycode configuration.
-// Graycode: no API keys stored here. Secrets come from the OS secret store via eyrie.
+// Graycode: no API keys stored here. Secrets come from the OS secret store via graycode-router.
 type Settings struct {
 	// PolicySchemaVersion versions permission/autonomy/sandbox fields. Zero is
 	// the legacy format and is migrated to CurrentPolicySchemaVersion on load.
 	PolicySchemaVersion int `json:"policy_schema_version,omitempty"`
-	// Model and Provider are retained only for one-time migration into eyrie provider.json.
+	// Model and Provider are retained only for one-time migration into graycode-router provider.json.
 	// Graycode does not persist model/provider here; use SetActiveModel / SetActiveProvider.
 	Model           string   `json:"model,omitempty"`
 	Provider        string   `json:"provider,omitempty"`
@@ -702,7 +702,7 @@ func ProviderAPIKeyEnv(provider string) string {
 
 // EnvKeyStatus returns set, empty, or local from the OS credential store.
 func EnvKeyStatus(provider string) string {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return "empty"
 	}
@@ -738,7 +738,7 @@ func providerCredentialEnvAliases(provider string) []string {
 	primary := strings.TrimSpace(ProviderAPIKeyEnv(provider))
 	seen := map[string]bool{}
 	var out []string
-	engine, _ := newEyrieEngine()
+	engine, _ := newGraycodeRouterEngine()
 	var aliases []string
 	if engine != nil {
 		aliases = engine.CredentialEnvKeys(provider)
@@ -755,10 +755,10 @@ func providerCredentialEnvAliases(provider string) []string {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Live model catalog fetch from eyrie
+// Live model catalog fetch from graycode-router
 // ─────────────────────────────────────────────────────────────
 
-// FetchModelsForProvider returns models from the eyrie catalog (dynamic; no graycode hardcoded lists).
+// FetchModelsForProvider returns models from the graycode-router catalog (dynamic; no graycode hardcoded lists).
 // RefreshModelCatalogV1 is the explicit network refresh boundary.
 func FetchModelsForProvider(provider string) ([]EngineModel, error) {
 	provider = gateway.NormalizeProviderID(provider)
@@ -788,7 +788,7 @@ func FetchModelsForProvider(provider string) ([]EngineModel, error) {
 			}}, nil
 		}
 	}
-	return nil, fmt.Errorf("no models found for provider %s in eyrie catalog (check API keys; graycode will refresh automatically on next start)", provider)
+	return nil, fmt.Errorf("no models found for provider %s in graycode-router catalog (check API keys; graycode will refresh automatically on next start)", provider)
 }
 
 // FetchModelsForProviderWithSettings resolves cached models using one
@@ -798,7 +798,7 @@ func FetchModelsForProviderWithSettings(ctx context.Context, settings Settings, 
 	if provider == "" {
 		return nil, fmt.Errorf("no provider specified")
 	}
-	engine, engineErr := NewEyrieEngineForSettings(settings)
+	engine, engineErr := NewGraycodeRouterEngineForSettings(settings)
 	if engineErr != nil {
 		return nil, engineErr
 	}
@@ -812,18 +812,18 @@ func FetchModelsForProviderWithSettings(ctx context.Context, settings Settings, 
 	if err != nil {
 		return nil, err
 	}
-	return nil, fmt.Errorf("no models found for provider %s in eyrie catalog", provider)
+	return nil, fmt.Errorf("no models found for provider %s in graycode-router catalog", provider)
 }
 
 func refreshModelCatalog(ctx context.Context, _ bool) (gateway.CatalogSnapshot, error) {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return gateway.CatalogSnapshot{}, err
 	}
 	return engine.RefreshCatalog(ctx, "")
 }
 
-// RefreshModelCatalogV1 asks eyrie to refresh the remote catalog and provider APIs using env API keys.
+// RefreshModelCatalogV1 asks graycode-router to refresh the remote catalog and provider APIs using env API keys.
 func RefreshModelCatalogV1(ctx context.Context) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
@@ -840,7 +840,7 @@ func RefreshModelCatalogV1(ctx context.Context) (string, error) {
 func RefreshModelCatalogV1WithSettings(ctx context.Context, settings Settings) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	engine, err := NewEyrieEngineForSettings(settings)
+	engine, err := NewGraycodeRouterEngineForSettings(settings)
 	if err != nil {
 		return "", err
 	}

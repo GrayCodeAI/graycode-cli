@@ -17,7 +17,7 @@ func TestPersistenceServiceNoRecursiveLock(t *testing.T) {
 	go func() {
 		defer close(done)
 		s := NewPersistenceService(nil)
-		s.LoadMessages([]types.EyrieMessage{
+		s.LoadMessages([]types.GraycodeRouterMessage{
 			{Role: "user", Content: "a"},
 			{Role: "assistant", Content: "b"},
 		})
@@ -41,7 +41,7 @@ func TestPersistenceServiceNoRecursiveLock(t *testing.T) {
 
 func TestPersistenceServiceSnapshotsAreDeepCopies(t *testing.T) {
 	ps := NewPersistenceService(nil)
-	ps.LoadMessages([]types.EyrieMessage{{
+	ps.LoadMessages([]types.GraycodeRouterMessage{{
 		Role:   "assistant",
 		Images: []string{"data:image/png;base64,abc"},
 		ToolUse: []types.ToolCall{{
@@ -73,7 +73,7 @@ func TestPersistenceServiceSnapshotsAreDeepCopies(t *testing.T) {
 
 func TestPersistenceServiceSetRawMessagesCopiesInput(t *testing.T) {
 	ps := NewPersistenceService(nil)
-	input := []types.EyrieMessage{{
+	input := []types.GraycodeRouterMessage{{
 		Role: "assistant",
 		ToolUse: []types.ToolCall{{
 			Arguments: map[string]interface{}{"nested": map[string]interface{}{"value": "safe"}},
@@ -93,7 +93,7 @@ func TestPersistenceServiceSetRawMessagesCopiesInput(t *testing.T) {
 // O(1). It is a view — the caller must not mutate or retain it.
 func TestPersistenceServiceRawMessagesView(t *testing.T) {
 	ps := NewPersistenceService(nil)
-	ps.LoadMessages([]types.EyrieMessage{{Role: "user", Content: "a"}})
+	ps.LoadMessages([]types.GraycodeRouterMessage{{Role: "user", Content: "a"}})
 
 	view := ps.RawMessagesView()
 	if len(view) != 1 || view[0].Content != "a" {

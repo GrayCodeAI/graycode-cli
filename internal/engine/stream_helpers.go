@@ -77,8 +77,8 @@ func streamRetryDelay(err error, attempt int) time.Duration {
 }
 
 // parseRetryDelayHint extracts a delay hint from an error message, returning 0
-// when no hint is present (mirroring eyrie's parseRetryDelay, but kept local so
-// the engine package does not reach past the eyrie engine facade boundary).
+// when no hint is present (mirroring graycode-router's parseRetryDelay, but kept local so
+// the engine package does not reach past the graycode-router engine facade boundary).
 func parseRetryDelayHint(errMsg string) time.Duration {
 	m := retryDelayRe.FindStringSubmatch(errMsg)
 	if m == nil {

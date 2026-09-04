@@ -18,7 +18,7 @@ curl -sf http://localhost:4590/v1/health
 ### `GET /v1/ready` — Readiness probe
 
 Returns 200 when the daemon is fully ready to serve traffic (session factory
-configured, Eyrie preflight checks pass). Returns 503 with the failed
+configured, GraycodeRouter preflight checks pass). Returns 503 with the failed
 dependency during startup or when dependencies are unavailable.
 
 ```bash

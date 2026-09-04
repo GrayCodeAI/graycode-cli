@@ -13,7 +13,7 @@ import (
 func TestCatalogReady_MissingCache(t *testing.T) {
 	InvalidateCatalogHealthCache()
 	dir := t.TempDir()
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", filepath.Join(dir, "missing.json"))
 	if CatalogReady(context.Background()) {
 		t.Fatal("expected not ready without cache")
 	}

@@ -8,9 +8,9 @@ import (
 
 // ScrubSet is the canonical list of credential env vars that agent-launched
 // subprocesses (the Bash tool, background tasks, seatbelt wrapper) must never
-// inherit. It mirrors the provider key names in Eyrie's provider profiles
-// (eyrie/config/profiles.go). Keeping the list explicit here avoids
-// importing eyrie internals and makes the boundary auditable.
+// inherit. It mirrors the provider key names in GraycodeRouter's provider profiles
+// (graycode-router/config/profiles.go). Keeping the list explicit here avoids
+// importing graycode-router internals and makes the boundary auditable.
 var ScrubSet = []string{
 	"ANTHROPIC_API_KEY",
 	"AWS_ACCESS_KEY_ID",

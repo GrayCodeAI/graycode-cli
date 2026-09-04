@@ -19,7 +19,7 @@ var pathCmd = &cobra.Command{
 	Short: "Developer path readiness (setup, security, sandbox, ecosystem)",
 	Long: `Check whether graycode is configured on the developer path:
 API keys in OS secret store, model selected, no secrets on disk,
-mandatory Docker isolation, and eyrie/harrier/shrike integration.
+mandatory Docker isolation, and graycode-router/harrier/shrike integration.
 
 Built for individual developers first — teams and enterprise later.
 

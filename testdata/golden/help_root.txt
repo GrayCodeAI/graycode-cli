@@ -1,6 +1,6 @@
 graycode is an AI coding agent that reads, writes, and runs code in your terminal.
 
-It connects to 28 first-class LLM providers through eyrie, executes tools (file I/O, shell,
+It connects to 28 first-class LLM providers through graycode-router, executes tools (file I/O, shell,
 git, web search), and manages sessions — all from a keyboard-driven TUI or
 headless mode for scripts and CI.
 
@@ -42,7 +42,7 @@ Available Commands:
   credentials  Manage secure API key storage (macOS Keychain / Linux secret service)
   daemon       Manage the graycode background server
   doctor       Run local diagnostics
-  ecosystem    Show eyrie, harrier, and shrike integration status
+  ecosystem    Show graycode-router, harrier, and shrike integration status
   eval         Evaluate model performance on coding benchmarks
   exec         Execute a single command non-interactively
   features     List and manage feature flags
@@ -59,7 +59,7 @@ Available Commands:
   manpage      Generate man page in roff format
   mcp          Show MCP configuration; run or register graycode as an MCP server
   mission      Run a multi-agent mission (parallel feature execution)
-  models       Deployment-aware model catalog (via eyrie)
+  models       Deployment-aware model catalog (via graycode-router)
   path         Developer path readiness (setup, security, sandbox, ecosystem)
   permissions  List and manage exact permission rules
   plan         Create and manage structured development plans
@@ -113,7 +113,7 @@ Flags:
       --max-budget-usd float               maximum estimated API spend in USD
       --max-turns int                      maximum number of agentic turns in non-interactive mode
       --mcp stringArray                    MCP server command
-  -m, --model string                       model to use (from eyrie catalog; see /models)
+  -m, --model string                       model to use (from graycode-router catalog; see /models)
       --no-auto-catalog-refresh            disable automatic catalog refresh when cache is missing, empty, or stale
       --no-session-persistence             disable session persistence in print mode
       --output-fields string               comma-separated field whitelist for --output-format json (e.g. "result,session_id")
@@ -125,7 +125,7 @@ Flags:
   -q, --quiet                              suppress non-essential output (spinners, progress, decoration); machine-parseable output only
       --record string                      record interactive REPL output to an fxtape file (fx --record parity)
       --recover                            scan for interrupted sessions and offer to resume
-      --refresh-catalog                    refresh the eyrie model catalog before starting
+      --refresh-catalog                    refresh the graycode-router model catalog before starting
       --repl                               start interactive REPL mode (like aider) for multi-turn conversation without TUI
       --repo-map                           inject an AST-ranked repository map (Aider-style) into the system prompt
   -r, --resume string                      resume a saved session by ID

@@ -14,7 +14,7 @@ func TestEcosystemCmdRuns(t *testing.T) {
 		provider = "auto"
 	}
 	out := graycodeconfig.FormatEcosystemPanel(t.Context(), provider, model)
-	if !strings.Contains(out, "Ecosystem (eyrie · harrier · shrike)") {
+	if !strings.Contains(out, "Ecosystem (graycode-router · harrier · shrike)") {
 		t.Fatalf("unexpected panel: %q", out)
 	}
 	if err := ecosystemCmd.RunE(ecosystemCmd, nil); err != nil {

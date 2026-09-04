@@ -6,12 +6,12 @@ import (
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
-func mkMsg(role string, trs []types.ToolResult) types.EyrieMessage {
-	return types.EyrieMessage{Role: role, ToolResults: trs}
+func mkMsg(role string, trs []types.ToolResult) types.GraycodeRouterMessage {
+	return types.GraycodeRouterMessage{Role: role, ToolResults: trs}
 }
 
 func TestClearOldToolResultsNoOpWhenBelowThreshold(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		mkMsg("user", []types.ToolResult{{Content: "aaaa"}}),
 	}
 	out, freed := clearOldToolResults(msgs, 100, 1000)
@@ -22,7 +22,7 @@ func TestClearOldToolResultsNoOpWhenBelowThreshold(t *testing.T) {
 
 func TestClearOldToolResultsClearsBiggestFirst(t *testing.T) {
 	// 6 tool-result messages; threshold low so clearing triggers; keep last 4.
-	msgs := make([]types.EyrieMessage, 6)
+	msgs := make([]types.GraycodeRouterMessage, 6)
 	for i := range msgs {
 		msgs[i] = mkMsg("user", []types.ToolResult{{Content: "12345678"}}) // 8 bytes
 	}
@@ -46,7 +46,7 @@ func TestClearOldToolResultsClearsBiggestFirst(t *testing.T) {
 
 func TestClearOldToolResultsStopsWhenUnderThreshold(t *testing.T) {
 	// Huge contents, small threshold: it clears until under threshold, then stops.
-	msgs := make([]types.EyrieMessage, 6)
+	msgs := make([]types.GraycodeRouterMessage, 6)
 	for i := range msgs {
 		msgs[i] = mkMsg("user", []types.ToolResult{{Content: "12345678"}})
 	}
@@ -63,7 +63,7 @@ func TestClearOldToolResultsStopsWhenUnderThreshold(t *testing.T) {
 }
 
 func TestClearOldToolResultsSkipsAlreadyCleared(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		mkMsg("user", []types.ToolResult{{Content: outputClearedPlaceholder}}),
 		mkMsg("user", []types.ToolResult{{Content: outputClearedPlaceholder}}),
 		mkMsg("user", []types.ToolResult{{Content: outputClearedPlaceholder}}),

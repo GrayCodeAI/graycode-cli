@@ -5,7 +5,7 @@
 **Horizon:** ~12–18 months (phased; can compress with parallel teams)  
 **Language:** Go only (no Rust ports; reimplement contracts and behavior)  
 **Primary product:** `graycode`  
-**Supporting repositories:** `eagle`, `eyrie`, `harrier` (Harrier), `shrike` (Shrike), `swift` (Swift), `kestrel` (Kestrel), `merlin` (Merlin), `falcon`, `starling`, `sparrow`, `robin`, `wren`, `owl`, and `graycode-platform` (web/BFF/Graycode Cloud; outside the Graycode Go runtime graph)
+**Supporting repositories:** `eagle`, `graycode-router`, `harrier` (Harrier), `shrike` (Shrike), `swift` (Swift), `kestrel` (Kestrel), `merlin` (Merlin), `falcon`, `starling`, `sparrow`, `robin`, `wren`, `owl`, and `graycode-platform` (web/BFF/Graycode Cloud; outside the Graycode Go runtime graph)
 
 ---
 
@@ -13,13 +13,13 @@
 
 ### Goal
 
-Bring Graycode to **Grok-class agent control-plane quality** (typed subagents, sandbox profiles, folder trust, hooks, plugins/marketplace, ACP depth, monitor/scheduler, enterprise managed policy) **without** abandoning Graycode’s multi-repo Go platform advantages (eyrie multi-provider, harrier graph memory, shrike compression, mission mode, contracts, cloud ledger).
+Bring Graycode to **Grok-class agent control-plane quality** (typed subagents, sandbox profiles, folder trust, hooks, plugins/marketplace, ACP depth, monitor/scheduler, enterprise managed policy) **without** abandoning Graycode’s multi-repo Go platform advantages (graycode-router multi-provider, harrier graph memory, shrike compression, mission mode, contracts, cloud ledger).
 
 ### Non-goals
 
 - Rewrite Graycode in Rust or monorepo-collapse engines into graycode.
 - Vendor lock-in to a single LLM host auth model.
-- Replace eyrie/harrier/shrike/swift with Grok-shaped internal crates.
+- Replace graycode-router/harrier/shrike/swift with Grok-shaped internal crates.
 - Default opt-in product telemetry that violates privacy-first posture.
 
 ### Strategy
@@ -130,7 +130,7 @@ This is the single highest-ROI fix: **wire what already exists**, then extend.
          │
     ┌────┴────┬──────────┬──────────┬──────────┐
     ▼         ▼          ▼          ▼          ▼
-  eyrie     harrier       shrike       swift     kestrel/merlin
+  graycode-router     harrier       shrike       swift     kestrel/merlin
 ```
 
 **New core package (proposed):** `graycode/internal/spawn` (or expand `engine/agent`) owning:
@@ -699,7 +699,7 @@ Depends on Phase 2 unified `taskruntime`.
 
 ### Phase 9 — Enterprise managed policy (4–6 weeks)
 
-**Repos:** `graycode-platform/apps/worker` (deployed as `graycode-cloud`), `graycode`, optional `eyrie`
+**Repos:** `graycode-platform/apps/worker` (deployed as `graycode-cloud`), `graycode`, optional `graycode-router`
 
 | Piece | Detail |
 |-------|--------|
@@ -768,7 +768,7 @@ Build on existing enterprise policyInput (model/capability lists).
 | Foreign import | swift | graycode | optional |
 | Memory dream UX | harrier | graycode | no |
 | Token | shrike | — | no change |
-| Providers | eyrie | graycode | no change |
+| Providers | graycode-router | graycode | no change |
 | Review engines | kestrel/merlin | graycode | findings already |
 
 ---
@@ -976,7 +976,7 @@ Week 4
 | Trust default | On | Security |
 | Marketplace before trust? | No | Supply chain |
 | Replace harrier? | No | Graph memory superior |
-| Replace eyrie? | No | Multi-provider is differentiator |
+| Replace graycode-router? | No | Multi-provider is differentiator |
 | Three bg systems | Unify early | Blocks monitor/wait |
 
 ---

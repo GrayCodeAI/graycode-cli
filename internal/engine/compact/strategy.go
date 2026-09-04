@@ -8,7 +8,7 @@ import (
 )
 
 type CompactResult struct {
-	Messages     []types.EyrieMessage
+	Messages     []types.GraycodeRouterMessage
 	Summary      string
 	TokensBefore int
 	TokensAfter  int
@@ -52,7 +52,7 @@ func IsCompactableTool(name string) bool {
 	return compactableTools[name]
 }
 
-func AdjustIndexToPreserveAPIInvariants(msgs []types.EyrieMessage, startIdx int) int {
+func AdjustIndexToPreserveAPIInvariants(msgs []types.GraycodeRouterMessage, startIdx int) int {
 	if startIdx <= 0 {
 		return 0
 	}
@@ -87,7 +87,7 @@ func AdjustIndexToPreserveAPIInvariants(msgs []types.EyrieMessage, startIdx int)
 	return idx
 }
 
-func HasTextContent(m types.EyrieMessage) bool {
+func HasTextContent(m types.GraycodeRouterMessage) bool {
 	if len(m.ToolResults) > 0 {
 		return false
 	}

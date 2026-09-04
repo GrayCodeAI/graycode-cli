@@ -211,7 +211,7 @@ func classifyPrompt(prompt string) string {
 }
 
 // modelForTask maps a task type to the appropriate model using configured roles
-// and eyrie catalog tier defaults.
+// and graycode-router catalog tier defaults.
 func (cr *CascadeRouter) modelForTask(taskType string, frugal bool) string {
 	tier := routing.SuggestTierForTask(taskType)
 
@@ -250,7 +250,7 @@ func (cr *CascadeRouter) modelForTask(taskType string, frugal bool) string {
 	}
 }
 
-// defaultFor returns the best model for a given cost tier via eyrie catalog tier defaults.
+// defaultFor returns the best model for a given cost tier via graycode-router catalog tier defaults.
 func (cr *CascadeRouter) defaultFor(tier ModelTier) string {
 	provider := ""
 	if info, ok := routing.Find(cr.DefaultModel); ok {

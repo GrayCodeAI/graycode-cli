@@ -133,7 +133,7 @@ func classify(err error) errorClass {
 	// cost before fulfilling a request. When the account balance can't cover
 	// that hold they return 403 with an insufficient_user_quota code rather
 	// than a 401 — so this must be checked before the generic 403 branch below,
-	// otherwise the user is misled into "check your API key". eyrie already
+	// otherwise the user is misled into "check your API key". graycode-router already
 	// tags these as "billing/quota problem"; the Agnes body also carries the
 	// Chinese pre-deduction phrasing (预扣费) and an insufficient_user_quota code.
 	if strings.Contains(low, "insufficient_user_quota") || strings.Contains(low, "insufficient_quota") ||

@@ -11,7 +11,7 @@ repository, product, or runtime module.
 | `graycode` | Main CLI, daemon, orchestration, policy, and public API | Main product and integration root |
 | `eagle` | Neutral cross-repository contracts | Go dependency of Graycode and selected engines |
 | `falcon` | Shared MCP transport and handler scaffolding | Go dependency of MCP-serving engines |
-| `eyrie` | Provider credentials, catalog, routing, transport, streaming | Graycode consumes `eyrie/engine` |
+| `graycode-router` | Provider credentials, catalog, routing, transport, streaming | Graycode consumes `graycode-router/engine` |
 | `harrier` | Harrier memory and retrieval engine | Graycode integration |
 | `shrike` | Shrike token budgeting and context compression | Graycode integration |
 | `swift` | Swift provenance and replay engine | Graycode consumes `swift/cli` |
@@ -32,7 +32,7 @@ Shrike, `swift` is Swift, `kestrel` is Kestrel, and `merlin` is Merlin.
 ```text
 sparrow / robin / wren ── HTTP/OpenAPI ──> graycode <── skill surface ── starling
                                              │
-                                             ├── eyrie/engine
+                                             ├── graycode-router/engine
                                              ├── harrier       (Harrier)
                                              ├── shrike        (Shrike)
                                              ├── swift/cli     (Swift)
@@ -78,7 +78,7 @@ use published module versions with `GOWORK=off`.
 ## Current versus proposed
 
 The proposed repository shape is already present locally. Remaining work is
-release and boundary refinement: publish the Eagle-compatible Eyrie revision,
+release and boundary refinement: publish the Eagle-compatible GraycodeRouter revision,
 remove its transitional legacy contract dependency from the standalone graph,
 and decide whether Graycode's graph/projection integrations should be hidden behind
 engine-owned facades.

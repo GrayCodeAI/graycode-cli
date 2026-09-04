@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"testing"
 
-	contracts "github.com/GrayCodeAI/eyrie/tools"
 	"github.com/GrayCodeAI/graycode-cli/internal/session"
 	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
+	contracts "github.com/GrayCodeAI/graycode-router/tools"
 )
 
 // saveTestSession isolates session storage to a temp dir and persists a

@@ -34,19 +34,19 @@ func originalsDir() string {
 	return filepath.Join(storage.StateDir(), "tool-catalog-originals")
 }
 
-// shrinkEyrieTools compresses the graycode tool list via shrike's toolschema
+// shrinkGraycodeRouterTools compresses the graycode tool list via shrike's toolschema
 // compressor. The list is converted to the OpenAI function-catalog wire shape,
 // shrunk, and converted back; any name-set mismatch fails open to input.
 // When compression changed something, the original catalog is persisted under
 // the state dir keyed by content hash before the shrunk form is returned.
-func shrinkEyrieTools(tools []types.EyrieTool) []types.EyrieTool {
+func shrinkGraycodeRouterTools(tools []types.GraycodeRouterTool) []types.GraycodeRouterTool {
 	if len(tools) == 0 || !toolShrinkEnabled() {
 		return tools
 	}
 
 	type wireTool struct {
-		Type     string          `json:"type"`
-		Function types.EyrieTool `json:"function"`
+		Type     string                   `json:"type"`
+		Function types.GraycodeRouterTool `json:"function"`
 	}
 	wire := make([]wireTool, len(tools))
 	for i := range tools {
@@ -68,7 +68,7 @@ func shrinkEyrieTools(tools []types.EyrieTool) []types.EyrieTool {
 	if len(shrunkWire) != len(tools) {
 		return tools // structural drift: never risk it
 	}
-	out := make([]types.EyrieTool, len(tools))
+	out := make([]types.GraycodeRouterTool, len(tools))
 	for i := range shrunkWire {
 		if shrunkWire[i].Function.Name != tools[i].Name {
 			slog.Debug("tool shrink name drift, failing open", "position", i)

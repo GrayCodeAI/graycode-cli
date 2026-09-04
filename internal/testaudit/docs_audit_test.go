@@ -22,7 +22,7 @@ func TestArchitectureDocsDoNotContainStaleContractsLanguage(t *testing.T) {
 	forbiddenPhrases := []string{
 		"eagle` (to add)",
 		"planned shared contracts layer",
-		"runtime still uses `eyrie/client` provider interfaces and config types",
+		"runtime still uses `graycode-router/client` provider interfaces and config types",
 	}
 
 	for _, rel := range files {

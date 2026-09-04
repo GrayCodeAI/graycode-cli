@@ -7,7 +7,7 @@ import (
 	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 )
 
-func TestNewEyrieEngineForSettingsIsInvocationScoped(t *testing.T) {
+func TestNewGraycodeRouterEngineForSettingsIsInvocationScoped(t *testing.T) {
 	previousStore := gateway.DefaultStore()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
@@ -17,7 +17,7 @@ func TestNewEyrieEngineForSettingsIsInvocationScoped(t *testing.T) {
 		Name: "private-gateway", BaseURL: "https://private.example.test/v1",
 		APIKeyEnv: "PRIVATE_GATEWAY_API_KEY", Model: "private/model-v1",
 	}}}
-	engine, err := NewEyrieEngineForSettings(settings)
+	engine, err := NewGraycodeRouterEngineForSettings(settings)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestNewEyrieEngineForSettingsIsInvocationScoped(t *testing.T) {
 		t.Fatalf("custom credential surface = %+v, err=%v", status, err)
 	}
 
-	if _, collisionErr := NewEyrieEngineForSettings(Settings{CustomProviders: []CustomProviderConfig{{
+	if _, collisionErr := NewGraycodeRouterEngineForSettings(Settings{CustomProviders: []CustomProviderConfig{{
 		Name: "openai", BaseURL: "https://collision.example.test/v1",
 	}}}); collisionErr == nil {
 		t.Fatal("built-in custom gateway collision was accepted")
@@ -53,7 +53,7 @@ func TestNewEyrieEngineForSettingsIsInvocationScoped(t *testing.T) {
 	if err != nil || len(models) != 1 {
 		t.Fatalf("independent invalid construction changed existing engine: %+v, err=%v", models, err)
 	}
-	other, err := NewEyrieEngineForSettings(Settings{})
+	other, err := NewGraycodeRouterEngineForSettings(Settings{})
 	if err != nil {
 		t.Fatal(err)
 	}

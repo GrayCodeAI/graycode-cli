@@ -8,19 +8,19 @@ import (
 	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 )
 
-// ApplyCredentialsResult is Graycode's UI-safe view of an Eyrie catalog/routing
-// application. It intentionally excludes Eyrie setup/config implementation
+// ApplyCredentialsResult is Graycode's UI-safe view of an GraycodeRouter catalog/routing
+// application. It intentionally excludes GraycodeRouter setup/config implementation
 // types from the product boundary.
 type ApplyCredentialsResult struct {
 	Catalog gateway.CatalogSnapshot
 }
 
-// ApplyEyrieCredentialsForProvider refreshes live models and writes sanitized
+// ApplyGraycodeRouterCredentialsForProvider refreshes live models and writes sanitized
 // deployment routing after /config saves a key.
-func ApplyEyrieCredentialsForProvider(ctx context.Context, providerID string) (*ApplyCredentialsResult, error) {
+func ApplyGraycodeRouterCredentialsForProvider(ctx context.Context, providerID string) (*ApplyCredentialsResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return nil, err
 	}
@@ -32,12 +32,12 @@ func ApplyEyrieCredentialsForProvider(ctx context.Context, providerID string) (*
 	return &ApplyCredentialsResult{Catalog: snapshot}, nil
 }
 
-// ApplyEyrieCredentials refreshes all configured providers and writes
+// ApplyGraycodeRouterCredentials refreshes all configured providers and writes
 // sanitized deployment routing.
-func ApplyEyrieCredentials(ctx context.Context) (*ApplyCredentialsResult, error) {
+func ApplyGraycodeRouterCredentials(ctx context.Context) (*ApplyCredentialsResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func ApplyEyrieCredentials(ctx context.Context) (*ApplyCredentialsResult, error)
 func RefreshGatewayCatalog(ctx context.Context, providerID string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return "", err
 	}

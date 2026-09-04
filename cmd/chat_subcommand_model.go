@@ -89,7 +89,7 @@ func (mo *modelSubcommand) Handle(m *chatModel, args []string, text string) (tea
 		m.session.Provider(),
 	)
 	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf(
-		"Model switched: %s → %s (Think: %s)\nConversation history preserved (%d messages); new requests use the new model.\nSaved in eyrie (provider.json). Use /model and press t to toggle Think.",
+		"Model switched: %s → %s (Think: %s)\nConversation history preserved (%d messages); new requests use the new model.\nSaved in graycode-router (provider.json). Use /model and press t to toggle Think.",
 		prevModel, m.session.Model(), thinkLabel, msgCount,
 	)})
 	return m, nil

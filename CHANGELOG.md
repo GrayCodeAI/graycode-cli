@@ -23,13 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] — 2026-07-13
 
 ### Changed
-- **Graycode/Eyrie production boundary completed**: Graycode owns the product face,
-  sessions, tools, permissions, and public schemas while Eyrie v0.2.1 owns
+- **Graycode/GraycodeRouter production boundary completed**: Graycode owns the product face,
+  sessions, tools, permissions, and public schemas while GraycodeRouter v0.2.1 owns
   credentials, catalog resolution, provider transport, resilience, and usage
-  telemetry behind the stable `eyrie/engine` facade.
+  telemetry behind the stable `graycode-router/engine` facade.
 - **Provider routing and usage attribution hardened**: resolved route changes,
   continuation segments, and terminal usage are propagated without duplicate
-  accounting, and production Eyrie calls use exactly one resilience layer.
+  accounting, and production GraycodeRouter calls use exactly one resilience layer.
 - **Daemon conversations are durable**: JSON and SSE chat requests create or
   resume persisted sessions, expose stable session IDs, preserve metadata, and
   distinguish invalid, missing, and corrupt state.
@@ -42,8 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`--permission-mode` CLI flag removed**; `--dangerously-skip-permissions` unchanged (now maps to the Autonomous tier). New `--dry-run` flag added as an unconditional kill switch (deny every tool call, regardless of tier or spec stage) — replaces `dontAsk`'s hard-lockout role.
 - **Version re-baselined to `0.1.0`** across `cmd/graycode/main.go`, `cmd/daemon.go`,
   `flake.nix`, `.github/workflows/release.yml`, and the `update`/daemon test suites, aligning graycode
-  with the rest of the GrayCodeAI ecosystem (`eyrie`, `shrike`, `harrier`, `kestrel`, `merlin`).
-- **Architecture boundary hardening**: Graycode now owns runtime request/response DTOs, transport config/provider seams, and review/verification product-boundary contracts, with `eyrie/client` usage restricted to internal adapters and guarded in CI.
+  with the rest of the GrayCodeAI ecosystem (`graycode-router`, `shrike`, `harrier`, `kestrel`, `merlin`).
+- **Architecture boundary hardening**: Graycode now owns runtime request/response DTOs, transport config/provider seams, and review/verification product-boundary contracts, with `graycode-router/client` usage restricted to internal adapters and guarded in CI.
 - **`shared/types` removed**: Graycode no longer ships the old shared type path, and local boundary checks now block any attempt to reintroduce it.
 
 ### Added
@@ -231,5 +231,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Project scaffold with cobra CLI and Bubbletea TUI
 - Interactive chat REPL with textarea input, spinner, lipgloss styling
-- eyrie wired as LLM provider dependency
+- graycode-router wired as LLM provider dependency
 - GitHub Actions CI

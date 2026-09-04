@@ -3,7 +3,7 @@
 Status: Implemented in working tree; sibling-repository PRs and skills curation remain follow-ups
 Date: 2026-08-21
 Scope: Adopt the high-value, verified concepts from MiniMax-AI's open-source
-repos into the Graycode ecosystem (Graycode plus independent repositories: Eyrie, Eagle,
+repos into the Graycode ecosystem (Graycode plus independent repositories: GraycodeRouter, Eagle,
 Falcon, Kestrel, and Merlin).
 
 ## Findings summary
@@ -14,27 +14,27 @@ internals produced these adoptions, ordered by value:
 
 | # | MiniMax repo | Adopt into | Action |
 |---|---|---|---|
-| 1 | MiniMax-Provider-Verifier | sibling `eyrie` | Add provider-conformance metrics + wire the orphaned `verify` harness into CI |
+| 1 | MiniMax-Provider-Verifier | sibling `graycode-router` | Add provider-conformance metrics + wire the orphaned `verify` harness into CI |
 | 2 | MiniMax/skills | `starling` | Curate high-quality skill content (content, not mechanism) |
 | 3 | MiniMax-Coding-Plan-MCP | graycode / `falcon` | MCP v2 no-network test pattern + image-source normalization (patterns only) |
 | 4 | minimax_search | graycode tooling | Jina page→Markdown browse extractor + evidence-extraction prompt (pattern) |
 | 5 | Mini-Agent | graycode engine | Cooperative-cancellation-with-cleanup + token-aware lossy summarization (patterns) |
 | 6 | MiniMax-MCP / JS | — | Not adoptable (media generation, out of scope) |
 
-## 1. Eyrie provider-conformance metrics + CI wiring (highest value)
+## 1. GraycodeRouter provider-conformance metrics + CI wiring (highest value)
 
-### Verified current state (eyrie repository)
+### Verified current state (graycode-router repository)
 
-- `eyrie/verify/verify.go` — a complete behavioral conformance harness
+- `graycode-router/verify/verify.go` — a complete behavioral conformance harness
   exists: `Case`/`CaseResult`/`Expectation`/`Report`, `Run()`, `scoreResponse()`,
   `ToolCallF1()`, `DiffBaseline()`, `Markdown()`.
-- `eyrie/verify/cases.go` — `CanonicalCases()` with 3 cases:
+- `graycode-router/verify/cases.go` — `CanonicalCases()` with 3 cases:
   `basic-chat`, `deterministic-answer`, `tool-call`.
-- `eyrie/verify/metrics.go` — `ToolCallF1()` already implemented.
+- `graycode-router/verify/metrics.go` — `ToolCallF1()` already implemented.
 - **Confirmed gap:** the `verify` package is referenced ONLY by its own tests.
   It is not wired into any CLI, Makefile target, CI job, or provider-registration
   gate. Only structural registry/parity tests are enforced.
-- eyrie already ships MiniMax providers (`minimax_token_plan`, `minimax_payg`)
+- graycode-router already ships MiniMax providers (`minimax_token_plan`, `minimax_payg`)
   as OpenAI-compatible adapters with `ThinkingFormat: "minimax"`.
 - `client/structured.go` already has `ValidateStructuredOutput()` — a recursive
   JSON-schema validator (`validateValue`, `validateObject`, `validateArray`)
@@ -43,7 +43,7 @@ internals produced these adoptions, ordered by value:
 ### What to implement
 
 **A. Add a `SchemaValidate` helper (argument-level) — new file
-`eyrie/verify/schema.go`**
+`graycode-router/verify/schema.go`**
 
 Add `SchemaValidate(args map[string]any, schema map[string]any) error` that
 checks tool-call arguments against the tool's `Parameters` JSON schema:
@@ -52,7 +52,7 @@ checks tool-call arguments against the tool's `Parameters` JSON schema:
 
 This is the `ToolCalls-Schema-Accuracy` dimension from MiniMax-Provider-Verifier.
 
-**B. Add `MatchRate` to `Report` — edit `eyrie/verify/verify.go`**
+**B. Add `MatchRate` to `Report` — edit `graycode-router/verify/verify.go`**
 
 Compute the `ToolCalls-Match-Rate` (trigger-vs-stop correctness) alongside F1.
 Extend `CaseResult` already has `ExpectedTool`/`CalledAnyTool`/`CorrectTool`, so
@@ -63,9 +63,9 @@ tool_calls_match_rate = (TP + TN) / expected_tool_call_total_count
 mirroring MiniMax's confusion-matrix metric.
 
 **C. Add a `verify` CLI entrypoint — new file
-`eyrie/cmd/verify/main.go`**
+`graycode-router/cmd/verify/main.go`**
 
-A small `go run`-able binary (or a `verify` subcommand if eyrie has a cmd/) that
+A small `go run`-able binary (or a `verify` subcommand if graycode-router has a cmd/) that
 runs `verify.Run` against a provider endpoint (live or cassette) and exits
 non-zero on unmet thresholds:
 - `--model`, `--base-url`, `--api-key`, `--provider`
@@ -74,8 +74,8 @@ non-zero on unmet thresholds:
 
 This makes the orphaned harness operational and enables CI gating.
 
-**D. Add a Makefile target + CI job — edit `eyrie/Makefile` and
-`eyrie/.github/workflows/ci.yml`**
+**D. Add a Makefile target + CI job — edit `graycode-router/Makefile` and
+`graycode-router/.github/workflows/ci.yml`**
 
 - Makefile: `verify` target that runs the harness in cassette mode (no tokens)
   and `verify-live` for manual live runs.
@@ -83,13 +83,13 @@ This makes the orphaned harness operational and enables CI gating.
   on PRs, ensuring the harness is exercised and providers don't regress.
 
 ### Files
-- `eyrie/verify/schema.go` (new)
-- `eyrie/verify/schema_test.go` (new)
-- `eyrie/verify/verify.go` (add MatchRate)
-- `eyrie/verify/verify_test.go` (add tests)
-- `eyrie/cmd/verify/main.go` (new)
-- `eyrie/Makefile` (verify target)
-- `eyrie/.github/workflows/ci.yml` (verify job)
+- `graycode-router/verify/schema.go` (new)
+- `graycode-router/verify/schema_test.go` (new)
+- `graycode-router/verify/verify.go` (add MatchRate)
+- `graycode-router/verify/verify_test.go` (add tests)
+- `graycode-router/cmd/verify/main.go` (new)
+- `graycode-router/Makefile` (verify target)
+- `graycode-router/.github/workflows/ci.yml` (verify job)
 
 ## 2. Curate MiniMax/skills content into starling
 
@@ -181,8 +181,8 @@ This makes the orphaned harness operational and enables CI gating.
 - The `verify` harness's live-token path: optional, off by default.
 
 ## Execution order
-1. Eyrie verify metrics + schema validation + tests (highest value)
-2. Eyrie verify CLI + Makefile + CI wiring
+1. GraycodeRouter verify metrics + schema validation + tests (highest value)
+2. GraycodeRouter verify CLI + Makefile + CI wiring
 3. graycode image-source normalization helper + tests
 4. graycode Jina browse extractor + tests
 5. Agent-loop cancellation/summarization patterns
@@ -190,12 +190,12 @@ This makes the orphaned harness operational and enables CI gating.
 
 ## Implementation status
 
-- [x] Eyrie schema-accuracy validation and tool-call match-rate metrics.
-- [x] Eyrie verification CLI, deterministic Makefile target, and CI job.
+- [x] GraycodeRouter schema-accuracy validation and tool-call match-rate metrics.
+- [x] GraycodeRouter verification CLI, deterministic Makefile target, and CI job.
 - [x] Graycode image-source normalization for data URIs, URLs, local files, and raw base64.
 - [x] Graycode Jina Reader page-to-Markdown client with opt-in configuration and tests.
 - [x] Graycode cancellation cleanup for incomplete assistant tool-use/tool-result turns.
 - [x] Confirmed graycode's existing `internal/engine/compact` already provides token-triggered
   compaction; no duplicate summarizer was added.
-- [ ] Publish the Eyrie repository changes through its own feature branch and PR.
+- [ ] Publish the GraycodeRouter repository changes through its own feature branch and PR.
 - [ ] Curate MiniMax skills into `starling` through its own feature branch and PR.

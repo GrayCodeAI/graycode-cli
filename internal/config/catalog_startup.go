@@ -72,7 +72,7 @@ func CatalogStatusLine(ctx context.Context) string {
 	return formatCatalogGatewayStatus("Catalog: ", rows, h.Models)
 }
 
-// CatalogReady reports whether the eyrie catalog cache exists and has models.
+// CatalogReady reports whether the graycode-router catalog cache exists and has models.
 func CatalogReady(ctx context.Context) bool {
 	h := CatalogHealthReport(ctx)
 	return h.Error == "" && h.Models > 0 && !h.Stale
@@ -146,7 +146,7 @@ func catalogNeedsAutoRefresh(h CatalogHealth, opts CatalogStartupOptions) bool {
 	return h.Stale
 }
 
-// AutoRefreshCatalog runs eyrie discover (remote + live APIs when keys are set).
+// AutoRefreshCatalog runs graycode-router discover (remote + live APIs when keys are set).
 func AutoRefreshCatalog(ctx context.Context, out io.Writer, verbose bool) error {
 	if out != nil {
 		if verbose {
@@ -185,7 +185,7 @@ func TryAutoRefreshCatalog(ctx context.Context) error {
 	return AutoRefreshCatalog(ctx, nil, false)
 }
 
-// RefreshCatalogAfterCredentials runs eyrie discover after /config saves API keys.
+// RefreshCatalogAfterCredentials runs graycode-router discover after /config saves API keys.
 func RefreshCatalogAfterCredentials(ctx context.Context, out io.Writer) error {
 	if !autoRefreshCatalogEnabled() {
 		return nil

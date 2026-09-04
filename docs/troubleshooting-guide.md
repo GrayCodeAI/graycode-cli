@@ -73,7 +73,7 @@ graycode daemon start --port 4591
 
 ### `GET /v1/ready` returns 503
 
-The readiness probe fails when Eyrie's local preflight doesn't pass. This
+The readiness probe fails when GraycodeRouter's local preflight doesn't pass. This
 checks provider state, catalog, credentials, and model selection.
 
 **Diagnosis:**
@@ -85,7 +85,7 @@ curl -v http://localhost:4590/v1/ready
 Check the response body for the specific failed check. Common causes:
 
 - No model configured — set `GRAYCODE_MODEL` or provider credentials.
-- Eyrie catalog not initialized — the nine Go modules are independent sibling
+- GraycodeRouter catalog not initialized — the nine Go modules are independent sibling
   repositories; from a full parent workspace, run `make setup` in graycode to
   regenerate the parent `go.work`:
   ```bash
@@ -198,7 +198,7 @@ mode) or when the engine is not ready (daemon mode).
 curl http://localhost:4590/v1/ready
 ```
 
-If readiness fails, the session factory exists but Eyrie preflight is not
+If readiness fails, the session factory exists but GraycodeRouter preflight is not
 satisfied (missing model, credentials, etc.).
 
 ---

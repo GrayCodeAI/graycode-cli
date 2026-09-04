@@ -31,8 +31,8 @@ func TestIsSmallTalkPrompt(t *testing.T) {
 }
 
 func TestSessionHasToolUse(t *testing.T) {
-	plain := []types.EyrieMessage{{Role: "user", Content: "hi"}}
-	used := []types.EyrieMessage{
+	plain := []types.GraycodeRouterMessage{{Role: "user", Content: "hi"}}
+	used := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "read stream.go"},
 		{Role: "assistant", ToolUse: []types.ToolCall{{Name: "Read"}}},
 		{Role: "user", Content: "thanks", ToolResults: []types.ToolResult{{}}},

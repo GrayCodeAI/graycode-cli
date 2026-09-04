@@ -12,7 +12,7 @@ import (
 // catalog) is split into cacheable segments, breakpoints are computed at the
 // last tool and last system boundaries, and the whole thing is enabled only
 // when the provider economics pay off for the expected reuse count. Full
-// wire-format lowering and key sharding across a fleet remain eyrie-side;
+// wire-format lowering and key sharding across a fleet remain graycode-router-side;
 // this is the deterministic client planner.
 
 // Anthropic 5m cache economics: uncached = 1.0x, cache write = 1.25x,
@@ -52,7 +52,7 @@ type CachePlan struct {
 
 // planCache computes whether and how to cache the stable prefix for a call.
 // Deterministic and pure so it can be tested without a provider connection.
-func planCache(provider, systemPrompt string, tools []types.EyrieTool, expectedReuse int) CachePlan {
+func planCache(provider, systemPrompt string, tools []types.GraycodeRouterTool, expectedReuse int) CachePlan {
 	if expectedReuse <= 0 {
 		expectedReuse = cacheDefaultReuse
 	}
@@ -112,6 +112,6 @@ func planCache(provider, systemPrompt string, tools []types.EyrieTool, expectedR
 
 // cacheDecision reports whether to request provider-native caching, delegating
 // to the planner at the default reuse. Kept for backward compatibility.
-func cacheDecision(provider, systemPrompt string, tools []types.EyrieTool) bool {
+func cacheDecision(provider, systemPrompt string, tools []types.GraycodeRouterTool) bool {
 	return planCache(provider, systemPrompt, tools, cacheDefaultReuse).Enabled
 }

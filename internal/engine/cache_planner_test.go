@@ -11,7 +11,7 @@ func bigSys(n int) string { return strings.Repeat("s", n) }
 
 func TestPlanCacheSegmentsAndBreakpoints(t *testing.T) {
 	sys := bigSys(cacheMinPrefixBytes + 2048)
-	tools := []types.EyrieTool{{Name: "t", Description: strings.Repeat("d", 4096), Parameters: map[string]interface{}{"type": "object"}}}
+	tools := []types.GraycodeRouterTool{{Name: "t", Description: strings.Repeat("d", 4096), Parameters: map[string]interface{}{"type": "object"}}}
 	p := planCache("anthropic", sys, tools, 2)
 	if !p.Enabled {
 		t.Fatalf("expected enabled, reason=%q", p.Reason)

@@ -36,7 +36,7 @@ GORELEASER   := $(GOBIN_DIR)/goreleaser
 # ---------------------------------------------------------------------------
 # Phony declarations (alphabetical).
 # ---------------------------------------------------------------------------
-.PHONY: all bench boundaries build check-replace ci clean contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard manifest-guard peer-guard internal-layers-guard package-boundaries-guard release-parity cover cover-new fmt help install lint lint-fix \
+.PHONY: all bench boundaries build check-replace ci clean contracts-guard ecosystem-guard graycode-router-client-guard graycode-router-engine-guard manifest-guard peer-guard internal-layers-guard package-boundaries-guard release-parity cover cover-new fmt help install lint lint-fix \
         release security setup smoke path sync test test-10x test-live test-new test-race tidy version vet api-docs api-validate workspace
 
 check-replace: ## Fail if go.mod has local replace directives (run before tagging)
@@ -118,11 +118,11 @@ contracts-guard: ## Fail on any legacy imports of removed graycode/shared/types.
 ecosystem-guard: ## Fail if external ecosystem repos import graycode/internal or removed graycode/shared/types.
 	bash ./scripts/check-ecosystem-boundaries.sh
 
-eyrie-client-guard: ## Fail on any production eyrie/client import.
-	bash ./scripts/check-eyrie-client-imports.sh
+graycode-router-client-guard: ## Fail on any production graycode-router/client import.
+	bash ./scripts/check-graycode-router-client-imports.sh
 
-eyrie-engine-guard: ## Require all production Eyrie imports to use the stable engine facade.
-	bash ./scripts/check-eyrie-engine-boundary.sh
+graycode-router-engine-guard: ## Require all production GraycodeRouter imports to use the stable engine facade.
+	bash ./scripts/check-graycode-router-engine-boundary.sh
 
 peer-guard: ## Fail if support engines import each other instead of depending only on Graycode contracts.
 	bash ./scripts/check-support-repo-coupling.sh
@@ -133,7 +133,7 @@ internal-layers-guard: ## Enforce one-way dependencies across stable Graycode in
 package-boundaries-guard: ## Enforce AST/package-graph boundaries with file/line diagnostics.
 	bash ./scripts/check-package-boundaries.sh
 
-boundaries: manifest-guard check-replace contracts-guard ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard internal-layers-guard package-boundaries-guard ## Alias for all boundary guards (matches `make boundaries` in engine repos).
+boundaries: manifest-guard check-replace contracts-guard ecosystem-guard graycode-router-client-guard graycode-router-engine-guard peer-guard internal-layers-guard package-boundaries-guard ## Alias for all boundary guards (matches `make boundaries` in engine repos).
 
 release-parity: ## Verify every go.mod ecosystem version resolves to a reachable remote commit.
 	bash ./scripts/check-module-release-parity.sh

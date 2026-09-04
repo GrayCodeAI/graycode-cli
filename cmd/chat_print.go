@@ -138,7 +138,7 @@ func runPrint(text string) error {
 				writePrintResult(printed.String(), sessionID, sess, false, nil)
 			}
 			if !noSessionPersistence {
-				saveEyrieSession(sessionID, sess)
+				saveGraycodeRouterSession(sessionID, sess)
 			}
 			return nil
 		}
@@ -154,7 +154,7 @@ func runPrint(text string) error {
 		writePrintResult(printed.String(), sessionID, sess, false, nil)
 	}
 	if !noSessionPersistence {
-		saveEyrieSession(sessionID, sess)
+		saveGraycodeRouterSession(sessionID, sess)
 	}
 	return nil
 }
@@ -246,7 +246,7 @@ func writePrintEvent(sessionID, eventType, content, toolName string) {
 	fmt.Println(string(data))
 }
 
-func saveEyrieSession(id string, sess *engine.Session) {
+func saveGraycodeRouterSession(id string, sess *engine.Session) {
 	raw := sess.RawMessages()
 	if len(raw) == 0 {
 		return
@@ -426,7 +426,7 @@ func runRepl() error {
 					writePrintResult(printed.String(), sessionID, sess, false, nil)
 				}
 				if !noSessionPersistence {
-					saveEyrieSession(sessionID, sess)
+					saveGraycodeRouterSession(sessionID, sess)
 				}
 			}
 		}

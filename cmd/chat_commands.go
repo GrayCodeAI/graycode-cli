@@ -257,7 +257,7 @@ var slashDescriptions = map[string]string{
 	"/version":               "Show graycode version",
 	"/vim":                   "Toggle vim mode",
 	"/welcome":               "Re-print the welcome header",
-	"/ecosystem":             "Show eyrie, harrier, and shrike integration status",
+	"/ecosystem":             "Show graycode-router, harrier, and shrike integration status",
 	"/path":                  "Developer path readiness (setup, security, sandbox)",
 	"/harrier":               "Show harrier memory (use /harrier search <query> to search)",
 	"/cron":                  "Show scheduled jobs",

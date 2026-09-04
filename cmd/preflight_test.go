@@ -9,7 +9,7 @@ import (
 
 // preflightReportShape mirrors the JSON-tagged PreflightReport returned by
 // EnginePreflightReportWithSettings. We assert against a local shape to
-// avoid coupling the test to the exact gateway/eyrie import path.
+// avoid coupling the test to the exact gateway/graycode-router import path.
 type preflightReportShape struct {
 	Ready  bool                  `json:"ready"`
 	Checks []preflightCheckShape `json:"checks"`

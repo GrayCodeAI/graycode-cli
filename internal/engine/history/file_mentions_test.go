@@ -190,7 +190,7 @@ func TestInjectFileMentionContext_NewFiles(t *testing.T) {
 	d := NewFileMentionDetector(dir)
 
 	text := "You need to update `src/auth.go` and `pkg/middleware/rate.go`."
-	messages := []types.EyrieMessage{} // no prior messages
+	messages := []types.GraycodeRouterMessage{} // no prior messages
 
 	result := d.InjectFileMentionContext(text, messages)
 
@@ -207,7 +207,7 @@ func TestInjectFileMentionContext_AllAlreadyDiscussed(t *testing.T) {
 	d := NewFileMentionDetector(dir)
 
 	text := "You need to update `src/auth.go`."
-	messages := []types.EyrieMessage{
+	messages := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "I'm working on src/auth.go"},
 	}
 

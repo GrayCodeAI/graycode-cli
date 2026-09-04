@@ -38,7 +38,7 @@ repository that follows this layout. Adopted 2026-05-14.
   the `VERSION` file because release-please bumps both atomically).
 - This is the Kubernetes / Helm / gh-cli pattern.
 
-### Go libraries (`sparrow`, `eyrie`, `kestrel`, `merlin`, `shrike`)
+### Go libraries (`sparrow`, `graycode-router`, `kestrel`, `merlin`, `shrike`)
 
 - `VERSION` at the repo root.
 - A `version.go` file co-located with `VERSION` uses `//go:embed` to read it at

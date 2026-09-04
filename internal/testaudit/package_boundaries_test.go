@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	graycodeModule = "github.com/GrayCodeAI/graycode-cli"
-	eyrieModule    = "github.com/GrayCodeAI/eyrie"
+	graycodeModule       = "github.com/GrayCodeAI/graycode-cli"
+	graycodeRouterModule = "github.com/GrayCodeAI/graycode-router"
 )
 
-var supportEngines = []string{"eyrie", "harrier", "shrike", "swift", "kestrel", "merlin"}
+var supportEngines = []string{"graycode-router", "harrier", "shrike", "swift", "kestrel", "merlin"}
 
 type packageImport struct {
 	file string
@@ -32,27 +32,27 @@ type packageImport struct {
 func TestPackageDependencyGraph(t *testing.T) {
 	root := repoRoot(t)
 
-	checkGraycodeEyrieFacade(t, root)
+	checkGraycodeGraycodeRouterFacade(t, root)
 	checkGraycodeInternalLayers(t, root)
 	checkSupportRepositoryBoundaries(t, root)
 }
 
-func checkGraycodeEyrieFacade(t *testing.T, root string) {
+func checkGraycodeGraycodeRouterFacade(t *testing.T, root string) {
 	paths := []string{filepath.Join(root, "internal"), filepath.Join(root, "cmd")}
 	var violations []string
 
 	for _, path := range paths {
 		for _, imp := range productionImports(t, root, path) {
-			if !strings.HasPrefix(imp.path, eyrieModule+"/") {
+			if !strings.HasPrefix(imp.path, graycodeRouterModule+"/") {
 				continue
 			}
-			if imp.path == eyrieModule+"/engine" || strings.HasPrefix(imp.path, eyrieModule+"/engine/") {
+			if imp.path == graycodeRouterModule+"/engine" || strings.HasPrefix(imp.path, graycodeRouterModule+"/engine/") {
 				continue
 			}
-			// Graycode uses the full vendored Eyrie API surface for provider, graph,
+			// Graycode uses the full vendored GraycodeRouter API surface for provider, graph,
 			// and tooling contracts that the engine facade does not re-export.
 			switch imp.path {
-			case eyrieModule + "/llm", eyrieModule + "/graph", eyrieModule + "/tools":
+			case graycodeRouterModule + "/llm", graycodeRouterModule + "/graph", graycodeRouterModule + "/tools":
 				continue
 			}
 			// Graycode's gateway declares the credential service name so existing
@@ -60,14 +60,14 @@ func checkGraycodeEyrieFacade(t *testing.T, root string) {
 			// production exception.
 			relFile, relErr := filepath.Rel(root, imp.file)
 			if relErr == nil && filepath.ToSlash(filepath.Dir(relFile)) == "internal/provider/gateway" &&
-				imp.path == eyrieModule+"/credentials" {
+				imp.path == graycodeRouterModule+"/credentials" {
 				continue
 			}
-			violations = append(violations, formatImportViolation(root, imp, "use the eyrie/engine facade"))
+			violations = append(violations, formatImportViolation(root, imp, "use the graycode-router/engine facade"))
 		}
 	}
 
-	assertNoPackageViolations(t, "Graycode Eyrie facade", violations)
+	assertNoPackageViolations(t, "Graycode GraycodeRouter facade", violations)
 }
 
 func checkGraycodeInternalLayers(t *testing.T, root string) {

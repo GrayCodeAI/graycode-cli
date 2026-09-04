@@ -26,7 +26,7 @@ type PersistenceService struct {
 	// stateMu protects compaction, token, and checkpoint metadata.
 	stateMu sync.RWMutex
 	// messages is the full transcript (system + user + assistant + tool_use + tool_result).
-	messages []types.EyrieMessage
+	messages []types.GraycodeRouterMessage
 	// system is the system prompt (mutable, agents append learned guidelines).
 	system string
 	// pinnedMessages is the count of messages protected from compaction (from /pin).
@@ -94,7 +94,7 @@ func (s *PersistenceService) SetLogger(l *logger.Logger) {
 }
 
 // Messages returns a snapshot copy of the current transcript.
-func (s *PersistenceService) Messages() []types.EyrieMessage {
+func (s *PersistenceService) Messages() []types.GraycodeRouterMessage {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	// Read s.messages directly; the lock is already held. Calling
@@ -108,7 +108,7 @@ func (s *PersistenceService) Messages() []types.EyrieMessage {
 // that previously wrote to s.messages directly. The input is deep-copied so
 // callers cannot mutate the live transcript after handing it to persistence.
 // Safe on a nil receiver.
-func (s *PersistenceService) SetRawMessages(msgs []types.EyrieMessage) {
+func (s *PersistenceService) SetRawMessages(msgs []types.GraycodeRouterMessage) {
 	if s == nil {
 		return
 	}
@@ -121,7 +121,7 @@ func (s *PersistenceService) SetRawMessages(msgs []types.EyrieMessage) {
 // arguments and multimodal slices are cloned as well, so callers cannot
 // mutate live session state by retaining or editing the returned value.
 // Safe to call on a nil receiver (returns nil).
-func (s *PersistenceService) RawMessages() []types.EyrieMessage {
+func (s *PersistenceService) RawMessages() []types.GraycodeRouterMessage {
 	if s == nil {
 		return nil
 	}
@@ -137,7 +137,7 @@ func (s *PersistenceService) RawMessages() []types.EyrieMessage {
 // as ephemeral: appends may reallocate the backing array, and nested tool
 // arguments are shared with live session state. Use RawMessages when a
 // stable snapshot is required. Safe on a nil receiver (returns nil).
-func (s *PersistenceService) RawMessagesView() []types.EyrieMessage {
+func (s *PersistenceService) RawMessagesView() []types.GraycodeRouterMessage {
 	if s == nil {
 		return nil
 	}
@@ -161,7 +161,7 @@ func (s *PersistenceService) SetSteering(sq *SteeringQueue) { s.steering = sq }
 
 // AddAssistant appends an assistant message.
 func (s *PersistenceService) AddAssistant(content string) {
-	s.AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: content})
+	s.AppendAssistantJournaled(types.GraycodeRouterMessage{Role: "assistant", Content: content})
 }
 
 // TrimIncompleteTurn removes a trailing partial turn so the transcript stays
@@ -219,7 +219,7 @@ func (s *PersistenceService) TrimIncompleteTurn() {
 
 // lastAssistantToolUseIDs returns the tool-use IDs from the most recent
 // assistant message carrying ToolUse blocks, or nil if none exists in msgs.
-func lastAssistantToolUseIDs(msgs []types.EyrieMessage) map[string]bool {
+func lastAssistantToolUseIDs(msgs []types.GraycodeRouterMessage) map[string]bool {
 	for i := len(msgs) - 1; i >= 0; i-- {
 		if msgs[i].Role == "assistant" && len(msgs[i].ToolUse) > 0 {
 			ids := make(map[string]bool, len(msgs[i].ToolUse))
@@ -232,7 +232,7 @@ func lastAssistantToolUseIDs(msgs []types.EyrieMessage) map[string]bool {
 	return nil
 }
 
-func hasOwnersForToolResults(msgs []types.EyrieMessage, results []types.ToolResult) bool {
+func hasOwnersForToolResults(msgs []types.GraycodeRouterMessage, results []types.ToolResult) bool {
 	owners := lastAssistantToolUseIDs(msgs)
 	if len(owners) == 0 {
 		return false
@@ -247,7 +247,7 @@ func hasOwnersForToolResults(msgs []types.EyrieMessage, results []types.ToolResu
 
 // hasResultsForAllToolUses reports whether every tool-use ID has at least one
 // matching tool_result anywhere in msgs.
-func hasResultsForAllToolUses(msgs []types.EyrieMessage, uses []types.ToolCall) bool {
+func hasResultsForAllToolUses(msgs []types.GraycodeRouterMessage, uses []types.ToolCall) bool {
 	if len(uses) == 0 {
 		return true
 	}
@@ -266,7 +266,7 @@ func hasResultsForAllToolUses(msgs []types.EyrieMessage, uses []types.ToolCall) 
 }
 
 // SetMessages replaces the transcript.
-func (s *PersistenceService) SetMessages(msgs []types.EyrieMessage) {
+func (s *PersistenceService) SetMessages(msgs []types.GraycodeRouterMessage) {
 	s.mu.Lock()
 	s.messages = cloneMessages(msgs)
 	s.mu.Unlock()
@@ -277,14 +277,14 @@ func (s *PersistenceService) SetMessages(msgs []types.EyrieMessage) {
 // snapshotLen is the length of the snapshot keep was derived from; messages
 // past that index are re-appended to the tail so a compaction racing an
 // AddUser can never drop the new message. Safe on a nil receiver.
-func (s *PersistenceService) ApplyCompaction(keep []types.EyrieMessage, snapshotLen int) {
+func (s *PersistenceService) ApplyCompaction(keep []types.GraycodeRouterMessage, snapshotLen int) {
 	if s == nil {
 		return
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if snapshotLen >= 0 && snapshotLen < len(s.messages) {
-		kept := make([]types.EyrieMessage, 0, len(keep)+(len(s.messages)-snapshotLen))
+		kept := make([]types.GraycodeRouterMessage, 0, len(keep)+(len(s.messages)-snapshotLen))
 		kept = append(kept, keep...)
 		kept = append(kept, s.messages[snapshotLen:]...)
 		s.messages = cloneMessages(kept)
@@ -295,7 +295,7 @@ func (s *PersistenceService) ApplyCompaction(keep []types.EyrieMessage, snapshot
 
 // AddUser appends a user message. Safe on a nil receiver.
 func (s *PersistenceService) AddUser(content string) {
-	s.AppendUserJournaled(types.EyrieMessage{Role: "user", Content: content})
+	s.AppendUserJournaled(types.GraycodeRouterMessage{Role: "user", Content: content})
 }
 
 // AddMessage appends a message with the specified role and content.
@@ -310,14 +310,14 @@ func (s *PersistenceService) AddMessage(role, content string) {
 		s.AddUser(content)
 	default:
 		s.mu.Lock()
-		s.messages = append(s.messages, types.EyrieMessage{Role: role, Content: content})
+		s.messages = append(s.messages, types.GraycodeRouterMessage{Role: role, Content: content})
 		s.mu.Unlock()
 	}
 }
 
 // AddUserWithImage appends a user message with an inline image.
 // The image is stored as a data URL ("data:<imageType>;base64,<base64>")
-// so the LLM-side eyrie client can decode it from the message body
+// so the LLM-side graycode-router client can decode it from the message body
 // without any extra metadata channel. imageType is "image/png",
 // "image/jpeg", etc.
 func (s *PersistenceService) AddUserWithImage(content, imageBase64, imageType string) {
@@ -325,7 +325,7 @@ func (s *PersistenceService) AddUserWithImage(content, imageBase64, imageType st
 		return
 	}
 	dataURL := "data:" + imageType + ";base64," + imageBase64
-	s.AppendUserJournaled(types.EyrieMessage{
+	s.AppendUserJournaled(types.GraycodeRouterMessage{
 		Role:    "user",
 		Content: content,
 		Images:  []string{dataURL},
@@ -428,7 +428,7 @@ func (s *PersistenceService) RemoveLastExchange() {
 }
 
 // LoadMessages replaces the transcript with a fresh slice.
-func (s *PersistenceService) LoadMessages(msgs []types.EyrieMessage) {
+func (s *PersistenceService) LoadMessages(msgs []types.GraycodeRouterMessage) {
 	s.mu.Lock()
 	// Clone while holding the lock; callers retain no mutable alias to the
 	// live transcript.
@@ -439,11 +439,11 @@ func (s *PersistenceService) LoadMessages(msgs []types.EyrieMessage) {
 // cloneMessages performs a deep copy of the provider-neutral transcript.
 // Tool arguments are arbitrary JSON-shaped values, so cloneJSONValue walks
 // maps and slices recursively instead of relying on a shallow slice copy.
-func cloneMessages(in []types.EyrieMessage) []types.EyrieMessage {
+func cloneMessages(in []types.GraycodeRouterMessage) []types.GraycodeRouterMessage {
 	if in == nil {
 		return nil
 	}
-	out := make([]types.EyrieMessage, len(in))
+	out := make([]types.GraycodeRouterMessage, len(in))
 	for i, msg := range in {
 		out[i] = msg
 		out[i].Images = append([]string(nil), msg.Images...)

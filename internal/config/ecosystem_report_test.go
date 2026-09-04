@@ -10,8 +10,8 @@ func TestFormatEcosystemPanel(t *testing.T) {
 	t.Parallel()
 	out := FormatEcosystemPanel(context.Background(), "anthropic", "claude-sonnet-4-20250514")
 	for _, want := range []string{
-		"Ecosystem (eyrie · harrier · shrike):",
-		"eyrie:",
+		"Ecosystem (graycode-router · harrier · shrike):",
+		"graycode-router:",
 		"harrier:",
 		"shrike:",
 	} {

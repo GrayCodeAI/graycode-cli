@@ -582,7 +582,7 @@ func TestFriendlyErrorBackwardCompat(t *testing.T) {
 		err      string
 		contains string
 	}{
-		{"rate limit 429", "eyrie: openai stream request failed: max retries (3) exceeded: HTTP 429", "Rate limited"},
+		{"rate limit 429", "graycode-router: openai stream request failed: max retries (3) exceeded: HTTP 429", "Rate limited"},
 		{"unauthorized 401", "HTTP 401 Unauthorized", "Authentication failed"},
 		{"forbidden 403", "HTTP 403 Forbidden", "Access denied"},
 		{"not found 404", "model not found", "/model"},

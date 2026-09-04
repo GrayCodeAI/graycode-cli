@@ -34,7 +34,7 @@ Final target shape:
 
 - `graycode` is the orchestrator and only primary product surface
 - six peer support engines sit below Graycode:
-  `eyrie`, `harrier`, `shrike`, `swift`, `kestrel`, `merlin`
+  `graycode-router`, `harrier`, `shrike`, `swift`, `kestrel`, `merlin`
 - `eagle` and `falcon` sit below those engines as shared foundations
 - SDKs and community skills sit above Graycode as consumers of Graycode public surfaces
 - `graycode-platform` stays outside the Graycode runtime module graph and exposes

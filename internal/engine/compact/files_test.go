@@ -67,7 +67,7 @@ func TestFileTracker_RecordModified_Empty(t *testing.T) {
 func TestFileTracker_ExtractFromMessages(t *testing.T) {
 	t.Parallel()
 	ft := NewFileTracker()
-	messages := []types.EyrieMessage{
+	messages := []types.GraycodeRouterMessage{
 		{
 			Role: "assistant",
 			ToolUse: []types.ToolCall{
@@ -88,7 +88,7 @@ func TestFileTracker_ExtractFromMessages(t *testing.T) {
 func TestFileTracker_ExtractFromMessages_SkipNonAssistant(t *testing.T) {
 	t.Parallel()
 	ft := NewFileTracker()
-	messages := []types.EyrieMessage{
+	messages := []types.GraycodeRouterMessage{
 		{Role: "user", ToolUse: []types.ToolCall{{Name: "Read", Arguments: map[string]interface{}{"path": "x.go"}}}},
 	}
 	ft.ExtractFromMessages(messages)

@@ -25,14 +25,14 @@ func TestStorageDirsRespectOverrides(t *testing.T) {
 	}
 }
 
-func TestProviderConfigPathUsesEyrieOverrideWithoutMovingGraycodeSettings(t *testing.T) {
+func TestProviderConfigPathUsesGraycodeRouterOverrideWithoutMovingGraycodeSettings(t *testing.T) {
 	graycodeDir := filepath.Join(t.TempDir(), "graycode")
-	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
+	graycodeRouterDir := filepath.Join(t.TempDir(), "graycode-router")
 	t.Setenv(envConfigDir, graycodeDir)
-	t.Setenv(envEyrieConfigDir, eyrieDir)
+	t.Setenv(envGraycodeRouterConfigDir, graycodeRouterDir)
 
-	if got, want := ProviderConfigPath(), filepath.Join(eyrieDir, "provider.json"); got != want {
-		t.Fatalf("ProviderConfigPath() = %q, want EYRIE_CONFIG_DIR path %q", got, want)
+	if got, want := ProviderConfigPath(), filepath.Join(graycodeRouterDir, "provider.json"); got != want {
+		t.Fatalf("ProviderConfigPath() = %q, want GRAYCODE_ROUTER_CONFIG_DIR path %q", got, want)
 	}
 	if got, want := SettingsPath(), filepath.Join(graycodeDir, "settings.json"); got != want {
 		t.Fatalf("SettingsPath() = %q, want GRAYCODE_CONFIG_DIR path %q", got, want)
@@ -42,7 +42,7 @@ func TestProviderConfigPathUsesEyrieOverrideWithoutMovingGraycodeSettings(t *tes
 func TestProviderConfigPathFallsBackToGraycodeOverride(t *testing.T) {
 	graycodeDir := filepath.Join(t.TempDir(), "graycode")
 	t.Setenv(envConfigDir, graycodeDir)
-	t.Setenv(envEyrieConfigDir, "  ")
+	t.Setenv(envGraycodeRouterConfigDir, "  ")
 
 	if got, want := ProviderConfigPath(), filepath.Join(graycodeDir, "provider.json"); got != want {
 		t.Fatalf("ProviderConfigPath() = %q, want GRAYCODE_CONFIG_DIR fallback %q", got, want)

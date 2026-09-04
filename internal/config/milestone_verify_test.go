@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	graycoderoutercfg "github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/credentials"
 )
 
 // isolateMilestoneTest uses a temp HOME and GRAYCODE_CONFIG_DIR so verification does not touch the user machine.
@@ -23,7 +23,7 @@ func isolateMilestoneTest(t *testing.T) string {
 	}
 	t.Setenv("HOME", home)
 	t.Setenv("GRAYCODE_CONFIG_DIR", graycodeDir)
-	t.Setenv("EYRIE_CONFIG_DIR", graycodeDir)
+	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", graycodeDir)
 	return graycodeDir
 }
 
@@ -34,12 +34,12 @@ func TestVerify_ProviderJSONOnDiskHasNoSecrets(t *testing.T) {
 		t.Fatal("compiled catalog required")
 	}
 	env := map[string]string{"ANTHROPIC_API_KEY": "sk-ant-verify-test-key-1234567890"}
-	cfg := eyriecfg.SyncProviderConfigFromCatalog(compiled, env)
-	path, err := eyriecfg.GetProviderConfigPath()
+	cfg := graycoderoutercfg.SyncProviderConfigFromCatalog(compiled, env)
+	path, err := graycoderoutercfg.GetProviderConfigPath()
 	if err != nil {
 		t.Fatalf("GetProviderConfigPath: %v", err)
 	}
-	if err := eyriecfg.SaveProviderConfig(cfg, path); err != nil {
+	if err := graycoderoutercfg.SaveProviderConfig(cfg, path); err != nil {
 		t.Fatal(err)
 	}
 	assertProviderJSONFileHasNoSecrets(t, path)
@@ -138,12 +138,12 @@ func TestVerify_EvaluateSetupFlow(t *testing.T) {
 	}
 
 	providerPath := filepath.Join(os.Getenv("HOME"), ".graycode", "provider.json")
-	cfg := &eyriecfg.ProviderConfig{
+	cfg := &graycoderoutercfg.ProviderConfig{
 		ActiveProvider: "anthropic",
 		ActiveModel:    "claude-sonnet-4-20250514",
 		AnthropicModel: "claude-sonnet-4-20250514",
 	}
-	if err := eyriecfg.SaveProviderConfig(cfg, providerPath); err != nil {
+	if err := graycoderoutercfg.SaveProviderConfig(cfg, providerPath); err != nil {
 		t.Fatal(err)
 	}
 	st = EvaluateSetup(ctx)
@@ -171,7 +171,7 @@ func assertProviderJSONFileHasNoSecrets(t *testing.T, path string) {
 			t.Fatalf("provider.json at %s contains non-empty %s", path, needle)
 		}
 	}
-	var cfg eyriecfg.ProviderConfig
+	var cfg graycoderoutercfg.ProviderConfig
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		t.Fatal(err)
 	}

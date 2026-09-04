@@ -35,7 +35,7 @@ func buildStatusInfo(m *chatModel) string {
 	visible := 0
 	if m.registry != nil {
 		toolCount = len(m.registry.PrimaryTools())
-		visible = len(m.registry.EyrieTools())
+		visible = len(m.registry.GraycodeRouterTools())
 	}
 	work := m.session.WorkMode()
 	if work == "" {

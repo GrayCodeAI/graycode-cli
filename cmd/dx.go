@@ -69,7 +69,7 @@ func doctorOutput(settings graycodeconfig.Settings) string {
 	b.WriteString(fmt.Sprintf("  Provider:    %s\n", effectiveProvider))
 	b.WriteString(fmt.Sprintf("  API key:     %s\n", maskedKeyStatus(graycodeconfig.ActiveProvider(context.Background()))))
 
-	// Model configured (eyrie provider.json)
+	// Model configured (graycode-router provider.json)
 	effectiveModel := strings.TrimSpace(graycodeconfig.ActiveModel(context.Background()))
 	if effectiveModel == "" {
 		effectiveModel = "(not configured)"

@@ -71,19 +71,19 @@ func TestWorkModePlanFiltersToolsAndBash(t *testing.T) {
 	}
 }
 
-func TestLazyEyrieToolsAndPromote(t *testing.T) {
+func TestLazyGraycodeRouterToolsAndPromote(t *testing.T) {
 	reg := tool.NewRegistry(tool.FileReadTool{}, tool.ImpactTool{})
 	reg.EnableLazyModelSurface([]string{"Read"})
-	eyrie := reg.EyrieTools()
-	if len(eyrie) != 1 || eyrie[0].Name != "Read" {
-		t.Fatalf("EyrieTools = %#v, want only Read", eyrie)
+	graycode - router := reg.GraycodeRouterTools()
+	if len(graycode-router) != 1 || graycode-router[0].Name != "Read" {
+		t.Fatalf("GraycodeRouterTools = %#v, want only Read", graycode-router)
 	}
 	if !reg.PromoteModelTool("Impact") {
 		t.Fatal("promote Impact failed")
 	}
-	eyrie = reg.EyrieTools()
-	if len(eyrie) != 2 {
-		t.Fatalf("after promote EyrieTools len = %d", len(eyrie))
+	graycode - router = reg.GraycodeRouterTools()
+	if len(graycode-router) != 2 {
+		t.Fatalf("after promote GraycodeRouterTools len = %d", len(graycode-router))
 	}
 }
 

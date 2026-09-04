@@ -499,7 +499,7 @@ func main() {
 
 ## Phase 3: Low Priority (Backlog - Score Impact: +0.2)
 
-### 6. Add AI Code Completion (eyrie)
+### 6. Add AI Code Completion (graycode-router)
 
 **Effort:** Medium (1-2 weeks)
 **Priority:** LOW
@@ -562,7 +562,7 @@ func main() {
 
 ---
 
-### 10. Add Completion Endpoint to eyrie
+### 10. Add Completion Endpoint to graycode-router
 
 **Effort:** Medium (1 week)
 **Priority:** LOW
@@ -628,7 +628,7 @@ Current architecture status: see `docs/architecture/graycode-architecture-baseli
 
 ---
 
-### **eyrie** (LLM Runtime)
+### **graycode-router** (LLM Runtime)
 
 | Phase | Improvement | Effort | Impact | Status |
 |-------|--------------|--------|--------|--------|

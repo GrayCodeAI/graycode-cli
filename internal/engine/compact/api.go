@@ -30,7 +30,7 @@ var mutatingTools = map[string]bool{
 	"NotebookEdit": true,
 }
 
-func APICompactMessages(msgs []types.EyrieMessage, cfg APICompactConfig) []types.EyrieMessage {
+func APICompactMessages(msgs []types.GraycodeRouterMessage, cfg APICompactConfig) []types.GraycodeRouterMessage {
 	totalTokens := token.EstimateTokens(msgs)
 	if totalTokens < cfg.TriggerTokens {
 		return msgs
@@ -41,7 +41,7 @@ func APICompactMessages(msgs []types.EyrieMessage, cfg APICompactConfig) []types
 		return msgs
 	}
 
-	result := make([]types.EyrieMessage, len(msgs))
+	result := make([]types.GraycodeRouterMessage, len(msgs))
 	copy(result, msgs)
 
 	freed := 0
@@ -101,7 +101,7 @@ func APICompactMessages(msgs []types.EyrieMessage, cfg APICompactConfig) []types
 	return result
 }
 
-func CountClearableToolResults(msgs []types.EyrieMessage) int {
+func CountClearableToolResults(msgs []types.GraycodeRouterMessage) int {
 	count := 0
 	for _, m := range msgs {
 		if len(m.ToolResults) > 0 && m.ToolResults[0].Content != "[Old tool result content cleared]" {
@@ -114,6 +114,6 @@ func CountClearableToolResults(msgs []types.EyrieMessage) int {
 	return count
 }
 
-func isThinkingMessage(m types.EyrieMessage) bool {
+func isThinkingMessage(m types.GraycodeRouterMessage) bool {
 	return len(m.Content) > 0 && m.Content[0] == '<' && len(m.ToolUse) == 0
 }

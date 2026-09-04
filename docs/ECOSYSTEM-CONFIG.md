@@ -1,7 +1,7 @@
 # graycode-eco Unified Config-as-Code
 
 Status: Draft / shared spec
-Applies to: graycode, eyrie, harrier, shrike, swift
+Applies to: graycode, graycode-router, harrier, shrike, swift
 
 This document specifies a **single, unified configuration schema** for the
 graycode-eco ecosystem: one declarative file (`graycode-eco.yaml`, with an equivalent
@@ -11,7 +11,7 @@ file is the source of truth, version-controlled alongside a project, and each
 repo reads the slice of the schema it owns.
 
 Today each repo configures itself independently through its own env vars,
-flags, and config files (graycode: `config.json` + `GRAYCODE_*`/`GRAYCODE_*` env; eyrie:
+flags, and config files (graycode: `config.json` + `GRAYCODE_*`/`GRAYCODE_*` env; graycode-router:
 provider env vars; harrier: `~/.harrier/config.toml`; shrike: `TOK_*` env; swift:
 `SWIFT_*` env). This spec does **not** replace those mechanisms — it defines a
 superset schema and maps every setting back to the repo + existing env
@@ -27,7 +27,7 @@ any runtime behavior.
    `graycode-eco.yaml` value > repo default. This preserves current behavior where
    env/flags are authoritative.
 3. **Repo-owned sections.** Each top-level section is owned by one repo (with
-   `model`/`providers` shared by graycode + eyrie). A repo only reads its sections.
+   `model`/`providers` shared by graycode + graycode-router). A repo only reads its sections.
 4. **Two encodings, one schema.** YAML is canonical for humans; the identical
    structure is valid JSON for machine generation. (harrier's on-disk format is
    TOML; its section maps 1:1 to `~/.harrier/config.toml`.)
@@ -49,7 +49,7 @@ runtime precedence above):
 ```yaml
 version: 1
 
-# ─── Shared: model + providers (graycode + eyrie) ───────────────────────────────
+# ─── Shared: model + providers (graycode + graycode-router) ───────────────────────────────
 model:
   default: anthropic/claude-sonnet-4-5   # provider/model the agent uses
   small_fast: anthropic/claude-haiku     # cheap model for trivial steps
@@ -66,16 +66,16 @@ providers:
     api_key_env: GEMINI_API_KEY
     model: gemini-2.0-flash
 
-# ─── eyrie: gateway / runtime ───────────────────────────────────────────────
+# ─── graycode-router: gateway / runtime ───────────────────────────────────────────────
 gateway:
-  base_url: http://localhost:8080        # eyrie endpoint graycode talks to
-  api_key_env: EYRIE_API_KEY
+  base_url: http://localhost:8080        # graycode-router endpoint graycode talks to
+  api_key_env: GRAYCODE_ROUTER_API_KEY
   allow_insecure_public_api: false
-  deployment_routing: ""                 # EYRIE_DEPLOYMENT_ROUTING
+  deployment_routing: ""                 # GRAYCODE_ROUTER_DEPLOYMENT_ROUTING
   model_catalog:
-    path_env: EYRIE_MODEL_CATALOG_PATH
-    url_env: EYRIE_MODEL_CATALOG_URL
-    refresh: EYRIE_MODEL_CATALOG_REFRESH
+    path_env: GRAYCODE_ROUTER_MODEL_CATALOG_PATH
+    url_env: GRAYCODE_ROUTER_MODEL_CATALOG_URL
+    refresh: GRAYCODE_ROUTER_MODEL_CATALOG_REFRESH
 
 # ─── harrier: memory ───────────────────────────────────────────────────────────
 memory:
@@ -129,30 +129,30 @@ telemetry:
 The authoritative mapping. "Mechanism today" is what already implements the
 setting; the unified key is rendered down to it.
 
-### Shared: model / providers (graycode + eyrie)
+### Shared: model / providers (graycode + graycode-router)
 
 | Unified key                     | Repo        | Mechanism today                                  |
 |---------------------------------|-------------|--------------------------------------------------|
 | `model.default`                 | graycode        | `GRAYCODE_MODEL` env / `config.json`                 |
 | `model.small_fast`              | graycode        | `GRAYCODE_SMALL_FAST_MODEL` env                  |
-| `providers[].api_key_env`       | eyrie/graycode  | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `XAI_API_KEY`, `ZAI_API_KEY`, `CANOPYWAVE_API_KEY`, `FIREWORKS_API_KEY` |
-| `providers[].base_url_env`      | eyrie       | `ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL` / `OPENAI_API_BASE`, `OLLAMA_BASE_URL`, `FIREWORKS_BASE_URL` |
-| `providers[].model` (openai)    | eyrie       | `OPENAI_MODEL` env                               |
-| `providers[].model` (gemini)    | eyrie       | `GEMINI_MODEL` env                               |
-| `providers[].model` (anthropic) | eyrie       | `ANTHROPIC_MODEL` env                            |
+| `providers[].api_key_env`       | graycode-router/graycode  | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `XAI_API_KEY`, `ZAI_API_KEY`, `CANOPYWAVE_API_KEY`, `FIREWORKS_API_KEY` |
+| `providers[].base_url_env`      | graycode-router       | `ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL` / `OPENAI_API_BASE`, `OLLAMA_BASE_URL`, `FIREWORKS_BASE_URL` |
+| `providers[].model` (openai)    | graycode-router       | `OPENAI_MODEL` env                               |
+| `providers[].model` (gemini)    | graycode-router       | `GEMINI_MODEL` env                               |
+| `providers[].model` (anthropic) | graycode-router       | `ANTHROPIC_MODEL` env                            |
 
-### eyrie: gateway / runtime
+### graycode-router: gateway / runtime
 
-| Unified key                          | Mechanism today (eyrie)              |
+| Unified key                          | Mechanism today (graycode-router)              |
 |--------------------------------------|--------------------------------------|
-| `gateway.base_url`                   | `EYRIE_BASE_URL` (graycode→eyrie link)   |
-| `gateway.api_key_env`                | `EYRIE_API_KEY`                      |
-| `gateway.allow_insecure_public_api`  | `EYRIE_ALLOW_INSECURE_PUBLIC_API`    |
-| `gateway.deployment_routing`         | `EYRIE_DEPLOYMENT_ROUTING` (also `GRAYCODE_DEPLOYMENT_ROUTING`) |
-| `gateway.model_catalog.path_env`     | `EYRIE_MODEL_CATALOG_PATH`           |
-| `gateway.model_catalog.url_env`      | `EYRIE_MODEL_CATALOG_URL`            |
-| `gateway.model_catalog.refresh`      | `EYRIE_MODEL_CATALOG_REFRESH` / `GRAYCODE_AUTO_REFRESH_CATALOG` / `GRAYCODE_CATALOG_REFRESH_ALWAYS` |
-| `gateway` config dir                 | `GRAYCODE_CONFIG_DIR` (default `~/.eyrie`) |
+| `gateway.base_url`                   | `GRAYCODE_ROUTER_BASE_URL` (graycode→graycode-router link)   |
+| `gateway.api_key_env`                | `GRAYCODE_ROUTER_API_KEY`                      |
+| `gateway.allow_insecure_public_api`  | `GRAYCODE_ROUTER_ALLOW_INSECURE_PUBLIC_API`    |
+| `gateway.deployment_routing`         | `GRAYCODE_ROUTER_DEPLOYMENT_ROUTING` (also `GRAYCODE_DEPLOYMENT_ROUTING`) |
+| `gateway.model_catalog.path_env`     | `GRAYCODE_ROUTER_MODEL_CATALOG_PATH`           |
+| `gateway.model_catalog.url_env`      | `GRAYCODE_ROUTER_MODEL_CATALOG_URL`            |
+| `gateway.model_catalog.refresh`      | `GRAYCODE_ROUTER_MODEL_CATALOG_REFRESH` / `GRAYCODE_AUTO_REFRESH_CATALOG` / `GRAYCODE_CATALOG_REFRESH_ALWAYS` |
+| `gateway` config dir                 | `GRAYCODE_CONFIG_DIR` (default `~/.graycode-router`) |
 
 ### harrier: memory
 
@@ -208,7 +208,7 @@ few env vars.
 
 The unified file is designed to be **resolved** into the existing mechanisms:
 
-- **env-based repos** (graycode, eyrie, shrike, swift): export the mapped env var for
+- **env-based repos** (graycode, graycode-router, shrike, swift): export the mapped env var for
   any key set in `graycode-eco.yaml` that is not already present in the process
   environment (preserving "env wins" precedence).
 - **file-based repos** (harrier): write/merge the `memory.*` section into
@@ -230,7 +230,7 @@ The schema is encoding-agnostic. The YAML above is identical in structure to:
   "providers": [
     { "name": "anthropic", "api_key_env": "ANTHROPIC_API_KEY" }
   ],
-  "gateway": { "base_url": "http://localhost:8080", "api_key_env": "EYRIE_API_KEY" },
+  "gateway": { "base_url": "http://localhost:8080", "api_key_env": "GRAYCODE_ROUTER_API_KEY" },
   "memory": { "addr": "127.0.0.1:3456", "data_dir": "~/.harrier" },
   "compression": { "enabled": true, "db_path": "~/.shrike/usage.db" },
   "swift": { "telemetry_optout": false },
@@ -242,5 +242,5 @@ The schema is encoding-agnostic. The YAML above is identical in structure to:
 
 The `telemetry` and `swift` sections only configure *transport/opt-out*. The
 *attribute vocabulary* emitted on spans is defined separately in
-[`OTEL-CONVENTIONS.md`](./OTEL-CONVENTIONS.md), with eyrie's
+[`OTEL-CONVENTIONS.md`](./OTEL-CONVENTIONS.md), with graycode-router's
 `internal/observability` package as the reference implementation.

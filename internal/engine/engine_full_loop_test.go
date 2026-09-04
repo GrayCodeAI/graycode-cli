@@ -69,14 +69,14 @@ func TestEngine_FullLoop_MultiTurn(t *testing.T) {
 
 func TestEngine_FullLoop_ToolUse(t *testing.T) {
 	mc := newMockClient(
-		&types.EyrieResponse{
+		&types.GraycodeRouterResponse{
 			FinishReason: "tool_use",
 			ToolCalls: []types.ToolCall{{
 				ID:        "call_1",
 				Name:      "Read",
 				Arguments: map[string]interface{}{"file_path": "/nonexistent"},
 			}},
-			Usage: &types.EyrieUsage{PromptTokens: 50, CompletionTokens: 30},
+			Usage: &types.GraycodeRouterUsage{PromptTokens: 50, CompletionTokens: 30},
 		},
 		mockTextResponse("I read the file and here's what I found."),
 	)

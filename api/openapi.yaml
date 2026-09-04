@@ -565,7 +565,7 @@ paths:
       tags: [system]
       summary: Readiness probe
       description: |
-        Returns 200 only when a session factory is configured and Eyrie's local
+        Returns 200 only when a session factory is configured and GraycodeRouter's local
         preflight confirms provider state, catalog, credentials, and model
         selection are ready. Returns 503 with the failed dependency otherwise.
       security: []

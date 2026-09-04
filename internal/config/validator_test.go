@@ -25,7 +25,7 @@ func TestValidateSettingsValid(t *testing.T) {
 	}
 }
 
-func TestValidateSettingsProviderDelegatedToEyrie(t *testing.T) {
+func TestValidateSettingsProviderDelegatedToGraycodeRouter(t *testing.T) {
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() { gateway.SetDefaultStore(nil) })
@@ -33,7 +33,7 @@ func TestValidateSettingsProviderDelegatedToEyrie(t *testing.T) {
 	s := Settings{Provider: "anthropic"}
 	result := ValidateSettings(s)
 	if result.Valid {
-		t.Fatal("expected invalid (missing env key for eyrie provider)")
+		t.Fatal("expected invalid (missing env key for graycode-router provider)")
 	}
 }
 

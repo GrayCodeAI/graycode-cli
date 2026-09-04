@@ -1,12 +1,12 @@
 package tool
 
 // Lazy model-surface helpers: tools can be registered for execution while
-// staying hidden from EyrieTools until promoted (ToolSearch select, mode, etc.).
+// staying hidden from GraycodeRouterTools until promoted (ToolSearch select, mode, etc.).
 
 // EnableLazyModelSurface restricts model-visible tools to essentialNames.
 // All other primary tools remain executable via Get (and discoverable via
 // ToolSearch when AvailableTools includes them) but are omitted from
-// EyrieTools until PromoteModelTool.
+// GraycodeRouterTools until PromoteModelTool.
 func (r *Registry) EnableLazyModelSurface(essentialNames []string) {
 	if r == nil {
 		return
@@ -88,7 +88,7 @@ func (r *Registry) ModelVisibleNames() []string {
 	return out
 }
 
-// IsModelVisible reports whether name is included in EyrieTools.
+// IsModelVisible reports whether name is included in GraycodeRouterTools.
 func (r *Registry) IsModelVisible(name string) bool {
 	if r == nil {
 		return false

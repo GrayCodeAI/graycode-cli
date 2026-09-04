@@ -116,7 +116,7 @@ func TestSession_LoadMessages(t *testing.T) {
 	mc := newMockClient()
 	s := newMockSession(mc)
 
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "msg1"},
 		{Role: "assistant", Content: "msg2"},
 		{Role: "user", Content: "msg3"},

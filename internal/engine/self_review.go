@@ -102,8 +102,8 @@ SUGGESTIONS: <comma-separated list of improvements, or "none">`)
 }
 
 // buildReviewMessages wraps the review prompt in a message slice.
-func buildReviewMessages(prompt string) []types.EyrieMessage {
-	return []types.EyrieMessage{
+func buildReviewMessages(prompt string) []types.GraycodeRouterMessage {
+	return []types.GraycodeRouterMessage{
 		{Role: "user", Content: prompt},
 	}
 }

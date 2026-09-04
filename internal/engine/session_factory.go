@@ -17,7 +17,7 @@ import (
 func BuildChatClient(ctx context.Context, selection gateway.Selection, legacyProvider string) (ChatClient, string, bool, error) {
 	modelRuntime, err := gateway.New(ctx, nil)
 	if err != nil {
-		return nil, requestedProvider(selection, legacyProvider), false, fmt.Errorf("eyrie transport: %w", err)
+		return nil, requestedProvider(selection, legacyProvider), false, fmt.Errorf("graycode-router transport: %w", err)
 	}
 	return buildChatClientWithRuntime(ctx, modelRuntime, selection, legacyProvider)
 }
@@ -33,7 +33,7 @@ func buildChatClientWithRuntime(ctx context.Context, modelRuntime *gateway.Gatew
 		resolvedSelection.Provider = provider
 	}
 	if modelRuntime == nil {
-		return nil, provider, false, errors.New("eyrie transport: runtime is nil")
+		return nil, provider, false, errors.New("graycode-router transport: runtime is nil")
 	}
 	label := strings.TrimSpace(resolvedSelection.Provider)
 	if label == "" {
@@ -47,7 +47,7 @@ func buildChatClientWithRuntime(ctx context.Context, modelRuntime *gateway.Gatew
 func BuildChatClientForSettings(ctx context.Context, settings graycodeconfig.Settings, selection gateway.Selection, legacyProvider string) (ChatClient, string, bool, error) {
 	modelRuntime, err := gateway.New(ctx, gatewayCustomGateways(settings.CustomProviders))
 	if err != nil {
-		return nil, requestedProvider(selection, legacyProvider), false, fmt.Errorf("eyrie transport: %w", err)
+		return nil, requestedProvider(selection, legacyProvider), false, fmt.Errorf("graycode-router transport: %w", err)
 	}
 	return buildChatClientWithRuntime(ctx, modelRuntime, selection, legacyProvider)
 }
@@ -96,7 +96,7 @@ func NewGraycodeSession(ctx context.Context, selection gateway.Selection, provid
 }
 
 // NewGraycodeSessionForSettings constructs a session with an invocation-scoped
-// Eyrie engine, including custom gateways from an explicit settings file.
+// GraycodeRouter engine, including custom gateways from an explicit settings file.
 func NewGraycodeSessionForSettings(ctx context.Context, settings graycodeconfig.Settings, selection gateway.Selection, provider, model, systemPrompt string, registry *tool.Registry) *Session {
 	chat, label, deploy, err := BuildChatClientForSettings(ctx, settings, selection, provider)
 	if err != nil {

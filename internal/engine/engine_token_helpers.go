@@ -6,7 +6,7 @@ import (
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
-func isRecentToolHeavy(messages []types.EyrieMessage) bool {
+func isRecentToolHeavy(messages []types.GraycodeRouterMessage) bool {
 	const lookback = 3
 	toolTurns := 0
 	assistantSeen := 0
@@ -25,7 +25,7 @@ func isRecentToolHeavy(messages []types.EyrieMessage) bool {
 	return assistantSeen >= lookback && toolTurns == assistantSeen
 }
 
-func isTextQuestion(messages []types.EyrieMessage) bool {
+func isTextQuestion(messages []types.GraycodeRouterMessage) bool {
 	var lastUserMsg string
 	for i := len(messages) - 1; i >= 0; i-- {
 		msg := messages[i]
@@ -53,7 +53,7 @@ func isTextQuestion(messages []types.EyrieMessage) bool {
 	return strings.HasSuffix(strings.TrimSpace(lower), "?")
 }
 
-func classifyPromptForBudget(messages []types.EyrieMessage) string {
+func classifyPromptForBudget(messages []types.GraycodeRouterMessage) string {
 	if isRecentToolHeavy(messages) {
 		return "tool"
 	}

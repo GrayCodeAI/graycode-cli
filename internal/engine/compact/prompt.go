@@ -128,7 +128,7 @@ const PriorSummaryPrefix = "[Conversation summary]"
 // ExtractPriorSummary extracts the previously generated summary text from the
 // first message of a conversation if one was persisted by an earlier
 // compaction. It returns "" when no prior summary is present.
-func ExtractPriorSummary(msgs []types.EyrieMessage) string {
+func ExtractPriorSummary(msgs []types.GraycodeRouterMessage) string {
 	for _, m := range msgs {
 		if m.Role != "user" {
 			continue

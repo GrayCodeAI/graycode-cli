@@ -38,7 +38,7 @@ func TestFinalizePopulatesToolsAndFiles_TriggersSkillDistill(t *testing.T) {
 	sk := &finalizeMockSkillStore{}
 	svc := &LifecycleService{lifecycle: &SessionLifecycle{SkillStore: sk}}
 
-	messages := []types.EyrieMessage{
+	messages := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "Refactor the auth module"},
 		{Role: "assistant", ToolUse: []types.ToolCall{
 			{Name: "Read", Arguments: map[string]interface{}{"path": "auth.go"}},
@@ -75,7 +75,7 @@ func TestFinalizeSimpleTaskNoSkillDistill(t *testing.T) {
 	sk := &finalizeMockSkillStore{}
 	svc := &LifecycleService{lifecycle: &SessionLifecycle{SkillStore: sk}}
 
-	messages := []types.EyrieMessage{
+	messages := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "What is 2+2?"},
 		{Role: "assistant", Content: "4"},
 	}

@@ -100,7 +100,7 @@ func TestSession_NewSessionWithClient_WiresAllSubServices(t *testing.T) {
 // actually goes through s.ChatLLM().Stream() rather than the legacy
 // ChatService.StreamChatContinue(). The mock client is injected via
 // SetTestClient, which also reattaches the ChatService, so the agent
-// loop's call site must hit the mock and not the real eyrie client.
+// loop's call site must hit the mock and not the real graycode-router client.
 func TestSession_Stream_UsesChatService(t *testing.T) {
 	mc := newMockClient(mockTextResponse("hi from service"))
 	s := newMockSession(mc)

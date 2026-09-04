@@ -11,7 +11,7 @@ import (
 
 // BuildChatProvider adapts Graycode's engine-backed session client to the smaller
 // provider contract used by host integrations such as Kestrel. Model resolution,
-// credentials, routing, and transport remain owned by Eyrie's engine facade.
+// credentials, routing, and transport remain owned by GraycodeRouter's engine facade.
 func BuildChatProvider(ctx context.Context, selection gateway.Selection, legacyProvider string) (types.ChatProvider, string, error) {
 	client, provider, _, err := BuildChatClient(ctx, selection, legacyProvider)
 	if err != nil {
@@ -19,7 +19,7 @@ func BuildChatProvider(ctx context.Context, selection gateway.Selection, legacyP
 	}
 	provider = strings.TrimSpace(provider)
 	if provider == "" {
-		return nil, "", fmt.Errorf("eyrie transport: provider unavailable")
+		return nil, "", fmt.Errorf("graycode-router transport: provider unavailable")
 	}
 	return &engineChatProvider{
 		client:   client,
@@ -38,7 +38,7 @@ type engineChatProvider struct {
 
 var _ types.ChatProvider = (*engineChatProvider)(nil)
 
-func (p *engineChatProvider) Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
+func (p *engineChatProvider) Chat(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error) {
 	if strings.TrimSpace(opts.Provider) == "" {
 		opts.Provider = p.provider
 	}
@@ -48,7 +48,7 @@ func (p *engineChatProvider) Chat(ctx context.Context, messages []types.EyrieMes
 	return p.client.Chat(ctx, messages, opts)
 }
 
-func (p *engineChatProvider) StreamChat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.StreamResult, error) {
+func (p *engineChatProvider) StreamChat(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.StreamResult, error) {
 	if strings.TrimSpace(opts.Provider) == "" {
 		opts.Provider = p.provider
 	}

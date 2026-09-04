@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/GrayCodeAI/eyrie/catalog"
-	"github.com/GrayCodeAI/eyrie/credentials"
 	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	"github.com/GrayCodeAI/graycode-router/credentials"
 )
 
 func TestFinishConfigEntry_APIKeyPaste_SavesBeforeProbe(t *testing.T) {
@@ -134,7 +134,7 @@ func configSaveTestTransport(status int) http.RoundTripper {
 	})
 }
 
-// roundTripFunc is defined in eyrie/runtime tests; duplicate here for graycode cmd tests.
+// roundTripFunc is defined in graycode-router/runtime tests; duplicate here for graycode cmd tests.
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -223,10 +223,10 @@ func TestHandleConfigApplyCredentialsMsg_CatalogFailureDoesNotBlameProvider(t *t
 	}
 }
 
-// Skipped: integration test requiring specific eyrie model catalog state
+// Skipped: integration test requiring specific graycode-router model catalog state
 func TestHandleConfigApplyCredentialsMsg_ValidationFailureDoesNotBlameProvider(t *testing.T) {
-	// TODO: enable once eyrie catalog fixtures pin the claude-fable-5 model state.
-	t.Skip("requires specific eyrie model catalog state (claude-fable-5)")
+	// TODO: enable once graycode-router catalog fixtures pin the claude-fable-5 model state.
+	t.Skip("requires specific graycode-router model catalog state (claude-fable-5)")
 	graycodeconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)
@@ -252,10 +252,10 @@ func TestHandleConfigApplyCredentialsMsg_ValidationFailureDoesNotBlameProvider(t
 	}
 }
 
-// Skipped: integration test requiring specific eyrie model catalog state
+// Skipped: integration test requiring specific graycode-router model catalog state
 func TestHandleConfigApplyCredentialsMsg_AuthenticationFailureBlamesKey(t *testing.T) {
-	// TODO: enable once eyrie catalog fixtures pin the auth-failure model state.
-	t.Skip("requires specific eyrie model catalog state")
+	// TODO: enable once graycode-router catalog fixtures pin the auth-failure model state.
+	t.Skip("requires specific graycode-router model catalog state")
 	graycodeconfig.InvalidateConfigUICache()
 	store := &credentials.MapStore{}
 	credentials.SetDefaultStore(store)

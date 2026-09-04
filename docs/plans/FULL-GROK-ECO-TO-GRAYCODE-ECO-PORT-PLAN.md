@@ -21,7 +21,7 @@
 2. **Go multi-repo stays** — map Grok crates into graycode / engines / contracts / cloud / skills.  
 3. **Prefer wire-first** — Graycode already has partial types; complete wiring before greenfield.  
 4. **Privacy-first defaults** — Grok Mixpanel/Sentry defaults become **opt-in** OTEL/privacy-safe telemetry.  
-5. **Multi-provider stays** — Grok sampler/auth maps to **eyrie**, not a single-vendor clone.  
+5. **Multi-provider stays** — Grok sampler/auth maps to **graycode-router**, not a single-vendor clone.  
 6. **Memory stays harrier** — Grok markdown memory maps to **harrier APIs + UX**, not a second store.
 7. **Tokens stay shrike** — Grok `xai-token-estimation` is obsolete relative to shrike.
 8. **Track everything** — even 70-line crates appear in the matrix (Done / Partial / Port / Skip / N/A).
@@ -69,7 +69,7 @@ grok-eco/grok-build  (one Rust workspace)
         │
         ├─► graycode                    product CLI/TUI/engine/tools/hooks/plugins/ACP
         ├─► eagle     pure DTOs (tool/spawn/hooks/policy)
-        ├─► eyrie                   LLM routing/stream/retry/catalog/auth credentials
+        ├─► graycode-router                   LLM routing/stream/retry/catalog/auth credentials
         ├─► harrier                    memory graph + dream UX
         ├─► shrike                     compression / secrets / token cost
         ├─► swift                   session capture/import/replay
@@ -116,8 +116,8 @@ grok-eco/grok-build  (one Rust workspace)
 | `xai-file-utils` | 15k | Event tracking / upload | graycode observability | Partial | M | Privacy opt-in |
 | `xai-grok-telemetry` | 14k | Events + OTEL + Mixpanel + Sentry | graycode observability | Partial | L | **Skip Mixpanel default**; keep OTEL |
 | `xai-hunk-tracker` | 13k | Agent vs external hunks | graycode | Port | L | |
-| `xai-grok-sampling-types` | 13k | Chat API types | **eyrie** | Done* | — | Different shape; eyrie owns |
-| `xai-grok-sampler` | 11k | HTTP stream + retry | **eyrie** | Done* | — | Do not replace eyrie |
+| `xai-grok-sampling-types` | 13k | Chat API types | **graycode-router** | Done* | — | Different shape; graycode-router owns |
+| `xai-grok-sampler` | 11k | HTTP stream + retry | **graycode-router** | Done* | — | Do not replace graycode-router |
 | `xai-grok-update` | 11k | Auto-update | graycode | Partial | M | |
 | `xai-grok-mcp` | 10k | MCP client (oauth, wire) | graycode `mcp` | Partial | L | |
 | `xai-codebase-graph` | 9.7k | Tree-sitter graph | graycode codegraph/repomap | Partial | L | |
@@ -144,16 +144,16 @@ grok-eco/grok-build  (one Rust workspace)
 | `xai-agent-lifecycle` | 0.6k | Lifecycle hooks data | graycode hooks/engine | Partial | S | |
 | `xai-gix-status` | 0.6k | Fast git status | graycode git tools | Partial | S | |
 | `xai-grok-paths` | 0.6k | AbsPath types | graycode | N/A | XS | Go path.Clean enough |
-| `xai-grok-secrets` | 0.6k | Secrets helpers | shrike + eyrie | Partial | S | |
+| `xai-grok-secrets` | 0.6k | Secrets helpers | shrike + graycode-router | Partial | S | |
 | `xai-grok-announcements` | 0.4k | Release announcements | graycode tips/notify | Port | S | |
-| `xai-grok-auth` | 0.4k | Auth seam | eyrie + graycode auth | Partial | M | Browser OAuth optional |
+| `xai-grok-auth` | 0.4k | Auth seam | graycode-router + graycode auth | Partial | M | Browser OAuth optional |
 | `xai-token-estimation` | 0.3k | Bytes/4 heuristic | **shrike** | Skip | — | shrike superior |
 | `xai-tracing-macros` | 0.2k | Log macros | graycode observability | N/A | XS | |
-| `xai-grok-env` | 0.2k | Backend env presets | eyrie/graycode | Partial | XS | |
+| `xai-grok-env` | 0.2k | Backend env presets | graycode-router/graycode | Partial | XS | |
 | `xai-prompt-queue` | 0.2k | Prompt queue types | graycode | Port | S | |
 | `xai-mixpanel` | 0.1k | Mixpanel client | — | **Skip** | — | Privacy; OTEL opt-in |
 | `xai-grok-version` | 0.1k | Version | graycode VERSION | Done | — | |
-| `xai-grok-models` | 0.1k | Default model IDs | eyrie catalog | Done* | — | |
+| `xai-grok-models` | 0.1k | Default model IDs | graycode-router catalog | Done* | — | |
 
 ### 2.2 Common crates (tool protocol / hub / compaction)
 
@@ -166,7 +166,7 @@ grok-eco/grok-build  (one Rust workspace)
 | `xai-tool-runtime` | 5.4k | Tool trait runtime | graycode tool | Partial | L | |
 | `xai-tool-types` | 3.6k | Spawn/task types | **contracts** | Port | M | **P0** |
 | `xai-grok-compaction` | 6.8k | Compaction engine | graycode engine + shrike | Partial | L | |
-| `xai-circuit-breaker` | 2.2k | HTTP breaker | eyrie/resilience | Partial | S | |
+| `xai-circuit-breaker` | 2.2k | HTTP breaker | graycode-router/resilience | Partial | S | |
 | `xai-tracing` | 0.8k | Tracing | graycode OTEL | Partial | S | |
 | `xai-test-utils` | 0.4k | Hermetic git tests | graycode testutil | Partial | S | |
 | `xai-interjection-core` | 0.3k | Interjection messaging | graycode | Port | S | Mid-turn user inject |
@@ -269,7 +269,7 @@ Grok slash modules (port checklist → graycode `/` commands or CLI):
 | 08 skills | same |
 | 09 plugins | same |
 | 10 hooks | same |
-| 11 custom models | eyrie + graycode |
+| 11 custom models | graycode-router + graycode |
 | 12 project rules AGENTS.md | exists Partial |
 | 13 memory | harrier UX |
 | 14 headless | CLI flags doc |
@@ -553,7 +553,7 @@ Port/finish: spawn, tools, sandbox, trust, hooks, plugins, marketplace client, T
 
 Port: spawn/capability/isolation types, hook events, optional sandbox policy DTO, tool protocol types (later).
 
-### `eyrie`
+### `graycode-router`
 
 Absorb: sampling/stream/retry/circuit-breaker lessons; catalog already ahead; managed deployment hooks; **do not** become Grok-only auth.
 
@@ -605,7 +605,7 @@ Dashboard/usage/marketplace web UI only.
 | SpaceXAI-only browser auth as sole path | Multi-provider + keychain |
 | `xai-token-estimation` | shrike wins |
 | Replace harrier with markdown memory files | Graph better |
-| Replace eyrie with xai-grok-sampler | Multi-provider better |
+| Replace graycode-router with xai-grok-sampler | Multi-provider better |
 | ratatui widgets | Bubble Tea stack |
 | `xai-proto-build` | Rust build |
 | Closed contribution policy | Graycode is open |
@@ -650,7 +650,7 @@ Declare complete when:
 6. Folder trust + sandbox deny globs pass security tests on macOS+Linux.  
 7. Marketplace can install a multi-component plugin.  
 8. Subagent explore/plan/general + resume + worktree isolation work.  
-9. No second memory/token/provider stack duplicated against harrier/shrike/eyrie.
+9. No second memory/token/provider stack duplicated against harrier/shrike/graycode-router.
 10. Continuous parity process (PACK-17) running for 2 releases.
 
 ---
