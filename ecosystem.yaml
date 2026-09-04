@@ -28,40 +28,11 @@ repositories:
     workspace: true
     facade: github.com/GrayCodeAI/eyrie/engine
 
-  - directory: sparrow
-    github_repo: sparrow
-    product_name: Graycode SDK for Go
-    kind: sdk
-    language: go
-    module: github.com/GrayCodeAI/sparrow
-    workspace: false
-
-  - directory: robin
-    github_repo: robin
-    product_name: Graycode SDK for Python
-    kind: sdk
-    language: python
-    workspace: false
-
-  - directory: wren
-    github_repo: wren
-    product_name: Graycode SDK for TypeScript
-    kind: sdk
-    language: typescript
-    workspace: false
-
-  - directory: starling
-    github_repo: starling
+  - directory: graycode-skills
+    github_repo: graycode-skills
     product_name: Graycode Community Skills
     kind: extension
     language: python
-    workspace: false
-
-  - directory: owl
-    github_repo: owl
-    product_name: Ecosystem Architecture Explorer
-    kind: tooling
-    language: javascript
     workspace: false
 
   - directory: graycode-platform

@@ -448,8 +448,8 @@ three runtime layers plus optional tooling/platform services:
 - **Support engines mounted by Graycode:** **eyrie**, **harrier**, **shrike**, **swift**, **kestrel**, **merlin**. Graycode imports or shells into these engines behind its own command surface.
 - **Shared foundations:** **falcon**
   provides shared MCP server scaffolding.
-- **API consumers/extensions:** **sparrow**, **robin**, and **wren** consume
-  Graycode's daemon API; **starling** provides Graycode skills.
+- **API consumers/extensions:** **graycode-skills** provides Graycode skills
+  installed on demand (`graycode skills install`).
 - **Tooling/platform:** **owl** visualizes the generated ecosystem graph;
   **graycode-platform** contains the optional web/BFF/Graycode Cloud plane and is
   outside the Graycode Go runtime graph.
