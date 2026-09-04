@@ -12,9 +12,8 @@ WORKDIR /build
 # commit-pseudo versions, resolved from the module proxy. The committed
 # go.work (which references sibling checkouts ../<repo>) is excluded from the
 # build context, so build in module mode (no go.work) against those pins.
-ENV GOPRIVATE=github.com/GrayCodeAI/* \
-    GONOSUMDB=github.com/GrayCodeAI/* \
-    GONOSUMCHECK=1
+# (No GOPRIVATE: proxy-first resolution serves the immutable pins; direct-VCS
+# fallback remains available for anything the proxy lacks.)
 
 # Build-time provenance (passed by .github/workflows/docker.yml or `docker build
 # --build-arg VERSION=... --build-arg COMMIT=... --build-arg BUILD_DATE=...`).

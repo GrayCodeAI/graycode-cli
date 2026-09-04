@@ -20,12 +20,11 @@ concurrency:
 
 env:
   GO_VERSION: "1.26.6"
-  # GrayCodeAI sibling modules are resolved from the workspace ../<repo> checkouts via
-  # go.work; their go.mod require versions intentionally do not match the
-  # frozen public proxy/sumdb snapshot, so bypass the proxy + checksum DB for them.
-  GOPRIVATE: "github.com/GrayCodeAI/*"
-  GONOSUMDB: "github.com/GrayCodeAI/*"
-  GONOSUMCHECK: "1"
+  # GrayCodeAI modules resolve from the public module proxy, which serves the
+  # pinned pseudo-versions immutably. Do NOT set GOPRIVATE for them: it forces
+  # direct-VCS resolution, which fails for repositories that no longer exist
+  # and bypasses the warm proxy cache. The default GOPROXY (proxy first, then
+  # direct fallback) is strictly more capable.
   # CI must resolve the dependency versions pinned in go.mod/go.sum, not whatever
   # happens to sit in the sibling checkouts that the committed go.work points at.
   # Go's reference is explicit that a committed go.work "may cause a continuous
