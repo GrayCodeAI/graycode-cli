@@ -74,16 +74,16 @@ func TestWorkModePlanFiltersToolsAndBash(t *testing.T) {
 func TestLazyGraycodeRouterToolsAndPromote(t *testing.T) {
 	reg := tool.NewRegistry(tool.FileReadTool{}, tool.ImpactTool{})
 	reg.EnableLazyModelSurface([]string{"Read"})
-	graycode - router := reg.GraycodeRouterTools()
-	if len(graycode-router) != 1 || graycode-router[0].Name != "Read" {
-		t.Fatalf("GraycodeRouterTools = %#v, want only Read", graycode-router)
+	graycodeRouter := reg.GraycodeRouterTools()
+	if len(graycodeRouter) != 1 || graycodeRouter[0].Name != "Read" {
+		t.Fatalf("GraycodeRouterTools = %#v, want only Read", graycodeRouter)
 	}
 	if !reg.PromoteModelTool("Impact") {
 		t.Fatal("promote Impact failed")
 	}
-	graycode - router = reg.GraycodeRouterTools()
-	if len(graycode-router) != 2 {
-		t.Fatalf("after promote GraycodeRouterTools len = %d", len(graycode-router))
+	graycodeRouter = reg.GraycodeRouterTools()
+	if len(graycodeRouter) != 2 {
+		t.Fatalf("after promote GraycodeRouterTools len = %d", len(graycodeRouter))
 	}
 }
 
