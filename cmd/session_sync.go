@@ -35,7 +35,7 @@ func explicitSelection(ctx context.Context) (provider, model string) {
 	return strings.TrimSpace(graycodeconfig.ActiveGateway(ctx)), strings.TrimSpace(graycodeconfig.ActiveModel(ctx))
 }
 
-// syncSessionFromPersistedSelection copies explicit eyrie provider.json
+// syncSessionFromPersistedSelection copies explicit graycode-router provider.json
 // selection into the live session when the session fields are empty.
 // It intentionally avoids runtime defaults so Graycode can preserve the
 // "gateway selected, model still missing" setup state.

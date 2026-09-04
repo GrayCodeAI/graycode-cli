@@ -44,7 +44,7 @@ func allTips() []Tip {
 		{ID: "slash-review", Text: "Use /review to get a code review of current changes.", Category: "workflow"},
 		{ID: "slash-init", Text: "Use /init to analyze a new project automatically.", Category: "project"},
 		{ID: "add-dir", Text: "Use /add-dir <path> to add extra directories to context.", Category: "context"},
-		{ID: "slash-memory", Text: "Use /memory for AGENTS.md; /harrier for graph memory; /ecosystem for eyrie/harrier/shrike status.", Category: "context"},
+		{ID: "slash-memory", Text: "Use /memory for AGENTS.md; /harrier for graph memory; /ecosystem for graycode-router/harrier/shrike status.", Category: "context"},
 		{ID: "slash-rewind", Text: "Use /rewind to undo the last exchange.", Category: "session"},
 		{ID: "slash-fork", Text: "Use /fork to branch off the current conversation.", Category: "session"},
 		{ID: "slash-context", Text: "Use /context to see what the agent knows about your project.", Category: "context"},

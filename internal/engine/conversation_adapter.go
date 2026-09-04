@@ -28,7 +28,7 @@ type ConversationState struct {
 	Summary    string
 }
 
-// ConversationManager manages a conversation lifecycle, bridging eyrie's
+// ConversationManager manages a conversation lifecycle, bridging graycode-router's
 // conversation management into graycode's chat session flow. It is safe for
 // concurrent use.
 type ConversationManager struct {

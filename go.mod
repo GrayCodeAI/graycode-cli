@@ -11,7 +11,7 @@ require (
 	charm.land/bubbles/v2 v2.1.1
 	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.5
-	github.com/GrayCodeAI/eyrie v0.2.3-0.20260902140659-6bc3068cd48a
+	github.com/GrayCodeAI/graycode-router v0.0.1
 	github.com/GrayCodeAI/harrier v0.0.0-20260902154449-d52fa214feb7
 	github.com/GrayCodeAI/kestrel v0.0.0-20260902154440-1b4c8cf7ea62
 	github.com/GrayCodeAI/merlin v0.0.0-20260902154444-0f4b9f7326cb

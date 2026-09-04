@@ -8,7 +8,7 @@ import (
 )
 
 func TestDynamicMaxTokens_CodeGenTask(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "Implement a REST API server"},
 	}
 	got := DynamicMaxTokens(msgs, 200000, "code")
@@ -18,7 +18,7 @@ func TestDynamicMaxTokens_CodeGenTask(t *testing.T) {
 }
 
 func TestDynamicMaxTokens_TextQuestion(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "What is the difference between a mutex and a semaphore?"},
 	}
 	got := DynamicMaxTokens(msgs, 200000, "code")
@@ -30,7 +30,7 @@ func TestDynamicMaxTokens_TextQuestion(t *testing.T) {
 
 func TestDynamicMaxTokens_ToolHeavyPattern(t *testing.T) {
 	// Simulate 3 consecutive assistant turns that all used tools.
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "read the files"},
 		{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{ID: "t1", Name: "Read"}}},
 		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "file1 content"}}},
@@ -48,7 +48,7 @@ func TestDynamicMaxTokens_ToolHeavyPattern(t *testing.T) {
 
 func TestDynamicMaxTokens_NotEnoughToolTurns(t *testing.T) {
 	// Only 2 tool turns (below the lookback threshold of 3).
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "do something"},
 		{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{ID: "t1", Name: "Read"}}},
 		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "output"}}},
@@ -65,7 +65,7 @@ func TestDynamicMaxTokens_NotEnoughToolTurns(t *testing.T) {
 
 func TestDynamicMaxTokens_MixedToolAndText(t *testing.T) {
 	// 3 assistant turns, but one is text-only -- not tool-heavy.
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "help me"},
 		{Role: "assistant", Content: "Sure, I can help."},
 		{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{ID: "t1", Name: "Read"}}},
@@ -83,7 +83,7 @@ func TestDynamicMaxTokens_MixedToolAndText(t *testing.T) {
 
 func TestDynamicMaxTokens_ContextBudgetLimit(t *testing.T) {
 	// Build messages that consume most of the context.
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: strings.Repeat("word ", 5000)},
 	}
 	// Small context window of 8000 tokens.
@@ -98,7 +98,7 @@ func TestDynamicMaxTokens_ContextBudgetLimit(t *testing.T) {
 }
 
 func TestDynamicMaxTokens_VerySmallContext(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: strings.Repeat("word ", 2000)},
 	}
 	got := DynamicMaxTokens(msgs, 2100, "code")
@@ -109,7 +109,7 @@ func TestDynamicMaxTokens_VerySmallContext(t *testing.T) {
 }
 
 func TestDynamicMaxTokens_ZeroContextSize(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "generate code"},
 	}
 	// contextSize=0 means unknown/unlimited -- should use base budget.
@@ -120,7 +120,7 @@ func TestDynamicMaxTokens_ZeroContextSize(t *testing.T) {
 }
 
 func TestDynamicMaxTokens_ExplainTask(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "generate something"},
 	}
 	got := DynamicMaxTokens(msgs, 200000, "explain")
@@ -130,7 +130,7 @@ func TestDynamicMaxTokens_ExplainTask(t *testing.T) {
 }
 
 func TestDynamicMaxTokens_ToolTask(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "do it"},
 	}
 	got := DynamicMaxTokens(msgs, 200000, "tool")
@@ -140,7 +140,7 @@ func TestDynamicMaxTokens_ToolTask(t *testing.T) {
 }
 
 func TestDynamicMaxTokens_DefaultTask(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "do something"},
 	}
 	got := DynamicMaxTokens(msgs, 200000, "")
@@ -152,7 +152,7 @@ func TestDynamicMaxTokens_DefaultTask(t *testing.T) {
 func TestIsRecentToolHeavy(t *testing.T) {
 	tests := []struct {
 		name string
-		msgs []types.EyrieMessage
+		msgs []types.GraycodeRouterMessage
 		want bool
 	}{
 		{
@@ -162,7 +162,7 @@ func TestIsRecentToolHeavy(t *testing.T) {
 		},
 		{
 			name: "only user messages",
-			msgs: []types.EyrieMessage{
+			msgs: []types.GraycodeRouterMessage{
 				{Role: "user", Content: "hello"},
 				{Role: "user", Content: "world"},
 			},
@@ -170,7 +170,7 @@ func TestIsRecentToolHeavy(t *testing.T) {
 		},
 		{
 			name: "three tool turns",
-			msgs: []types.EyrieMessage{
+			msgs: []types.GraycodeRouterMessage{
 				{Role: "assistant", ToolUse: []types.ToolCall{{ID: "1", Name: "Read"}}},
 				{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "1"}}},
 				{Role: "assistant", ToolUse: []types.ToolCall{{ID: "2", Name: "Edit"}}},
@@ -182,7 +182,7 @@ func TestIsRecentToolHeavy(t *testing.T) {
 		},
 		{
 			name: "two tool one text",
-			msgs: []types.EyrieMessage{
+			msgs: []types.GraycodeRouterMessage{
 				{Role: "assistant", Content: "let me think"},
 				{Role: "assistant", ToolUse: []types.ToolCall{{ID: "1", Name: "Read"}}},
 				{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "1"}}},
@@ -205,7 +205,7 @@ func TestIsRecentToolHeavy(t *testing.T) {
 func TestIsTextQuestion(t *testing.T) {
 	tests := []struct {
 		name string
-		msgs []types.EyrieMessage
+		msgs []types.GraycodeRouterMessage
 		want bool
 	}{
 		{
@@ -215,35 +215,35 @@ func TestIsTextQuestion(t *testing.T) {
 		},
 		{
 			name: "question mark",
-			msgs: []types.EyrieMessage{
+			msgs: []types.GraycodeRouterMessage{
 				{Role: "user", Content: "Is this working?"},
 			},
 			want: true,
 		},
 		{
 			name: "what prefix",
-			msgs: []types.EyrieMessage{
+			msgs: []types.GraycodeRouterMessage{
 				{Role: "user", Content: "What does this function do"},
 			},
 			want: true,
 		},
 		{
 			name: "explain prefix",
-			msgs: []types.EyrieMessage{
+			msgs: []types.GraycodeRouterMessage{
 				{Role: "user", Content: "Explain the architecture"},
 			},
 			want: true,
 		},
 		{
 			name: "imperative command",
-			msgs: []types.EyrieMessage{
+			msgs: []types.GraycodeRouterMessage{
 				{Role: "user", Content: "Implement the REST API"},
 			},
 			want: false,
 		},
 		{
 			name: "skips tool results",
-			msgs: []types.EyrieMessage{
+			msgs: []types.GraycodeRouterMessage{
 				{Role: "user", Content: "Why does this fail?"},
 				{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "error output"}}},
 			},

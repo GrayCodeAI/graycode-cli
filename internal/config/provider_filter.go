@@ -4,13 +4,13 @@ import (
 	"context"
 )
 
-// DefaultModelProviderFilter picks which eyrie provider to list models for when the UI
-// has no explicit filter. Host prefs (settings) win; otherwise eyrie routing/deployments decide.
+// DefaultModelProviderFilter picks which graycode-router provider to list models for when the UI
+// has no explicit filter. Host prefs (settings) win; otherwise graycode-router routing/deployments decide.
 func DefaultModelProviderFilter(ctx context.Context) string {
 	if p := ActiveGateway(ctx); p != "" {
 		return p
 	}
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return ""
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 )
 
-func TestEnvKeyStatusUsesEyrieCredentialStatus(t *testing.T) {
+func TestEnvKeyStatusUsesGraycodeRouterCredentialStatus(t *testing.T) {
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() { gateway.SetDefaultStore(nil) })

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/eyrie/credentials"
-	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-router/credentials"
+	graycoderouterengine "github.com/GrayCodeAI/graycode-router/engine"
 )
 
 func TestContextUsedTokens_PrefersAPI(t *testing.T) {
@@ -21,21 +21,21 @@ func TestContextUsedTokens_PrefersAPI(t *testing.T) {
 	}
 }
 
-func TestNativeCompactionSupportUsesEyrieCredentialStore(t *testing.T) {
+func TestNativeCompactionSupportUsesGraycodeRouterCredentialStore(t *testing.T) {
 	ctx := context.Background()
 	store := &credentials.MapStore{}
-	runtime, err := eyrieengine.New(eyrieengine.Options{SecretStore: store})
+	runtime, err := graycoderouterengine.New(graycoderouterengine.Options{SecretStore: store})
 	if err != nil {
 		t.Fatal(err)
 	}
 	s := NewSessionWithClient(gateway.NewFromEngine(runtime).ChatClient(), "anthropic", "claude-sonnet-4-6", "sys", nil, true)
 	if s.supportsNativeCompaction() {
-		t.Fatal("expected no support before Eyrie has a credential")
+		t.Fatal("expected no support before GraycodeRouter has a credential")
 	}
 	if err := store.Set(ctx, credentials.AccountForEnv("ANTHROPIC_API_KEY"), "sk-test"); err != nil {
 		t.Fatal(err)
 	}
 	if !s.supportsNativeCompaction() {
-		t.Fatal("expected support from Eyrie's injected credential store")
+		t.Fatal("expected support from GraycodeRouter's injected credential store")
 	}
 }

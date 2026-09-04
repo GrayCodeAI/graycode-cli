@@ -108,7 +108,7 @@ func (m *chatModel) mcpSummary() string {
 	}
 	if m.registry != nil {
 		var toolNames []string
-		for _, t := range m.registry.EyrieTools() {
+		for _, t := range m.registry.GraycodeRouterTools() {
 			if strings.HasPrefix(t.Name, "mcp__") {
 				toolNames = append(toolNames, t.Name)
 			}

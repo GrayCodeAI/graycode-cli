@@ -8,7 +8,7 @@ Linux Foundation / Agentic AI Foundation)
 ## Executive Decision
 
 Goose's audit against graycode found that most of its runtime concepts already have
-a native graycode implementation (providers via eyrie, sessions, MCP, ACP, skills,
+a native graycode implementation (providers via graycode-router, sessions, MCP, ACP, skills,
 native sandboxing, permissions). The genuinely novel, graycode-relevant ideas are
 adopted here in Go, without copying Rust code or weakening graycode's native
 sandboxing model.
@@ -17,7 +17,7 @@ sandboxing model.
 
 | Goose package/concept | Graycode implementation | Decision |
 |---|---|---|
-| Provider abstraction (~36) | sibling `eyrie` (28 built-in + 75+ live) | Keep graycode |
+| Provider abstraction (~36) | sibling `graycode-router` (28 built-in + 75+ live) | Keep graycode |
 | Sessions (SQLite WAL) | `internal/session` JSONL+WAL+zstd + sibling `swift` (Swift) | Keep graycode |
 | MCP (client+server) | `internal/mcp` + sibling `falcon` | Keep graycode |
 | ACP | `internal/acp` | Keep graycode |
@@ -50,7 +50,7 @@ or MCP stdio processes by filtering dangerous environment overrides
   checker) — a `sanitizeEnv` / `SafeEnv` helper.
 - Consumers: `internal/mcp` stdio launch path and `internal/plugin` package
   execution.
-- No changes to sibling `eyrie`.
+- No changes to sibling `graycode-router`.
 
 ### Required behavior
 
@@ -147,7 +147,7 @@ accounting, matching `goose-context-management`.
   change and is tracked separately.
 - MCP Apps / agent-provided HTML UIs: novel but requires UI-layer design.
 - ACP-as-provider wrapping other CLIs: larger provider abstraction change.
-- Local-inference tool emulation / toolshim: depends on eyrie's local-model
+- Local-inference tool emulation / toolshim: depends on graycode-router's local-model
   path.
 - Recipe security scanner / cron recipes: graycode already has schedule/cron.
 

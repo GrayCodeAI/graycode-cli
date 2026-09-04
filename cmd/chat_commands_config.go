@@ -26,7 +26,7 @@ func (m *chatModel) handleConfigCommand(parts []string, text string) (tea.Model,
 			m.session.SetModel(cached[0].ID)
 			_ = graycodeconfig.SetGlobalSetting("model", cached[0].ID)
 		}
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nModel: %s\nSaved in eyrie (provider.json).", value, m.session.Model())})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Provider set to: %s\nModel: %s\nSaved in graycode-router (provider.json).", value, m.session.Model())})
 		return m, nil
 	}
 	if len(parts) >= 3 && parts[1] == "model" {
@@ -52,7 +52,7 @@ func (m *chatModel) handleConfigCommand(parts []string, text string) (tea.Model,
 			return m, nil
 		}
 		m.syncSessionSelection()
-		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved in eyrie (provider.json).", m.session.Model())})
+		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Model switched to: %s\nSaved in graycode-router (provider.json).", m.session.Model())})
 		return m, nil
 	}
 	if len(parts) >= 2 && parts[1] == "keys" {

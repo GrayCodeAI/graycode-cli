@@ -170,7 +170,7 @@ func TestLoadSettingsUsesUserConfigOnly(t *testing.T) {
 	t.Setenv("HOME", home)
 	configDir := filepath.Join(home, "config")
 	t.Setenv("GRAYCODE_CONFIG_DIR", configDir)
-	t.Setenv("EYRIE_CONFIG_DIR", filepath.Join(home, "eyrie"))
+	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", filepath.Join(home, "graycode-router"))
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func TestLoadSettingsUsesUserConfigOnly(t *testing.T) {
 
 	settings := LoadSettings()
 	if got := ActiveModel(context.TODO()); got != "openai/gpt-4o" {
-		t.Fatalf("expected global model in eyrie, got %q (settings.model=%q)", got, settings.Model)
+		t.Fatalf("expected global model in graycode-router, got %q (settings.model=%q)", got, settings.Model)
 	}
 	if settings.Model != "" {
 		t.Fatalf("model must not remain in graycode settings.json, got %q", settings.Model)
@@ -243,7 +243,7 @@ func TestLoadSettingsPreservesRejectedLegacySelection(t *testing.T) {
 	configDir := filepath.Join(home, "config")
 	t.Setenv("HOME", home)
 	t.Setenv("GRAYCODE_CONFIG_DIR", configDir)
-	t.Setenv("EYRIE_CONFIG_DIR", filepath.Join(home, "eyrie"))
+	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", filepath.Join(home, "graycode-router"))
 	if err := os.MkdirAll(configDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +264,7 @@ func TestLoadSettingsPreservesRejectedLegacySelection(t *testing.T) {
 		t.Fatalf("rejected legacy selection was removed from disk: %s", data)
 	}
 	if got := ActiveModel(context.Background()); got != "" {
-		t.Fatalf("rejected legacy model reached Eyrie state: %q", got)
+		t.Fatalf("rejected legacy model reached GraycodeRouter state: %q", got)
 	}
 }
 

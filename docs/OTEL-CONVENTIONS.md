@@ -1,7 +1,7 @@
 # graycode-eco OpenTelemetry Semantic Conventions for AI Agent Spans
 
 Status: Draft / shared spec
-Applies to: graycode, eyrie, harrier, shrike, swift
+Applies to: graycode, graycode-router, harrier, shrike, swift
 
 This document defines the **ecosystem-wide** OpenTelemetry (OTel) semantic
 conventions that every graycode-eco repo should follow when emitting spans for AI
@@ -19,23 +19,23 @@ concerns that the GenAI spec does not yet standardize.
 
 ## Reference ownership
 
-Eyrie owns provider-call instrumentation behind its `eyrie/engine` facade.
+GraycodeRouter owns provider-call instrumentation behind its `graycode-router/engine` facade.
 Its lower provider layer contains the reference OTel decorator for chat and
 stream calls: it starts a client span, records provider/model/usage attributes,
 sets status from the result, and ends a streamed span on completion. That
-decorator is an Eyrie implementation detail; Graycode must not import or compose it
+decorator is an GraycodeRouter implementation detail; Graycode must not import or compose it
 directly.
 
-- `eyrie/internal/observability/observability.go` provides a stdlib-only,
+- `graycode-router/internal/observability/observability.go` provides a stdlib-only,
   zero-dependency telemetry/metrics layer (spans, latency histograms,
   Prometheus + JSON export) for environments that cannot pull in the OTel SDK.
-- `eyrie/internal/observability/genai_semconv.go` exports the canonical
+- `graycode-router/internal/observability/genai_semconv.go` exports the canonical
   attribute-key constants defined below, so Go code can reference them instead
   of hard-coding strings. A pinning test
   (`genai_semconv_test.go`) guards the exact key values.
 
 When adding tracing to Graycode, propagate swift context through the Engine call and
-use the attribute keys in this document. Eyrie wraps provider operations;
+use the attribute keys in this document. GraycodeRouter wraps provider operations;
 Graycode wraps product turns and tools. Harrier, Shrike, and Swift instrument only their
 own operations.
 
@@ -52,7 +52,7 @@ own operations.
 LLM/provider request spans SHOULD use span kind `CLIENT`. Tool invocations and
 agent steps that represent internal work SHOULD use span kind `INTERNAL`.
 
-eyrie's existing stdlib layer also defines short span names
+graycode-router's existing stdlib layer also defines short span names
 (`llm.chat`, `llm.stream`, `llm.retry`, `llm.cache_hit`) — these remain valid
 for the internal metrics collector; the names above are the cross-repo
 convention for OTLP-exported spans.
@@ -60,10 +60,10 @@ convention for OTLP-exported spans.
 ## Required / recommended attributes
 
 The required attribute set for any AI agent span. Keys are exported as Go
-constants in `eyrie/internal/observability/genai_semconv.go` (constant name in
+constants in `graycode-router/internal/observability/genai_semconv.go` (constant name in
 parentheses).
 
-| Attribute key                   | Go const (`eyrie` observability)   | Type   | Required | Meaning                                                        |
+| Attribute key                   | Go const (`graycode-router` observability)   | Type   | Required | Meaning                                                        |
 |---------------------------------|------------------------------------|--------|----------|----------------------------------------------------------------|
 | `gen_ai.system`                 | `AttrGenAISystem`                  | string | yes      | Provider/system: `openai`, `anthropic`, `gemini`, etc.         |
 | `gen_ai.request.model`          | `AttrGenAIRequestModel`            | string | yes      | Model requested by the caller, e.g. `gpt-4o`.                  |
@@ -79,13 +79,13 @@ parentheses).
 ### Notes
 
 - **Tokens as integers.** Emit `gen_ai.usage.input_tokens` /
-  `gen_ai.usage.output_tokens` as OTel integer attributes. eyrie's stdlib
+  `gen_ai.usage.output_tokens` as OTel integer attributes. graycode-router's stdlib
   `Span.Attributes` is `map[string]string`; when bridging that layer to OTLP,
   convert to integer attributes.
 - **Cost is a double in USD.** `cost.usd` is the ecosystem standard.
-  eyrie's metrics collector stores cost internally in micro-USD for precision
+  graycode-router's metrics collector stores cost internally in micro-USD for precision
   (`costMicroUSD`) but exports USD; emit the USD value on spans.
-- **No prompt/response bodies by default.** Following eyrie's audit design
+- **No prompt/response bodies by default.** Following graycode-router's audit design
   (`observability/audit.go`), spans MUST NOT carry raw prompt/response text by
   default. If content capture is enabled, use the OTel GenAI event/log channel,
   not span attributes, and gate it behind explicit opt-in.
@@ -94,7 +94,7 @@ parentheses).
 
 ## Legacy attribute mapping
 
-eyrie's older stdlib constants (`AttrLLMProvider`, `AttrLLMModel`,
+graycode-router's older stdlib constants (`AttrLLMProvider`, `AttrLLMModel`,
 `AttrLLMInputTokens`, …, keyed `llm.*`) predate this spec and remain for
 backwards compatibility. New instrumentation should use the `gen_ai.*` keys.
 Mapping:
@@ -111,12 +111,12 @@ Mapping:
 
 ## Per-repo guidance
 
-- **eyrie** — owns provider/model/usage spans behind `eyrie/engine`; align
+- **graycode-router** — owns provider/model/usage spans behind `graycode-router/engine`; align
   attribute keys to `gen_ai.*` over time.
 - **graycode** — daemon/orchestrator. Already has OTel hooks
   (`GRAYCODE_ENABLE_TELEMETRY`, `GRAYCODE_OTEL_SHUTDOWN_TIMEOUT_MS`). Emit
   `agent.id` and `session.id` on agent-turn spans; propagate them downstream to
-  eyrie via context so provider spans inherit the same IDs.
+  graycode-router via context so provider spans inherit the same IDs.
 - **harrier** — memory service. Add `embeddings` spans with `gen_ai.system` +
   `gen_ai.request.model` from its embeddings config; tag retrieval spans with
   `session.id`.
@@ -129,5 +129,5 @@ Mapping:
 ## Versioning
 
 This spec tracks OTel GenAI conventions, which are still evolving. Pin changes
-to the constants via `genai_semconv_test.go` in eyrie and update this table in
+to the constants via `genai_semconv_test.go` in graycode-router and update this table in
 the same change.

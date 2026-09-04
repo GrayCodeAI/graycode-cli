@@ -18,7 +18,7 @@ import (
 //     right tool and format the arguments correctly? Scored separately, and only
 //     over cases where a trigger actually fired.
 //
-// With 40+ tools and model-swapping via eyrie, "picked the wrong moment to call
+// With 40+ tools and model-swapping via graycode-router, "picked the wrong moment to call
 // a tool" and "called the right tool with bad args" are distinct regressions.
 // Scoring them apart makes which one regressed legible.
 

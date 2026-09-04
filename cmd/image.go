@@ -165,7 +165,7 @@ func IsPDFFile(path string) bool {
 
 // ReadPDFText reads a PDF and extracts its text content using stdlib only.
 //
-// eyrie does not expose a native document/PDF content block, so PDFs are
+// graycode-router does not expose a native document/PDF content block, so PDFs are
 // degraded to text and injected inline. This is a best-effort extractor: it
 // inflates FlateDecode content streams and pulls text from PDF text-showing
 // operators (Tj / TJ). It does not handle every PDF (encrypted, scanned-image,

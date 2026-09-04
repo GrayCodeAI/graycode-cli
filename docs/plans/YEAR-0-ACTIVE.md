@@ -15,7 +15,7 @@ port matrices; it freezes what “Year 0 done” means and tracks pack status.
 |----|--------|
 | Reimplement Grok **behavior** in Go | Copy Rust crates or depend on Grok |
 | Map capabilities to graycode-eco repos | Collapse engines into graycode monorepo |
-| Wire existing modes/budgets first | Rebuild eyrie/harrier/shrike as Grok clones |
+| Wire existing modes/budgets first | Rebuild graycode-router/harrier/shrike as Grok clones |
 | Privacy-first telemetry (OTEL opt-in) | Port Mixpanel defaults |
 
 ## Pack status

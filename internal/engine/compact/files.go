@@ -35,7 +35,7 @@ func (ft *FileTracker) RecordModified(path string) {
 	ft.ModifiedFiles[path]++
 }
 
-func (ft *FileTracker) ExtractFromMessages(messages []types.EyrieMessage) {
+func (ft *FileTracker) ExtractFromMessages(messages []types.GraycodeRouterMessage) {
 	for _, msg := range messages {
 		if msg.Role != "assistant" {
 			continue

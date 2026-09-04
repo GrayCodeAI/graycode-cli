@@ -8,8 +8,8 @@ That means Graycode should support multiple providers without leaking provider-s
 
 ## Design principle
 
-Provider-specific code lives behind Eyrie's stable `eyrie/engine` host facade.
-Graycode is the face and composition root; Eyrie is the engine.
+Provider-specific code lives behind GraycodeRouter's stable `graycode-router/engine` host facade.
+Graycode is the face and composition root; GraycodeRouter is the engine.
 
 Graycode decides:
 
@@ -17,7 +17,7 @@ Graycode decides:
 - the semantic intent (`fast`, `balanced`, `reasoning`, `economical`)
 - whether an exact user-selected model may fall back
 
-`eyrie` handles:
+`graycode-router` handles:
 
 - capability-to-model resolution
 - provider and deployment selection
@@ -43,7 +43,7 @@ Graycode decides:
 ## Graycode-facing abstraction
 
 Graycode depends on its small `ChatClient` product port and adapts it only to
-`eyrie/engine`, never to a vendor-specific or lower-level Eyrie client.
+`graycode-router/engine`, never to a vendor-specific or lower-level GraycodeRouter client.
 
 Example concerns:
 
@@ -60,9 +60,9 @@ Example concerns:
 - no provider-specific branches inside review/verify logic
 - no model-specific assumptions inside session persistence
 - keep task-semantic policy inside Graycode orchestration
-- keep provider/deployment routing, health, retry, and fallback inside Eyrie
-- Graycode production integrations use `github.com/GrayCodeAI/eyrie/engine`
-- direct imports of lower Eyrie packages are forbidden and CI-enforced
+- keep provider/deployment routing, health, retry, and fallback inside GraycodeRouter
+- Graycode production integrations use `github.com/GrayCodeAI/graycode-router/engine`
+- direct imports of lower GraycodeRouter packages are forbidden and CI-enforced
 - custom gateway settings enter as `engine.Options.CustomGateways` and are
   isolated per Engine instance
 - Graycode-owned JSON, session, and conversation schemas are explicit projections;

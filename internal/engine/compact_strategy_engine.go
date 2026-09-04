@@ -8,7 +8,7 @@ import (
 
 type CompactStrategy interface {
 	Name() string
-	ShouldTrigger(msgs []types.EyrieMessage, tokenCount, threshold int) bool
+	ShouldTrigger(msgs []types.GraycodeRouterMessage, tokenCount, threshold int) bool
 	Compact(ctx context.Context, s *Session) (*CompactResult, error)
 }
 
@@ -31,7 +31,7 @@ func NewStrategyRegistry(config CompactConfig) *StrategyRegistry {
 	return r
 }
 
-func (r *StrategyRegistry) SelectStrategy(sess *Session, msgs []types.EyrieMessage, tokenCount int) CompactStrategy {
+func (r *StrategyRegistry) SelectStrategy(sess *Session, msgs []types.GraycodeRouterMessage, tokenCount int) CompactStrategy {
 	threshold := r.config.ContextWindowSize - r.config.AutoCompactBuffer - r.config.MaxOutputTokens
 	for _, s := range r.strategies {
 		if _, ok := s.(*ProviderNativeCompactStrategy); ok && (sess == nil || !sess.supportsNativeCompaction()) {

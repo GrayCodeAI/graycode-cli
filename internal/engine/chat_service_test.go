@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/llm"
 	"github.com/GrayCodeAI/graycode-cli/internal/resilience/retry"
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/graycode-router/llm"
 )
 
 // TestChatService_BuildOptions checks that BuildOptions correctly
@@ -137,7 +137,7 @@ func TestChatService_ChatDelegatesToClient(t *testing.T) {
 	})
 	resp, err := svc.Chat(
 		context.Background(),
-		[]types.EyrieMessage{{Role: "user", Content: "hi"}},
+		[]types.GraycodeRouterMessage{{Role: "user", Content: "hi"}},
 		svc.BuildOptions("sys", "claude-opus-4", 1024, nil),
 	)
 	if err != nil {
@@ -152,11 +152,11 @@ func TestChatService_ChatDelegatesToClient(t *testing.T) {
 // ChatService.Chat surfaces the underlying error unchanged.
 type errClient struct{ err error }
 
-func (e *errClient) Chat(_ context.Context, _ []types.EyrieMessage, _ types.ChatOptions) (*types.EyrieResponse, error) {
+func (e *errClient) Chat(_ context.Context, _ []types.GraycodeRouterMessage, _ types.ChatOptions) (*types.GraycodeRouterResponse, error) {
 	return nil, e.err
 }
 
-func (e *errClient) StreamChatContinue(_ context.Context, _ []types.EyrieMessage, _ types.ChatOptions, _ types.ContinuationConfig) (*types.StreamResult, error) {
+func (e *errClient) StreamChatContinue(_ context.Context, _ []types.GraycodeRouterMessage, _ types.ChatOptions, _ types.ContinuationConfig) (*types.StreamResult, error) {
 	return nil, e.err
 }
 
@@ -174,11 +174,11 @@ type resilienceManagingTestClient struct {
 	calls int
 }
 
-func (c *resilienceManagingTestClient) Chat(context.Context, []types.EyrieMessage, types.ChatOptions) (*types.EyrieResponse, error) {
+func (c *resilienceManagingTestClient) Chat(context.Context, []types.GraycodeRouterMessage, types.ChatOptions) (*types.GraycodeRouterResponse, error) {
 	return nil, c.err
 }
 
-func (c *resilienceManagingTestClient) StreamChatContinue(context.Context, []types.EyrieMessage, types.ChatOptions, types.ContinuationConfig) (*types.StreamResult, error) {
+func (c *resilienceManagingTestClient) StreamChatContinue(context.Context, []types.GraycodeRouterMessage, types.ChatOptions, types.ContinuationConfig) (*types.StreamResult, error) {
 	c.calls++
 	return nil, c.err
 }
@@ -187,7 +187,7 @@ func (c *resilienceManagingTestClient) ManagesResilience() bool { return true }
 func TestChatService_DoesNotDuplicateEngineResilience(t *testing.T) {
 	client := &resilienceManagingTestClient{err: errors.New("routed transport failed")}
 	svc := NewChatService(client, ChatServiceConfig{})
-	_, err := svc.Stream(context.Background(), []types.EyrieMessage{{Role: "user", Content: "hi"}}, types.ChatOptions{})
+	_, err := svc.Stream(context.Background(), []types.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, types.ChatOptions{})
 	if err == nil {
 		t.Fatal("expected stream error")
 	}
@@ -200,16 +200,16 @@ type flakyLegacyStartClient struct {
 	calls int
 }
 
-func (*flakyLegacyStartClient) Chat(context.Context, []types.EyrieMessage, types.ChatOptions) (*types.EyrieResponse, error) {
+func (*flakyLegacyStartClient) Chat(context.Context, []types.GraycodeRouterMessage, types.ChatOptions) (*types.GraycodeRouterResponse, error) {
 	return nil, nil
 }
 
-func (c *flakyLegacyStartClient) StreamChatContinue(context.Context, []types.EyrieMessage, types.ChatOptions, types.ContinuationConfig) (*types.StreamResult, error) {
+func (c *flakyLegacyStartClient) StreamChatContinue(context.Context, []types.GraycodeRouterMessage, types.ChatOptions, types.ContinuationConfig) (*types.StreamResult, error) {
 	c.calls++
 	if c.calls == 1 {
 		return nil, errors.New("temporary transport failure")
 	}
-	events := make(chan types.EyrieStreamEvent)
+	events := make(chan types.GraycodeRouterStreamEvent)
 	close(events)
 	return llm.NewStreamResult(events, "", nil), nil
 }
@@ -243,21 +243,21 @@ func retryConfigForBoundaryTest() retry.Config {
 // received on the retry so tests can assert the emergency compact (H3).
 type overflowThenCaptureClient struct {
 	calls   int
-	seen    []types.EyrieMessage
+	seen    []types.GraycodeRouterMessage
 	started bool
 }
 
-func (*overflowThenCaptureClient) Chat(context.Context, []types.EyrieMessage, types.ChatOptions) (*types.EyrieResponse, error) {
+func (*overflowThenCaptureClient) Chat(context.Context, []types.GraycodeRouterMessage, types.ChatOptions) (*types.GraycodeRouterResponse, error) {
 	return nil, nil
 }
 
-func (c *overflowThenCaptureClient) StreamChatContinue(_ context.Context, messages []types.EyrieMessage, _ types.ChatOptions, _ types.ContinuationConfig) (*types.StreamResult, error) {
+func (c *overflowThenCaptureClient) StreamChatContinue(_ context.Context, messages []types.GraycodeRouterMessage, _ types.ChatOptions, _ types.ContinuationConfig) (*types.StreamResult, error) {
 	c.calls++
 	if c.calls == 1 {
 		return nil, errors.New("input too long: 120000 tokens exceeds the limit of 100000")
 	}
 	c.started = true
-	c.seen = append([]types.EyrieMessage(nil), messages...)
+	c.seen = append([]types.GraycodeRouterMessage(nil), messages...)
 	return &types.StreamResult{}, nil
 }
 
@@ -265,10 +265,10 @@ func (c *overflowThenCaptureClient) StreamChatContinue(_ context.Context, messag
 // context-overflow error, the retry sends a compacted (smaller) transcript
 // instead of re-sending the same overflowing messages.
 func TestChatService_EmergencyCompactTrimsBeforeRetry(t *testing.T) {
-	var messages []types.EyrieMessage
-	messages = append(messages, types.EyrieMessage{Role: "system", Content: "sys"})
+	var messages []types.GraycodeRouterMessage
+	messages = append(messages, types.GraycodeRouterMessage{Role: "system", Content: "sys"})
 	for i := 0; i < 100; i++ {
-		messages = append(messages, types.EyrieMessage{Role: "user", Content: "message-" + itoaForTest(i)})
+		messages = append(messages, types.GraycodeRouterMessage{Role: "user", Content: "message-" + itoaForTest(i)})
 	}
 
 	client := &overflowThenCaptureClient{}

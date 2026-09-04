@@ -10,7 +10,7 @@ import (
 )
 
 func TestCompactEstimateTokens(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "Hello world"},
 		{Role: "assistant", Content: strings.Repeat("x", 400)},
 	}
@@ -18,7 +18,7 @@ func TestCompactEstimateTokens(t *testing.T) {
 	if tokens < 1 {
 		t.Errorf("expected at least 1 token, got %d", tokens)
 	}
-	shortMsgs := []types.EyrieMessage{
+	shortMsgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}
 	shortTokens := token.EstimateTokens(shortMsgs)
@@ -30,7 +30,7 @@ func TestCompactEstimateTokens(t *testing.T) {
 func TestAdjustIndexToPreserveAPIInvariants(t *testing.T) {
 	tests := []struct {
 		name     string
-		msgs     []types.EyrieMessage
+		msgs     []types.GraycodeRouterMessage
 		startIdx int
 		wantIdx  int
 	}{
@@ -42,7 +42,7 @@ func TestAdjustIndexToPreserveAPIInvariants(t *testing.T) {
 		},
 		{
 			name: "no tool pairs",
-			msgs: []types.EyrieMessage{
+			msgs: []types.GraycodeRouterMessage{
 				{Role: "user", Content: "hello"},
 				{Role: "assistant", Content: "hi"},
 				{Role: "user", Content: "bye"},
@@ -52,7 +52,7 @@ func TestAdjustIndexToPreserveAPIInvariants(t *testing.T) {
 		},
 		{
 			name: "tool_result at startIdx - moves back past tool_use",
-			msgs: []types.EyrieMessage{
+			msgs: []types.GraycodeRouterMessage{
 				{Role: "user", Content: "hello"},
 				{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash"}}},
 				{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "output"}}},
@@ -63,7 +63,7 @@ func TestAdjustIndexToPreserveAPIInvariants(t *testing.T) {
 		},
 		{
 			name: "at boundary already",
-			msgs: []types.EyrieMessage{
+			msgs: []types.GraycodeRouterMessage{
 				{Role: "user", Content: "hello"},
 				{Role: "assistant", Content: "response"},
 			},
@@ -83,7 +83,7 @@ func TestAdjustIndexToPreserveAPIInvariants(t *testing.T) {
 }
 
 func TestMicrocompactMessages(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "read file.go"},
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t1", Name: "Read"}}},
 		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "package main\nfunc main() {}"}}},
@@ -132,7 +132,7 @@ func TestMicrocompactMessages(t *testing.T) {
 }
 
 func TestAPICompactMessages(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "hello"},
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash", Arguments: map[string]interface{}{"command": strings.Repeat("x", 1000)}}}},
 		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: strings.Repeat("output ", 1000)}}},
@@ -158,7 +158,7 @@ func TestAPICompactMessages(t *testing.T) {
 }
 
 func TestAPICompactPreservesMutatingTools(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "edit file"},
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t1", Name: "Edit", Arguments: map[string]interface{}{"old_string": strings.Repeat("x", 1000), "new_string": "y"}}}},
 		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: strings.Repeat("edited ", 500)}}},
@@ -180,7 +180,7 @@ func TestAPICompactPreservesMutatingTools(t *testing.T) {
 }
 
 func TestCalculateMessagesToKeepIndex(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: strings.Repeat("hello ", 100)},
 		{Role: "assistant", Content: strings.Repeat("response ", 100)},
 		{Role: "user", Content: strings.Repeat("follow up ", 100)},
@@ -205,7 +205,7 @@ func TestCalculateMessagesToKeepIndex(t *testing.T) {
 }
 
 func TestFilterCompactBoundaries(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "[Session memory summary]\nold stuff"},
 		{Role: "assistant", Content: "Understood."},
 		{Role: "user", Content: "real message"},

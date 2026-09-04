@@ -15,7 +15,7 @@ done < <("${ROOT_DIR}/scripts/ecosystem-manifest.sh" list workspace)
 failed=0
 
 # Directory and module path differ when a repo is renamed (e.g. graycode-router
-# hosts module github.com/GrayCodeAI/eyrie), so resolve via the manifest.
+# hosts module github.com/GrayCodeAI/graycode-router), so resolve via the manifest.
 module_for_repo() {
   awk -v dir="$1" '
     /^  - directory:/ { cur=$0; sub(/^  - directory:[[:space:]]*/, "", cur); next }

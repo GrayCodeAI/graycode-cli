@@ -12,7 +12,7 @@ import (
 
 // LLMClient is the minimal interface for calling an LLM from engine components.
 type LLMClient interface {
-	Chat(ctx context.Context, msgs []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error)
+	Chat(ctx context.Context, msgs []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error)
 }
 
 // Reflector provides verbal self-reflection on agent actions.
@@ -46,7 +46,7 @@ func (r *Reflector) History() []ReflectionEntry {
 }
 
 // Reflect analyzes a failure and records a lesson.
-func (r *Reflector) Reflect(ctx context.Context, goal string, msgs []types.EyrieMessage, errorContext string) (*ReflectionEntry, error) {
+func (r *Reflector) Reflect(ctx context.Context, goal string, msgs []types.GraycodeRouterMessage, errorContext string) (*ReflectionEntry, error) {
 	if r.llm == nil {
 		return nil, fmt.Errorf("reflector: no LLM client configured")
 	}
@@ -55,7 +55,7 @@ func (r *Reflector) Reflect(ctx context.Context, goal string, msgs []types.Eyrie
 	r.mu.Unlock()
 
 	prompt := buildReflectionPrompt(goal, msgs, errorContext)
-	allMsgs := []types.EyrieMessage{{Role: "user", Content: prompt}}
+	allMsgs := []types.GraycodeRouterMessage{{Role: "user", Content: prompt}}
 	resp, err := r.llm.Chat(ctx, allMsgs, types.ChatOptions{Model: r.model, MaxTokens: 512})
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func parseReflectionEntry(content string, attempt int, goal string) ReflectionEn
 // buildReflectionPrompt constructs the reflection prompt from goal, messages, and error.
 // The instruction block is delegated to LearnPrompt so the failure-analysis
 // template lives in one place.
-func buildReflectionPrompt(goal string, msgs []types.EyrieMessage, errorContext string) string {
+func buildReflectionPrompt(goal string, msgs []types.GraycodeRouterMessage, errorContext string) string {
 	var sb strings.Builder
 	sb.WriteString("TASK GOAL: " + goal + "\n\n")
 	sb.WriteString("CONVERSATION TRANSCRIPT:\n")

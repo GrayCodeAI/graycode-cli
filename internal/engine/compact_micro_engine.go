@@ -13,7 +13,7 @@ type MicroCompactStrategy struct{}
 
 func (s *MicroCompactStrategy) Name() string { return "micro" }
 
-func (s *MicroCompactStrategy) ShouldTrigger(msgs []types.EyrieMessage, tokenCount, threshold int) bool {
+func (s *MicroCompactStrategy) ShouldTrigger(msgs []types.GraycodeRouterMessage, tokenCount, threshold int) bool {
 	if tokenCount < threshold/2 {
 		return false
 	}

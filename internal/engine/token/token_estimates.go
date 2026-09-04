@@ -7,7 +7,7 @@ import (
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
-func EstimateTokens(msgs []types.EyrieMessage) int {
+func EstimateTokens(msgs []types.GraycodeRouterMessage) int {
 	total := 0
 	for _, m := range msgs {
 		total += EstimateMessageTokens(m)
@@ -15,7 +15,7 @@ func EstimateTokens(msgs []types.EyrieMessage) int {
 	return total
 }
 
-func EstimateMessageTokens(m types.EyrieMessage) int {
+func EstimateMessageTokens(m types.GraycodeRouterMessage) int {
 	tokens := CountTokens(m.Content)
 	for _, tc := range m.ToolUse {
 		tokens += CountTokens(tc.Name)

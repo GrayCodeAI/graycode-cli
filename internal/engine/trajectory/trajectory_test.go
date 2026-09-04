@@ -7,8 +7,8 @@ import (
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
-func bigToolMsg(payload string) types.EyrieMessage {
-	return types.EyrieMessage{
+func bigToolMsg(payload string) types.GraycodeRouterMessage {
+	return types.GraycodeRouterMessage{
 		Role:        "assistant",
 		ToolUse:     []types.ToolCall{{Name: "Bash", Arguments: map[string]interface{}{"command": payload}}},
 		ToolResults: []types.ToolResult{{Content: payload}},
@@ -16,7 +16,7 @@ func bigToolMsg(payload string) types.EyrieMessage {
 }
 
 func TestUnderBudgetUnchanged(t *testing.T) {
-	msgs := []types.EyrieMessage{{Role: "user", Content: "hi"}}
+	msgs := []types.GraycodeRouterMessage{{Role: "user", Content: "hi"}}
 	out, changed := CompressTrajectory(msgs, 10000, 2, 2)
 	if changed || len(out) != 1 {
 		t.Fatal("small trajectory must be unchanged")
@@ -24,7 +24,7 @@ func TestUnderBudgetUnchanged(t *testing.T) {
 }
 
 func TestProtectHeadTailCompressMiddle(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "start"},
 		bigToolMsg(strings.Repeat("a", 4000)), // head turn with tool call
 		{Role: "user", Content: strings.Repeat("b", 3000)},
@@ -59,7 +59,7 @@ func TestProtectHeadTailCompressMiddle(t *testing.T) {
 }
 
 func TestNoMiddleWhenProtectCoversAll(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "a"},
 		{Role: "user", Content: strings.Repeat("b", 5000)},
 		{Role: "user", Content: "c"},
@@ -71,7 +71,7 @@ func TestNoMiddleWhenProtectCoversAll(t *testing.T) {
 }
 
 func TestSummaryCapturesLatestRequest(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "old"},
 		{Role: "user", Content: "the real request here"},
 		{Role: "assistant", Content: strings.Repeat("x", 3000)},

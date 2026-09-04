@@ -31,7 +31,7 @@ func TestCacheDecisionLargePrefixOn(t *testing.T) {
 }
 
 func TestCacheDecisionCountsToolCatalog(t *testing.T) {
-	tools := []types.EyrieTool{
+	tools := []types.GraycodeRouterTool{
 		{Name: "t1", Description: strings.Repeat("d", 9000), Parameters: map[string]interface{}{"type": "object"}},
 	}
 	sys := "small"

@@ -435,7 +435,7 @@ func TestRegistryExposesArchiveNamesAndAcceptsAliases(t *testing.T) {
 	}
 
 	var exposed []string
-	for _, t := range r.EyrieTools() {
+	for _, t := range r.GraycodeRouterTools() {
 		exposed = append(exposed, t.Name)
 	}
 	for _, alias := range []string{"bash", "file_read", "file_write", "file_edit", "ls"} {

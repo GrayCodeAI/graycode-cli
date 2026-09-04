@@ -45,9 +45,9 @@ The comparison doc is blunt that this is a **fundamental product-tier gap**
 RBAC "requires a multi-tenant SaaS backend ... beyond the current single-user
 token store at `/graycode/internal/auth/auth.go`" (`TOP20_COMPARISON.md:72`).
 
-The eyrie side of the house has the parallel gaps: a LiteLLM-compatible proxy
+The graycode-router side of the house has the parallel gaps: a LiteLLM-compatible proxy
 endpoint and "multi-tenant team/project management with SSO/RBAC" with per-key
-budgets (`TOP20_COMPARISON.md:95-96`). Graycode Cloud and eyrie multi-tenancy share
+budgets (`TOP20_COMPARISON.md:95-96`). Graycode Cloud and graycode-router multi-tenancy share
 the same identity, billing, and RBAC substrate; this doc designs that substrate
 once and shows how both consume it.
 
@@ -87,9 +87,9 @@ once and shows how both consume it.
   privacy-first posture (`TOP20_COMPARISON.md:20`) is preserved — cloud is opt-in.
 - **Not** building our own microVM hypervisor. We integrate E2B/Daytona (build-vs-buy
   in §6), not write Firecracker orchestration from scratch.
-- **Not** an LLM gateway rewrite. Eyrie remains the provider engine behind
-  Graycode's `eyrie/engine` integration; the plane calls a Graycode agent worker, which
-  composes Eyrie. The plane does not re-implement routing, caching, or provider
+- **Not** an LLM gateway rewrite. GraycodeRouter remains the provider engine behind
+  Graycode's `graycode-router/engine` integration; the plane calls a Graycode agent worker, which
+  composes GraycodeRouter. The plane does not re-implement routing, caching, or provider
   adapters.
 - **Not** SSO/SAML in P0 (deferred to P2; OIDC social login + API keys first).
 - **Not** on-prem/self-hosted enterprise distribution in P0 (P2).
@@ -121,7 +121,7 @@ once and shows how both consume it.
                          │         │                              │
                          │         ▼                              │
                          │  ┌──────────────┐      ┌─────────────┐ │
-                         │  │ Agent Worker │─────▶│  eyrie       │ │
+                         │  │ Agent Worker │─────▶│  graycode-router       │ │
                          │  │ (engine.     │      │  (model      │ │
                          │  │  Session)    │      │   runtime)   │ │
                          │  └──────┬───────┘      └─────────────┘ │
@@ -144,7 +144,7 @@ middleware (`daemon.go:185`) and `routes()` table (`daemon.go:174-183`).
 Net-new. Wraps/extends `internal/auth` (see §4).
 
 **Billing service** — credit ledger, metering ingestion, server-side pricing,
-hard-limit enforcement, and invoicing. Graycode Cloud owns this authority; Eyrie
+hard-limit enforcement, and invoicing. Graycode Cloud owns this authority; GraycodeRouter
 supplies normalized model and token usage through Graycode's Engine boundary.
 
 **Workspace service** — workspace membership, shared session state, share links,
@@ -256,7 +256,7 @@ Edge:             check credit balance(org) > floor    [Billing svc]   ← rejec
 Edge → Router:    route(org, ws, user, session_id?)
 Router → Worker:  acquire/lease Agent Worker (+ Sandbox)
 Worker:           engine.Session.Stream(ctx)           [stream.go:20]
-Worker → eyrie:   Chat/StreamChat with ctx carrying virtual key
+Worker → graycode-router:   Chat/StreamChat with ctx carrying virtual key
                   (WithVirtualKey, budget_provider.go:23)
 Worker → Edge:    SSE content events  (daemon.go:321-337, reused verbatim)
 Edge → Client:    SSE relay
@@ -311,7 +311,7 @@ This is the crux: **what is reusable today vs. net-new.**
 | Autonomy / permission gating | `daemon.go:286-298` (`PresetConfig`, `NeedsPermission`) | Server-side auto-approval policy already exists for non-interactive runs; cloud reuses it per-workspace policy. |
 | Auth primitives | `internal/auth/auth.go` (`TokenStore`, `SecureStorage`), `device_flow.go` (full RFC 8628) | Device-grant **client** is done. `SecureStorage` (macOS keychain + file fallback, `auth.go:54-121`) stays for local credential caching of cloud tokens. `GenerateNonce` (`auth.go:124`) for OAuth state/PKCE. |
 | Constant-time key compare | `daemon.go:207-224` | API-key verification logic carries over (but keys move to hashed storage; see net-new). |
-| Eyrie normalized usage | `eyrie/engine` response and stream usage DTOs through Graycode's adapter | Reuse model/token dimensions as metering input. Do not import lower Eyrie packages or trust client-computed prices for billing. |
+| GraycodeRouter normalized usage | `graycode-router/engine` response and stream usage DTOs through Graycode's adapter | Reuse model/token dimensions as metering input. Do not import lower GraycodeRouter packages or trust client-computed prices for billing. |
 | Sandbox executor interface | `internal/sandbox/container.go:18-21` (`containerExecutor`: `Exec`, `Running`) | `CloudSandbox` implements the same interface → drop-in. Callers don't know if they're on local Docker or a cloud microVM. |
 | Sandbox lifecycle manager | `internal/sandbox/snapshot_sandbox.go:52-228` (`Create/Pause/Resume/Snapshot/Restore/List/Cleanup`) | Existing pause/resume/snapshot semantics map cleanly onto E2B/Daytona pause+snapshot APIs; the manager abstraction guides the `CloudSandbox` API shape. |
 | Messaging gateways | `internal/daemon/gateway.go`, `telegram.go`, `discord.go`, `slack.go` | Already forward to `/v1/chat` via `forwardToGraycode` (`gateway.go:17`) with bearer auth. In cloud they forward to the tenant-scoped chat endpoint with the org's key — minimal change. |
@@ -339,7 +339,7 @@ This is the crux: **what is reusable today vs. net-new.**
    in-process engine. Net-new control loop.
 6. **`CloudSandbox`** — E2B/Daytona-backed implementation of `containerExecutor`.
    The interface and call sites exist; the cloud backend does not.
-7. **Billing/credit ledger + invoicing + Stripe integration** — eyrie gives
+7. **Billing/credit ledger + invoicing + Stripe integration** — graycode-router gives
    enforcement and cost math; the ledger, top-ups, plans, and payment processor are
    net-new.
 8. **Workspace sharing** — `session_shares` and the share/continue flows.
@@ -385,7 +385,7 @@ credits hit zero.
 - **M2.1** SSO/SAML + SCIM provisioning.
 - **M2.2** Multi-region worker pools + autoscaling; second sandbox provider for redundancy.
 - **M2.3** JetBrains extension (ACP).
-- **M2.4** Org-scoped provider config (BYO keys / BYO model endpoints), aligning with eyrie multi-tenant proxy (`TOP20_COMPARISON.md:96`).
+- **M2.4** Org-scoped provider config (BYO keys / BYO model endpoints), aligning with graycode-router multi-tenant proxy (`TOP20_COMPARISON.md:96`).
 - **M2.5** Audit logging, IT-managed policy tiers, self-hosted/on-prem distribution.
 - **M2.6** Cloud Routines (scheduled/triggered runs) on the worker plane via `internal/system/cron/cron.go` (`TOP20_COMPARISON.md:48`).
 
@@ -397,9 +397,9 @@ credits hit zero.
 |---|---|---|
 | MicroVM sandboxing | **Buy/integrate** E2B (P0) + Daytona (P2 redundancy) | Building Firecracker orchestration is a multi-quarter effort orthogonal to product value. E2B SDK is open source (Apache-2.0/MIT family); Daytona is Apache-2.0. Both have hosted offerings; we can also self-host E2B later. The `containerExecutor` seam (`container.go:18`) keeps us provider-agnostic. |
 | Identity / OAuth server | **Buy** (Ory Hydra/Kratos, Auth0, or WorkOS) for P0; revisit P2 | Writing a compliant OAuth2/OIDC AS is risky. Ory is Apache-2.0 (self-hostable, privacy-aligned). WorkOS/Auth0 are SaaS — faster but introduce a third party in the auth path (weigh against privacy posture). Prefer **Ory self-hosted** to keep the privacy-first promise. |
-| Billing / payments | **Buy** Stripe for payment + invoicing; **build** the credit ledger | Never build a card processor. The ledger and metering are ours (and partly exist in eyrie). Stripe SDK is permissive. |
+| Billing / payments | **Buy** Stripe for payment + invoicing; **build** the credit ledger | Never build a card processor. The ledger and metering are ours (and partly exist in graycode-router). Stripe SDK is permissive. |
 | Database | **Buy** managed Postgres | Standard. |
-| Metering enforcement | **Build in Graycode Cloud** on normalized Engine usage | Billing authority must be server-owned and versioned; lower Eyrie packages remain engine implementation details. |
+| Metering enforcement | **Build in Graycode Cloud** on normalized Engine usage | Billing authority must be server-owned and versioned; lower GraycodeRouter packages remain engine implementation details. |
 | Web UI framework | **Build** small React SPA, `go:embed` served (Aider/OpenHands pattern) | Keeps deployment a single binary; matches `TOP20_COMPARISON.md:31`. |
 | IDE protocol | **Adopt** ACP (Agent Client Protocol) | Industry trajectory (Gemini CLI, Zed, JetBrains), `TOP20_COMPARISON.md:32,36`. Avoid bespoke per-IDE protocols. |
 
@@ -430,7 +430,7 @@ erode that.
 4. **Per-line SSE escaping is a real injection defense** already present
    (`daemon.go:324-329`) and must be preserved in the relay path — LLM output can
    contain newlines that would otherwise forge SSE events.
-5. **Credit enforcement is a DoS control too.** Hard floors (HTTP 402) via eyrie
+5. **Credit enforcement is a DoS control too.** Hard floors (HTTP 402) via graycode-router
    `CheckBudget` (`budget_provider.go:181`) bound runaway agent spend per tenant.
 6. **Code privacy.** Customer code lives only in the ephemeral microVM and the
    session store; offer per-org data-retention controls and a "no-retention" mode
@@ -460,7 +460,7 @@ erode that.
    server-priced LLM usage and sandbox-minutes — what's the blended margin?
 4. **BYO keys vs. managed keys:** if an org brings its own provider keys, do their
    LLM tokens still consume credits (we only charge sandbox/orchestration), or run
-   free? Affects eyrie provider-config plumbing (`TOP20_COMPARISON.md:96`).
+   free? Affects graycode-router provider-config plumbing (`TOP20_COMPARISON.md:96`).
 5. **Identity build-vs-buy:** Ory self-hosted (privacy, ops burden) vs. WorkOS/Auth0
    (speed, third party in auth path). Privacy posture argues for Ory.
 6. **Session store backend:** Postgres for everything vs. Postgres (metadata) +
@@ -497,7 +497,7 @@ Assumes a small senior team (3-4 engineers). Estimates are for engineering only
 with P0 a hard ~8-10 calendar weeks for a usable single-team beta.**
 
 Leverage note: the agent loop, SSE, sandbox interface, device-flow client, and
-eyrie budget machinery are **already built** — they collapse what would otherwise
+graycode-router budget machinery are **already built** — they collapse what would otherwise
 be the most expensive parts (the agent runtime and the metering enforcement engine)
 into integration work. The genuinely greenfield cost is identity/multi-tenancy,
 worker orchestration, and the cloud sandbox backend.

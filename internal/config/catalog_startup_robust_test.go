@@ -27,7 +27,7 @@ func TestPrepareCatalogForSession_StaleCacheRefreshFailureContinues(t *testing.T
 
 func TestCatalogCachePathForDisplay_RespectsEnv(t *testing.T) {
 	custom := filepath.Join(t.TempDir(), "custom.json")
-	t.Setenv("EYRIE_MODEL_CATALOG_PATH", custom)
+	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", custom)
 	if got := graycodeconfig.CatalogCachePathForDisplay(); got != custom {
 		t.Fatalf("path = %q want %q", got, custom)
 	}

@@ -228,7 +228,7 @@ func TestRepoMapCacheDir(t *testing.T) {
 func TestConfigDir_Default(t *testing.T) {
 	// Clear env var to test default behavior
 	t.Setenv(envConfigDir, "")
-	t.Setenv(envEyrieConfigDir, "")
+	t.Setenv(envGraycodeRouterConfigDir, "")
 
 	got := ConfigDir()
 	if got == "" {
@@ -273,12 +273,12 @@ func TestSettingsPath(t *testing.T) {
 
 // --- ProviderConfigPath tests ---
 
-func TestProviderConfigPath_EyrieOverride(t *testing.T) {
-	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
-	t.Setenv(envEyrieConfigDir, eyrieDir)
+func TestProviderConfigPath_GraycodeRouterOverride(t *testing.T) {
+	graycodeRouterDir := filepath.Join(t.TempDir(), "graycode-router")
+	t.Setenv(envGraycodeRouterConfigDir, graycodeRouterDir)
 
 	got := ProviderConfigPath()
-	want := filepath.Join(eyrieDir, "provider.json")
+	want := filepath.Join(graycodeRouterDir, "provider.json")
 	if got != want {
 		t.Errorf("ProviderConfigPath() = %q, want %q", got, want)
 	}
@@ -287,7 +287,7 @@ func TestProviderConfigPath_EyrieOverride(t *testing.T) {
 func TestProviderConfigPath_GraycodeFallback(t *testing.T) {
 	graycodeDir := filepath.Join(t.TempDir(), "graycode")
 	t.Setenv(envConfigDir, graycodeDir)
-	t.Setenv(envEyrieConfigDir, "")
+	t.Setenv(envGraycodeRouterConfigDir, "")
 
 	got := ProviderConfigPath()
 	want := filepath.Join(graycodeDir, "provider.json")
@@ -296,10 +296,10 @@ func TestProviderConfigPath_GraycodeFallback(t *testing.T) {
 	}
 }
 
-func TestProviderConfigPath_EyrieWhitespaceIgnored(t *testing.T) {
+func TestProviderConfigPath_GraycodeRouterWhitespaceIgnored(t *testing.T) {
 	graycodeDir := filepath.Join(t.TempDir(), "graycode")
 	t.Setenv(envConfigDir, graycodeDir)
-	t.Setenv(envEyrieConfigDir, "   ") // whitespace should be treated as empty
+	t.Setenv(envGraycodeRouterConfigDir, "   ") // whitespace should be treated as empty
 
 	got := ProviderConfigPath()
 	want := filepath.Join(graycodeDir, "provider.json")

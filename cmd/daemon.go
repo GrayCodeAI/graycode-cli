@@ -209,9 +209,9 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		)
 	})
 
-	// Wire Eyrie's authoritative local preflight into GET /v1/ready. A session
+	// Wire GraycodeRouter's authoritative local preflight into GET /v1/ready. A session
 	// factory only proves Graycode can attempt construction; readiness additionally
-	// requires Eyrie's provider state, catalog, credentials, and model selection.
+	// requires GraycodeRouter's provider state, catalog, credentials, and model selection.
 	srv.SetReadyFn(daemonReadyProbe(factory))
 	addr, err := srv.Start()
 	if err != nil {
@@ -327,14 +327,14 @@ func slogLevelFromString(s string) slog.Level {
 }
 
 // daemonReadyProbe builds the readiness function installed via SetReadyFn. It
-// performs Eyrie's local preflight (provider state, catalog, credentials, and
+// performs GraycodeRouter's local preflight (provider state, catalog, credentials, and
 // model selection) under a short timeout:
 //
 //   - No session factory wired      -> not ready ("engine not configured").
 //   - Preflight reports ready        -> ready.
-//   - Preflight reports incomplete   -> not ready with the failed Eyrie check.
+//   - Preflight reports incomplete   -> not ready with the failed GraycodeRouter check.
 //
-// This never performs a paid/live model call — Eyrie preflight only inspects
+// This never performs a paid/live model call — GraycodeRouter preflight only inspects
 // local catalog/credential/model state — so it is safe to call on every probe.
 func daemonReadyProbe(factory daemon.SessionFactory) func() (bool, string) {
 	return daemonReadyProbeWithPreflight(factory, graycodeconfig.EnginePreflightReport)
@@ -346,7 +346,7 @@ func daemonReadyProbeWithPreflight(factory daemon.SessionFactory, preflight func
 			return false, "engine not configured"
 		}
 		if preflight == nil {
-			return false, "Eyrie readiness probe not configured"
+			return false, "GraycodeRouter readiness probe not configured"
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
@@ -360,13 +360,13 @@ func daemonReadyProbeWithPreflight(factory daemon.SessionFactory, preflight func
 				if detail == "" {
 					detail = "failed"
 				}
-				return false, fmt.Sprintf("Eyrie %s: %s", check.Name, detail)
+				return false, fmt.Sprintf("GraycodeRouter %s: %s", check.Name, detail)
 			}
 		}
 		if ctx.Err() != nil {
-			return false, "Eyrie preflight timed out"
+			return false, "GraycodeRouter preflight timed out"
 		}
-		return false, "Eyrie preflight is not ready"
+		return false, "GraycodeRouter preflight is not ready"
 	}
 }
 

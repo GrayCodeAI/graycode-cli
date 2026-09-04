@@ -1,4 +1,4 @@
-# Ecosystem message flow (eyrie · harrier · shrike)
+# Ecosystem message flow (graycode-router · harrier · shrike)
 
 How one user message travels through graycode and the GrayCodeAI ecosystem libraries.
 
@@ -26,7 +26,7 @@ User prompt (TUI or graycode exec)
           │
           ▼
 ┌───────────────────┐     ┌─────────────┐
-│  Graycode ChatClient   │────►│ eyrie/engine│  catalog, credentials, routing
+│  Graycode ChatClient   │────►│ graycode-router/engine│  catalog, credentials, routing
 │  port + adapter    │     │ generate/   │────► provider API
 └─────────┬─────────┘     │ stream      │
                           └─────────────┘
@@ -42,7 +42,7 @@ User prompt (TUI or graycode exec)
           ▼ (when context grows)
 ┌───────────────────┐
 │  shrike Compress      │  fast path before LLM summarization
-│  + eyrie compact   │
+│  + graycode-router compact   │
 └───────────────────┘
 ```
 
@@ -50,8 +50,8 @@ User prompt (TUI or graycode exec)
 
 ### 1. Session start (`graycode` or `graycode exec`)
 
-- **eyrie**: The Graycode composition root creates an `eyrie/engine.Engine` with
-  Eyrie-owned state paths, an injected secret store, and per-engine custom
+- **graycode-router**: The Graycode composition root creates an `graycode-router/engine.Engine` with
+  GraycodeRouter-owned state paths, an injected secret store, and per-engine custom
   gateway metadata. The engine loads provider state and the model catalog, then
   builds transport behind Graycode's `ChatClient` port.
 - **harrier**: `configureSession` creates `HarrierBridge` → opens `~/.harrier/data/harrier.db`. If missing, graycode runs without persistent memory.
@@ -68,8 +68,8 @@ User prompt (TUI or graycode exec)
 Each turn:
 
 1. **harrier** — recall memories matching the latest user message (token budget ~2000).
-2. **eyrie** — Graycode's adapter calls engine generate/stream with Graycode-owned tool
-   definitions; Eyrie normalizes provider events and tool requests.
+2. **graycode-router** — Graycode's adapter calls engine generate/stream with Graycode-owned tool
+   definitions; GraycodeRouter normalizes provider events and tool requests.
 3. Tools run with `HarrierBridge` in context for `CoreMemory*` tools.
 4. **harrier** — sleeptime consolidation, skill distillation, auto-remember after turns.
 
@@ -78,7 +78,7 @@ Each turn:
 When messages exceed limits (`internal/engine/compact.go`):
 
 1. **shrike** — `shrike.Compress()` tries a fast compression path for summaries.
-2. **eyrie** — if shrike reduction is insufficient, graycode calls the LLM to summarize, then keeps recent messages.
+2. **graycode-router** — if shrike reduction is insufficient, graycode calls the LLM to summarize, then keeps recent messages.
 
 ### 5. Token accounting
 
@@ -87,7 +87,7 @@ When messages exceed limits (`internal/engine/compact.go`):
 ## Verify locally
 
 ```bash
-graycode doctor              # ecosystem panel + eyrie preflight + harrier status
+graycode doctor              # ecosystem panel + graycode-router preflight + harrier status
 graycode harrier                # merlin memory graph
 ./scripts/smoke-graycode.sh  # build + quick tests
 ```
@@ -96,15 +96,15 @@ graycode harrier                # merlin memory graph
 
 | Module | Role in graycode | Required? |
 |--------|----------------|-----------|
-| **eyrie** | LLM APIs, catalog, credentials, routing | Yes |
+| **graycode-router** | LLM APIs, catalog, credentials, routing | Yes |
 | **harrier** | SQLite memory graph at `~/.harrier/data/` | No (degrades gracefully) |
 | **shrike** | Token estimate + context compression | Yes (embedded, no config) |
 
-The support repositories are independent sibling checkouts: `eyrie`,
+The support repositories are independent sibling checkouts: `graycode-router`,
 `harrier` (Harrier), and `shrike` (Shrike), with the parent `go.work` wiring the
 local Go workspace.
 
-Production Graycode code imports Eyrie only through `eyrie/engine`. Conversation
+Production Graycode code imports GraycodeRouter only through `graycode-router/engine`. Conversation
 history, WAL/resume, permissions, and tool execution remain in Graycode; provider
 credentials, discovery, selection, transport, resilience, and normalized
-streaming remain in Eyrie.
+streaming remain in GraycodeRouter.

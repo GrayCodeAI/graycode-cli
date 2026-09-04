@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0   # goreleaser needs full history for changelog
 
       # Releases build against the sibling repos resolved via the workspace go.work.
-      - uses: ./.github/actions/checkout-eyrie
+      - uses: ./.github/actions/checkout-graycode-router
         with:
           ref: ${{ github.ref_name }}
 

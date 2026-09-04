@@ -116,7 +116,7 @@ func (m chatModel) configOllamaURLView() string {
 
 	var b strings.Builder
 	b.WriteString(titleStyle.Render(icons.Llama()+" Ollama local") + "\n")
-	b.WriteString(mutedStyle.Render("no API key · eyrie discovers installed models") + "\n\n")
+	b.WriteString(mutedStyle.Render("no API key · graycode-router discovers installed models") + "\n\n")
 	if notice := strings.TrimSpace(m.configNotice); notice != "" {
 		b.WriteString(mutedStyle.Render(sanitizeConfigNotice(notice)) + "\n\n")
 	}

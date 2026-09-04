@@ -6,4 +6,4 @@ package engine
 // cache_planner.go (planCache / cacheDecision) implements this arithmetic:
 // segments the stable prefix, computes breakpoints, and enables caching only
 // when the expected reuse count beats the write premium. Full wire-format
-// lowering and fleet-wide key-sharding remain eyrie-side.
+// lowering and fleet-wide key-sharding remain graycode-router-side.

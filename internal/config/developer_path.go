@@ -184,7 +184,7 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 	pre := EnginePreflightReport(ctx)
 	if pre.Ready {
 		checks = append(checks, PathCheck{
-			Section: "Ecosystem", Name: "eyrie", Status: PathPass,
+			Section: "Ecosystem", Name: "graycode-router", Status: PathPass,
 			Detail:   "Preflight ready to chat",
 			Blocking: true,
 		})
@@ -197,7 +197,7 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 			}
 		}
 		checks = append(checks, PathCheck{
-			Section: "Ecosystem", Name: "eyrie", Status: status,
+			Section: "Ecosystem", Name: "graycode-router", Status: status,
 			Detail:   "Preflight not ready — see graycode preflight",
 			FixHint:  "Complete /config (credentials + model)",
 			Blocking: true,
@@ -262,7 +262,7 @@ func developerPathNextStep(r DeveloperPathReport, setup SetupState) string {
 func FormatDeveloperPathReport(ctx context.Context) string {
 	r := EvaluateDeveloperPath(ctx)
 	var b strings.Builder
-	b.WriteString("Developer path (graycode · eyrie · shrike · harrier)\n\n")
+	b.WriteString("Developer path (graycode · graycode-router · shrike · harrier)\n\n")
 
 	status := "NEEDS SETUP"
 	switch {

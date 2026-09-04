@@ -18,7 +18,7 @@ func isolateCredentialHome(t *testing.T) {
 	_ = os.MkdirAll(graycodeDir, 0o700)
 	t.Setenv("HOME", home)
 	t.Setenv("GRAYCODE_CONFIG_DIR", graycodeDir)
-	t.Setenv("EYRIE_CONFIG_DIR", filepath.Join(home, "eyrie"))
+	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", filepath.Join(home, "graycode-router"))
 }
 
 func TestEffectiveModelAndProvider_ClearsWithoutCredentials(t *testing.T) {

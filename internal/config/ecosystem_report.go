@@ -11,12 +11,12 @@ import (
 
 // EcosystemReport is the structured view of the ecosystem panel.
 type EcosystemReport struct {
-	Eyre    EcosystemEyrie   `json:"eyrie"`
-	Harrier EcosystemHarrier `json:"harrier"`
-	Shrike  EcosystemShrike  `json:"shrike"`
+	Eyre    EcosystemGraycodeRouter `json:"graycode-router"`
+	Harrier EcosystemHarrier        `json:"harrier"`
+	Shrike  EcosystemShrike         `json:"shrike"`
 }
 
-type EcosystemEyrie struct {
+type EcosystemGraycodeRouter struct {
 	CatalogExists bool   `json:"catalog_exists"`
 	ModelCount    int    `json:"model_count,omitempty"`
 	Ready         bool   `json:"ready"`
@@ -39,7 +39,7 @@ type EcosystemShrike struct {
 func BuildEcosystemReport(ctx context.Context, provider, model string) EcosystemReport {
 	var r EcosystemReport
 
-	// eyrie
+	// graycode-router
 	cat := CatalogHealthReport(ctx)
 	r.Eyre.CatalogExists = cat.Exists
 	r.Eyre.ModelCount = cat.Models
@@ -68,36 +68,36 @@ func BuildEcosystemReport(ctx context.Context, provider, model string) Ecosystem
 	return r
 }
 
-// FormatEcosystemPanel summarizes eyrie, harrier, and shrike integration for doctor and status output.
+// FormatEcosystemPanel summarizes graycode-router, harrier, and shrike integration for doctor and status output.
 func FormatEcosystemPanel(ctx context.Context, provider, model string) string {
 	var b strings.Builder
-	b.WriteString("Ecosystem (eyrie · harrier · shrike):\n")
+	b.WriteString("Ecosystem (graycode-router · harrier · shrike):\n")
 
-	// eyrie — LLM provider layer
+	// graycode-router — LLM provider layer
 	cat := CatalogHealthReport(ctx)
-	eyrieLine := "  eyrie: "
+	graycodeRouterLine := "  graycode-router: "
 	if cat.Exists {
-		eyrieLine += fmt.Sprintf("catalog %d models", cat.Models)
+		graycodeRouterLine += fmt.Sprintf("catalog %d models", cat.Models)
 	} else {
-		eyrieLine += "catalog missing (run graycode models refresh)"
+		graycodeRouterLine += "catalog missing (run graycode models refresh)"
 	}
 	pre := EnginePreflightReport(ctx)
 	if pre.Ready {
-		eyrieLine += " · locally ready"
+		graycodeRouterLine += " · locally ready"
 	} else {
-		eyrieLine += " · setup incomplete"
+		graycodeRouterLine += " · setup incomplete"
 	}
 	if strings.TrimSpace(provider) != "" && provider != "auto" {
-		eyrieLine += fmt.Sprintf(" · provider %s", provider)
+		graycodeRouterLine += fmt.Sprintf(" · provider %s", provider)
 	}
 	if dep, err := EngineDeploymentSummary(ctx, model); err == nil {
 		if dep.RoutingStages > 0 {
-			eyrieLine += fmt.Sprintf(" · routing %s (%d stages)", dep.RoutingSource, dep.RoutingStages)
+			graycodeRouterLine += fmt.Sprintf(" · routing %s (%d stages)", dep.RoutingSource, dep.RoutingStages)
 		} else {
-			eyrieLine += fmt.Sprintf(" · routing %s", dep.RoutingSource)
+			graycodeRouterLine += fmt.Sprintf(" · routing %s", dep.RoutingSource)
 		}
 	}
-	b.WriteString(eyrieLine + "\n")
+	b.WriteString(graycodeRouterLine + "\n")
 
 	// harrier — persistent memory graph
 	bridge := memory.NewHarrierBridge()

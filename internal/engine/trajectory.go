@@ -11,7 +11,7 @@ import (
 // TrajectoryRun records a single attempt at completing a task.
 type TrajectoryRun struct {
 	ID       int
-	Messages []types.EyrieMessage
+	Messages []types.GraycodeRouterMessage
 	Success  bool
 	Summary  string // distilled lessons from this run
 	Tokens   int
@@ -123,7 +123,7 @@ func (td *TrajectoryDistiller) RunWithDistillation(ctx context.Context, prompt s
 
 // SummarizeTrajectory extracts a concise summary from a sequence of messages:
 // what was attempted, what failed, key decisions made, and files touched.
-func SummarizeTrajectory(messages []types.EyrieMessage) string {
+func SummarizeTrajectory(messages []types.GraycodeRouterMessage) string {
 	var b strings.Builder
 	var attempted []string
 	var failures []string

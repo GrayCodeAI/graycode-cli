@@ -31,8 +31,8 @@ Three codex ideas are deliberately deferred as future RFCs; see
 | `app-server-daemon`, `app-server-protocol` (JSON-RPC for IDE/desktop) | `internal/daemon` HTTP/SSE on 4590 + `internal/acp` | Keep graycode |
 | `mcp-server`, `codex-mcp`, `rmcp-client`, `connectors` | `internal/mcp` client+server, sibling `falcon` scaffolding | Keep graycode |
 | `skills`, `plugin`, `hooks` | community skill registry + structural validator, plugins, expanded lifecycle hook events | Keep graycode |
-| `login`, `keyring-store`, `aws-auth` | eyrie credential store in OS keychain across 28 providers | Keep graycode (broader) |
-| `model-provider(-info)`, `models-manager`, `ollama`, `lmstudio` | sibling `eyrie` adapters, catalog, cascade routing | Keep graycode (much broader) |
+| `login`, `keyring-store`, `aws-auth` | graycode-router credential store in OS keychain across 28 providers | Keep graycode (broader) |
+| `model-provider(-info)`, `models-manager`, `ollama`, `lmstudio` | sibling `graycode-router` adapters, catalog, cascade routing | Keep graycode (much broader) |
 | `memories`, `agent-graph-store`, `context-fragments` | sibling `harrier` (Harrier) graph memory; eventlog/graphjournal projections | Keep graycode |
 | `apply-patch`, `file-search`, `file-watcher`, `git-utils` | edit tools, codegraph, git tooling, watcher hooks | Keep graycode |
 | `external-agent-migration` | swift reads Claude Code / Codex / Gemini CLI / OpenCode / Cursor sessions | Parity |

@@ -3,15 +3,15 @@ package engine
 import (
 	"context"
 
-	"github.com/GrayCodeAI/eyrie/llm"
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/graycode-router/llm"
 )
 
 // ChatClient abstracts the LLM client methods used by Session.
-// The production implementation is the Eyrie engine adapter; tests can inject a mock.
+// The production implementation is the GraycodeRouter engine adapter; tests can inject a mock.
 type ChatClient interface {
-	Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error)
-	StreamChatContinue(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions, cfg types.ContinuationConfig) (*types.StreamResult, error)
+	Chat(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error)
+	StreamChatContinue(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions, cfg types.ContinuationConfig) (*types.StreamResult, error)
 }
 
 // resilienceManagingChatClient is an optional capability implemented by
@@ -58,18 +58,18 @@ func NewMockClientForTest() ChatClient {
 
 type exportedMockClient struct{}
 
-func (m *exportedMockClient) Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
-	return &types.EyrieResponse{
+func (m *exportedMockClient) Chat(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error) {
+	return &types.GraycodeRouterResponse{
 		Content:      "mock test response",
 		FinishReason: "end_turn",
-		Usage:        &types.EyrieUsage{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15},
+		Usage:        &types.GraycodeRouterUsage{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15},
 	}, nil
 }
 
-func (m *exportedMockClient) StreamChatContinue(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions, cfg types.ContinuationConfig) (*types.StreamResult, error) {
-	ch := make(chan types.EyrieStreamEvent, 5)
-	ch <- types.EyrieStreamEvent{Type: "content", Content: "mock streamed response"}
-	ch <- types.EyrieStreamEvent{Type: "done", StopReason: "end_turn", Usage: &types.EyrieUsage{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15}}
+func (m *exportedMockClient) StreamChatContinue(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions, cfg types.ContinuationConfig) (*types.StreamResult, error) {
+	ch := make(chan types.GraycodeRouterStreamEvent, 5)
+	ch <- types.GraycodeRouterStreamEvent{Type: "content", Content: "mock streamed response"}
+	ch <- types.GraycodeRouterStreamEvent{Type: "done", StopReason: "end_turn", Usage: &types.GraycodeRouterUsage{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15}}
 	close(ch)
 	return &types.StreamResult{Events: ch}, nil
 }

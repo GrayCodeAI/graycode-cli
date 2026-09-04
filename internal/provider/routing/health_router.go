@@ -34,7 +34,7 @@ func NewHealthRouter() *HealthRouter {
 	return NewHealthRouterForProvider("")
 }
 
-// NewHealthRouterForProvider creates a router using eyrie tier models for the provider.
+// NewHealthRouterForProvider creates a router using graycode-router tier models for the provider.
 func NewHealthRouterForProvider(provider string) *HealthRouter {
 	return &HealthRouter{
 		tiers: DefaultHealthTiers(provider),

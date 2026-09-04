@@ -7,7 +7,7 @@ import (
 )
 
 func TestCollapseRepeatedMessages_NoCollapse(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "hello"},
 		{Role: "assistant", Content: "hi"},
 		{Role: "user", Content: "bye"},
@@ -19,7 +19,7 @@ func TestCollapseRepeatedMessages_NoCollapse(t *testing.T) {
 }
 
 func TestCollapseRepeatedMessages_ToolResults(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "run tests", ToolResults: []types.ToolResult{{ToolUseID: "Bash", Content: "PASS: all tests passed\ndetails..."}}},
 		{Role: "user", Content: "run tests", ToolResults: []types.ToolResult{{ToolUseID: "Bash", Content: "PASS: all tests passed\nother details"}}},
 		{Role: "user", Content: "run tests", ToolResults: []types.ToolResult{{ToolUseID: "Bash", Content: "PASS: all tests passed\nmore details"}}},
@@ -33,7 +33,7 @@ func TestCollapseRepeatedMessages_ToolResults(t *testing.T) {
 }
 
 func TestCollapseRepeatedMessages_Errors(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "connection refused", IsError: true}}},
 		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t2", Content: "connection refused", IsError: true}}},
 		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t3", Content: "connection refused", IsError: true}}},
@@ -48,7 +48,7 @@ func TestCollapseRepeatedMessages_Errors(t *testing.T) {
 }
 
 func TestCollapseRepeatedMessages_MixedContent(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "hello"},
 		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "Bash", Content: "ok\ndetails"}}},
 		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "Bash", Content: "ok\nother"}}},
@@ -62,7 +62,7 @@ func TestCollapseRepeatedMessages_MixedContent(t *testing.T) {
 }
 
 func TestCollapseRepeatedMessages_ShortInput(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 	}
 	result := CollapseRepeatedMessages(msgs)

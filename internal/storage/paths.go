@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	appName           = "graycode"
-	envConfigDir      = "GRAYCODE_CONFIG_DIR"
-	envEyrieConfigDir = "EYRIE_CONFIG_DIR"
-	envStateDir       = "GRAYCODE_STATE_DIR"
-	envCacheDir       = "GRAYCODE_CACHE_DIR"
-	projectIDHashLen  = 12
+	appName                    = "graycode"
+	envConfigDir               = "GRAYCODE_CONFIG_DIR"
+	envGraycodeRouterConfigDir = "GRAYCODE_ROUTER_CONFIG_DIR"
+	envStateDir                = "GRAYCODE_STATE_DIR"
+	envCacheDir                = "GRAYCODE_CACHE_DIR"
+	projectIDHashLen           = 12
 )
 
 // ConfigDir returns the per-user configuration directory for Graycode.
@@ -49,10 +49,10 @@ func SettingsPath() string {
 }
 
 func ProviderConfigPath() string {
-	// Eyrie owns provider routing state. Keep GRAYCODE_CONFIG_DIR as the
-	// compatibility fallback, but let Eyrie's host-neutral override win when
+	// GraycodeRouter owns provider routing state. Keep GRAYCODE_CONFIG_DIR as the
+	// compatibility fallback, but let GraycodeRouter's host-neutral override win when
 	// both variables are configured.
-	if dir := cleanEnvDir(envEyrieConfigDir); dir != "" {
+	if dir := cleanEnvDir(envGraycodeRouterConfigDir); dir != "" {
 		return filepath.Join(dir, "provider.json")
 	}
 	return filepath.Join(ConfigDir(), "provider.json")

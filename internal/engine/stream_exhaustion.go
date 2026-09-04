@@ -46,7 +46,7 @@ func (s *Session) SynthesisForExhaustion(ctx context.Context, reason string) str
 
 	callCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	resp, err := s.ChatLLM().Chat(callCtx, []types.EyrieMessage{
+	resp, err := s.ChatLLM().Chat(callCtx, []types.GraycodeRouterMessage{
 		{Role: "user", Content: b.String()},
 	}, types.ChatOptions{
 		Provider:  s.ChatLLM().Provider(),

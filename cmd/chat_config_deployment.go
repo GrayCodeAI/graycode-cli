@@ -78,10 +78,10 @@ func saveCredentialAsync(inference graycodeconfig.CredentialInference, secret st
 		}
 		graycodeconfig.InvalidateConfigUICache()
 		graycodeconfig.RefreshConfigCredSnapshot(ctx)
-		result, err := graycodeconfig.ApplyEyrieCredentialsForProvider(ctx, inference.ProviderID)
+		result, err := graycodeconfig.ApplyGraycodeRouterCredentialsForProvider(ctx, inference.ProviderID)
 		if err != nil && graycodeconfig.IsCatalogCacheRequired(err) {
 			if refreshErr := graycodeconfig.RefreshCatalogAfterCredentials(ctx, nil); refreshErr == nil {
-				result, err = graycodeconfig.ApplyEyrieCredentialsForProvider(ctx, inference.ProviderID)
+				result, err = graycodeconfig.ApplyGraycodeRouterCredentialsForProvider(ctx, inference.ProviderID)
 			} else {
 				err = fmt.Errorf("%w; automatic catalog refresh failed: %w", err, refreshErr)
 			}
@@ -102,7 +102,7 @@ func saveCredentialAsync(inference graycodeconfig.CredentialInference, secret st
 				deploymentID: inference.DeploymentID,
 			}
 		}
-		opts := configModelOptionsFromEyrie(entries)
+		opts := configModelOptionsFromGraycodeRouter(entries)
 		return configApplyCredentialsMsg{
 			summary:      graycodeconfig.FormatApplyCredentialsSummary(result),
 			providerID:   inference.ProviderID,

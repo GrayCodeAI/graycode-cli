@@ -39,28 +39,28 @@ func TestIsCompactableTool_Empty(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestHasTextContent_WithContent(t *testing.T) {
-	msg := types.EyrieMessage{Role: "assistant", Content: "Hello world"}
+	msg := types.GraycodeRouterMessage{Role: "assistant", Content: "Hello world"}
 	if !HasTextContent(msg) {
 		t.Error("expected true for message with content")
 	}
 }
 
 func TestHasTextContent_EmptyContent(t *testing.T) {
-	msg := types.EyrieMessage{Role: "assistant", Content: ""}
+	msg := types.GraycodeRouterMessage{Role: "assistant", Content: ""}
 	if HasTextContent(msg) {
 		t.Error("expected false for empty content")
 	}
 }
 
 func TestHasTextContent_WhitespaceOnly(t *testing.T) {
-	msg := types.EyrieMessage{Role: "assistant", Content: "   \n\t  "}
+	msg := types.GraycodeRouterMessage{Role: "assistant", Content: "   \n\t  "}
 	if HasTextContent(msg) {
 		t.Error("expected false for whitespace-only content")
 	}
 }
 
 func TestHasTextContent_ToolResultIgnored(t *testing.T) {
-	msg := types.EyrieMessage{
+	msg := types.GraycodeRouterMessage{
 		Role:        "user",
 		Content:     "has content",
 		ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "output"}},
@@ -71,7 +71,7 @@ func TestHasTextContent_ToolResultIgnored(t *testing.T) {
 }
 
 func TestHasTextContent_WithToolUse(t *testing.T) {
-	msg := types.EyrieMessage{
+	msg := types.GraycodeRouterMessage{
 		Role:    "assistant",
 		Content: "Using tool",
 		ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash"}},
@@ -134,7 +134,7 @@ func TestCompactResult_Fields(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestAdjustIndex_StartIndexZero(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash"}}},
 		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "ok"}}},
 	}
@@ -145,7 +145,7 @@ func TestAdjustIndex_StartIndexZero(t *testing.T) {
 }
 
 func TestAdjustIndex_StartBeyondRange(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "hello"},
 	}
 	got := AdjustIndexToPreserveAPIInvariants(msgs, 100)
@@ -155,7 +155,7 @@ func TestAdjustIndex_StartBeyondRange(t *testing.T) {
 }
 
 func TestAdjustIndex_UnresolvedToolPair(t *testing.T) {
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "do stuff"},
 		{Role: "assistant", ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash"}}},
 		{Role: "user", ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "ok"}}},

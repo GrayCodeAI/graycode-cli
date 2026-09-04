@@ -41,7 +41,7 @@ type SnapshotTracker interface {
 	TrackCtx(ctx context.Context, message string) (string, error)
 }
 
-// Session manages a conversation with an LLM via eyrie.
+// Session manages a conversation with an LLM via graycode-router.
 // The mu RWMutex protects the remaining session metadata for concurrent
 // access. Transcript and system-context state are owned by PersistenceService.
 //
@@ -160,7 +160,7 @@ type Session struct {
 	isolation IsolationProfile
 }
 
-// NewSession creates a conversation session through Eyrie's engine facade.
+// NewSession creates a conversation session through GraycodeRouter's engine facade.
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
 	return NewGraycodeSession(context.Background(), gateway.Selection{
 		Provider: provider,
@@ -683,10 +683,10 @@ func (s *Session) ForkConversation(nodeID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	msgs := make([]types.EyrieMessage, 0, len(history))
+	msgs := make([]types.GraycodeRouterMessage, 0, len(history))
 	for _, node := range history {
 		if node.Role == "user" || node.Role == "assistant" {
-			msgs = append(msgs, types.EyrieMessage{Role: node.Role, Content: node.Content})
+			msgs = append(msgs, types.GraycodeRouterMessage{Role: node.Role, Content: node.Content})
 		}
 	}
 	p.SetRawMessages(msgs)
@@ -710,10 +710,10 @@ func (s *Session) SwitchBranch(nodeID string) error {
 	if err != nil {
 		return err
 	}
-	msgs := make([]types.EyrieMessage, 0, len(history))
+	msgs := make([]types.GraycodeRouterMessage, 0, len(history))
 	for _, node := range history {
 		if node.Role == "user" || node.Role == "assistant" {
-			msgs = append(msgs, types.EyrieMessage{Role: node.Role, Content: node.Content})
+			msgs = append(msgs, types.GraycodeRouterMessage{Role: node.Role, Content: node.Content})
 		}
 	}
 	p.SetRawMessages(msgs)
@@ -1011,7 +1011,7 @@ func (s *Session) Cwd() string {
 // effective policy change. Unchanged requests add nothing. System prompt is
 // unchanged across mode switches (KV-cache stability).
 func (s *Session) EnsureSandboxPolicyStatement() string {
-	if s == nil || s.tools == nil || s.tools.Registry() == nil || len(s.tools.Registry().EyrieTools()) == 0 {
+	if s == nil || s.tools == nil || s.tools.Registry() == nil || len(s.tools.Registry().GraycodeRouterTools()) == 0 {
 		return ""
 	}
 
@@ -1044,7 +1044,7 @@ func (s *Session) EnsureSandboxPolicyStatement() string {
 
 	if stmt != last {
 		if p := s.Persistence(); p != nil {
-			p.AppendUserJournaled(types.EyrieMessage{Role: "user", Content: stmt})
+			p.AppendUserJournaled(types.GraycodeRouterMessage{Role: "user", Content: stmt})
 		}
 		s.mu.Lock()
 		s.lastSandboxStatement = stmt
@@ -1110,7 +1110,7 @@ func (s *Session) EnsureSkillCatalogStatement() string {
 	if digest != last {
 		msg := plugin.RenderSkillCatalogMessage(invocable, digest)
 		if p := s.Persistence(); p != nil {
-			p.AppendUserJournaled(types.EyrieMessage{Role: "user", Content: msg})
+			p.AppendUserJournaled(types.GraycodeRouterMessage{Role: "user", Content: msg})
 		}
 		s.mu.Lock()
 		s.lastSkillCatalogDigest = digest
@@ -1127,7 +1127,7 @@ func (s *Session) CostValue() *Cost {
 	return &s.Cost
 }
 
-func (s *Session) LoadMessages(msgs []types.EyrieMessage) {
+func (s *Session) LoadMessages(msgs []types.GraycodeRouterMessage) {
 	s.Persistence().SetRawMessages(msgs)
 }
 
@@ -1141,7 +1141,7 @@ func (s *Session) MessageCount() int {
 // AddUser/AddAssistant and the agent loop (stream.go) all write through it,
 // and compaction/governor paths read it. Delegating here means TUI/CLI
 // consumers — notably saveSession — see the real, populated transcript.
-func (s *Session) RawMessages() []types.EyrieMessage {
+func (s *Session) RawMessages() []types.GraycodeRouterMessage {
 	if p := s.Persistence(); p != nil {
 		return p.RawMessages()
 	}
@@ -1150,7 +1150,7 @@ func (s *Session) RawMessages() []types.EyrieMessage {
 
 // Chat implements the LLMClient interface by delegating to the underlying client.
 // This allows Session to be passed to components that need LLM access (e.g. Reflector, SelfReview).
-func (s *Session) Chat(ctx context.Context, msgs []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
+func (s *Session) Chat(ctx context.Context, msgs []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error) {
 	if s.ChatLLM() == nil {
 		return nil, fmt.Errorf("session: no LLM client configured")
 	}
@@ -1179,7 +1179,7 @@ func (s *Session) Schedule() *schedule.Manager {
 						Priority: 1,
 					})
 				} else {
-					p.AppendUserJournaled(types.EyrieMessage{
+					p.AppendUserJournaled(types.GraycodeRouterMessage{
 						Role:    "user",
 						Content: content,
 					})

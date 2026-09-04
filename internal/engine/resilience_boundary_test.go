@@ -7,17 +7,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/llm"
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/graycode-router/llm"
 )
 
 type resilienceBoundaryClient struct {
 	mu            sync.Mutex
-	streams       [][]types.EyrieStreamEvent
-	chatResponses []*types.EyrieResponse
+	streams       [][]types.GraycodeRouterStreamEvent
+	chatResponses []*types.GraycodeRouterResponse
 	streamCalls   int
 	chatCalls     int
-	messages      [][]types.EyrieMessage
+	messages      [][]types.GraycodeRouterMessage
 }
 
 type managedResilienceBoundaryClient struct {
@@ -26,30 +26,30 @@ type managedResilienceBoundaryClient struct {
 
 func (*managedResilienceBoundaryClient) ManagesResilience() bool { return true }
 
-func (c *resilienceBoundaryClient) Chat(context.Context, []types.EyrieMessage, types.ChatOptions) (*types.EyrieResponse, error) {
+func (c *resilienceBoundaryClient) Chat(context.Context, []types.GraycodeRouterMessage, types.ChatOptions) (*types.GraycodeRouterResponse, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.chatCalls++
 	if len(c.chatResponses) == 0 {
-		return &types.EyrieResponse{}, nil
+		return &types.GraycodeRouterResponse{}, nil
 	}
 	response := c.chatResponses[0]
 	c.chatResponses = c.chatResponses[1:]
 	return response, nil
 }
 
-func (c *resilienceBoundaryClient) StreamChatContinue(_ context.Context, messages []types.EyrieMessage, _ types.ChatOptions, _ types.ContinuationConfig) (*types.StreamResult, error) {
+func (c *resilienceBoundaryClient) StreamChatContinue(_ context.Context, messages []types.GraycodeRouterMessage, _ types.ChatOptions, _ types.ContinuationConfig) (*types.StreamResult, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.streamCalls++
 	c.messages = append(c.messages, cloneBoundaryMessages(messages))
 
-	events := []types.EyrieStreamEvent{{Type: "done", StopReason: "end_turn"}}
+	events := []types.GraycodeRouterStreamEvent{{Type: "done", StopReason: "end_turn"}}
 	if len(c.streams) > 0 {
 		events = c.streams[0]
 		c.streams = c.streams[1:]
 	}
-	ch := make(chan types.EyrieStreamEvent, len(events))
+	ch := make(chan types.GraycodeRouterStreamEvent, len(events))
 	for _, event := range events {
 		ch <- event
 	}
@@ -63,14 +63,14 @@ func (c *resilienceBoundaryClient) counts() (stream, chat int) {
 	return c.streamCalls, c.chatCalls
 }
 
-func (c *resilienceBoundaryClient) messagesForCall(call int) []types.EyrieMessage {
+func (c *resilienceBoundaryClient) messagesForCall(call int) []types.GraycodeRouterMessage {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return cloneBoundaryMessages(c.messages[call])
 }
 
-func cloneBoundaryMessages(messages []types.EyrieMessage) []types.EyrieMessage {
-	out := make([]types.EyrieMessage, len(messages))
+func cloneBoundaryMessages(messages []types.GraycodeRouterMessage) []types.GraycodeRouterMessage {
+	out := make([]types.GraycodeRouterMessage, len(messages))
 	copy(out, messages)
 	for i := range out {
 		out[i].ToolUse = append([]types.ToolCall(nil), messages[i].ToolUse...)
@@ -102,14 +102,14 @@ func runResilienceBoundarySession(t *testing.T, client ChatClient, configure fun
 }
 
 func TestAgentLoopResilienceBoundary_StreamRetry(t *testing.T) {
-	transient := []types.EyrieStreamEvent{{Type: "error", Error: "temporary connection reset by peer"}}
-	success := []types.EyrieStreamEvent{
+	transient := []types.GraycodeRouterStreamEvent{{Type: "error", Error: "temporary connection reset by peer"}}
+	success := []types.GraycodeRouterStreamEvent{
 		{Type: "content", Content: "recovered"},
 		{Type: "done", StopReason: "end_turn"},
 	}
 
 	t.Run("engine facade gets one stream attempt", func(t *testing.T) {
-		base := &resilienceBoundaryClient{streams: [][]types.EyrieStreamEvent{transient, success}}
+		base := &resilienceBoundaryClient{streams: [][]types.GraycodeRouterStreamEvent{transient, success}}
 		events := runResilienceBoundarySession(t, &managedResilienceBoundaryClient{base}, nil)
 		streamCalls, chatCalls := base.counts()
 		if streamCalls != 1 || chatCalls != 0 {
@@ -121,7 +121,7 @@ func TestAgentLoopResilienceBoundary_StreamRetry(t *testing.T) {
 	})
 
 	t.Run("legacy client retains stream retry", func(t *testing.T) {
-		client := &resilienceBoundaryClient{streams: [][]types.EyrieStreamEvent{transient, success}}
+		client := &resilienceBoundaryClient{streams: [][]types.GraycodeRouterStreamEvent{transient, success}}
 		events := runResilienceBoundarySession(t, client, nil)
 		streamCalls, chatCalls := client.counts()
 		if streamCalls != 2 || chatCalls != 0 {
@@ -134,16 +134,16 @@ func TestAgentLoopResilienceBoundary_StreamRetry(t *testing.T) {
 }
 
 func TestAgentLoopResilienceBoundary_ThinkingOnlyRecovery(t *testing.T) {
-	thinkingOnly := []types.EyrieStreamEvent{
+	thinkingOnly := []types.GraycodeRouterStreamEvent{
 		{Type: "thinking", Thinking: "internal reasoning"},
 		{Type: "done", StopReason: "end_turn"},
 	}
-	fallback := &types.EyrieResponse{Content: "compatibility reply", FinishReason: "end_turn"}
+	fallback := &types.GraycodeRouterResponse{Content: "compatibility reply", FinishReason: "end_turn"}
 
 	t.Run("engine facade does not trigger Graycode protocol recovery", func(t *testing.T) {
 		base := &resilienceBoundaryClient{
-			streams:       [][]types.EyrieStreamEvent{thinkingOnly},
-			chatResponses: []*types.EyrieResponse{fallback},
+			streams:       [][]types.GraycodeRouterStreamEvent{thinkingOnly},
+			chatResponses: []*types.GraycodeRouterResponse{fallback},
 		}
 		events := runResilienceBoundarySession(t, &managedResilienceBoundaryClient{base}, nil)
 		streamCalls, chatCalls := base.counts()
@@ -157,8 +157,8 @@ func TestAgentLoopResilienceBoundary_ThinkingOnlyRecovery(t *testing.T) {
 
 	t.Run("legacy client retains thinking-only fallback", func(t *testing.T) {
 		client := &resilienceBoundaryClient{
-			streams:       [][]types.EyrieStreamEvent{thinkingOnly},
-			chatResponses: []*types.EyrieResponse{fallback},
+			streams:       [][]types.GraycodeRouterStreamEvent{thinkingOnly},
+			chatResponses: []*types.GraycodeRouterResponse{fallback},
 		}
 		events := runResilienceBoundarySession(t, client, nil)
 		streamCalls, chatCalls := client.counts()
@@ -172,17 +172,17 @@ func TestAgentLoopResilienceBoundary_ThinkingOnlyRecovery(t *testing.T) {
 }
 
 func TestAgentLoopResilienceBoundary_MaxTokensContinuation(t *testing.T) {
-	partial := []types.EyrieStreamEvent{
+	partial := []types.GraycodeRouterStreamEvent{
 		{Type: "content", Content: "partial"},
 		{Type: "done", StopReason: "max_tokens"},
 	}
-	finished := []types.EyrieStreamEvent{
+	finished := []types.GraycodeRouterStreamEvent{
 		{Type: "content", Content: " finished"},
 		{Type: "done", StopReason: "end_turn"},
 	}
 
 	t.Run("engine facade does not get a synthetic continuation turn", func(t *testing.T) {
-		base := &resilienceBoundaryClient{streams: [][]types.EyrieStreamEvent{partial, finished}}
+		base := &resilienceBoundaryClient{streams: [][]types.GraycodeRouterStreamEvent{partial, finished}}
 		session := NewSessionWithClient(&managedResilienceBoundaryClient{base}, "test", "test-model", "test system", nil, false)
 		session.LifecycleSvc().Limits().SetMaxTurns(5)
 		session.AddUser("continue test")
@@ -204,7 +204,7 @@ func TestAgentLoopResilienceBoundary_MaxTokensContinuation(t *testing.T) {
 	})
 
 	t.Run("legacy client retains synthetic continuation", func(t *testing.T) {
-		client := &resilienceBoundaryClient{streams: [][]types.EyrieStreamEvent{partial, finished}}
+		client := &resilienceBoundaryClient{streams: [][]types.GraycodeRouterStreamEvent{partial, finished}}
 		session := NewSessionWithClient(client, "test", "test-model", "test system", nil, false)
 		session.LifecycleSvc().Limits().SetMaxTurns(5)
 		session.AddUser("continue test")
@@ -222,7 +222,7 @@ func TestAgentLoopResilienceBoundary_MaxTokensContinuation(t *testing.T) {
 }
 
 func TestAgentLoopResilienceBoundary_KeepsGraycodeToolAuthorizationAndMutation(t *testing.T) {
-	base := &resilienceBoundaryClient{streams: [][]types.EyrieStreamEvent{
+	base := &resilienceBoundaryClient{streams: [][]types.GraycodeRouterStreamEvent{
 		{
 			{Type: "tool_call", ToolCall: &types.ToolCall{ID: "write-1", Name: "Write", Arguments: map[string]interface{}{"file_path": "blocked.txt", "content": "no"}}},
 			{Type: "done", StopReason: "tool_use"},

@@ -30,7 +30,7 @@ func friendlyErrorMessage(err error) string {
 			strings.Contains(low, "does not exist") {
 			ex1, ex2 := graycodeconfig.ExampleModelHints()
 			msg = fmt.Sprintf(
-				"Model not found. Check your model name with /model.\n  Examples from the eyrie catalog: %s, %s\n  Use /models to list all models, or /config to change provider.",
+				"Model not found. Check your model name with /model.\n  Examples from the graycode-router catalog: %s, %s\n  Use /models to list all models, or /config to change provider.",
 				ex1, ex2,
 			)
 		}

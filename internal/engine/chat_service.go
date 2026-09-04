@@ -7,16 +7,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/eyrie/engine"
 	"github.com/GrayCodeAI/graycode-cli/internal/observability/metrics"
 	"github.com/GrayCodeAI/graycode-cli/internal/resilience/ratelimit"
 	"github.com/GrayCodeAI/graycode-cli/internal/resilience/retry"
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/graycode-router/engine"
 )
 
 // ChatService is the Session's view of the LLM transport. It owns the
-// Eyrie client, provider/model identity, and compatibility-only rate/retry
-// controls. Production facade clients own resilience inside Eyrie. The service
+// GraycodeRouter client, provider/model identity, and compatibility-only rate/retry
+// controls. Production facade clients own resilience inside GraycodeRouter. The service
 // is constructed once in NewSessionWithClient and consulted by
 // agentLoop every turn.
 //
@@ -26,13 +26,13 @@ import (
 // plan.
 type ChatService struct {
 	mu sync.RWMutex
-	// client is the eyrie transport. Always non-nil after construction.
+	// client is the graycode-router transport. Always non-nil after construction.
 	client ChatClient
 	// provider / model are the active LLM identity.
 	provider string
 	model    string
 	// deploymentRouting is true when the client is catalog-backed
-	// (e.g. DeploymentRouter from eyrie/runtime.ChatProvider).
+	// (e.g. DeploymentRouter from graycode-router/runtime.ChatProvider).
 	deploymentRouting bool
 	// rateLimiter is the per-session token bucket.
 	rateLimiter *ratelimit.Limiter
@@ -43,7 +43,7 @@ type ChatService struct {
 	// contCfg is the continuation config for StreamChatContinue.
 	contCfg types.ContinuationConfig
 	// outputSchema, when non-empty, requests a JSON-schema-constrained
-	// response. Plumbed into eyrie's ChatOptions.ResponseFormat.
+	// response. Plumbed into graycode-router's ChatOptions.ResponseFormat.
 	outputSchema string
 	// thinkingEnabled is the generic host preference for provider thinking /
 	// reasoning toggles (Z.AI, LongCat, Agnes, …). nil leaves provider default.
@@ -99,7 +99,7 @@ func NewChatService(client ChatClient, cfg ChatServiceConfig) *ChatService {
 	}
 }
 
-// Client returns the underlying eyrie client. Exposed for callers (e.g.
+// Client returns the underlying graycode-router client. Exposed for callers (e.g.
 // background goroutines) that need to issue one-off LLM calls without
 // the agent-loop retry wrapper.
 func (c *ChatService) Client() ChatClient {
@@ -185,7 +185,7 @@ func (c *ChatService) Reattach(client ChatClient, provider string) {
 // BuildOptions constructs a types.ChatOptions for an outgoing LLM call,
 // encoding all the knobs the agent loop needs (system prompt, model,
 // max tokens, tools, structured output, etc.).
-func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens int, tools []types.EyrieTool) types.ChatOptions {
+func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens int, tools []types.GraycodeRouterTool) types.ChatOptions {
 	c.mu.RLock()
 	provider := c.provider
 	thinkingEnabled := c.thinkingEnabled
@@ -209,23 +209,23 @@ func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens i
 	}
 	// Opt-in tool-catalog compression (GRAYCODE_TOOL_SHRINK=1): fail-open, so the
 	// returned tools equal the input whenever anything is off or drifts.
-	opts.Tools = shrinkEyrieTools(opts.Tools)
+	opts.Tools = shrinkGraycodeRouterTools(opts.Tools)
 	return opts
 }
 
 // Stream issues a streaming LLM call with retry, rate-limit, and
 // emergency-compact. The returned *types.StreamResult's Events channel
-// emits EyrieStreamEvent values; the caller must Close() the result
+// emits GraycodeRouterStreamEvent values; the caller must Close() the result
 // when done.
 //
 // On context cancellation mid-call, returns the cancellation error wrapped
 // with whatever partial state the upstream had emitted (caller should
 // check ctx.Err()).
 //
-// Eyrie facade clients advertise that they manage provider resilience. For
+// GraycodeRouter facade clients advertise that they manage provider resilience. For
 // those clients this service records the product metric and delegates exactly
 // once; injected legacy clients retain Graycode's compatibility retry/rate layer.
-func (c *ChatService) Stream(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.StreamResult, error) {
+func (c *ChatService) Stream(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.StreamResult, error) {
 	c.mu.RLock()
 	client := c.client
 	rateLimiter := c.rateLimiter
@@ -282,11 +282,11 @@ const (
 // emergencyCompactWindow messages. This is a last-resort path (the normal
 // context governor in the agent loop does the real summarization); here we
 // only need the retry to succeed once.
-func emergencyCompact(messages []types.EyrieMessage) []types.EyrieMessage {
+func emergencyCompact(messages []types.GraycodeRouterMessage) []types.GraycodeRouterMessage {
 	if len(messages) <= emergencyCompactMin {
 		return messages
 	}
-	out := make([]types.EyrieMessage, 0, emergencyCompactWindow+1)
+	out := make([]types.GraycodeRouterMessage, 0, emergencyCompactWindow+1)
 	for _, m := range messages {
 		if m.Role == "system" {
 			out = append(out, m)
@@ -304,7 +304,7 @@ func emergencyCompact(messages []types.EyrieMessage) []types.EyrieMessage {
 // Chat issues a non-streaming LLM call. Used by background goroutines
 // (sleeptime consolidation, skill distillation) that don't need
 // incremental events.
-func (c *ChatService) Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
+func (c *ChatService) Chat(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error) {
 	client := c.Client()
 	if client == nil {
 		return nil, errors.New("chat service: no client configured")

@@ -269,24 +269,24 @@ func TestIsSensitivePath_GraycodeConfigDir(t *testing.T) {
 	}
 }
 
-func TestIsSensitivePath_EyrieConfigDirTakesPrecedence(t *testing.T) {
+func TestIsSensitivePath_GraycodeRouterConfigDirTakesPrecedence(t *testing.T) {
 	graycodeDir := filepath.Join(t.TempDir(), "graycode")
-	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
+	graycodeRouterDir := filepath.Join(t.TempDir(), "graycode-router")
 	t.Setenv("GRAYCODE_CONFIG_DIR", graycodeDir)
-	t.Setenv("EYRIE_CONFIG_DIR", eyrieDir)
+	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", graycodeRouterDir)
 
-	if reason := IsSensitivePath(filepath.Join(eyrieDir, "provider.json")); reason == "" {
-		t.Fatal("expected EYRIE_CONFIG_DIR/provider.json to be blocked")
+	if reason := IsSensitivePath(filepath.Join(graycodeRouterDir, "provider.json")); reason == "" {
+		t.Fatal("expected GRAYCODE_ROUTER_CONFIG_DIR/provider.json to be blocked")
 	}
 	if reason := IsSensitivePath(filepath.Join(graycodeDir, "settings.json")); reason != "" {
 		t.Fatalf("expected Graycode settings path to remain allowed, got %q", reason)
 	}
 }
 
-func TestFileToolsBlockEyrieProviderConfig(t *testing.T) {
-	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
-	t.Setenv("EYRIE_CONFIG_DIR", eyrieDir)
-	providerPath := filepath.Join(eyrieDir, "provider.json")
+func TestFileToolsBlockGraycodeRouterProviderConfig(t *testing.T) {
+	graycodeRouterDir := filepath.Join(t.TempDir(), "graycode-router")
+	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", graycodeRouterDir)
+	providerPath := filepath.Join(graycodeRouterDir, "provider.json")
 
 	readInput, _ := json.Marshal(map[string]string{"path": providerPath})
 	editInput, _ := json.Marshal(map[string]string{
@@ -342,12 +342,12 @@ func TestIsSensitivePath_GraycodeConfigDirEnv(t *testing.T) {
 // symlinks before opening (M13): reading through a symlink that points at a
 // sensitive target is blocked, while a symlink to an ordinary file works.
 func TestFileRead_BlocksSymlinkToSensitiveFile(t *testing.T) {
-	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
-	if err := os.MkdirAll(eyrieDir, 0o755); err != nil {
+	graycodeRouterDir := filepath.Join(t.TempDir(), "graycode-router")
+	if err := os.MkdirAll(graycodeRouterDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("EYRIE_CONFIG_DIR", eyrieDir)
-	providerPath := filepath.Join(eyrieDir, "provider.json")
+	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", graycodeRouterDir)
+	providerPath := filepath.Join(graycodeRouterDir, "provider.json")
 	if err := os.WriteFile(providerPath, []byte(`{"key":"x"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -862,17 +862,17 @@ func TestCommandReferencesSensitivePath(t *testing.T) {
 	}
 }
 
-func TestCommandReferencesSensitivePath_EyrieConfigDir(t *testing.T) {
-	eyrieDir := filepath.Join(t.TempDir(), "eyrie config with spaces")
-	t.Setenv("EYRIE_CONFIG_DIR", eyrieDir)
+func TestCommandReferencesSensitivePath_GraycodeRouterConfigDir(t *testing.T) {
+	graycodeRouterDir := filepath.Join(t.TempDir(), "graycode-router config with spaces")
+	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", graycodeRouterDir)
 
 	commands := []string{
-		`cat "` + filepath.Join(eyrieDir, "provider.json") + `"`,
-		`cat "$EYRIE_CONFIG_DIR/provider.json"`,
-		`cat "${EYRIE_CONFIG_DIR}/provider.json"`,
-		`cat "${EYRIE_CONFIG_DIR%/}/provider.json"`,
-		`printf '%s\n' "$EYRIE_CONFIG_DIR"`,
-		"cat " + strings.ReplaceAll(filepath.Join(eyrieDir, "provider.json"), " ", `\ `),
+		`cat "` + filepath.Join(graycodeRouterDir, "provider.json") + `"`,
+		`cat "$GRAYCODE_ROUTER_CONFIG_DIR/provider.json"`,
+		`cat "${GRAYCODE_ROUTER_CONFIG_DIR}/provider.json"`,
+		`cat "${GRAYCODE_ROUTER_CONFIG_DIR%/}/provider.json"`,
+		`printf '%s\n' "$GRAYCODE_ROUTER_CONFIG_DIR"`,
+		"cat " + strings.ReplaceAll(filepath.Join(graycodeRouterDir, "provider.json"), " ", `\ `),
 	}
 	for _, command := range commands {
 		if reason := CommandReferencesSensitivePath(command); reason == "" {

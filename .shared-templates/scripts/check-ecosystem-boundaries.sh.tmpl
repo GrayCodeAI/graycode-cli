@@ -12,7 +12,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 # =============================================================================
-# VARIANT 1 — Support engine (eyrie, harrier, shrike, swift, kestrel, merlin).
+# VARIANT 1 — Support engine (graycode-router, harrier, shrike, swift, kestrel, merlin).
 # Engines are peers: they may depend on falcon,
 # but never on graycode/internal/* or another engine.
 # =============================================================================
@@ -81,7 +81,7 @@ echo "ecosystem boundary guard passed"
 # only — never on a support engine directly, and never on graycode/internal.
 # =============================================================================
 #
-# FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(eyrie|harrier|shrike|swift|kestrel|merlin)(/|")'
+# FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(graycode-router|harrier|shrike|swift|kestrel|merlin)(/|")'
 # FORBIDDEN_INTERNAL='github\.com/GrayCodeAI/graycode-cli/internal'
 #
 # (same rg/grep + report pattern as Variant 1, naming "SDKs/skills must go

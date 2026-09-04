@@ -30,30 +30,30 @@ func TestDaemonReadyProbe_NilFactory(t *testing.T) {
 	}
 }
 
-// TestDaemonReadyProbe_FailedEyriePreflight verifies a factory alone does not
-// make the daemon ready when Eyrie's authoritative preflight is incomplete.
-func TestDaemonReadyProbe_FailedEyriePreflight(t *testing.T) {
+// TestDaemonReadyProbe_FailedGraycodeRouterPreflight verifies a factory alone does not
+// make the daemon ready when GraycodeRouter's authoritative preflight is incomplete.
+func TestDaemonReadyProbe_FailedGraycodeRouterPreflight(t *testing.T) {
 	factory := func(daemon.ChatRequest) (*engine.Session, error) { return nil, nil }
 	probe := daemonReadyProbeWithPreflight(factory, func(context.Context) graycodeconfig.EnginePreflight {
 		return graycodeconfig.EnginePreflight{Ready: false}
 	})
 	ok, reason := probe()
 	if ok {
-		t.Fatal("failed Eyrie preflight must report not ready")
+		t.Fatal("failed GraycodeRouter preflight must report not ready")
 	}
 	if reason == "" {
-		t.Fatal("failed Eyrie preflight must include a reason")
+		t.Fatal("failed GraycodeRouter preflight must include a reason")
 	}
 }
 
-func TestDaemonReadyProbe_ReadyEyriePreflight(t *testing.T) {
+func TestDaemonReadyProbe_ReadyGraycodeRouterPreflight(t *testing.T) {
 	factory := func(daemon.ChatRequest) (*engine.Session, error) { return nil, nil }
 	probe := daemonReadyProbeWithPreflight(factory, func(context.Context) graycodeconfig.EnginePreflight {
 		return graycodeconfig.EnginePreflight{Ready: true}
 	})
 	ok, reason := probe()
 	if !ok || reason != "" {
-		t.Fatalf("ready Eyrie preflight = (%v, %q), want (true, empty)", ok, reason)
+		t.Fatalf("ready GraycodeRouter preflight = (%v, %q), want (true, empty)", ok, reason)
 	}
 }
 
@@ -93,7 +93,7 @@ func TestDaemonReadyProbe_AffectsReadyEndpoint(t *testing.T) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusServiceUnavailable {
-		t.Errorf("expected 503 from /v1/ready when Eyrie is not ready, got %d", resp.StatusCode)
+		t.Errorf("expected 503 from /v1/ready when GraycodeRouter is not ready, got %d", resp.StatusCode)
 	}
 	var body daemon.ReadyResponse
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {

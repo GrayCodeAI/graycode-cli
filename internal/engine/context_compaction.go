@@ -134,7 +134,7 @@ func (s *Session) checkpointManager() *session.CheckpointManager {
 	return p.CheckpointManager()
 }
 
-func rawToSessionMessages(raw []types.EyrieMessage) []session.Message {
+func rawToSessionMessages(raw []types.GraycodeRouterMessage) []session.Message {
 	return session.FromRuntimeMessages(raw)
 }
 

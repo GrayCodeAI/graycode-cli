@@ -3,7 +3,7 @@ package session
 import "github.com/GrayCodeAI/graycode-cli/internal/types"
 
 // FromRuntimeMessages converts Graycode runtime messages into persisted session messages.
-func FromRuntimeMessages(in []types.EyrieMessage) []Message {
+func FromRuntimeMessages(in []types.GraycodeRouterMessage) []Message {
 	if len(in) == 0 {
 		return nil
 	}
@@ -34,13 +34,13 @@ func FromRuntimeToolResults(in []types.ToolResult) []ToolResult {
 }
 
 // ToRuntimeMessages converts persisted session messages back into Graycode runtime messages.
-func ToRuntimeMessages(in []Message) []types.EyrieMessage {
+func ToRuntimeMessages(in []Message) []types.GraycodeRouterMessage {
 	if len(in) == 0 {
 		return nil
 	}
-	out := make([]types.EyrieMessage, len(in))
+	out := make([]types.GraycodeRouterMessage, len(in))
 	for i, msg := range in {
-		out[i] = types.EyrieMessage{
+		out[i] = types.GraycodeRouterMessage{
 			Role:         msg.Role,
 			Content:      msg.Content,
 			Thinking:     msg.Thinking,

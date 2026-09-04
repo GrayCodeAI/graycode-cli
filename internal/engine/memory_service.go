@@ -130,7 +130,7 @@ func (s *MemoryService) OnSessionEnd(success bool) {
 
 // Finalize performs memory-side session bookkeeping from a transcript
 // snapshot. The agent loop does not need to know which backend is installed.
-func (s *MemoryService) Finalize(messages []types.EyrieMessage, success bool) {
+func (s *MemoryService) Finalize(messages []types.GraycodeRouterMessage, success bool) {
 	if s == nil {
 		return
 	}

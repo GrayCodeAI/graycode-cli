@@ -39,7 +39,7 @@ These items are already completed in the current workspace.
   cmd/session restore paths
 - replaced the provider-owned message alias with a Graycode-owned runtime DTO
 - added explicit Graycode-owned runtime DTOs; the final boundary translates them
-  through `eyrie/engine`
+  through `graycode-router/engine`
 
 ### Event contract migration
 - added `eagle/events`
@@ -56,14 +56,14 @@ These items are already completed in the current workspace.
 ### Governance
 - added `check-shared-types-imports.sh`
 - added `check-ecosystem-boundaries.sh`
-- added `check-eyrie-client-imports.sh`
+- added `check-graycode-router-client-imports.sh`
 - wired both guards into `Makefile` and CI
-- wired the Eyrie engine-boundary guards into `Makefile` and CI
+- wired the GraycodeRouter engine-boundary guards into `Makefile` and CI
 - added a legacy import guard so the removed `shared/types` path cannot return
 - extended the ecosystem boundary guard to scan sibling engine repos when present locally
 - updated docs across Graycode, kestrel, merlin, and external workspace copies
 - added standalone boundary guards in `kestrel` and `merlin`
-- added standalone boundary guards in `shrike`, `eyrie`, `harrier`, and `swift`
+- added standalone boundary guards in `shrike`, `graycode-router`, `harrier`, and `swift`
 - updated support repo READMEs with ecosystem boundary rules
 
 ### Review and verification contract migration
@@ -96,21 +96,21 @@ Local state:
 Still external:
 - confirm released module versions used by Graycode match the merged contract changes
 
-### 3. Remove Graycode production dependency on lower Eyrie packages
+### 3. Remove Graycode production dependency on lower GraycodeRouter packages
 Current state:
 - session persistence uses neutral tool contracts
-- Graycode now owns the runtime message DTO in `internal/types.EyrieMessage`
+- Graycode now owns the runtime message DTO in `internal/types.GraycodeRouterMessage`
 - Graycode now owns runtime tool call/result DTOs in `internal/types`
 - Graycode now owns runtime response/usage/stream DTOs in `internal/types`
 - Graycode now owns runtime chat options, response format, tool choice, continuation config, and tool definition DTOs in `internal/types`
 - Graycode now owns the transport-provider seam in `internal/types.ChatProvider`
 - Graycode session, review, setup, catalog, diagnostics, and custom-provider paths
-  now enter through `eyrie/engine`
-- production imports of every lower Eyrie package are zero
+  now enter through `graycode-router/engine`
+- production imports of every lower GraycodeRouter package are zero
 - cmd/session restore paths now go through centralized `session.ToRuntimeMessages` and `session.FromRuntimeMessages`
 
 Decision:
-- completed: Graycode owns the product DTO/port seam and Eyrie owns the engine,
+- completed: Graycode owns the product DTO/port seam and GraycodeRouter owns the engine,
   provider, credential, catalog, routing, resilience, and normalization layers
 - keep the zero-exception boundary enforced; lower packages are test-fixture-only
 
@@ -178,7 +178,7 @@ Do not do these without a separate decision:
 - completed: moved provider/config interfaces behind Graycode-owned transport adapters
 
 ### PR 3
-- completed: removed all lower-level Eyrie imports from Graycode production code and
+- completed: removed all lower-level GraycodeRouter imports from Graycode production code and
   replaced the compatibility allowlist with a zero-exception guard
 
 ### PR 4

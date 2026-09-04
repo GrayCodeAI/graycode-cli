@@ -51,13 +51,13 @@
     "features": ["tools", "resources", "prompts", "sampling"]
   },
   "ecosystem_compatibility": {
-    "graycode+eyrie": "full",
+    "graycode+graycode-router": "full",
     "graycode+shrike": "full",
     "graycode+kestrel": "full",
     "graycode+merlin": "full",
     "graycode+harrier": "full",
     "graycode+swift": "full",
-    "eyrie+shrike": "token_compression",
+    "graycode-router+shrike": "token_compression",
     "kestrel+merlin": "security_review"
   }
 }

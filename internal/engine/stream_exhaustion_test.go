@@ -10,7 +10,7 @@ import (
 
 func TestSynthesisForExhaustion(t *testing.T) {
 	sess := NewSessionWithClient(NewMockClientForTest(), "test", "test-model", "", nil, false)
-	sess.Persistence().SetRawMessages([]types.EyrieMessage{
+	sess.Persistence().SetRawMessages([]types.GraycodeRouterMessage{
 		{Role: "user", Content: "fix the bug"},
 		{Role: "assistant", Content: "I found it"},
 	})
@@ -36,7 +36,7 @@ func TestSynthesisForExhaustionNoMessages(t *testing.T) {
 
 func TestSynthesisForExhaustionCancelled(t *testing.T) {
 	sess := NewSessionWithClient(NewMockClientForTest(), "test", "test-model", "", nil, false)
-	sess.Persistence().SetRawMessages([]types.EyrieMessage{{Role: "user", Content: "hi"}})
+	sess.Persistence().SetRawMessages([]types.GraycodeRouterMessage{{Role: "user", Content: "hi"}})
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if out := sess.SynthesisForExhaustion(ctx, "x"); out != "" {
@@ -47,7 +47,7 @@ func TestSynthesisForExhaustionCancelled(t *testing.T) {
 func TestEmitExhaustionFallsBack(t *testing.T) {
 	// Default (opt-in off): static fallback message even with a live LLM.
 	sess := NewSessionWithClient(NewMockClientForTest(), "test", "test-model", "", nil, false)
-	sess.Persistence().SetRawMessages([]types.EyrieMessage{{Role: "user", Content: "hi"}})
+	sess.Persistence().SetRawMessages([]types.GraycodeRouterMessage{{Role: "user", Content: "hi"}})
 	ch := make(chan StreamEvent, 2)
 	sess.emitExhaustion(context.Background(), ch, "reason")
 	ev := <-ch
@@ -63,7 +63,7 @@ func TestEmitExhaustionFallsBack(t *testing.T) {
 func TestEmitExhaustionSynthesizesWhenOptedIn(t *testing.T) {
 	t.Setenv(gracefulExhaustionEnv, "1")
 	sess := NewSessionWithClient(NewMockClientForTest(), "test", "test-model", "", nil, false)
-	sess.Persistence().SetRawMessages([]types.EyrieMessage{{Role: "user", Content: "hi"}})
+	sess.Persistence().SetRawMessages([]types.GraycodeRouterMessage{{Role: "user", Content: "hi"}})
 	ch := make(chan StreamEvent, 2)
 	sess.emitExhaustion(context.Background(), ch, "turn limit reached")
 	ev := <-ch

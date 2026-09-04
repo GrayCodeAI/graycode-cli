@@ -16,25 +16,25 @@ import (
 	kestrelreview "github.com/GrayCodeAI/kestrel/review"
 )
 
-// EyrieAdapter implements kestrel's Provider interface using graycode's eyrie client.
+// GraycodeRouterAdapter implements kestrel's Provider interface using graycode's graycode-router client.
 // It translates between kestrel.Message/kestrel.ChatOpts and Graycode runtime DTOs.
-type EyrieAdapter struct {
+type GraycodeRouterAdapter struct {
 	client   types.ChatProvider
 	provider string
 }
 
-// NewEyrieAdapter creates an adapter that satisfies kestrel.Provider using
-// the given eyrie client and provider name (e.g. "anthropic", "openai").
-func NewEyrieAdapter(c types.ChatProvider, provider string) *EyrieAdapter {
-	return &EyrieAdapter{client: c, provider: provider}
+// NewGraycodeRouterAdapter creates an adapter that satisfies kestrel.Provider using
+// the given graycode-router client and provider name (e.g. "anthropic", "openai").
+func NewGraycodeRouterAdapter(c types.ChatProvider, provider string) *GraycodeRouterAdapter {
+	return &GraycodeRouterAdapter{client: c, provider: provider}
 }
 
-// Chat translates a kestrel LLM request into an eyrie call and returns the
+// Chat translates a kestrel LLM request into an graycode-router call and returns the
 // result in kestrel's Response format.
-func (a *EyrieAdapter) Chat(ctx context.Context, messages []kestrelLib.Message, opts kestrelLib.ChatOpts) (*kestrelLib.Response, error) {
-	eyrieMessages := make([]types.EyrieMessage, len(messages))
+func (a *GraycodeRouterAdapter) Chat(ctx context.Context, messages []kestrelLib.Message, opts kestrelLib.ChatOpts) (*kestrelLib.Response, error) {
+	graycodeRouterMessages := make([]types.GraycodeRouterMessage, len(messages))
 	for i, m := range messages {
-		eyrieMessages[i] = types.EyrieMessage{
+		graycodeRouterMessages[i] = types.GraycodeRouterMessage{
 			Role:    m.Role,
 			Content: m.Content,
 		}
@@ -46,7 +46,7 @@ func (a *EyrieAdapter) Chat(ctx context.Context, messages []kestrelLib.Message, 
 		temp = &t
 	}
 
-	eyrieOpts := types.ChatOptions{
+	graycodeRouterOpts := types.ChatOptions{
 		Provider:    a.provider,
 		Model:       opts.Model,
 		MaxTokens:   opts.MaxTokens,
@@ -54,7 +54,7 @@ func (a *EyrieAdapter) Chat(ctx context.Context, messages []kestrelLib.Message, 
 		System:      opts.System,
 	}
 
-	resp, err := a.client.Chat(ctx, eyrieMessages, eyrieOpts)
+	resp, err := a.client.Chat(ctx, graycodeRouterMessages, graycodeRouterOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (a *EyrieAdapter) Chat(ctx context.Context, messages []kestrelLib.Message, 
 // If initialization fails, all operations degrade gracefully and return
 // empty results rather than errors.
 type Bridge struct {
-	adapter  *EyrieAdapter
+	adapter  *GraycodeRouterAdapter
 	reviewer *kestrelLib.Reviewer
 	opts     []kestrelLib.Option
 	mu       sync.Mutex
@@ -103,7 +103,7 @@ func (b *Bridge) init(c types.ChatProvider, provider string, opts ...kestrelLib.
 	if c == nil {
 		return
 	}
-	b.adapter = NewEyrieAdapter(c, provider)
+	b.adapter = NewGraycodeRouterAdapter(c, provider)
 	// Prepend the provider option so callers don't have to.
 	b.opts = append([]kestrelLib.Option{kestrelLib.WithProvider(b.adapter)}, opts...)
 	b.reviewer = kestrelLib.NewReviewer(b.opts...)

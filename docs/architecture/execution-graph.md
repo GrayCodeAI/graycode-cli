@@ -16,7 +16,7 @@ runtime owners
   Harrier retrieval + Graycode code index
   Merlin + Kestrel quality projections
   Shrike runtime projection
-  Eyrie operations projection
+  GraycodeRouter operations projection
   Swift checkpoints
         |
         v
@@ -48,7 +48,7 @@ eagle/graph
 | Context compression operations | Shrike | Compression statistics are automatically captured during persisted-session context compaction |
 | Response redaction quality | Shrike | Aggregate Shrike-only secret matches are automatically captured after persisted-session response redaction |
 | Token usage and budget decisions | Shrike | Deduplicated provider usage updates Shrike's tracker; usage and next-turn budget decisions are automatically captured |
-| Model routing and generation usage | Eyrie | Route and normalized usage operations are automatically captured after each persisted-session model turn |
+| Model routing and generation usage | GraycodeRouter | Route and normalized usage operations are automatically captured after each persisted-session model turn |
 | Observation history | `internal/graphjournal` | Append-only, privacy-safe runtime evidence |
 | Swift sessions and checkpoints | Swift | Exact start-time metadata correlation plus stable external references |
 
@@ -108,7 +108,7 @@ Nodes:
   facts;
 - `shrike/compression/<digest>`, `shrike/usage/<digest>`, `shrike/budget/<digest>`, and
   `shrike/redaction/<digest>` — operations, policy, and quality facts;
-- `eyrie/route/<digest>` and `eyrie/generation/<digest>` — model route and
+- `graycode-router/route/<digest>` and `graycode-router/generation/<digest>` — model route and
   normalized generation operations;
 - `swift/checkpoint/<id>` — externally owned Swift checkpoint reference.
 
@@ -234,7 +234,7 @@ The central tool-execution seam automatically records:
 - Shrike-only secret matches removed from persisted-session responses.
 - Shrike usage summaries and budget decisions emitted from the central,
   deduplicated provider-accounting seam.
-- Eyrie model route and usage reported for persisted-session turns.
+- GraycodeRouter model route and usage reported for persisted-session turns.
 
 Mission execution now also persists a portable graph artifact for local mission
 runs. Plain `graycode mission` runs emit mission and feature execution nodes; the

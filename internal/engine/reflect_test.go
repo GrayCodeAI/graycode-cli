@@ -16,12 +16,12 @@ type mockLLMClient struct {
 	calls    int
 }
 
-func (m *mockLLMClient) Chat(_ context.Context, msgs []types.EyrieMessage, _ types.ChatOptions) (*types.EyrieResponse, error) {
+func (m *mockLLMClient) Chat(_ context.Context, msgs []types.GraycodeRouterMessage, _ types.ChatOptions) (*types.GraycodeRouterResponse, error) {
 	m.calls++
 	if m.err != nil {
 		return nil, m.err
 	}
-	return &types.EyrieResponse{Content: m.response}, nil
+	return &types.GraycodeRouterResponse{Content: m.response}, nil
 }
 
 func TestNewReflector(t *testing.T) {
@@ -43,7 +43,7 @@ WHAT_TO_DO: Use the project root from the session context instead of hardcoding 
 	}
 
 	r := NewReflector(mock, "test-model")
-	ref, err := r.Reflect(context.Background(), "fix the config parser", []types.EyrieMessage{
+	ref, err := r.Reflect(context.Background(), "fix the config parser", []types.GraycodeRouterMessage{
 		{Role: "user", Content: "Fix the config parser to handle nested keys."},
 		{Role: "assistant", Content: "I will edit config.go."},
 	}, "permission denied: /tmp/config.go")
@@ -252,7 +252,7 @@ what_to_do: lowercase fix`
 }
 
 func TestBuildReflectionPrompt_ContainsKeyElements(t *testing.T) {
-	messages := []types.EyrieMessage{
+	messages := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "Fix the parser."},
 		{
 			Role:    "assistant",

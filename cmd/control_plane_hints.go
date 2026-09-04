@@ -24,7 +24,7 @@ func workModeSwitchSummary(sess *engine.Session, wm engine.WorkMode) string {
 	}
 	visible := 0
 	if sess != nil && sess.Tools() != nil && sess.Tools().Registry() != nil {
-		visible = len(sess.Tools().Registry().EyrieTools())
+		visible = len(sess.Tools().Registry().GraycodeRouterTools())
 	}
 	return fmt.Sprintf("Work mode → %s\n%s\nModel-visible tools: %d  ·  /status for full control plane", wm, hint, visible)
 }

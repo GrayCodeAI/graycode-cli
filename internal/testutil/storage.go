@@ -24,7 +24,7 @@ func InstallHermeticStorage() (func(), error) {
 	if err != nil {
 		return nil, err
 	}
-	keys := []string{"HOME", "GRAYCODE_CONFIG_DIR", "GRAYCODE_STATE_DIR", "GRAYCODE_CACHE_DIR", "EYRIE_CONFIG_DIR"}
+	keys := []string{"HOME", "GRAYCODE_CONFIG_DIR", "GRAYCODE_STATE_DIR", "GRAYCODE_CACHE_DIR", "GRAYCODE_ROUTER_CONFIG_DIR"}
 	previous := make(map[string]string, len(keys))
 	wasSet := make(map[string]bool, len(keys))
 	for _, key := range keys {
@@ -37,10 +37,10 @@ func InstallHermeticStorage() (func(), error) {
 		return nil, err
 	}
 	for key, suffix := range map[string]string{
-		"GRAYCODE_CONFIG_DIR": "config",
-		"GRAYCODE_STATE_DIR":  "state",
-		"GRAYCODE_CACHE_DIR":  "cache",
-		"EYRIE_CONFIG_DIR":    "eyrie-config",
+		"GRAYCODE_CONFIG_DIR":        "config",
+		"GRAYCODE_STATE_DIR":         "state",
+		"GRAYCODE_CACHE_DIR":         "cache",
+		"GRAYCODE_ROUTER_CONFIG_DIR": "graycode-router-config",
 	} {
 		if _, ok := os.LookupEnv(key); !ok {
 			if err := os.Setenv(key, filepath.Join(root, suffix)); err != nil {

@@ -43,7 +43,7 @@ adding a second agent runtime:
 
 The comparison also found no reason to adopt Kimi Code's two-engine split or
 replace Graycode's stronger Harrier memory, Shrike token controls, Swift replay, Kestrel
-review, Merlin auditing, or Eyrie provider runtime.
+review, Merlin auditing, or GraycodeRouter provider runtime.
 
 ### 1. Skill metadata interoperability
 
@@ -111,7 +111,7 @@ tool, depth, time, token, and cost budgets.
 
 ## Deliberately Not Adopted
 
-- CommandCodeAI provider adapters: Eyrie owns provider protocols and routing.
+- CommandCodeAI provider adapters: GraycodeRouter owns provider protocols and routing.
 - BaseAI remote pipes: incompatible with Graycode's local authority and durable
   event model.
 - BaseAI `lowdb` JSON memory: weaker than Harrier and Graycode persistence.
@@ -128,5 +128,5 @@ tool, depth, time, token, and cost budgets.
 4. Repeat the focused and full checks independently.
 5. Merlin the final diff, worktree, and sibling-repository status.
 
-The Eyrie repository remains a separate repository change and must be published
+The GraycodeRouter repository remains a separate repository change and must be published
 through its own feature branch and PR before updating Graycode's module pin.

@@ -7,13 +7,13 @@ import (
 )
 
 // ModelSupportsVision reports whether the named model can accept image content
-// blocks. eyrie carries image data on EyrieMessage.Images but does not expose a
+// blocks. graycode-router carries image data on GraycodeRouterMessage.Images but does not expose a
 // per-model capability flag, so graycode gates locally on the model identifier.
 //
 // The check is heuristic and intentionally conservative: an unknown model is
 // treated as non-vision so that we never send image blocks a provider will
 // reject. Known vision-capable families are matched by substring on the
-// lower-cased model id (which is how eyrie/providers name them).
+// lower-cased model id (which is how graycode-router/providers name them).
 func ModelSupportsVision(model string) bool {
 	m := strings.ToLower(strings.TrimSpace(model))
 	if m == "" {
@@ -70,7 +70,7 @@ func (s *Session) SupportsVision() bool {
 // empty it defaults to image/png.
 //
 // When the active model supports vision the image is attached as a multimodal
-// block (via EyrieMessage.Images, which eyrie expands into an image content
+// block (via GraycodeRouterMessage.Images, which graycode-router expands into an image content
 // block). When it does not, the message degrades gracefully: only the text is
 // sent, annotated with a note so the model is aware an image was dropped, and
 // attached reports false. Callers can surface a warning to the user on false.
@@ -93,7 +93,7 @@ func (s *Session) AddUserWithAttachment(content, imageBase64, mediaType string) 
 	if persist == nil {
 		return false
 	}
-	persist.AppendUserJournaled(types.EyrieMessage{
+	persist.AppendUserJournaled(types.GraycodeRouterMessage{
 		Role:    "user",
 		Content: content,
 		Images:  []string{"data:" + mediaType + ";base64," + imageBase64},
@@ -111,7 +111,7 @@ func (s *Session) AddUserWithAttachment(content, imageBase64, mediaType string) 
 
 // AddUserWithDocumentText adds a user message that incorporates extracted
 // document text (e.g. from a PDF) inline as text. This is the graceful path for
-// formats eyrie cannot carry as native image/document blocks: the extracted
+// formats graycode-router cannot carry as native image/document blocks: the extracted
 // text is fenced and labeled so the model can reason over it.
 //
 // label is a short human identifier for the source (e.g. the file name); it may

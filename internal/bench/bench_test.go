@@ -43,15 +43,15 @@ var sWEbenchSmokeTasks = []taskFixture{
 // so a benchmark can assert the agent attempted them.
 type stubChatClient struct {
 	t      testing.TB
-	events []types.EyrieStreamEvent
+	events []types.GraycodeRouterStreamEvent
 }
 
-func (m *stubChatClient) Chat(_ context.Context, _ []types.EyrieMessage, _ types.ChatOptions) (*types.EyrieResponse, error) {
-	return &types.EyrieResponse{Content: "stub", FinishReason: "end_turn"}, nil
+func (m *stubChatClient) Chat(_ context.Context, _ []types.GraycodeRouterMessage, _ types.ChatOptions) (*types.GraycodeRouterResponse, error) {
+	return &types.GraycodeRouterResponse{Content: "stub", FinishReason: "end_turn"}, nil
 }
 
-func (m *stubChatClient) StreamChatContinue(_ context.Context, _ []types.EyrieMessage, _ types.ChatOptions, _ types.ContinuationConfig) (*types.StreamResult, error) {
-	ch := make(chan types.EyrieStreamEvent, len(m.events)+1)
+func (m *stubChatClient) StreamChatContinue(_ context.Context, _ []types.GraycodeRouterMessage, _ types.ChatOptions, _ types.ContinuationConfig) (*types.StreamResult, error) {
+	ch := make(chan types.GraycodeRouterStreamEvent, len(m.events)+1)
 	for _, e := range m.events {
 		ch <- e
 	}
@@ -61,7 +61,7 @@ func (m *stubChatClient) StreamChatContinue(_ context.Context, _ []types.EyrieMe
 
 // runTask drives engine.Session.Stream for a single fixture and returns the
 // flattened event sequence + whether the loop terminated cleanly.
-func runTask(t *testing.B, fix taskFixture, events []types.EyrieStreamEvent) (terminated bool, got []engine.StreamEvent) {
+func runTask(t *testing.B, fix taskFixture, events []types.GraycodeRouterStreamEvent) (terminated bool, got []engine.StreamEvent) {
 	svc := &stubChatClient{t: t, events: events}
 	s := engine.NewSessionWithClient(svc, "bench", "bench-model", "bench system", nil, false)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -93,18 +93,18 @@ func TestBenchmark_SWE_benchHeadless(t *testing.T) {
 	for _, fix := range sWEbenchSmokeTasks {
 		// The stub emits a content + done event, modelling a provider that
 		// answers without tools (the no-tools path) or a read+answer path.
-		events := []types.EyrieStreamEvent{
+		events := []types.GraycodeRouterStreamEvent{
 			{Type: "content", Content: "understood"},
 		}
 		if len(fix.MustUse) > 0 {
 			// Simulate a tool-use turn followed by completion.
 			events = nil
 			for _, name := range fix.MustUse {
-				events = append(events, types.EyrieStreamEvent{Type: "tool_use", Content: name})
+				events = append(events, types.GraycodeRouterStreamEvent{Type: "tool_use", Content: name})
 			}
-			events = append(events, types.EyrieStreamEvent{Type: "content", Content: "done"})
+			events = append(events, types.GraycodeRouterStreamEvent{Type: "content", Content: "done"})
 		}
-		events = append(events, types.EyrieStreamEvent{Type: "done", StopReason: "end_turn"})
+		events = append(events, types.GraycodeRouterStreamEvent{Type: "done", StopReason: "end_turn"})
 
 		terminated, got := runTask(b, fix, events)
 		if !terminated {

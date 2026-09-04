@@ -25,7 +25,7 @@ type resultInfo struct {
 	toolName string
 }
 
-func MicrocompactMessages(msgs []types.EyrieMessage, cfg MicroCompactConfig) []types.EyrieMessage {
+func MicrocompactMessages(msgs []types.GraycodeRouterMessage, cfg MicroCompactConfig) []types.GraycodeRouterMessage {
 	var compactableResults []resultInfo
 	for i, m := range msgs {
 		if len(m.ToolResults) == 0 {
@@ -47,7 +47,7 @@ func MicrocompactMessages(msgs []types.EyrieMessage, cfg MicroCompactConfig) []t
 		clearSet[compactableResults[i].index] = true
 	}
 
-	result := make([]types.EyrieMessage, len(msgs))
+	result := make([]types.GraycodeRouterMessage, len(msgs))
 	copy(result, msgs)
 	for idx := range clearSet {
 		oldResults := result[idx].ToolResults
@@ -59,7 +59,7 @@ func MicrocompactMessages(msgs []types.EyrieMessage, cfg MicroCompactConfig) []t
 				IsError:   tr.IsError,
 			}
 		}
-		result[idx] = types.EyrieMessage{
+		result[idx] = types.GraycodeRouterMessage{
 			Role:        result[idx].Role,
 			ToolResults: newResults,
 		}
@@ -68,7 +68,7 @@ func MicrocompactMessages(msgs []types.EyrieMessage, cfg MicroCompactConfig) []t
 	return result
 }
 
-func ToolNameForResult(m types.EyrieMessage, msgs []types.EyrieMessage) string {
+func ToolNameForResult(m types.GraycodeRouterMessage, msgs []types.GraycodeRouterMessage) string {
 	if len(m.ToolResults) == 0 {
 		return ""
 	}
@@ -83,7 +83,7 @@ func ToolNameForResult(m types.EyrieMessage, msgs []types.EyrieMessage) string {
 	return ""
 }
 
-func HasTimeGap(msgs []types.EyrieMessage, threshold time.Duration) bool {
+func HasTimeGap(msgs []types.GraycodeRouterMessage, threshold time.Duration) bool {
 	lastTextIdx := -1
 	for i := len(msgs) - 1; i >= 0; i-- {
 		if HasTextContent(msgs[i]) && msgs[i].Role == "assistant" {

@@ -2,7 +2,7 @@ package cmd
 
 // turnHadThinkingOnly reports whether the latest user turn ended with internal
 // reasoning visible but no assistant reply or tool activity. This is the TUI
-// symptom of eyrie's ResponseErrorOnlyReasoning health check.
+// symptom of graycode-router's ResponseErrorOnlyReasoning health check.
 func turnHadThinkingOnly(messages []displayMsg) bool {
 	if len(messages) == 0 {
 		return false

@@ -19,7 +19,7 @@ Faces (TUI / headless / ACP / daemon)
               Session kernel
            (agentLoop · tools)
                     │
-     eyrie · harrier · shrike · swift · kestrel · merlin
+     graycode-router · harrier · shrike · swift · kestrel · merlin
 ```
 
 ## Pieces
@@ -53,7 +53,7 @@ Single entry for subagents + background tasks:
 ### 3. Lazy model surface (`tool.Registry`)
 
 - Essential tools registered and **model-visible**
-- Optional tools registered for **execution + ToolSearch**, hidden from `EyrieTools`
+- Optional tools registered for **execution + ToolSearch**, hidden from `GraycodeRouterTools`
 - `ToolSearch` `select:Name` **promotes** tool onto the model surface
 - APIs: `EnableLazyModelSurface`, `SetModelVisibility`, `PromoteModelTool`
 

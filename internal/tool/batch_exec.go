@@ -16,7 +16,7 @@ import (
 // BatchExecTool submits prompts to the provider-native Message Batches API
 // for 50%-cost async execution. Designed for CI/scripted workloads where the
 // result is not needed immediately. Uses fixed HTTP calls (no shell) against
-// the provider's REST endpoint; no eyrie/client import (boundary-guarded).
+// the provider's REST endpoint; no graycode-router/client import (boundary-guarded).
 type BatchExecTool struct{}
 
 func (BatchExecTool) Name() string      { return "BatchExec" }
@@ -226,8 +226,8 @@ func isBatchTerminal(s string) bool { return batchTerminalStates[strings.ToLower
 
 // batchWait polls until the batch reaches a terminal state, with exponential
 // backoff + jitter capped at 30s, honoring Retry-After on 429/5xx, bounded by
-// timeoutSeconds (default 600). Mirrors eyrie's WaitUntilDone but inlined to
-// stay boundary-compliant (no eyrie/client import).
+// timeoutSeconds (default 600). Mirrors graycode-router's WaitUntilDone but inlined to
+// stay boundary-compliant (no graycode-router/client import).
 func batchWait(ctx context.Context, apiKey, batchID string, timeoutSeconds, pollIntervalSec int) (string, error) {
 	if timeoutSeconds <= 0 {
 		timeoutSeconds = 600

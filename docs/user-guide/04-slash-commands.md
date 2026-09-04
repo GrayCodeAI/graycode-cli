@@ -359,7 +359,7 @@ Quick ready-to-chat check.
 
 ### `/ecosystem`
 
-Show ecosystem component status (Eyrie, harrier, shrike).
+Show ecosystem component status (GraycodeRouter, harrier, shrike).
 
 ```
 /ecosystem
@@ -455,7 +455,7 @@ Toggle vim-style keybindings.
 
 ### `/refresh-model-catalog`
 
-Fetch the latest deployment-aware model catalog from Eyrie.
+Fetch the latest deployment-aware model catalog from GraycodeRouter.
 
 ```
 /refresh-model-catalog

@@ -184,9 +184,9 @@ func TestNoDirectOsGetenvInInternal(t *testing.T) {
 	t.Logf("Total os.Getenv violations in internal/: %d (logged as tech debt)", violationCount)
 }
 
-// TestNoDirectLowerEyrieImports verifies production Graycode code uses only
-// Eyrie's stable engine facade. Tests may import lower packages for fixtures.
-func TestNoDirectLowerEyrieImports(t *testing.T) {
+// TestNoDirectLowerGraycodeRouterImports verifies production Graycode code uses only
+// GraycodeRouter's stable engine facade. Tests may import lower packages for fixtures.
+func TestNoDirectLowerGraycodeRouterImports(t *testing.T) {
 	root := repoRoot(t)
 	paths := []string{
 		filepath.Join(root, "internal"),
@@ -202,37 +202,37 @@ func TestNoDirectLowerEyrieImports(t *testing.T) {
 			}
 			for _, imp := range pf.File.Imports {
 				path := strings.Trim(imp.Path.Value, `"`)
-				if !strings.HasPrefix(path, "github.com/GrayCodeAI/eyrie/") ||
-					path == "github.com/GrayCodeAI/eyrie/engine" ||
-					strings.HasPrefix(path, "github.com/GrayCodeAI/eyrie/engine/") {
+				if !strings.HasPrefix(path, "github.com/GrayCodeAI/graycode-router/") ||
+					path == "github.com/GrayCodeAI/graycode-router/engine" ||
+					strings.HasPrefix(path, "github.com/GrayCodeAI/graycode-router/engine/") {
 					continue
 				}
-				// Graycode uses the full vendored Eyrie API surface for provider,
+				// Graycode uses the full vendored GraycodeRouter API surface for provider,
 				// graph, and tooling contracts that the engine facade does not
 				// re-export.
 				switch path {
-				case "github.com/GrayCodeAI/eyrie/llm",
-					"github.com/GrayCodeAI/eyrie/graph",
-					"github.com/GrayCodeAI/eyrie/tools":
+				case "github.com/GrayCodeAI/graycode-router/llm",
+					"github.com/GrayCodeAI/graycode-router/graph",
+					"github.com/GrayCodeAI/graycode-router/tools":
 					continue
 				}
-				// The gateway package is Graycode's single Eyrie boundary; it may
-				// import eyrie/credentials to declare Graycode's OS keychain service
+				// The gateway package is Graycode's single GraycodeRouter boundary; it may
+				// import graycode-router/credentials to declare Graycode's OS keychain service
 				// name (the host-neutral default would otherwise orphan existing
-				// secrets). All other production code must use eyrie/engine only.
+				// secrets). All other production code must use graycode-router/engine only.
 				if strings.HasPrefix(rel, "internal/provider/gateway/") &&
-					path == "github.com/GrayCodeAI/eyrie/credentials" {
+					path == "github.com/GrayCodeAI/graycode-router/credentials" {
 					continue
 				}
 				pos := pf.FSet.Position(imp.Pos())
-				t.Fatalf("forbidden lower-level Eyrie import %q at %s:%d; use github.com/GrayCodeAI/eyrie/engine", path, rel, pos.Line)
+				t.Fatalf("forbidden lower-level GraycodeRouter import %q at %s:%d; use github.com/GrayCodeAI/graycode-router/engine", path, rel, pos.Line)
 			}
 		}
 	}
 }
 
 // TestNoLazyProviderConstructionInGraycode verifies Graycode does not construct lazy
-// provider transports directly. Provider/model transport resolution belongs in Eyrie.
+// provider transports directly. Provider/model transport resolution belongs in GraycodeRouter.
 func TestNoLazyProviderConstructionInGraycode(t *testing.T) {
 	root := repoRoot(t)
 	paths := []string{
@@ -257,7 +257,7 @@ func TestNoLazyProviderConstructionInGraycode(t *testing.T) {
 					return true
 				}
 				pos := pf.FSet.Position(call.Pos())
-				t.Fatalf("forbidden eyrie lazy provider construction at %s:%d; use the eyrie/engine facade", rel, pos.Line)
+				t.Fatalf("forbidden graycode-router lazy provider construction at %s:%d; use the graycode-router/engine facade", rel, pos.Line)
 				return true
 			})
 		}

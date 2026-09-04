@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	llm "github.com/GrayCodeAI/eyrie/llm"
 	gw "github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	llm "github.com/GrayCodeAI/graycode-router/llm"
 )
 
 type GatewayStatus struct {
@@ -22,19 +22,19 @@ type GatewayStatus struct {
 	DNSHost                 string
 }
 
-// IsCatalogCacheRequired reports whether an Eyrie operation failed because
+// IsCatalogCacheRequired reports whether an GraycodeRouter operation failed because
 // the local model catalog has not been created yet.
 func IsCatalogCacheRequired(err error) bool {
 	return gw.IsCatalogCacheRequired(err)
 }
 
-// RegisteredProviderCount returns Eyrie's canonical first-class provider count.
+// RegisteredProviderCount returns GraycodeRouter's canonical first-class provider count.
 func RegisteredProviderCount() int {
 	return gw.RegisteredProviderCount()
 }
 
 func AllCatalogProviders() []string {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return nil
 	}
@@ -57,7 +57,7 @@ func AllCatalogProviders() []string {
 }
 
 func AllSetupGateways() []string {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return nil
 	}
@@ -122,7 +122,7 @@ func GatewaySupportsLiveDiscovery(providerID string) bool {
 }
 
 func ActiveGateway(ctx context.Context) string {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return ""
 	}
@@ -137,7 +137,7 @@ func ActiveGateway(ctx context.Context) string {
 }
 
 func GatewayStatuses(ctx context.Context, activeProvider, activeModel string) []GatewayStatus {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return nil
 	}
@@ -163,7 +163,7 @@ func GatewayStatuses(ctx context.Context, activeProvider, activeModel string) []
 }
 
 func GatewayForModel(modelID string) string {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return ""
 	}
@@ -171,7 +171,7 @@ func GatewayForModel(modelID string) string {
 }
 
 func ShouldClearSelectionAfterCredentialRemove(ctx context.Context, removedProvider string) bool {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return true
 	}
@@ -183,7 +183,7 @@ func ShouldClearSelectionAfterCredentialRemove(ctx context.Context, removedProvi
 }
 
 func ClearActiveSelection(ctx context.Context) error {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func ClearActiveSelection(ctx context.Context) error {
 }
 
 func SyncSelectionWithCredentials(ctx context.Context) {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return
 	}
@@ -213,7 +213,7 @@ func SyncSelectionWithCredentials(ctx context.Context) {
 }
 
 func DefaultModelForProvider(provider string) string {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return ""
 	}
@@ -221,7 +221,7 @@ func DefaultModelForProvider(provider string) string {
 }
 
 func DefaultModelForProviderWithSettings(settings Settings, provider string) string {
-	engine, err := NewEyrieEngineForSettings(settings)
+	engine, err := NewGraycodeRouterEngineForSettings(settings)
 	if err != nil {
 		return ""
 	}
@@ -248,7 +248,7 @@ func ModelIDsForProvider(provider string) ([]string, error) {
 }
 
 func CheapestModelForProvider(provider, fallback string) string {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return fallback
 	}
@@ -256,7 +256,7 @@ func CheapestModelForProvider(provider, fallback string) string {
 }
 
 func ProviderOfModel(modelName string) string {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return ""
 	}
@@ -264,7 +264,7 @@ func ProviderOfModel(modelName string) string {
 }
 
 func ProviderOfModelWithSettings(settings Settings, modelName string) string {
-	engine, err := NewEyrieEngineForSettings(settings)
+	engine, err := NewGraycodeRouterEngineForSettings(settings)
 	if err != nil {
 		return ""
 	}
@@ -272,7 +272,7 @@ func ProviderOfModelWithSettings(settings Settings, modelName string) string {
 }
 
 func ExampleModelHints() (string, string) {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return "an Anthropic model", "an OpenAI model"
 	}
@@ -281,7 +281,7 @@ func ExampleModelHints() (string, string) {
 }
 
 func AllCanonicalModelIDs() []string {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return nil
 	}
@@ -298,7 +298,7 @@ func AllCanonicalModelIDs() []string {
 }
 
 func ProviderIDForDeployment(deploymentID string) string {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return ""
 	}
@@ -311,7 +311,7 @@ func ProviderIDForDeployment(deploymentID string) string {
 }
 
 func PrimaryAPIKeyEnvForDeployment(deploymentID string) string {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return ""
 	}
@@ -324,7 +324,7 @@ func PrimaryAPIKeyEnvForDeployment(deploymentID string) string {
 }
 
 func engineGateway(providerID string) (gw.GatewayDefs, bool) {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return gw.GatewayDefs{}, false
 	}

@@ -96,7 +96,7 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Build the Kestrel bridge through Graycode's Eyrie engine boundary.
+	// Build the Kestrel bridge through Graycode's GraycodeRouter engine boundary.
 	ctx := context.Background()
 	selection := graycodeconfig.EffectiveSelection(ctx, graycodeconfig.SelectionOptions{
 		ProviderOverride: strings.TrimSpace(provider),

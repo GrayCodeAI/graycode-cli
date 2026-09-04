@@ -19,14 +19,14 @@ const replayCacheDirEnv = "GRAYCODE_REPLAY_CACHE_DIR"
 const replayFingerprintEnv = "GRAYCODE_REPLAY_FINGERPRINT"
 
 // replayKey builds the cache key for one completion request.
-func replayKey(opts types.ChatOptions, messages []types.EyrieMessage) string {
+func replayKey(opts types.ChatOptions, messages []types.GraycodeRouterMessage) string {
 	return replaycache.Key(replaycache.Fingerprint(os.Getenv(replayFingerprintEnv)),
 		opts.Provider, opts.Model, messages, opts.MaxTokens)
 }
 
 // chatWithReplay wraps client.Chat with the replay cache when
 // GRAYCODE_REPLAY_CACHE_DIR is set; otherwise it calls straight through.
-func chatWithReplay(ctx context.Context, client ChatClient, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
+func chatWithReplay(ctx context.Context, client ChatClient, messages []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error) {
 	dir := os.Getenv(replayCacheDirEnv)
 	if dir == "" {
 		return client.Chat(ctx, messages, opts)
