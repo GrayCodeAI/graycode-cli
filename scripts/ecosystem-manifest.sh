@@ -82,6 +82,21 @@ validate() {
     fi
     seen_dirs+="${directory}"$'\n'
 
+    # Absent workspace checkouts skip all filesystem checks below; the checkout
+    # step already warned. Manifest-internal checks (fields, dupes, count) stay
+    # strict so manifest drift still fails.
+    if [[ "${flags%%:*}" == "true" && ! -d "${ECO_DIR}/${directory}/.git" ]]; then
+      echo "WARNING: ${directory}: workspace repository is not checked out; skipping filesystem checks" >&2
+      if [[ "${language}" == "go" && -n "${module}" ]]; then
+        if grep -qxF "${module}" <<<"${seen_modules}"; then
+          echo "duplicate module: ${module}" >&2
+          failed=1
+        fi
+        seen_modules+="${module}"$'\n'
+      fi
+      continue
+    fi
+
     if [[ "${language}" == "go" ]]; then
       if [[ -z "${module}" ]]; then
         echo "${directory}: Go repository has no module" >&2
@@ -120,13 +135,6 @@ validate() {
       fi
     fi
 
-    # Only workspace repositories are required to exist for Go workspace
-    # generation. SDKs, skills, Owl, and the platform remain independent
-    # repositories and need not be checked out in a Graycode-only CI job.
-    if [[ "${flags%%:*}" == "true" && ! -d "${ECO_DIR}/${directory}/.git" ]]; then
-      echo "${directory}: workspace repository is not checked out" >&2
-      failed=1
-    fi
   done < <(records)
 
   if ((count != 15)); then

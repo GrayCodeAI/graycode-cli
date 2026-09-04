@@ -18,13 +18,20 @@ runs:
         INPUT_REF: ${{ inputs.ref }}
       run: |
         set -euo pipefail
-        # The generated workspace references sibling bird-codename repos.
+        # The generated workspace references sibling repos from ecosystem.yaml.
+        # Repositories that no longer resolve are skipped with a warning so a
+        # single-repo checkout still yields a working CI run (expected during
+        # ecosystem migration; downstream guards skip absent checkouts too).
         ws_parent="$(cd "${GITHUB_WORKSPACE}/.." && pwd)"
         while IFS= read -r repo; do
-          [ "$repo" = graycode ] && continue
+          [ "$repo" = graycode-cli ] && continue
           dest="${ws_parent}/${repo}"
           if [ -d "$dest/.git" ]; then
             echo "$repo already present at $dest"
+            continue
+          fi
+          if ! git ls-remote "https://github.com/GrayCodeAI/${repo}.git" HEAD >/dev/null 2>&1; then
+            echo "WARNING: GrayCodeAI/${repo} is not reachable; skipping checkout"
             continue
           fi
           if git ls-remote --heads "https://github.com/GrayCodeAI/${repo}.git" "$INPUT_REF" | grep -q .; then
