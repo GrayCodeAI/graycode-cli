@@ -57,8 +57,8 @@ func TestGenerate_GraycodeRepo(t *testing.T) {
 	}
 
 	// Name should be the directory name.
-	if fp.Name != "graycode" {
-		t.Errorf("expected Name='graycode', got %q", fp.Name)
+	if fp.Name != "graycode-cli" {
+		t.Errorf("expected Name='graycode-cli', got %q", fp.Name)
 	}
 
 	t.Logf("Fingerprint: files=%d lines=%d langs=%d deps=%d pm=%s",

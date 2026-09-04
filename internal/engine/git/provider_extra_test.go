@@ -5,13 +5,13 @@ import (
 )
 
 func TestParseGHRepoView_Github(t *testing.T) {
-	jsonStr := `{"owner":{"login":"GrayCodeAI"},"name":"graycode","url":"https://github.com/GrayCodeAI/graycode-cli"}`
+	jsonStr := `{"owner":{"login":"GrayCodeAI"},"name":"graycode-cli","url":"https://github.com/GrayCodeAI/graycode-cli"}`
 	owner, repo, provider := parseGHRepoView(jsonStr)
 	if owner != "GrayCodeAI" {
 		t.Errorf("owner = %q, want %q", owner, "GrayCodeAI")
 	}
-	if repo != "graycode" {
-		t.Errorf("repo = %q, want %q", repo, "graycode")
+	if repo != "graycode-cli" {
+		t.Errorf("repo = %q, want %q", repo, "graycode-cli")
 	}
 	if provider != "github" {
 		t.Errorf("provider = %q, want %q", provider, "github")
@@ -59,8 +59,8 @@ func TestParseGitConfig_Github(t *testing.T) {
 	if owner != "GrayCodeAI" {
 		t.Errorf("owner = %q, want %q", owner, "GrayCodeAI")
 	}
-	if repo != "graycode" {
-		t.Errorf("repo = %q, want %q", repo, "graycode")
+	if repo != "graycode-cli" {
+		t.Errorf("repo = %q, want %q", repo, "graycode-cli")
 	}
 	if provider != "github" {
 		t.Errorf("provider = %q, want %q", provider, "github")
