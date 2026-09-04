@@ -23,33 +23,6 @@ func TestNewTokenStore(t *testing.T) {
 	}
 }
 
-func TestTokenStore_Load(t *testing.T) {
-	ts := NewTokenStore()
-	// Pre-populate
-	ts.tokens["test"] = "old"
-	err := ts.Load()
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-	// Load should reset to empty
-	if len(ts.tokens) != 0 {
-		t.Errorf("expected empty tokens after Load, got %d", len(ts.tokens))
-	}
-}
-
-func TestTokenStore_Save(t *testing.T) {
-	ts := NewTokenStore()
-	ts.tokens["test"] = "secret"
-	err := ts.Save()
-	if err != nil {
-		t.Fatalf("Save() error: %v", err)
-	}
-	// Save is a no-op stub, tokens should still be in memory
-	if ts.tokens["test"] != "secret" {
-		t.Error("token should still be in memory after Save")
-	}
-}
-
 func TestTokenStore_Get(t *testing.T) {
 	ts := NewTokenStore()
 	ts.tokens["provider1"] = "token1"

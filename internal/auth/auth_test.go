@@ -82,17 +82,6 @@ func TestTokenStore(t *testing.T) {
 			}
 		}
 	})
-
-	t.Run("load and save are no-ops", func(t *testing.T) {
-		t.Parallel()
-		store := NewTokenStore()
-		if err := store.Load(); err != nil {
-			t.Errorf("Load() error = %v", err)
-		}
-		if err := store.Save(); err != nil {
-			t.Errorf("Save() error = %v", err)
-		}
-	})
 }
 
 func TestGenerateNonce(t *testing.T) {

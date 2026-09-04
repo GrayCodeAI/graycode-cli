@@ -4,20 +4,14 @@
 package engine
 
 import (
-	"context"
-
 	"github.com/GrayCodeAI/graycode-cli/internal/engine/agent"
 )
 
 type (
-	SubAgentMode   = agent.SubAgentMode
-	SubAgentConfig = agent.SubAgentConfig
-	SubAgentBudget = agent.SubAgentBudget
-	// Deprecated: use Session.SpawnController() and BackgroundAgentManager
-	// (taskruntime-backed) instead. BackgroundAgentPool is retained for
-	// compatibility with older callers and tests.
-	BackgroundAgentPool = agent.BackgroundAgentPool
-	BackgroundResult    = agent.BackgroundResult
+	SubAgentMode     = agent.SubAgentMode
+	SubAgentConfig   = agent.SubAgentConfig
+	SubAgentBudget   = agent.SubAgentBudget
+	BackgroundResult = agent.BackgroundResult
 )
 
 const (
@@ -46,16 +40,3 @@ func FilterToolsForMode(mode SubAgentMode, available []string) []string {
 }
 func DefaultTurnsForMode(mode SubAgentMode) int { return agent.DefaultTurnsForMode(mode) }
 func IsReadOnlyMode(mode SubAgentMode) bool     { return agent.IsReadOnlyMode(mode) }
-
-// Deprecated: prefer Session.SpawnController().SpawnBackground for async
-// sub-agents. Retained for compatibility.
-func NewBackgroundAgentPool() *BackgroundAgentPool { return agent.NewBackgroundAgentPool() }
-
-// Deprecated: prefer Session.SpawnController().SpawnBackground for async
-// sub-agents. Retained for compatibility.
-func NewBackgroundAgentPoolWithContext(ctx context.Context) *BackgroundAgentPool {
-	return agent.NewBackgroundAgentPoolWithContext(ctx)
-}
-
-// Deprecated: prefer SpawnController for background result formatting.
-func FormatResults(results []BackgroundResult) string { return agent.FormatResults(results) }
