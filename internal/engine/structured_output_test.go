@@ -48,7 +48,7 @@ func TestChatStructured_NoSchema(t *testing.T) {
 	s.SetTestClient(mc)
 
 	resp, err := s.ChatStructured(context.Background(),
-		[]types.EyrieMessage{{Role: "user", Content: "hi"}}, types.ChatOptions{}, "")
+		[]types.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, types.ChatOptions{}, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestChatStructured_ValidFirstTry(t *testing.T) {
 	s.SetTestClient(mc)
 
 	_, err := s.ChatStructured(context.Background(),
-		[]types.EyrieMessage{{Role: "user", Content: "describe ada"}}, types.ChatOptions{}, personSchema)
+		[]types.GraycodeRouterMessage{{Role: "user", Content: "describe ada"}}, types.ChatOptions{}, personSchema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestChatStructured_RetryOnceThenSucceeds(t *testing.T) {
 	s.SetTestClient(mc)
 
 	resp, err := s.ChatStructured(context.Background(),
-		[]types.EyrieMessage{{Role: "user", Content: "describe ada"}}, types.ChatOptions{}, personSchema)
+		[]types.GraycodeRouterMessage{{Role: "user", Content: "describe ada"}}, types.ChatOptions{}, personSchema)
 	if err != nil {
 		t.Fatalf("unexpected error after retry: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestChatStructured_RetryOnceThenReturnsError(t *testing.T) {
 	s.SetTestClient(mc)
 
 	resp, err := s.ChatStructured(context.Background(),
-		[]types.EyrieMessage{{Role: "user", Content: "describe"}}, types.ChatOptions{}, personSchema)
+		[]types.GraycodeRouterMessage{{Role: "user", Content: "describe"}}, types.ChatOptions{}, personSchema)
 	if err == nil {
 		t.Fatal("expected schema error after failed retry")
 	}

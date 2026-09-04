@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/eyrie/catalog"
-	eyrieconfig "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/graycode-router/catalog"
+	graycoderouterconfig "github.com/GrayCodeAI/graycode-router/config"
 )
 
 // CompiledCatalogV1 is retained only for lower-level migration/security tests.
@@ -20,7 +20,7 @@ func CompiledCatalogV1() *catalog.CompiledCatalog {
 	return compiled
 }
 
-func deploymentHasSecrets(deployment eyrieconfig.DeploymentConfig) bool {
+func deploymentHasSecrets(deployment graycoderouterconfig.DeploymentConfig) bool {
 	return strings.TrimSpace(deployment.APIKey) != "" || strings.TrimSpace(deployment.Token) != "" ||
 		strings.TrimSpace(deployment.SecretAccessKey) != "" || strings.TrimSpace(deployment.AccessKeyID) != "" ||
 		strings.TrimSpace(deployment.SessionToken) != ""

@@ -7,7 +7,7 @@
     "graycode",
     "sparrow",
     "robin",
-    "eyrie",
+    "graycode-router",
     "kestrel",
     "merlin",
     "shrike",
@@ -15,15 +15,15 @@
     "swift"
   ],
   "dependencies": {
-    "graycode":            ["eyrie", "kestrel", "merlin", "shrike"],
+    "graycode":            ["graycode-router", "kestrel", "merlin", "shrike"],
     "sparrow":     ["graycode"],
     "robin": ["graycode"],
-    "kestrel":           ["graycode", "eyrie"],
+    "kestrel":           ["graycode", "graycode-router"],
     "merlin":         ["graycode"],
     "swift":           [],
     "shrike":             ["graycode"],
     "harrier":            [],
-    "eyrie":           []
+    "graycode-router":           []
   },
   "matrices": [
     {
@@ -33,7 +33,7 @@
         "graycode":            "0.1.0",
         "sparrow":     "0.1.0",
         "robin": "0.1.0",
-        "eyrie":           "0.1.0",
+        "graycode-router":           "0.1.0",
         "kestrel":           "0.1.0",
         "merlin":         "0.1.0",
         "shrike":             "0.1.0",
@@ -48,7 +48,7 @@
         "graycode":            "main",
         "sparrow":     "main",
         "robin": "main",
-        "eyrie":           "main",
+        "graycode-router":           "main",
         "kestrel":           "main",
         "merlin":         "main",
         "shrike":             "main",

@@ -9,7 +9,7 @@ import (
 
 func TestStreamUsageLedgerRecordsDoneOnlyUsage(t *testing.T) {
 	var ledger streamUsageLedger
-	terminal := &types.EyrieUsage{PromptTokens: 13, CompletionTokens: 7, TotalTokens: 20}
+	terminal := &types.GraycodeRouterUsage{PromptTokens: 13, CompletionTokens: 7, TotalTokens: 20}
 
 	if !ledger.shouldRecord(terminal, true) {
 		t.Fatal("done-only usage was dropped")
@@ -18,7 +18,7 @@ func TestStreamUsageLedgerRecordsDoneOnlyUsage(t *testing.T) {
 
 func TestStreamUsageLedgerDoesNotDoubleCountRepeatedDoneUsage(t *testing.T) {
 	var ledger streamUsageLedger
-	usage := &types.EyrieUsage{PromptTokens: 13, CompletionTokens: 7, TotalTokens: 20, CacheReadTokens: 4}
+	usage := &types.GraycodeRouterUsage{PromptTokens: 13, CompletionTokens: 7, TotalTokens: 20, CacheReadTokens: 4}
 
 	if !ledger.shouldRecord(usage, false) {
 		t.Fatal("usage event was dropped")
@@ -30,8 +30,8 @@ func TestStreamUsageLedgerDoesNotDoubleCountRepeatedDoneUsage(t *testing.T) {
 
 func TestStreamUsageLedgerPreservesDistinctContinuationUsage(t *testing.T) {
 	var ledger streamUsageLedger
-	first := &types.EyrieUsage{PromptTokens: 13, CompletionTokens: 7, TotalTokens: 20}
-	second := &types.EyrieUsage{PromptTokens: 20, CompletionTokens: 5, TotalTokens: 25}
+	first := &types.GraycodeRouterUsage{PromptTokens: 13, CompletionTokens: 7, TotalTokens: 20}
+	second := &types.GraycodeRouterUsage{PromptTokens: 20, CompletionTokens: 5, TotalTokens: 25}
 
 	if !ledger.shouldRecord(first, false) || !ledger.shouldRecord(second, false) {
 		t.Fatal("distinct continuation usage was dropped")

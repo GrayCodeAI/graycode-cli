@@ -61,7 +61,7 @@ func (s *SecureStorage) Get(account string) (string, error) {
 	if runtime.GOOS == "windows" {
 		return s.getWindows(account)
 	}
-	// Fallback to file-based storage for Linux (keyring handled by eyrie layer)
+	// Fallback to file-based storage for Linux (keyring handled by graycode-router layer)
 	return s.getFile(account)
 }
 

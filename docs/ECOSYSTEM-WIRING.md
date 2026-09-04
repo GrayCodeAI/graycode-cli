@@ -48,14 +48,14 @@ flowchart TB
 
   subgraph Local[Local-first runtime]
     User[CLI / daemon user] --> Graycode[Graycode composition root]
-    Graycode --> Eyrie[Eyrie facade]
+    Graycode --> GraycodeRouter[GraycodeRouter facade]
     Graycode --> Harrier[Harrier / Harrier facade]
     Graycode --> Shrike[Shrike / Shrike facade]
     Graycode --> Swift[Swift / Swift facade]
     Graycode --> Kestrel[Kestrel / Kestrel facade]
     Graycode --> Merlin[Merlin / Merlin facade]
     Graycode --> Eagle[Eagle neutral contracts]
-    Eyrie --> Eagle
+    GraycodeRouter --> Eagle
     Harrier --> Eagle
     Shrike --> Eagle
     Swift --> Eagle
@@ -88,7 +88,7 @@ flowchart TB
 | Boundary | Owner | Rule |
 |---|---|---|
 | Product orchestration | Graycode | Engines never orchestrate Graycode or one another. |
-| Provider runtime | Eyrie | Graycode imports its supported `engine` facade. |
+| Provider runtime | GraycodeRouter | Graycode imports its supported `engine` facade. |
 | Shared data contracts | Eagle | Neutral types only; no product behavior. |
 | Portable local graph | Source engine/Graycode | Emit bounded `graycode.graph/v1` facts without raw secrets or prompts. |
 | Daemon HTTP API | Graycode | `graycode/api/openapi.yaml` is authoritative. |
@@ -137,15 +137,15 @@ must use `directory`/`github_repo`; UI copy may use `product_name`.
 
 ### Coordinated Go publication gate
 
-The compatible Eagle-migrated Eyrie source is currently ahead of Eyrie's
-published `origin/main`. Do not merge or release Graycode against the older Eyrie
+The compatible Eagle-migrated GraycodeRouter source is currently ahead of GraycodeRouter's
+published `origin/main`. Do not merge or release Graycode against the older GraycodeRouter
 pseudo-version: it still exposes the retired `graycode-core-contracts` types and is
 not type-compatible with Graycode's Eagle boundary.
 
-1. Merge and publish the Eyrie ecosystem-wiring branch first.
+1. Merge and publish the GraycodeRouter ecosystem-wiring branch first.
 2. Resolve that final remote commit to its canonical Go pseudo-version with
-   `go list -m github.com/GrayCodeAI/eyrie@<commit>`.
-3. Update Graycode's Eyrie requirement, run `GOWORK=off go mod tidy`, and remove any
+   `go list -m github.com/GrayCodeAI/graycode-router@<commit>`.
+3. Update Graycode's GraycodeRouter requirement, run `GOWORK=off go mod tidy`, and remove any
    transition excludes no longer required by the published engine graphs.
 4. Require Graycode's `public-modules` and `release-parity` CI jobs to pass before
    merging or tagging Graycode.

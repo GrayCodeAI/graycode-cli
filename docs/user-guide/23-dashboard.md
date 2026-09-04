@@ -9,7 +9,7 @@ The Graycode dashboard provides system status and monitoring information.
 In the TUI:
 
 ```
-/ecosystem         # Ecosystem status (Eyrie, harrier, shrike)
+/ecosystem         # Ecosystem status (GraycodeRouter, harrier, shrike)
 /path              # Developer path readiness
 /preflight         # Quick health check
 ```
@@ -22,7 +22,7 @@ Shows the status of all Graycode components:
 
 | Component | Status |
 |-----------|--------|
-| Eyrie (providers) | Ready / Error |
+| GraycodeRouter (providers) | Ready / Error |
 | harrier (memory) | Connected / Offline |
 | shrike (tokenizer) | Available |
 | swift (session capture) | Ready |

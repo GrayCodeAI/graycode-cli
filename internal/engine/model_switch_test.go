@@ -12,7 +12,7 @@ import (
 func TestSetModelPreservesHistory(t *testing.T) {
 	s := NewSession("anthropic", "claude-sonnet-4-6", "system", nil)
 
-	history := []types.EyrieMessage{
+	history := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "what is 2+2?"},
 		{Role: "assistant", Content: "4"},
 		{Role: "user", Content: "and 3+3?"},

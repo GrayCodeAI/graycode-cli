@@ -8,8 +8,8 @@ For Graycode, the developer path is the minimum local setup required to chat, ed
 
 - A provider credential stored in the OS secret store
 - A model selected in Graycode settings
-- A local model catalog available through eyrie
-- No plaintext API keys left in Eyrie's configured `provider.json` or legacy env files
+- A local model catalog available through graycode-router
+- No plaintext API keys left in GraycodeRouter's configured `provider.json` or legacy env files
 - Safe defaults for Bash execution and filesystem access
 - Optional but healthy ecosystem integrations like harrier memory
 
@@ -63,7 +63,7 @@ validation or `graycode models list <provider> --live`.
 
 ### 3. Select a model
 
-Pick a model in `/config`. Graycode stores the selected model in settings and uses eyrie for provider routing and catalog resolution.
+Pick a model in `/config`. Graycode stores the selected model in settings and uses graycode-router for provider routing and catalog resolution.
 
 If the catalog is missing or empty:
 
@@ -75,11 +75,11 @@ graycode models refresh
 
 `graycode path` treats these as important security conditions:
 
-- Eyrie's resolved `provider.json` must not contain secret fields
+- GraycodeRouter's resolved `provider.json` must not contain secret fields
 - legacy `~/.graycode/env` or `~/.graycode/.env` files should be migrated away
 - sensitive files like provider config and SSH paths should be blocked from agent reads
 
-Eyrie resolves provider state from `EYRIE_CONFIG_DIR` first, then
+GraycodeRouter resolves provider state from `GRAYCODE_ROUTER_CONFIG_DIR` first, then
 `GRAYCODE_CONFIG_DIR` for compatibility, then the platform user-config directory.
 Graycode protects that resolved path even when it is customized or symlinked.
 
@@ -105,7 +105,7 @@ graycode path --strict
 
 `graycode path` also verifies the core support layer behind Graycode:
 
-- `eyrie` for provider routing and local preflight readiness
+- `graycode-router` for provider routing and local preflight readiness
 - `shrike` for token estimation and compression
 - `harrier` for optional persistent memory
 

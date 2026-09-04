@@ -101,7 +101,7 @@ func runEvalLoop(cmd *cobra.Command, _ []string) error {
 	settings := graycodeconfig.LoadGlobalSettings()
 	ctx := context.Background()
 
-	gw, err := graycodeconfig.NewEyrieEngineForSettings(settings)
+	gw, err := graycodeconfig.NewGraycodeRouterEngineForSettings(settings)
 	if err != nil {
 		return fmt.Errorf("eval loop: build engine client: %w", err)
 	}

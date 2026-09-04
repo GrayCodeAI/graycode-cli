@@ -74,7 +74,7 @@ func gatewayCredentialSnapshot(ctx context.Context) map[string]gatewayCredential
 	credSnapMu.Unlock()
 
 	out := make(map[string]gatewayCredentialState)
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err == nil {
 		for _, gateway := range engine.Gateways(ctx) {
 			out[gateway.ID] = gatewayCredentialState{

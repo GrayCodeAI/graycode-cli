@@ -100,7 +100,7 @@ func TestClassifyError_InsufficientCredits(t *testing.T) {
 // cover the maximum-token pre-authorization hold. That must surface as a
 // quota problem, NOT as "check your API key".
 func TestClassifyError_AgnesPreDeductionQuota(t *testing.T) {
-	err := errors.New("eyrie: agnes chat failed (HTTP 403) [request_id=202607300111184425982109LnnftLG]: " +
+	err := errors.New("graycode-router: agnes chat failed (HTTP 403) [request_id=202607300111184425982109LnnftLG]: " +
 		"billing/quota problem — check the provider account's balance and limits — " +
 		"AgnesAI_error: 预扣费额度失败, 用户剩余额度: $0.000740, 需要预扣费额度: $0.002068")
 	result := ClassifyError(err)
@@ -116,7 +116,7 @@ func TestClassifyError_AgnesPreDeductionQuota(t *testing.T) {
 	}
 }
 
-// The eyrie layer tags quota holds as "billing/quota problem"; a bare hint
+// The graycode-router layer tags quota holds as "billing/quota problem"; a bare hint
 // (without the full Agnes body) must still be classified as a quota problem.
 func TestClassifyError_QuotaHintOnly(t *testing.T) {
 	err := errors.New("billing/quota problem — check the provider account's balance and limits")

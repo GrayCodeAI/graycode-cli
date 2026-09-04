@@ -18,7 +18,7 @@ graycode-eco/
 ├── graycode                 # product, CLI, daemon, orchestration, policy
 ├── eagle                # shared neutral contracts
 ├── falcon               # shared MCP transport/handler kit
-├── eyrie                # provider runtime (product label: Eyrie)
+├── graycode-router                # provider runtime (product label: GraycodeRouter)
 ├── harrier              # memory engine (product label: Harrier)
 ├── shrike               # token/context engine (product label: Shrike)
 ├── swift                # provenance engine (product label: Swift)
@@ -37,7 +37,7 @@ graycode-eco/
 ```text
 sparrow / robin / wren ── Graycode daemon API ──> graycode <── skill API ── starling
                                              │
-                                             ├── eyrie/engine
+                                             ├── graycode-router/engine
                                              ├── harrier       (Harrier)
                                              ├── shrike        (Shrike)
                                              ├── swift/cli     (Swift)
@@ -45,7 +45,7 @@ sparrow / robin / wren ── Graycode daemon API ──> graycode <── skill
                                              ├── merlin        (Merlin)
                                              └── eagle
 
-eyrie / harrier / shrike / swift / kestrel / merlin ──> eagle (as needed)
+graycode-router / harrier / shrike / swift / kestrel / merlin ──> eagle (as needed)
 harrier / kestrel / merlin ──> falcon ──> mark3labs/mcp-go
 ```
 
@@ -69,7 +69,7 @@ CI must test both workspace mode and `GOWORK=off` module mode.
 
 ```text
 Graycode local runtime
-  ├── Eyrie provider generation
+  ├── GraycodeRouter provider generation
   ├── Harrier memory and retrieval
   ├── Shrike token budgeting/compression
   ├── Swift swift/provenance
@@ -129,7 +129,7 @@ corresponding engine facade rather than exporting implementation types further.
 5. Deploy GrayCode Platform independently after its Worker/BFF contract tests
    pass.
 
-The current local Eyrie checkout is Eagle-compatible, but Graycode's published
-Eyrie pin still has a transitive `graycode-core-contracts` dependency. That is a
+The current local GraycodeRouter checkout is Eagle-compatible, but Graycode's published
+GraycodeRouter pin still has a transitive `graycode-core-contracts` dependency. That is a
 release-order issue, not a reason to add a local `replace` directive or a
 platform dependency.

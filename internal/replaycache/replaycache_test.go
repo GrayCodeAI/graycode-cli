@@ -10,7 +10,7 @@ import (
 )
 
 func TestKeyDeterministic(t *testing.T) {
-	msgs := []types.EyrieMessage{{Role: "user", Content: "hello"}}
+	msgs := []types.GraycodeRouterMessage{{Role: "user", Content: "hello"}}
 	k1 := Key("fp", "anthropic", "claude", msgs, 100)
 	k2 := Key("fp", "anthropic", "claude", msgs, 100)
 	if k1 != k2 {
@@ -39,8 +39,8 @@ func TestFingerprintHidesSecrets(t *testing.T) {
 
 func TestPutGetResponseRoundTrip(t *testing.T) {
 	c := New(t.TempDir())
-	key := Key("fp", "p", "m", []types.EyrieMessage{{Role: "user", Content: "hi"}}, 10)
-	want := &types.EyrieResponse{Content: "cached answer", FinishReason: "end_turn"}
+	key := Key("fp", "p", "m", []types.GraycodeRouterMessage{{Role: "user", Content: "hi"}}, 10)
+	want := &types.GraycodeRouterResponse{Content: "cached answer", FinishReason: "end_turn"}
 	if err := c.Put(key, want); err != nil {
 		t.Fatal(err)
 	}
@@ -58,8 +58,8 @@ func TestPutGetResponseRoundTrip(t *testing.T) {
 
 func TestStreamRoundTrip(t *testing.T) {
 	c := New(t.TempDir())
-	key := Key("fp", "p", "m", []types.EyrieMessage{{Role: "user", Content: "s"}}, 10)
-	events := []types.EyrieStreamEvent{
+	key := Key("fp", "p", "m", []types.GraycodeRouterMessage{{Role: "user", Content: "s"}}, 10)
+	events := []types.GraycodeRouterStreamEvent{
 		{Type: "content", Content: "hel"},
 		{Type: "content", Content: "lo"},
 		{Type: "done", StopReason: "end_turn"},
@@ -80,7 +80,7 @@ func TestFilesAreNotWorldReadable(t *testing.T) {
 	dir := t.TempDir()
 	c := New(dir)
 	key := Key("fp", "p", "m", nil, 0)
-	if err := c.Put(key, &types.EyrieResponse{Content: "x"}); err != nil {
+	if err := c.Put(key, &types.GraycodeRouterResponse{Content: "x"}); err != nil {
 		t.Fatal(err)
 	}
 	matches, _ := filepath.Glob(filepath.Join(dir, "resp", "*", "*.json"))
@@ -110,11 +110,11 @@ func TestPutStreamEmptyErrors(t *testing.T) {
 
 func TestEntriesCountsBothKinds(t *testing.T) {
 	c := New(t.TempDir())
-	k := Key("fp", "p", "m", []types.EyrieMessage{{Role: "user", Content: "e"}}, 5)
-	if err := c.Put(k, &types.EyrieResponse{Content: "r"}); err != nil {
+	k := Key("fp", "p", "m", []types.GraycodeRouterMessage{{Role: "user", Content: "e"}}, 5)
+	if err := c.Put(k, &types.GraycodeRouterResponse{Content: "r"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := c.PutStream(k, []types.EyrieStreamEvent{{Type: "done"}}); err != nil {
+	if err := c.PutStream(k, []types.GraycodeRouterStreamEvent{{Type: "done"}}); err != nil {
 		t.Fatal(err)
 	}
 	if got := c.Entries(); got != 2 {
@@ -124,7 +124,7 @@ func TestEntriesCountsBothKinds(t *testing.T) {
 
 func TestJSONStableAcrossMarshalOrder(t *testing.T) {
 	// The canonical key must not depend on Go struct marshaling order.
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "q"},
 		{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{Name: "Bash", Arguments: map[string]interface{}{"command": "ls"}}}, ToolResults: []types.ToolResult{{Content: "out", IsError: true}}},
 	}

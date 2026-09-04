@@ -11,7 +11,7 @@ The repository directory and product-name distinction is intentional:
 | Directory/repository | Product or role |
 |---|---|
 | `graycode` | Graycode product and orchestration root |
-| `eyrie` | Eyrie provider runtime |
+| `graycode-router` | GraycodeRouter provider runtime |
 | `harrier` | Harrier memory engine |
 | `shrike` | Shrike token/context engine |
 | `swift` | Swift provenance engine |
@@ -37,7 +37,7 @@ graycode-eco/
 ├── graycode                 # product / composition root
 ├── eagle                # neutral contracts foundation
 ├── falcon               # MCP foundation
-├── eyrie                # Eyrie provider engine
+├── graycode-router                # GraycodeRouter provider engine
 ├── harrier              # Harrier memory engine
 ├── shrike               # Shrike context engine
 ├── swift                # Swift engine
@@ -60,7 +60,7 @@ published versions pinned in each `go.mod`.
 ```text
 sparrow / robin / wren ── HTTP/OpenAPI ──> graycode <── skill surface ── starling
                                              │
-                                             ├── eyrie/engine
+                                             ├── graycode-router/engine
                                              ├── harrier       (Harrier)
                                              ├── shrike        (Shrike)
                                              ├── swift/cli     (Swift)
@@ -97,7 +97,7 @@ contract parity checks, and Graycode-centered dependency direction all exist.
 The remaining proposed work is boundary refinement rather than repository
 reorganization:
 
-1. publish the Eagle-migrated Eyrie revision and update Graycode's standalone pin;
+1. publish the Eagle-migrated GraycodeRouter revision and update Graycode's standalone pin;
 2. remove the transitional `graycode-core-contracts` dependency from the published
    module graph;
 3. decide whether graph/projection packages should remain explicit Graycode
@@ -108,7 +108,7 @@ reorganization:
 ## Allowed dependency edges
 
 ```text
-graycode -> eyrie / harrier / shrike / swift / kestrel / merlin / eagle
+graycode -> graycode-router / harrier / shrike / swift / kestrel / merlin / eagle
 engines -> eagle                  # only for shared contracts
 harrier / kestrel / merlin -> falcon
 sparrow / robin / wren -> Graycode public HTTP/OpenAPI surface

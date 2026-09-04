@@ -4,7 +4,7 @@ Graycode treats the agent runtime as a product boundary around provider output.
 
 ## Tool-Call Path
 
-1. Eyrie normalizes provider protocol responses.
+1. GraycodeRouter normalizes provider protocol responses.
 2. Graycode validates and resolves tool metadata.
 3. Permission and sandbox policy runs before execution.
 4. Tool execution observes timeouts, cancellation, and path boundaries.
@@ -23,7 +23,7 @@ interchangeable.
 
 The harness is testable without live providers through scripted providers and
 recorded interactions. Provider protocol and behavioral conformance belongs in
-Eyrie's verification package; Graycode owns host-level UX, permissions, persistence,
+GraycodeRouter's verification package; Graycode owns host-level UX, permissions, persistence,
 and review contracts.
 
 ## Security Rule

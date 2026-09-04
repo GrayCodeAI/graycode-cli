@@ -151,7 +151,7 @@ func (s *LifecycleService) StartContext(ctx context.Context, lastUserMsg string)
 // Finalize performs lifecycle bookkeeping from immutable session snapshots.
 // It intentionally accepts data rather than *Session so the lifecycle layer
 // cannot reach through the god object for unrelated state.
-func (s *LifecycleService) Finalize(ctx context.Context, messages []types.EyrieMessage, success bool, duration time.Duration, totalCost float64) {
+func (s *LifecycleService) Finalize(ctx context.Context, messages []types.GraycodeRouterMessage, success bool, duration time.Duration, totalCost float64) {
 	if s == nil {
 		return
 	}

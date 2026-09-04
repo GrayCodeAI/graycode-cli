@@ -17,7 +17,7 @@ type (
 func NewTokenPredictor() *TokenPredictor                { return token.NewTokenPredictor() }
 func NewTokenReporter(sessionBudget int) *TokenReporter { return token.NewTokenReporter(sessionBudget) }
 
-func DynamicMaxTokens(messages []types.EyrieMessage, contextSize int, taskType string) int {
+func DynamicMaxTokens(messages []types.GraycodeRouterMessage, contextSize int, taskType string) int {
 	return token.DynamicMaxTokens(messages, contextSize, taskType)
 }
 func ClassifyTaskComplexity(task string) string { return token.ClassifyTaskComplexity(task) }
@@ -33,5 +33,5 @@ func CountTokensFast(text string) int { return token.CountTokensFast(text) }
 func CompressForContext(text string, budget int) (string, int) {
 	return token.CompressForContext(text, budget)
 }
-func EstimateTokens(msgs []types.EyrieMessage) int   { return token.EstimateTokens(msgs) }
-func EstimateMessageTokens(m types.EyrieMessage) int { return token.EstimateMessageTokens(m) }
+func EstimateTokens(msgs []types.GraycodeRouterMessage) int   { return token.EstimateTokens(msgs) }
+func EstimateMessageTokens(m types.GraycodeRouterMessage) int { return token.EstimateMessageTokens(m) }

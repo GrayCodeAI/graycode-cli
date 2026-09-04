@@ -84,13 +84,13 @@ func runEvalTools(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	tools := registry.EyrieTools()
+	tools := registry.GraycodeRouterTools()
 
 	// caller performs one tool-aware turn and reports the first tool the model
 	// chose (if any). It does not execute the tool — we are scoring selection,
 	// not effects.
 	caller := func(ctx context.Context, c eval.ToolUseCase) (eval.ObservedCall, error) {
-		resp, err := sess.Chat(ctx, []types.EyrieMessage{
+		resp, err := sess.Chat(ctx, []types.GraycodeRouterMessage{
 			{Role: "user", Content: c.Prompt},
 		}, types.ChatOptions{Model: model, Tools: tools})
 		if err != nil {

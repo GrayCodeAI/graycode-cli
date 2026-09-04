@@ -8,7 +8,7 @@ import (
 
 const testProvider = "anthropic"
 
-// testTierModels loads haiku/sonnet/opus model IDs from eyrie's catalog (not hardcoded).
+// testTierModels loads haiku/sonnet/opus model IDs from graycode-router's catalog (not hardcoded).
 func testTierModels(t *testing.T, provider string) (haiku, sonnet, opus string) {
 	t.Helper()
 	haiku = routing.PreferredModelForTier(provider, routing.TierHaiku, "")

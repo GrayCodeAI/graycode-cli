@@ -111,15 +111,15 @@ func (s *Session) smartCompactBody(ctx context.Context) {
 	}
 
 	tail := raw[len(raw)-keepEnd:]
-	keep := make([]types.EyrieMessage, 0, len(tail)+2)
-	keep = append(keep, types.EyrieMessage{
+	keep := make([]types.GraycodeRouterMessage, 0, len(tail)+2)
+	keep = append(keep, types.GraycodeRouterMessage{
 		Role:    "user",
 		Content: "[Conversation summary]\n" + summary + "\n\n[Continue from the recent messages below.]",
 	})
 	// Only emit the assistant ack when the tail starts with a user message;
 	// two adjacent assistant messages are rejected by OpenAI-compat providers.
 	if len(tail) == 0 || tail[0].Role != "assistant" {
-		keep = append(keep, types.EyrieMessage{
+		keep = append(keep, types.GraycodeRouterMessage{
 			Role:    "assistant",
 			Content: "Understood. I have the context from the summary above. Continuing.",
 		})
@@ -133,7 +133,7 @@ func (s *Session) smartCompactBody(ctx context.Context) {
 // window on very long transcripts.
 const summaryInputRuneCap = 32_000
 
-func (s *Session) generateSummary(ctx context.Context, raw []types.EyrieMessage) string {
+func (s *Session) generateSummary(ctx context.Context, raw []types.GraycodeRouterMessage) string {
 	// Incremental compaction: if a prior summary was persisted by an earlier
 	// compaction, merge the NEW messages into it rather than re-summarizing the
 	// entire conversation from scratch. This preserves already-captured context
@@ -152,9 +152,9 @@ func (s *Session) generateSummary(ctx context.Context, raw []types.EyrieMessage)
 
 	// Build a compact version of the conversation for summarization
 	// using the structured compaction prompt from compact_prompt.go
-	var summaryMsgs []types.EyrieMessage
+	var summaryMsgs []types.GraycodeRouterMessage
 	compactPrompt := BuildIncrementalCompactPrompt(prior)
-	summaryMsgs = append(summaryMsgs, types.EyrieMessage{
+	summaryMsgs = append(summaryMsgs, types.GraycodeRouterMessage{
 		Role:    "user",
 		Content: compactPrompt + "\n\nConversation:\n",
 	})
@@ -267,7 +267,7 @@ func CompressMessageContent(content string, maxTokens int) string {
 }
 
 // compactModel returns the cheapest available model for the current provider.
-// Queries eyrie's catalog at runtime — no hardcoded model names.
+// Queries graycode-router's catalog at runtime — no hardcoded model names.
 // Summarization doesn't need frontier reasoning, so the cheapest model suffices.
 func (s *Session) compactModel() string {
 	provider := strings.ToLower(s.ChatLLM().Provider())

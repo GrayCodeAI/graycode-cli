@@ -42,7 +42,7 @@ func BuildIncrementalCompactPrompt(priorSummary string) string {
 	return compact.BuildIncrementalCompactPrompt(priorSummary)
 }
 
-func ExtractPriorSummary(msgs []types.EyrieMessage) string {
+func ExtractPriorSummary(msgs []types.GraycodeRouterMessage) string {
 	return compact.ExtractPriorSummary(msgs)
 }
 
@@ -51,7 +51,7 @@ func ExtractPriorSummary(msgs []types.EyrieMessage) string {
 const PriorSummaryPrefix = compact.PriorSummaryPrefix
 
 func IsCompactableTool(name string) bool { return compact.IsCompactableTool(name) }
-func AdjustIndexToPreserveAPIInvariants(msgs []types.EyrieMessage, startIdx int) int {
+func AdjustIndexToPreserveAPIInvariants(msgs []types.GraycodeRouterMessage, startIdx int) int {
 	return compact.AdjustIndexToPreserveAPIInvariants(msgs, startIdx)
 }
-func HasTextContent(m types.EyrieMessage) bool { return compact.HasTextContent(m) }
+func HasTextContent(m types.GraycodeRouterMessage) bool { return compact.HasTextContent(m) }

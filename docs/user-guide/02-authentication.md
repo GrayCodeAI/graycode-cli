@@ -1,6 +1,6 @@
 # Authentication
 
-Graycode supports several authentication methods, including API key configuration through the TUI and multi-provider support via Eyrie.
+Graycode supports several authentication methods, including API key configuration through the TUI and multi-provider support via GraycodeRouter.
 
 ---
 
@@ -49,7 +49,7 @@ base URL is `https://api.fireworks.ai/inference/v1`. See the official
 
 ## Provider Configuration
 
-Graycode uses Eyrie for provider routing, health checks, and retry logic. To configure providers:
+Graycode uses GraycodeRouter for provider routing, health checks, and retry logic. To configure providers:
 
 ```bash
 # In the TUI, press /config to open provider settings
@@ -75,7 +75,7 @@ Or export:
 export GRAYCODE_DEPLOYMENT_ROUTING=true
 ```
 
-Graycode will route canonical model IDs through Eyrie's deployment catalog. Refresh the catalog with:
+Graycode will route canonical model IDs through GraycodeRouter's deployment catalog. Refresh the catalog with:
 
 ```
 /refresh-model-catalog
@@ -185,7 +185,7 @@ Check credential status at any time:
 graycode credentials status
 ```
 
-This verifies keychain entries and validates Eyrie's provider status.
+This verifies keychain entries and validates GraycodeRouter's provider status.
 
 ---
 
@@ -203,7 +203,7 @@ During a session, the active method handles all refreshes.
 
 ## Multi-Provider Support
 
-Graycode works with any LLM provider through Eyrie's adapter system:
+Graycode works with any LLM provider through GraycodeRouter's adapter system:
 
 | Provider | Status |
 |----------|--------|

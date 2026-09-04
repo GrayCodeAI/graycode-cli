@@ -22,11 +22,11 @@ separate end-user products.
 
 ## Support engines
 
-### `eyrie`
-Graycode provider engine. Its public host boundary is `eyrie/engine`, which owns
+### `graycode-router`
+Graycode provider engine. Its public host boundary is `graycode-router/engine`, which owns
 credentials, provider state, catalog discovery, model/deployment selection,
 transport, resilience, and normalized generation/streaming. Graycode production
-code has zero imports of Eyrie's lower-level packages.
+code has zero imports of GraycodeRouter's lower-level packages.
 
 ### `harrier` (Harrier)
 Graycode memory engine.
@@ -45,7 +45,7 @@ Graycode verification engine.
 
 All six support engines are peers:
 
-- `eyrie`
+- `graycode-router`
 - `harrier` (Harrier)
 - `shrike` (Shrike)
 - `swift` (Swift)

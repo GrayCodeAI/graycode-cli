@@ -83,7 +83,7 @@ func TestCountClearableToolResults(t *testing.T) {
 
 func TestIsThinkingMessage(t *testing.T) {
 	// Empty message
-	result := isThinkingMessage(types.EyrieMessage{})
+	result := isThinkingMessage(types.GraycodeRouterMessage{})
 	if result {
 		t.Error("expected false for empty message")
 	}
@@ -130,7 +130,7 @@ func TestReadSessionMemory_NonExistent(t *testing.T) {
 
 func TestIsCompactBoundary(t *testing.T) {
 	// Empty message
-	result := IsCompactBoundary(types.EyrieMessage{})
+	result := IsCompactBoundary(types.GraycodeRouterMessage{})
 	if result {
 		t.Error("expected false for empty message")
 	}

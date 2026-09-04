@@ -16,7 +16,7 @@ const bytesPerToken = 4
 
 // estTokens estimates the token cost of a message from its text plus tool
 // payload sizes.
-func estTokens(m types.EyrieMessage) int {
+func estTokens(m types.GraycodeRouterMessage) int {
 	n := len(m.Content)
 	for _, tu := range m.ToolUse {
 		if s, ok := tu.Arguments["_raw"]; ok {
@@ -45,7 +45,7 @@ func estTokens(m types.EyrieMessage) int {
 //
 // Returns (msgs, false) unchanged when already under budget or there is no
 // compressible middle.
-func CompressTrajectory(msgs []types.EyrieMessage, targetTokens, protectFirst, protectLast int) ([]types.EyrieMessage, bool) {
+func CompressTrajectory(msgs []types.GraycodeRouterMessage, targetTokens, protectFirst, protectLast int) ([]types.GraycodeRouterMessage, bool) {
 	if len(msgs) == 0 || targetTokens <= 0 {
 		return msgs, false
 	}
@@ -72,9 +72,9 @@ func CompressTrajectory(msgs []types.EyrieMessage, targetTokens, protectFirst, p
 	middle := msgs[protectFirst : len(msgs)-protectLast]
 
 	summary := summarizeMiddle(middle)
-	out := make([]types.EyrieMessage, 0, len(head)+len(tail)+1)
+	out := make([]types.GraycodeRouterMessage, 0, len(head)+len(tail)+1)
 	out = append(out, head...)
-	out = append(out, types.EyrieMessage{
+	out = append(out, types.GraycodeRouterMessage{
 		Role:    "user",
 		Content: "[compressed middle: " + summary + "]",
 	})
@@ -85,7 +85,7 @@ func CompressTrajectory(msgs []types.EyrieMessage, targetTokens, protectFirst, p
 // summarizeMiddle reduces the middle region to a compact one-line digest. It
 // counts turns and tool calls and captures the last user request, which is the
 // most task-relevant signal for a human checkpoint.
-func summarizeMiddle(middle []types.EyrieMessage) string {
+func summarizeMiddle(middle []types.GraycodeRouterMessage) string {
 	turns := len(middle)
 	toolCalls := 0
 	lastUser := ""

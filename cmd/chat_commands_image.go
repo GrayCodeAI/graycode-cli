@@ -17,7 +17,7 @@ import (
 //
 // It reads an image (or PDF) file, builds a multimodal user message gated on the
 // active model's vision capability, and starts a turn. For PDFs the text is
-// extracted and injected inline (eyrie has no native document block). Without a
+// extracted and injected inline (graycode-router has no native document block). Without a
 // vision-capable model the image degrades to a text-only note.
 func (m *chatModel) handleImageCommand(parts []string, text string) (tea.Model, tea.Cmd) {
 	if len(parts) < 2 {

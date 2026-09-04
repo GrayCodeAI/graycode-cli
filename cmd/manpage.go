@@ -39,7 +39,7 @@ func GenerateManPage() string {
 	b.WriteString("\n")
 
 	// Name
-	b.WriteString(".SH NAME\ngraycode \\- AI coding agent powered by eyrie\n")
+	b.WriteString(".SH NAME\ngraycode \\- AI coding agent powered by graycode-router\n")
 
 	// Synopsis
 	b.WriteString(".SH SYNOPSIS\n")
@@ -48,7 +48,7 @@ func GenerateManPage() string {
 	// Description
 	b.WriteString(".SH DESCRIPTION\n")
 	b.WriteString("graycode is an AI coding agent that reads, writes, and runs code in your terminal.\n")
-	fmt.Fprintf(&b, "It connects to %d first-class LLM providers through eyrie, executes tools (file I/O,\n", registeredProviderCount())
+	fmt.Fprintf(&b, "It connects to %d first-class LLM providers through graycode-router, executes tools (file I/O,\n", registeredProviderCount())
 	b.WriteString("shell, git, web search), and manages sessions from a keyboard-driven TUI\n")
 	b.WriteString("or headless mode for scripts and CI.\n")
 

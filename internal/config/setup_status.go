@@ -45,16 +45,16 @@ func evaluateSetupFrom(hasCreds, hasModel bool) SetupState {
 	return st
 }
 
-// HasConfiguredDeployment reports whether at least one eyrie deployment has credentials.
+// HasConfiguredDeployment reports whether at least one graycode-router deployment has credentials.
 func HasConfiguredDeployment(ctx context.Context) bool {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	return err == nil && engine.EffectiveSelection(ctx, SelectionOptions{}).HasConfiguredDeployment
 }
 
-// HasSelectedModel reports whether eyrie provider.json has a selected model.
+// HasSelectedModel reports whether graycode-router provider.json has a selected model.
 func HasSelectedModel() bool {
 	return strings.TrimSpace(ActiveModel(context.Background())) != ""
 }

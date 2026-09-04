@@ -16,7 +16,7 @@ import (
 // xAI-compatible chat-completions endpoint with server-side X search enabled,
 // returning the model's summarized answer. Adopted from grok-cli's search_x
 // (server-side search tooling rather than a bespoke crawler). Inline HTTP,
-// boundary-compliant (no eyrie/client import), httptest-testable.
+// boundary-compliant (no graycode-router/client import), httptest-testable.
 type SearchXTool struct{}
 
 func (SearchXTool) Name() string      { return "SearchX" }

@@ -8,7 +8,7 @@ import (
 )
 
 func TestRuntimeMessageRoundTrip(t *testing.T) {
-	in := []types.EyrieMessage{
+	in := []types.GraycodeRouterMessage{
 		{
 			Role:    "assistant",
 			Content: "working",

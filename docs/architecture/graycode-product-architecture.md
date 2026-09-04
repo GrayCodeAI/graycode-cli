@@ -10,8 +10,8 @@ repositories. It is not a monorepo or a runtime product.
 Graycode is the only primary product surface in the graycode-eco ecosystem. The support repos exist to power Graycode, not to compete with it as standalone products.
 
 For model execution specifically: **Graycode is the face and composition layer;
-Eyrie is the engine.** Graycode owns the conversation and product experience while
-the `eyrie/engine` facade owns the complete provider path from credential and
+GraycodeRouter is the engine.** Graycode owns the conversation and product experience while
+the `graycode-router/engine` facade owns the complete provider path from credential and
 catalog state through model selection and normalized generation/streaming.
 
 ## Goals
@@ -26,7 +26,7 @@ catalog state through model selection and normalized generation/streaming.
 ## Target repo set
 
 - `graycode`
-- `eyrie`
+- `graycode-router`
 - `harrier`
 - `shrike`
 - `swift`
@@ -57,7 +57,7 @@ Users / SDKs / Skills
         |                             |
         v                             v
  core execution                 trust / quality
- eyrie  harrier  shrike              swift  kestrel  merlin
+ graycode-router  harrier  shrike              swift  kestrel  merlin
         \    |    /                 \    |    /
          \   |   /                   \   |   /
           +--+--+---------------------+--+--+
@@ -72,7 +72,7 @@ Current implementation in the workspace:
 
 ```text
 graycode
-  -> eyrie
+  -> graycode-router
   -> harrier
   -> shrike
   -> swift
@@ -97,7 +97,7 @@ SDKs / Skills / future integrations
    +------------+------------+------------+------------+------------+------------+
    |            |            |            |            |            |            |
    v            v            v            v            v            v            v
- Eyrie        Harrier         Shrike         Swift        Kestrel       Merlin    public APIs
+ GraycodeRouter        Harrier         Shrike         Swift        Kestrel       Merlin    public APIs
    \            |            |            |            |            /
     +-----------+------------+------------+------------+-----------+
                                  |
@@ -137,8 +137,8 @@ Graycode does not own:
 
 ## Engine responsibilities
 
-### `eyrie`
-- stable host control and generation facade (`eyrie/engine`)
+### `graycode-router`
+- stable host control and generation facade (`graycode-router/engine`)
 - credential storage and safe credential status
 - catalog discovery and model metadata
 - concrete provider/deployment selection
@@ -181,20 +181,20 @@ Graycode does not own:
 
 1. User invokes `graycode`.
 2. Graycode loads product settings, policy, and workspace state, then creates an
-   Eyrie Engine with effective per-instance custom gateway settings.
+   GraycodeRouter Engine with effective per-instance custom gateway settings.
 3. Graycode creates or resumes a session.
 4. Graycode asks `shrike` for context assembly.
 5. Graycode asks `harrier` for relevant memory.
-6. Graycode routes provider execution through `eyrie`.
+6. Graycode routes provider execution through `graycode-router`.
 7. Graycode invokes tools and records actions through `swift`.
 8. Graycode invokes `kestrel` when review should run.
 9. Graycode invokes `merlin` when verification should run.
 10. Graycode persists results and returns output to the user.
 
 At step 6, Graycode passes intent and Graycode-owned conversation DTOs through its
-adapter. Eyrie loads provider/catalog/credential state, resolves the gateway,
+adapter. GraycodeRouter loads provider/catalog/credential state, resolves the gateway,
 and returns normalized events. No production Graycode package imports a lower
-Eyrie package, and no Eyrie engine DTO is used as Graycode's persistent or CLI
+GraycodeRouter package, and no GraycodeRouter engine DTO is used as Graycode's persistent or CLI
 schema.
 
 ## Implementation phases
@@ -227,8 +227,8 @@ Status:
 Status:
 - completed for the local runtime boundary
 - Graycode owns runtime DTOs and review/verify product-boundary contracts
-- Graycode's `ChatClient` anti-corruption port translates only to `eyrie/engine`
-- all lower-level Eyrie production imports are forbidden by shell guards and meta-audit tests
+- Graycode's `ChatClient` anti-corruption port translates only to `graycode-router/engine`
+- all lower-level GraycodeRouter production imports are forbidden by shell guards and meta-audit tests
 
 ### Phase 5
 - align SDKs and skills to Graycode public interfaces only

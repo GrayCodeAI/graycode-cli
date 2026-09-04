@@ -11,7 +11,7 @@ import (
 	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 )
 
-// configModelOption is one row in the /config model picker (display from eyrie, id for settings).
+// configModelOption is one row in the /config model picker (display from graycode-router, id for settings).
 type configModelOption struct {
 	ID               string
 	CanonicalID      string
@@ -74,7 +74,7 @@ func fetchModelsAsync(provider string) tea.Cmd {
 		if err != nil {
 			return modelsFetchedMsg{provider: provider, err: err}
 		}
-		opts := configModelOptionsFromEyrie(entries)
+		opts := configModelOptionsFromGraycodeRouter(entries)
 		if len(opts) > 0 {
 			modelCacheMu.Lock()
 			modelCache[provider] = opts
@@ -84,7 +84,7 @@ func fetchModelsAsync(provider string) tea.Cmd {
 	}
 }
 
-func configModelOptionsFromEyrie(entries []graycodeconfig.EngineModel) []configModelOption {
+func configModelOptionsFromGraycodeRouter(entries []graycodeconfig.EngineModel) []configModelOption {
 	opts := make([]configModelOption, len(entries))
 	for i, e := range entries {
 		opts[i] = configModelOption{
@@ -180,7 +180,7 @@ func ensureModelCacheLoaded(provider string) {
 		modelSyncMu.Unlock()
 		return
 	}
-	opts := configModelOptionsFromEyrie(entries)
+	opts := configModelOptionsFromGraycodeRouter(entries)
 	modelCacheMu.Lock()
 	modelCache[provider] = opts
 	modelCacheMu.Unlock()
@@ -252,7 +252,7 @@ func loadConfigModelOptions(provider string) []configModelOption {
 	modelCacheMu.RUnlock()
 	entries, err := graycodeconfig.ListEngineModels(context.Background(), provider, false)
 	if err == nil && len(entries) > 0 {
-		opts := configModelOptionsFromEyrie(entries)
+		opts := configModelOptionsFromGraycodeRouter(entries)
 		modelCacheMu.Lock()
 		modelCache[provider] = opts
 		modelCacheMu.Unlock()

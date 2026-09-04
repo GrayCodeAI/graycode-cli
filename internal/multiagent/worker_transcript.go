@@ -55,16 +55,16 @@ func IsTranscriptComplete(path string) (bool, bool, error) {
 	return found, false, nil
 }
 
-// LoadTranscript reads a transcript file back into EyrieMessages. The final
+// LoadTranscript reads a transcript file back into GraycodeRouterMessages. The final
 // __complete record (if any) is returned separately as handoff+true.
-func LoadTranscript(path string) ([]types.EyrieMessage, *Handoff, bool, error) {
+func LoadTranscript(path string) ([]types.GraycodeRouterMessage, *Handoff, bool, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, nil, false, err
 	}
 	defer func() { _ = f.Close() }()
 
-	var messages []types.EyrieMessage
+	var messages []types.GraycodeRouterMessage
 	var handoff *Handoff
 	var complete bool
 
@@ -86,7 +86,7 @@ func LoadTranscript(path string) ([]types.EyrieMessage, *Handoff, bool, error) {
 			continue
 		}
 
-		var msg types.EyrieMessage
+		var msg types.GraycodeRouterMessage
 		if err := json.Unmarshal(line, &msg); err != nil {
 			// Skip malformed lines rather than failing the whole load.
 			continue
@@ -127,13 +127,13 @@ func (w *PersistWriter) Path() string {
 }
 
 // Write appends one message to the transcript.
-func (w *PersistWriter) Write(msg types.EyrieMessage) error {
+func (w *PersistWriter) Write(msg types.GraycodeRouterMessage) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return w.writeLocked(msg)
 }
 
-func (w *PersistWriter) writeLocked(msg types.EyrieMessage) error {
+func (w *PersistWriter) writeLocked(msg types.GraycodeRouterMessage) error {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return fmt.Errorf("marshal transcript message: %w", err)

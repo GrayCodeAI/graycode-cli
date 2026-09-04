@@ -68,14 +68,14 @@ func TestIntegration_FullSessionFlow(t *testing.T) {
 
 	// Simulate the engine receiving an assistant text reply + tool call + tool result
 	// by manually building the message sequence that agentLoop would produce.
-	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.EyrieMessage{
+	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.GraycodeRouterMessage{
 		Role:    "assistant",
 		Content: "Sure, let me check that file.",
 		ToolUse: []types.ToolCall{
 			{ID: "tc-1", Name: "Bash", Arguments: map[string]interface{}{"command": "echo hello"}},
 		},
 	}))
-	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.EyrieMessage{
+	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.GraycodeRouterMessage{
 		Role: "user",
 		ToolResults: []types.ToolResult{{
 			ToolUseID: "tc-1",
@@ -83,7 +83,7 @@ func TestIntegration_FullSessionFlow(t *testing.T) {
 			IsError:   false,
 		}},
 	}))
-	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.EyrieMessage{
+	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.GraycodeRouterMessage{
 		Role:    "assistant",
 		Content: "The command ran successfully and returned 'hello'.",
 	}))

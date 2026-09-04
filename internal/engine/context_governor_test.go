@@ -51,7 +51,7 @@ func TestMaybeSpillToolOutput_LargeSpills(t *testing.T) {
 
 func TestManageContextBeforeTurn_CollapseOnly(t *testing.T) {
 	s := NewSession("", "test-model", "sys", nil)
-	s.Persistence().SetRawMessages([]types.EyrieMessage{
+	s.Persistence().SetRawMessages([]types.GraycodeRouterMessage{
 		{Role: "user", ToolResults: []types.ToolResult{{Content: "err", IsError: true}}},
 		{Role: "user", ToolResults: []types.ToolResult{{Content: "err", IsError: true}}},
 	})

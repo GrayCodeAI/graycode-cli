@@ -1,5 +1,5 @@
 // Package recipe also provides declarative provider configuration.
-// This file implements YAML-based provider definitions compatible with eyrie.
+// This file implements YAML-based provider definitions compatible with graycode-router.
 package recipe
 
 import (

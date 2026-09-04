@@ -16,7 +16,7 @@ var (
 
 const catalogHealthCacheTTL = 15 * time.Second
 
-// CatalogHealth summarizes the on-disk eyrie model catalog for doctor / status output.
+// CatalogHealth summarizes the on-disk graycode-router model catalog for doctor / status output.
 type CatalogHealth struct {
 	CachePath   string    `json:"cache_path"`
 	Exists      bool      `json:"exists"`
@@ -31,7 +31,7 @@ type CatalogHealth struct {
 	Error       string    `json:"error,omitempty"`
 }
 
-// CatalogHealthReport inspects ~/.eyrie/model_catalog.json (or EYRIE_MODEL_CATALOG_PATH).
+// CatalogHealthReport inspects ~/.graycode-router/model_catalog.json (or GRAYCODE_ROUTER_MODEL_CATALOG_PATH).
 func CatalogHealthReport(ctx context.Context) CatalogHealth {
 	path := CatalogCachePathForDisplay()
 	catalogHealthMu.Lock()
@@ -59,7 +59,7 @@ func InvalidateCatalogHealthCache() {
 }
 
 func catalogHealthReportUncached(ctx context.Context) CatalogHealth {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err != nil {
 		return CatalogHealth{Error: err.Error()}
 	}
@@ -79,7 +79,7 @@ func catalogHealthReportUncached(ctx context.Context) CatalogHealth {
 // FormatCatalogHealth returns human-readable catalog status for graycode doctor.
 func FormatCatalogHealth(h CatalogHealth) string {
 	var b strings.Builder
-	b.WriteString("Model catalog (eyrie):\n")
+	b.WriteString("Model catalog (graycode-router):\n")
 	b.WriteString(fmt.Sprintf("  path: %s\n", h.CachePath))
 	if h.Error != "" {
 		b.WriteString(fmt.Sprintf("  status: %s\n", h.Error))
@@ -126,7 +126,7 @@ func EnsureCatalogAvailable(ctx context.Context) error {
 
 // CatalogCachePathForDisplay returns the path users should care about.
 func CatalogCachePathForDisplay() string {
-	engine, err := newEyrieEngine()
+	engine, err := newGraycodeRouterEngine()
 	if err == nil {
 		return engine.StatePaths().Catalog
 	}

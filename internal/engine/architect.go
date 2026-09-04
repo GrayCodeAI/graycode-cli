@@ -37,7 +37,7 @@ type PlanStep struct {
 }
 
 // Message is a lightweight chat message used by the architect pipeline.
-// This avoids coupling to external message types from eyrie.
+// This avoids coupling to external message types from graycode-router.
 type ArchitectMessage struct {
 	Role    string // "system", "user", "assistant"
 	Content string

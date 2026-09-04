@@ -17,7 +17,7 @@ import (
 
 // MediaEngine is the pluggable backend that actually generates image/video
 // assets. graycode does not bundle a media provider; a host (or a provider-backed
-// eyrie integration) wires one in via SetMediaEngine. The tool and the
+// graycode-router integration) wires one in via SetMediaEngine. The tool and the
 // local-persistence contract are provider-agnostic, so generation, saving, and
 // result reporting all work the same regardless of backend.
 type MediaEngine interface {

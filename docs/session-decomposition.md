@@ -84,8 +84,8 @@ backends without an explicit migration and recovery decision.
 **Owns:** `client ChatClient`, `provider string`, `model string`, `apiKeys map[string]string`, `Router *modelPkg.Router`, `DeploymentRouting bool`, `RateLimiter *ratelimit.Limiter`, `OutputSchema string`, `GLMThinkingEnabled *bool`, `ContCfg types.ContinuationConfig`, `ChatOptions{}` builder.
 
 **Methods:**
-- `BuildOptions(systemPrompt string, tools []client.EyrieTool, activeModel string, maxTokens int) types.ChatOptions`
-- `Chat(ctx, msgs, opts) (*types.EyrieResponse, error)` — non-streaming, used by background goroutines
+- `BuildOptions(systemPrompt string, tools []client.GraycodeRouterTool, activeModel string, maxTokens int) types.ChatOptions`
+- `Chat(ctx, msgs, opts) (*types.GraycodeRouterResponse, error)` — non-streaming, used by background goroutines
 - `Stream(ctx, msgs, opts) (*types.StreamResult, error)` — with retry, circuit-breaker record, rate-limit wait
 - `RecordSuccess(latency time.Duration)` / `RecordFailure(err error)`
 - `BuildContinuationConfig() types.ContinuationConfig`
@@ -99,7 +99,7 @@ backends without an explicit migration and recovery decision.
 **Methods:**
 - `RecallContext(ctx, lastUserMsg string, budget int) string` — unifies backend recall behind one nil-safe call
 - `Remember(ctx, content, category string)` — wraps memory.Remember
-- `RunSleeptimeConsolidation(ctx, provider ChatService, messages []types.EyrieMessage)` — background
+- `RunSleeptimeConsolidation(ctx, provider ChatService, messages []types.GraycodeRouterMessage)` — background
 - `RunSkillDistillation(ctx, provider ChatService, ...)` — background
 - `RecordFeedback(ctx, content string, action string)` — wraps EnhancedMemory feedback
 - `ShouldRemember(text string) bool` — heuristic for auto-remember
@@ -139,14 +139,14 @@ backends without an explicit migration and recovery decision.
 
 **Methods:**
 - `OnSessionStart(ctx, lastUserMsg string) (learnedCtx string)`
-- `OnSessionEnd(ctx, success bool, duration time.Duration, messages []types.EyrieMessage)`
+- `OnSessionEnd(ctx, success bool, duration time.Duration, messages []types.GraycodeRouterMessage)`
 - `SelectModel(taskType, currentModel, hint string) string` — wraps Cascade
-- `OnToolFailure(ctx, intent string, history []types.EyrieMessage, errOutput string) (*Reflection, error)`
-- `RecordDecision(turn int, toolNames string, msgs []types.EyrieMessage)`
+- `OnToolFailure(ctx, intent string, history []types.GraycodeRouterMessage, errOutput string) (*Reflection, error)`
+- `RecordDecision(turn int, toolNames string, msgs []types.GraycodeRouterMessage)`
 - `CheckLimits(turnCount int) (cont bool, reason string)` — wraps Limits
 - `RecordTurn(turn int)`, `RecordToolCall(name string)`
 - `DetectDoomLoop(steps []ToolStep) bool`
-- `InjectSteering(messages []types.EyrieMessage) []types.EyrieMessage`
+- `InjectSteering(messages []types.GraycodeRouterMessage) []types.GraycodeRouterMessage`
 
 **File:** `graycode/internal/engine/lifecycle_service.go` (~250 LOC)
 
@@ -161,7 +161,7 @@ backends without an explicit migration and recovery decision.
 - `AddUser(content string)`, `AddAssistant(content string)`, `AddUserWithImage(...)`, `AddUserWithAttachment(...)`
 - `AddUserWithDocumentText(content, label, extracted string)`
 - `AppendSystemContext(content string)`, `ReplaceSystemContextSection(header, content string)`
-- `Messages() []types.EyrieMessage`, `RawMessages()`, `MessageCount()`, `LoadMessages([]types.EyrieMessage)`
+- `Messages() []types.GraycodeRouterMessage`, `RawMessages()`, `MessageCount()`, `LoadMessages([]types.GraycodeRouterMessage)`
 - `RemoveLastExchange()`
 - `ConvoHead() string`, `ForkConversation(nodeID string) (string, error)`, `SwitchBranch(nodeID string) error`, `ListBranches(nodeID string) ([]*storage.DAGNode, error)`
 - `CheckpointOnCompaction(strategy string, before, after int, manual bool)`
@@ -223,7 +223,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
     for turn := 0; ; turn++ {
         if !s.Lifecycle.CheckLimits(turn) { return }
 
-        opts := s.Chat.BuildOptions(s.system, s.Tools.Registry().EyrieTools(), activeModel, maxTok)
+        opts := s.Chat.BuildOptions(s.system, s.Tools.Registry().GraycodeRouterTools(), activeModel, maxTok)
         result, err := s.Chat.Stream(ctx, s.Persistence.Messages(), opts)
         if err != nil { /* error path */ }
         defer result.Close()
@@ -257,7 +257,7 @@ The loop body shrinks from 800 lines to ~250 because:
 3. **Phase 3**: extract `MemoryService` (most fields, but only consumed in the preamble/postamble of `agentLoop`).
 4. **Phase 4**: extract `PermissionService` (smallest surface).
 5. **Phase 5**: extract `LifecycleService` (biggest behavioral surface, but mostly reads `messages` and `tools`).
-6. **Phase 6**: extract `PersistenceService` (last because it owns the `messages []types.EyrieMessage` field which is touched everywhere).
+6. **Phase 6**: extract `PersistenceService` (last because it owns the `messages []types.GraycodeRouterMessage` field which is touched everywhere).
 7. **Phase 7**: extract `ToolService` (depends on 4, 5; do last).
 8. **Phase 8**: delete fields from `Session`, add backwards-compatible shims that delegate to the new services, mark for removal in v0.2.0.
 

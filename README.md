@@ -30,7 +30,7 @@ graycode is an AI-powered coding agent that lives in your terminal. It reads you
 
 **Developer path:** one machine, keychain credentials, local memory. Run `graycode path` to check readiness.
 
-- **Model-agnostic** — supports 28 first-class providers through [eyrie](https://github.com/GrayCodeAI/graycode-router), including Anthropic, OpenAI, Gemini, Fireworks AI, Concentrate AI (pay-as-you-go), DeepSeek, and Ollama
+- **Model-agnostic** — supports 28 first-class providers through [graycode-router](https://github.com/GrayCodeAI/graycode-router), including Anthropic, OpenAI, Gemini, Fireworks AI, Concentrate AI (pay-as-you-go), DeepSeek, and Ollama
 - **Zero CGO** — single static binary, cross-compiled for linux/darwin/windows on amd64/arm64
 - **Privacy-first** — your code never leaves your machine except to the LLM API you choose
 - **Docker-only execution** — agent commands run in an isolated container and
@@ -275,8 +275,8 @@ Features adopted from open-source agent projects. All are off by default unless 
 | Structural code match | `CodeMatch` tool | Tree-sitter query search over Go/Python/TS/TSX |
 | Composable toolsets | `graycode toolset [name]` + `Toolset` tool | Named tool groups (research, dev, ops, full_stack) |
 | App verification | `AppVerify` tool | Boot-smoke check with readiness polling and evidence artifacts |
-| Media generation | `GenerateMedia` tool | Image/video generation with local persistence. Backend via `tool.SetMediaEngine`; an OpenAI-compatible client ships in `eyrie/client` (`ImageClient`), wired by the host (boundary-guarded — graycode routes through the eyrie facade) |
-| Voice transcription | Telegram voice notes + `stt` package | Transcribe Telegram voice/audio into the prompt. Backend via `stt.SetTranscriber`; an OpenAI-compatible client ships in `eyrie/client` (`AudioClient`), wired by the host |
+| Media generation | `GenerateMedia` tool | Image/video generation with local persistence. Backend via `tool.SetMediaEngine`; an OpenAI-compatible client ships in `graycode-router/client` (`ImageClient`), wired by the host (boundary-guarded — graycode routes through the graycode-router facade) |
+| Voice transcription | Telegram voice notes + `stt` package | Transcribe Telegram voice/audio into the prompt. Backend via `stt.SetTranscriber`; an OpenAI-compatible client ships in `graycode-router/client` (`AudioClient`), wired by the host |
 | Git-tree file snapshots | `internal/gitsnapshot` | Content-addressed tree capture/diff/preview/restore |
 | Turn-boundary rewind | `internal/filestate` | Per-prompt before/after snapshots with durable store |
 | Continual harness | `internal/intelligence/harness` | Versioned, evidence-backed refinement of supplemental prompts/memories/skills/subagents with rollback |
@@ -341,7 +341,7 @@ graycode exec --agent reviewer "review last commit" # Custom persona
 
 ```bash
 graycode path                   # Developer path readiness (setup + security + sandbox)
-graycode doctor                  # Full health report (eyrie + harrier + shrike panel)
+graycode doctor                  # Full health report (graycode-router + harrier + shrike panel)
 graycode ecosystem               # Ecosystem panel only
 graycode harrier                    # Persistent memory graph
 graycode harrier search <query>     # Search harrier memories
@@ -352,7 +352,7 @@ make smoke                   # Build + quick verification script
 
 See [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md).
 
-See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, harrier, and shrike connect during a chat session, and [docs/ECOSYSTEM-WIRING.md](docs/ECOSYSTEM-WIRING.md) for the current-to-proposed architecture and repository boundaries.
+See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how graycode-router, harrier, and shrike connect during a chat session, and [docs/ECOSYSTEM-WIRING.md](docs/ECOSYSTEM-WIRING.md) for the current-to-proposed architecture and repository boundaries.
 
 In the TUI: `/path`, `/ecosystem`, `/harrier`, `/harrier search <query>`, `/memory` (AGENTS.md).
 
@@ -395,12 +395,12 @@ graycode works with any LLM provider. **Developer path:** paste keys in `/config
 | Xiaomi (MiMo) Token Plan | `xiaomi_mimo_token_plan` | `XIAOMI_MIMO_TOKEN_PLAN_API_KEY` (pick region in `/config`) |
 | Ollama (local) | `ollama` | `OLLAMA_BASE_URL` (no API key) |
 
-Provider routing, model resolution, and retries are handled by [eyrie](https://github.com/GrayCodeAI/graycode-router).
+Provider routing, model resolution, and retries are handled by [graycode-router](https://github.com/GrayCodeAI/graycode-router).
 For deployment-aware routing, set `"deployment_routing": true` in `.graycode/settings.json`
 or export `GRAYCODE_DEPLOYMENT_ROUTING=true`. Graycode will route canonical model IDs through
-Eyrie's deployment catalog, so new models can be exposed by refreshing the catalog
+GraycodeRouter's deployment catalog, so new models can be exposed by refreshing the catalog
 instead of changing Graycode. In chat, run `/refresh-model-catalog` to fetch the latest
-deployment-aware catalog into `~/.eyrie/model_catalog.json`.
+deployment-aware catalog into `~/.graycode-router/model_catalog.json`.
 
 ## Architecture
 
@@ -436,7 +436,7 @@ graycode/
 
 Ecosystem sibling repos (independent Git repos in the `graycode-eco` parent
 folder):
-├── eyrie/              # LLM provider runtime
+├── graycode-router/              # LLM provider runtime
 ```
 
 ### Ecosystem
@@ -445,7 +445,7 @@ graycode is the main CLI/product and integrates these GrayCodeAI repositories in
 three runtime layers plus optional tooling/platform services:
 
 - **Primary product:** **graycode** is the only end-user product surface in this ecosystem.
-- **Support engines mounted by Graycode:** **eyrie**, **harrier**, **shrike**, **swift**, **kestrel**, **merlin**. Graycode imports or shells into these engines behind its own command surface.
+- **Support engines mounted by Graycode:** **graycode-router**, **harrier**, **shrike**, **swift**, **kestrel**, **merlin**. Graycode imports or shells into these engines behind its own command surface.
 - **Shared foundations:** **falcon**
   provides shared MCP server scaffolding.
 - **API consumers/extensions:** **graycode-skills** provides Graycode skills
@@ -482,7 +482,7 @@ You may keep a **personal** parent **`go.work`** that lists alternate clones on 
 | Component | Repository | Purpose |
 |---|---|---|
 | **graycode** | This repo | AI coding agent |
-| **eyrie** | [GrayCodeAI/graycode-router](https://github.com/GrayCodeAI/graycode-router) | LLM provider runtime |
+| **graycode-router** | [GrayCodeAI/graycode-router](https://github.com/GrayCodeAI/graycode-router) | LLM provider runtime |
 
 For the consolidated repo map and the current-vs-proposed architecture diagrams, see [docs/architecture/graycode-current-vs-proposed.md](docs/architecture/graycode-current-vs-proposed.md).
 For execution-graph ownership, automatic capture seams, export/sync commands,

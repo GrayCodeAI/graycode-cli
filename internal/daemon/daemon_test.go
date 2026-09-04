@@ -94,7 +94,7 @@ func TestDaemon_Ready(t *testing.T) {
 			wantReady:  false,
 		},
 		{
-			name:       "engine wired without Eyrie probe is not ready",
+			name:       "engine wired without GraycodeRouter probe is not ready",
 			factory:    factory,
 			wantStatus: http.StatusServiceUnavailable,
 			wantReady:  false,

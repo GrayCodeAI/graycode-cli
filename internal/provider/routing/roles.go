@@ -26,7 +26,7 @@ type ModelRoles struct {
 	Commit   string `json:"commit,omitempty"`
 }
 
-// DefaultRoles keeps Graycode's workflow policy while asking Eyrie for the
+// DefaultRoles keeps Graycode's workflow policy while asking GraycodeRouter for the
 // economical same-provider model used for commit/summarization work.
 func DefaultRoles(primaryModel string) ModelRoles {
 	primaryModel = strings.TrimSpace(primaryModel)

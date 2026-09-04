@@ -15,7 +15,7 @@ SDKs (Sparrow / Robin / Wren)
    +----------+----------+
    |          |          |
    v          v          v
-Eyrie     Harrier     Shrike
+GraycodeRouter     Harrier     Shrike
 models    memory      tokens
    |          |          |
    +----------+----------+
@@ -65,7 +65,7 @@ bash owl/scripts/sync-ecosystem.sh
 
 - Keep Eagle imports in Graycode and engines limited to shared contracts.
 - Keep Falcon imports limited to MCP-serving components.
-- Keep Graycode's Eyrie integration behind `eyrie/engine`.
+- Keep Graycode's GraycodeRouter integration behind `graycode-router/engine`.
 - Keep Graycode's SDKs outside the Go workspace and outside engine dependencies.
 - Keep platform integration at the HTTP/Service Binding boundary.
 - Keep graph and quality projections as explicit, reviewed Graycode integration
@@ -76,21 +76,21 @@ Acceptance checks:
 ```text
 bash graycode/scripts/check-ecosystem-boundaries.sh
 bash graycode/scripts/check-support-repo-coupling.sh
-bash graycode/scripts/check-eyrie-engine-boundary.sh
-bash graycode/scripts/check-eyrie-client-imports.sh
+bash graycode/scripts/check-graycode-router-engine-boundary.sh
+bash graycode/scripts/check-graycode-router-client-imports.sh
 bash graycode/scripts/check-shared-types-imports.sh
 bash graycode/scripts/check-no-replace-directives.sh
 ```
 
 ## Phase 3: Published-module cutover — pending external release
 
-The local Eyrie source already uses Eagle contracts. Graycode's current published
-Eyrie pseudo-version still declares the retired compatibility contract
-transitively, so this phase requires publishing the compatible Eyrie revision.
+The local GraycodeRouter source already uses Eagle contracts. Graycode's current published
+GraycodeRouter pseudo-version still declares the retired compatibility contract
+transitively, so this phase requires publishing the compatible GraycodeRouter revision.
 
-1. Publish the current Eagle-compatible Eyrie revision.
+1. Publish the current Eagle-compatible GraycodeRouter revision.
 2. Resolve its canonical Go pseudo-version from the published commit.
-3. Update Graycode's Eyrie requirement to that version.
+3. Update Graycode's GraycodeRouter requirement to that version.
 4. Run `GOWORK=off go mod tidy` in Graycode.
 5. Confirm the retired compatibility module is absent from Graycode's module graph.
 6. Remove any obsolete transition excludes.
@@ -149,7 +149,7 @@ The architecture is complete when:
 - all 15 repositories match the canonical manifest;
 - Graycode builds and tests with `GOWORK=off`;
 - SDK and platform contract checks pass; and
-- the published Eyrie revision no longer brings the retired compatibility
+- the published GraycodeRouter revision no longer brings the retired compatibility
   contract into Graycode's standalone module graph.
 
 Current state: Phases 1, 2, and the local portion of Phase 4 are complete.

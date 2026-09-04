@@ -234,7 +234,7 @@ surface operations, ignorable markers, format version enforcement, and session
 header parity. The port is functionally complete. Remaining optional depth:
 - ~~DSH `surface.ts` `SurfaceManager`/`SurfaceReplacePlan` (live correction protocol — replacement operations).~~ Delivered: `internal/eventlog/surface.go` — `FoldSurface` (complete replay → surface nodes + replacement history) and an incremental `SurfaceManager` (bound to a `*Log`, with `Nodes`/`ReplaceGeneration`/`ValidateNext` atomic pre-flight), mirroring DSH's surface provenance, replacement-range, contiguity, and tool-result-rewrite invariants.
 - ~~Zstd compression in persistence (DSH `session-persistence-jsonl/src/zstd.ts`).~~ Delivered: `internal/eventlog/zstdz/zstd.go` + `internal/session/session.go` (`.jsonl.zstd` saves) — see Phase 9.
-- DSH `packages/llm/llm/src/assembler.ts` (response normalization — covered by Eyrie facade).
+- DSH `packages/llm/llm/src/assembler.ts` (response normalization — covered by GraycodeRouter facade).
 
 This matrix is the honest anchor: the skeleton is ported; the deep fidelity is
 the actual remaining work.

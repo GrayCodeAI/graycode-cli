@@ -4,18 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/GrayCodeAI/eyrie/llm"
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/graycode-router/llm"
 )
 
 // ProviderNativeCompactStrategy delegates provider-specific compaction to
-// Eyrie. Graycode owns when conversation state is compacted and how the resulting
-// summary is inserted; Eyrie owns credentials and provider transport details.
+// GraycodeRouter. Graycode owns when conversation state is compacted and how the resulting
+// summary is inserted; GraycodeRouter owns credentials and provider transport details.
 type ProviderNativeCompactStrategy struct{}
 
 func (s *ProviderNativeCompactStrategy) Name() string { return "provider_native" }
 
-func (s *ProviderNativeCompactStrategy) ShouldTrigger(msgs []types.EyrieMessage, tokenCount, threshold int) bool {
+func (s *ProviderNativeCompactStrategy) ShouldTrigger(msgs []types.GraycodeRouterMessage, tokenCount, threshold int) bool {
 	return tokenCount >= threshold && len(msgs) >= 8
 }
 
@@ -49,8 +49,8 @@ func (s *ProviderNativeCompactStrategy) Compact(ctx context.Context, sess *Sessi
 	if keepEnd > len(messagesBefore) {
 		keepEnd = len(messagesBefore)
 	}
-	tail := append([]types.EyrieMessage(nil), messagesBefore[len(messagesBefore)-keepEnd:]...)
-	messages := append([]types.EyrieMessage{{Role: "user", Content: FormatCompactSummary(summary)}}, tail...)
+	tail := append([]types.GraycodeRouterMessage(nil), messagesBefore[len(messagesBefore)-keepEnd:]...)
+	messages := append([]types.GraycodeRouterMessage{{Role: "user", Content: FormatCompactSummary(summary)}}, tail...)
 	compact := &CompactResult{
 		Messages:     messages,
 		TokensBefore: tokensBefore,

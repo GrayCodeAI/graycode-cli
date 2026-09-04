@@ -5,25 +5,25 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 if command -v rg >/dev/null 2>&1; then
-  eyrie_imports="$(
-    rg -n '"github\.com/GrayCodeAI/eyrie/[^\"]+"' \
+  graycoderouter_imports="$(
+    rg -n '"github\.com/GrayCodeAI/graycode-router/[^\"]+"' \
       --glob '*.go' --glob '!*_test.go' . || true
   )"
 else
-  eyrie_imports="$(
+  graycoderouter_imports="$(
     grep -RInE --include='*.go' --exclude='*_test.go' \
-      '"github\.com/GrayCodeAI/eyrie/[^\"]+"' . || true
+      '"github\.com/GrayCodeAI/graycode-router/[^\"]+"' . || true
   )"
 fi
-# Graycode uses the full vendored Eyrie API surface for provider, graph, and
+# Graycode uses the full vendored GraycodeRouter API surface for provider, graph, and
 # tooling contracts that the engine facade does not re-export.
-violations="$(printf '%s\n' "$eyrie_imports" | grep -vE '"github\.com/GrayCodeAI/eyrie/(engine|llm|graph|tools)(/|\")' || true)"
+violations="$(printf '%s\n' "$graycoderouter_imports" | grep -vE '"github\.com/GrayCodeAI/graycode-router/(engine|llm|graph|tools)(/|\")' || true)"
 
 if [[ -n "$violations" ]]; then
-  echo "direct production imports below the eyrie/engine facade found:"
+  echo "direct production imports below the graycode-router/engine facade found:"
   echo "$violations"
   echo
-  echo "route every Graycode production integration through github.com/GrayCodeAI/eyrie/engine"
+  echo "route every Graycode production integration through github.com/GrayCodeAI/graycode-router/engine"
   exit 1
 fi
 
@@ -39,4 +39,4 @@ if [[ -n "$credential_symbols" ]]; then
   exit 1
 fi
 
-echo "eyrie engine boundary passed (zero lower-level production imports)"
+echo "graycode-router engine boundary passed (zero lower-level production imports)"

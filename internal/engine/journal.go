@@ -73,7 +73,7 @@ func (s *PersistenceService) FlushWriteBehind() error {
 
 // AppendUserJournaled journals a user message and appends it to the transcript.
 // Safe on a nil receiver.
-func (s *PersistenceService) AppendUserJournaled(msg types.EyrieMessage) {
+func (s *PersistenceService) AppendUserJournaled(msg types.GraycodeRouterMessage) {
 	if s == nil {
 		return
 	}
@@ -87,7 +87,7 @@ func (s *PersistenceService) AppendUserJournaled(msg types.EyrieMessage) {
 
 // AppendAssistantJournaled journals an assistant message and appends it to the
 // transcript. Safe on a nil receiver.
-func (s *PersistenceService) AppendAssistantJournaled(msg types.EyrieMessage) {
+func (s *PersistenceService) AppendAssistantJournaled(msg types.GraycodeRouterMessage) {
 	if s == nil {
 		return
 	}
@@ -116,7 +116,7 @@ func (s *PersistenceService) JournalTitle() string {
 // Messages(); compactions and other non-append transcript edits are not yet
 // represented as journal events, so consistency is only expected for transcripts
 // built exclusively through the journaled append methods.
-func (s *PersistenceService) JournalProjection() []types.EyrieMessage {
+func (s *PersistenceService) JournalProjection() []types.GraycodeRouterMessage {
 	if s == nil {
 		return nil
 	}
@@ -125,7 +125,7 @@ func (s *PersistenceService) JournalProjection() []types.EyrieMessage {
 		return nil
 	}
 	msgs := eventlog.ProjectMessages(j.Snapshot())
-	out := make([]types.EyrieMessage, len(msgs))
+	out := make([]types.GraycodeRouterMessage, len(msgs))
 	for i, m := range msgs {
 		out[i] = fromJournalMessage(m)
 	}
@@ -149,7 +149,7 @@ func (s *PersistenceService) Reconstructible() error {
 	if err := eventlog.Validate(j.Snapshot()); err != nil {
 		return err
 	}
-	var live []types.EyrieMessage
+	var live []types.GraycodeRouterMessage
 	s.mu.RLock()
 	live = cloneMessages(s.messages)
 	s.mu.RUnlock()
@@ -160,7 +160,7 @@ func (s *PersistenceService) Reconstructible() error {
 	return nil
 }
 
-func toJournalMessage(m types.EyrieMessage) eventlog.Message {
+func toJournalMessage(m types.GraycodeRouterMessage) eventlog.Message {
 	jm := eventlog.Message{
 		Role:     m.Role,
 		Content:  m.Content,
@@ -192,8 +192,8 @@ func toJournalMessage(m types.EyrieMessage) eventlog.Message {
 	return jm
 }
 
-func fromJournalMessage(m eventlog.Message) types.EyrieMessage {
-	out := types.EyrieMessage{
+func fromJournalMessage(m eventlog.Message) types.GraycodeRouterMessage {
+	out := types.GraycodeRouterMessage{
 		Role:     m.Role,
 		Content:  m.Content,
 		Thinking: m.Thinking,
@@ -222,7 +222,7 @@ func fromJournalMessage(m eventlog.Message) types.EyrieMessage {
 	return out
 }
 
-func cloneSingleMessage(m types.EyrieMessage) types.EyrieMessage {
-	clones := cloneMessages([]types.EyrieMessage{m})
+func cloneSingleMessage(m types.GraycodeRouterMessage) types.GraycodeRouterMessage {
+	clones := cloneMessages([]types.GraycodeRouterMessage{m})
 	return clones[0]
 }

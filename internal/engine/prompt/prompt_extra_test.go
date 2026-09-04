@@ -13,11 +13,11 @@ type mockLLMClient struct {
 	err      error
 }
 
-func (m *mockLLMClient) Chat(ctx context.Context, msgs []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
+func (m *mockLLMClient) Chat(ctx context.Context, msgs []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return &types.EyrieResponse{Content: m.response}, nil
+	return &types.GraycodeRouterResponse{Content: m.response}, nil
 }
 
 func TestFormatFloat(t *testing.T) {

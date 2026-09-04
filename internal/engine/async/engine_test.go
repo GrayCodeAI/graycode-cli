@@ -14,23 +14,23 @@ import (
 // fakeClient is a scripted ChatClient for exercising the engine loop.
 type fakeClient struct {
 	mu            sync.Mutex
-	script        []types.EyrieStreamEvent
+	script        []types.GraycodeRouterStreamEvent
 	streamStarted chan struct{}
 	streamCtx     context.Context
 }
 
-func newFakeClient(events ...types.EyrieStreamEvent) *fakeClient {
+func newFakeClient(events ...types.GraycodeRouterStreamEvent) *fakeClient {
 	return &fakeClient{
 		script:        events,
 		streamStarted: make(chan struct{}),
 	}
 }
 
-func (f *fakeClient) Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
-	return &types.EyrieResponse{Content: "mock", FinishReason: "end_turn"}, nil
+func (f *fakeClient) Chat(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error) {
+	return &types.GraycodeRouterResponse{Content: "mock", FinishReason: "end_turn"}, nil
 }
 
-func (f *fakeClient) StreamChatContinue(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions, cfg types.ContinuationConfig) (*types.StreamResult, error) {
+func (f *fakeClient) StreamChatContinue(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions, cfg types.ContinuationConfig) (*types.StreamResult, error) {
 	f.mu.Lock()
 	f.streamCtx = ctx
 	f.mu.Unlock()
@@ -40,7 +40,7 @@ func (f *fakeClient) StreamChatContinue(ctx context.Context, messages []types.Ey
 		close(f.streamStarted)
 	}
 
-	ch := make(chan types.EyrieStreamEvent, 16)
+	ch := make(chan types.GraycodeRouterStreamEvent, 16)
 	go func() {
 		defer close(ch)
 		for _, evt := range f.script {
@@ -63,11 +63,11 @@ type cancelTurns struct {
 	call          int
 }
 
-func (c *cancelTurns) Chat(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
-	return &types.EyrieResponse{Content: "mock", FinishReason: "end_turn"}, nil
+func (c *cancelTurns) Chat(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error) {
+	return &types.GraycodeRouterResponse{Content: "mock", FinishReason: "end_turn"}, nil
 }
 
-func (c *cancelTurns) StreamChatContinue(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions, cfg types.ContinuationConfig) (*types.StreamResult, error) {
+func (c *cancelTurns) StreamChatContinue(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions, cfg types.ContinuationConfig) (*types.StreamResult, error) {
 	select {
 	case <-c.streamStarted:
 	default:
@@ -78,8 +78,8 @@ func (c *cancelTurns) StreamChatContinue(ctx context.Context, messages []types.E
 	first := c.call == 1
 	c.mu.Unlock()
 
-	ch := make(chan types.EyrieStreamEvent, 4)
-	ch <- types.EyrieStreamEvent{Type: "content", Content: "thinking..."}
+	ch := make(chan types.GraycodeRouterStreamEvent, 4)
+	ch <- types.GraycodeRouterStreamEvent{Type: "content", Content: "thinking..."}
 	if first {
 		go func() {
 			<-ctx.Done()
@@ -118,9 +118,9 @@ func drainEvents(t *testing.T, ch <-chan *Event) []*Event {
 
 func TestEngineTurnEmitsTerminalDone(t *testing.T) {
 	client := newFakeClient(
-		types.EyrieStreamEvent{Type: "content", Content: "hello"},
-		types.EyrieStreamEvent{Type: "usage", Usage: &types.EyrieUsage{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15}},
-		types.EyrieStreamEvent{Type: "done", StopReason: "end_turn"},
+		types.GraycodeRouterStreamEvent{Type: "content", Content: "hello"},
+		types.GraycodeRouterStreamEvent{Type: "usage", Usage: &types.GraycodeRouterUsage{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15}},
+		types.GraycodeRouterStreamEvent{Type: "done", StopReason: "end_turn"},
 	)
 	e := New(newTestSession(t, client))
 	e.Start(context.Background())
@@ -151,7 +151,7 @@ func TestEngineTurnEmitsTerminalDone(t *testing.T) {
 }
 
 func TestEngineStopThenStartProcessesAgain(t *testing.T) {
-	client := newFakeClient(types.EyrieStreamEvent{Type: "done", StopReason: "end_turn"})
+	client := newFakeClient(types.GraycodeRouterStreamEvent{Type: "done", StopReason: "end_turn"})
 	e := New(newTestSession(t, client))
 
 	e.Start(context.Background())
@@ -211,7 +211,7 @@ func TestEngineCancelAbortsTurnAndKeepsRunning(t *testing.T) {
 
 func TestEngineStreamErrorEmitsErrorThenDone(t *testing.T) {
 	client := newFakeClient(
-		types.EyrieStreamEvent{Type: "error", Error: "provider exploded"},
+		types.GraycodeRouterStreamEvent{Type: "error", Error: "provider exploded"},
 	)
 	e := New(newTestSession(t, client))
 	e.Start(context.Background())
@@ -238,7 +238,7 @@ func TestEngineStreamErrorEmitsErrorThenDone(t *testing.T) {
 }
 
 func TestEngineReplyToReceivesTerminalEvent(t *testing.T) {
-	client := newFakeClient(types.EyrieStreamEvent{Type: "done", StopReason: "end_turn"})
+	client := newFakeClient(types.GraycodeRouterStreamEvent{Type: "done", StopReason: "end_turn"})
 	e := New(newTestSession(t, client))
 	e.Start(context.Background())
 	defer e.Stop()

@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
-	eyriecfg "github.com/GrayCodeAI/eyrie/config"
-	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/eyrie/setup"
 	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
+	graycoderoutercfg "github.com/GrayCodeAI/graycode-router/config"
+	"github.com/GrayCodeAI/graycode-router/credentials"
+	"github.com/GrayCodeAI/graycode-router/setup"
 )
 
 func TestLiveOpenCodeGoMiniMaxM3FullGraycodePath(t *testing.T) {
@@ -38,9 +38,9 @@ func TestLiveOpenCodeGoMiniMaxM3FullGraycodePath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("provider=%s model=%s tools=%d system_len=%d", effectiveProvider, effectiveModel, len(registry.EyrieTools()), len(systemPrompt))
+	t.Logf("provider=%s model=%s tools=%d system_len=%d", effectiveProvider, effectiveModel, len(registry.GraycodeRouterTools()), len(systemPrompt))
 
-	adapter := setup.ConfiguredDeploymentAdapters(eyriecfg.LoadProviderConfig(""))["opencodego"]
+	adapter := setup.ConfiguredDeploymentAdapters(graycoderoutercfg.LoadProviderConfig(""))["opencodego"]
 	t.Logf("adapter_type=%T", adapter.Provider)
 
 	sess := newGraycodeSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)

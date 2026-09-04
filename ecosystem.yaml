@@ -21,12 +21,12 @@ repositories:
 
   - directory: graycode-router
     github_repo: graycode-router
-    product_name: Eyrie
+    product_name: Graycode Router
     kind: engine
     language: go
-    module: github.com/GrayCodeAI/eyrie
+    module: github.com/GrayCodeAI/graycode-router
     workspace: true
-    facade: github.com/GrayCodeAI/eyrie/engine
+    facade: github.com/GrayCodeAI/graycode-router/engine
 
   - directory: graycode-skills
     github_repo: graycode-skills

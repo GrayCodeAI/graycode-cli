@@ -3,7 +3,7 @@
 **Status:** Draft
 **Author:** Ecosystem / DX working group
 **Last updated:** 2026-06-06
-**Scope:** Multi-month effort spanning all 5 repos (graycode, eyrie, harrier, shrike, swift) + a new gallery web property + a unified docs site.
+**Scope:** Multi-month effort spanning all 5 repos (graycode, graycode-router, harrier, shrike, swift) + a new gallery web property + a unified docs site.
 
 > This is a design a team executes against, not a code-session deliverable. It grounds every claim in the actual graycode-eco codebase (cited as `path:line`) and reuses what already exists rather than greenfielding.
 
@@ -36,7 +36,7 @@ graycode-eco is **not** starting from zero. A large fraction of the marketplace 
 - **A V2 manifest already supports MCP-adjacent bundles.** `graycode/internal/plugin/manifest_v2.go:11` (`ManifestV2`) carries `Tools`, `Permissions`, `Hooks` (`:32` `ManifestHook` with `Event`/`Command`/`Priority`), `Config`, `Dependencies`, `Mode` (subprocess/daemon).
 - **Trust scaffolding already exists.** `graycode/internal/plugin/malware_check.go:19` blocks `eval()`, pipe-to-shell, reverse shells; `graycode/internal/plugin/audit.go` flags hidden-Unicode / homoglyph attacks (`graycode skills audit`).
 
-The gap is therefore **consolidation and elevation**, not invention: (a) a *standardized, multi-asset* extension format (today's registry is skills-only); (b) a *browsable web gallery*; (c) a *trust/signing* story beyond static malware regexes; and (d) a *unified docs site* that today is five disconnected `README.md`/`ARCHITECTURE.md` trees (`graycode/docs/`, `eyrie/docs/`, `harrier/`, `shrike/docs/`, `swift/docs/`).
+The gap is therefore **consolidation and elevation**, not invention: (a) a *standardized, multi-asset* extension format (today's registry is skills-only); (b) a *browsable web gallery*; (c) a *trust/signing* story beyond static malware regexes; and (d) a *unified docs site* that today is five disconnected `README.md`/`ARCHITECTURE.md` trees (`graycode/docs/`, `graycode-router/docs/`, `harrier/`, `shrike/docs/`, `swift/docs/`).
 
 ---
 
@@ -81,7 +81,7 @@ The gap is therefore **consolidation and elevation**, not invention: (a) a *stan
 │  graycode CLI (Go)                │      │  Gallery + Docs site (static) │
 │  internal/plugin/registry.go  │      │  Docusaurus or Mintlify       │
 │  + new: trust.go, extman.go   │      │  - /extensions (gallery)      │
-│  cmd/skills_cmd.go (+ ext cmd)│      │  - /docs/{graycode,eyrie,...}     │
+│  cmd/skills_cmd.go (+ ext cmd)│      │  - /docs/{graycode,graycode-router,...}     │
 │  internal/plugin/manifest_v2  │      │  - generated from registry.v2 │
 └───────────────────────────────┘      └──────────────────────────────┘
 ```
@@ -203,7 +203,7 @@ browser → graycodeskills.dev/extensions  (static Docusaurus/Mintlify page)
 **Flow C — Docs build (unified site, all 5 repos)**
 ```
 CI (docs repo) →
-  pull README.md / ARCHITECTURE.md / docs/** from each of graycode, eyrie,
+  pull README.md / ARCHITECTURE.md / docs/** from each of graycode, graycode-router,
      harrier (Harrier), shrike (Shrike), swift (Swift)  (independent checkouts or sparse checkout)
   → transform: inject sidebars, rewrite intra-repo links
   → generate /extensions/* from registry.v2.json
@@ -262,7 +262,7 @@ The discovery-precedence engine (`rules.go:20` `DefaultRuleSources`, walk-up + l
 - **Exit:** `graycode ext install` works for at least 5 multi-asset extensions, signature-verified, on a v2 index.
 
 ### P1 — Gallery + Docs site (the visible surface)
-- **M1.1** Stand up the static site (decision in §6). Pages: `/extensions` (gallery), per-extension detail, `/docs/{graycode,eyrie,harrier,shrike,swift}` (getting-started + API ref + architecture), `/comparison` (rendered from `TOP20_COMPARISON.md`).
+- **M1.1** Stand up the static site (decision in §6). Pages: `/extensions` (gallery), per-extension detail, `/docs/{graycode,graycode-router,harrier,shrike,swift}` (getting-started + API ref + architecture), `/comparison` (rendered from `TOP20_COMPARISON.md`).
 - **M1.2** Build-time generation of `/extensions/index.json` from `registry.v2.json`; client-side fuzzy search, category + capability-badge filters.
 - **M1.3** Aggregate the 5 independent repositories' docs via checkout or sparse checkout in CI (Flow C); link-rewriting + unified sidebar.
 - **M1.4** `graycode ext update` (diff installed version vs index, re-verify, atomic replace) and `graycode ext verify <name>` (re-check signature/audit of an installed extension).
@@ -272,7 +272,7 @@ The discovery-precedence engine (`rules.go:20` `DefaultRuleSources`, walk-up + l
 - **M2.1** `graycode ext publish` — scaffolds `extension.yaml`, runs validators (`tools/validate_skill.py` extended), signs locally, opens a PR to `starling`.
 - **M2.2** Publisher trust tiers: verified-publisher badge (key in graycode's bundled trust DB) vs community (signed but unverified) vs unsigned.
 - **M2.3** Trending/installs analytics — privacy-preserving (aggregate counts from PR-based opt-in pings or GitHub stars only; **no per-user tracking**, see §7).
-- **M2.4** Cross-repo extension kinds: eyrie provider plug-ins, shrike compression profiles (`TOP20_COMPARISON.md:181` team profiles), swift exporters — registered through the same `extension.yaml` `provides` mechanism with new `kind`s.
+- **M2.4** Cross-repo extension kinds: graycode-router provider plug-ins, shrike compression profiles (`TOP20_COMPARISON.md:181` team profiles), swift exporters — registered through the same `extension.yaml` `provides` mechanism with new `kind`s.
 - **Exit:** External contributors can publish a verified, multi-asset extension end-to-end; gallery shows mixed-kind extensions across the ecosystem.
 
 ---
@@ -330,7 +330,7 @@ These repos are privacy-first; the marketplace must not regress that.
 
 1. **Signing backend:** minisign (simple, key-in-binary) for P0, or go straight to sigstore/cosign keyless (transparency log, no key custody) and align with the SBOM effort (`TOP20_COMPARISON.md:240`)? Tradeoff: operational simplicity now vs. provenance rigor later.
 2. **One repo or two?** Keep gallery + docs in `starling`, or split docs into a new `graycode-docs` repo with the 5 repos as submodules? (Submodules complicate contributor flow but isolate doc build from skill content.)
-3. **Cross-repo extension kinds (P2):** do eyrie/shrike/swift assets (provider plugins, compression profiles, exporters) belong in the *same* `starling` registry, or a per-repo registry federated into one gallery index?
+3. **Cross-repo extension kinds (P2):** do graycode-router/shrike/swift assets (provider plugins, compression profiles, exporters) belong in the *same* `starling` registry, or a per-repo registry federated into one gallery index?
 4. **Versioning & compat matrix:** `compat.minGraycodeVersion` exists (`manifest_v2.go:20`), but do we also need per-asset compat (e.g., an MCP server needing a specific transport graycode supports)? Tie-in to the tri-modal MCP transport gap (`TOP20_COMPARISON.md:83`).
 5. **Install integrity for non-skill assets:** today install only copies `SKILL.md` trees (`registry.go` discovers `SKILL.md`); multi-asset copy (commands/hooks/mcp/themes/subagents) needs a defined on-disk layout under `~/.graycode/`. What are the canonical install dirs for each asset kind?
 6. **Domain & hosting:** confirm `graycodeskills.dev` (referenced `TOP20_COMPARISON.md:65`) ownership and Pages target (GitHub vs Cloudflare).
@@ -349,7 +349,7 @@ These repos are privacy-first; the marketplace must not regress that.
 | **P1 — CLI update/verify** | `graycode ext update`, `graycode ext verify`, atomic replace | **2 ew** |
 | **P2 — publisher self-service** | `graycode ext publish` scaffolder + validators, PR automation | **3 ew** |
 | **P2 — trust tiers + sigstore upgrade** | verified-publisher badges, optional cosign/sigstore keyless + transparency log | **3–4 ew** |
-| **P2 — cross-repo kinds** | eyrie/shrike/swift extension kinds + federated index | **3–4 ew** |
+| **P2 — cross-repo kinds** | graycode-router/shrike/swift extension kinds + federated index | **3–4 ew** |
 | **Cross-cutting** | docs writing (content, not framework), security review, CI, design iteration | **4–6 ew** |
 | **Total** | | **≈ 31–44 eng-weeks** (~7.5–11 eng-months; 2 engineers ~4–5 calendar months) |
 

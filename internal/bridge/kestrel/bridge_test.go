@@ -83,11 +83,11 @@ func TestBridge_ImproveNotReady(t *testing.T) {
 	}
 }
 
-func TestEyrieAdapter_Chat(t *testing.T) {
-	// Test that EyrieAdapter correctly translates kestrel messages.
-	// We can't easily test with a real eyrie client, but we verify the adapter
+func TestGraycodeRouterAdapter_Chat(t *testing.T) {
+	// Test that GraycodeRouterAdapter correctly translates kestrel messages.
+	// We can't easily test with a real graycode-router client, but we verify the adapter
 	// struct is properly constructed.
-	adapter := NewEyrieAdapter(nil, "openai")
+	adapter := NewGraycodeRouterAdapter(nil, "openai")
 	if adapter.provider != "openai" {
 		t.Fatalf("expected provider openai, got %s", adapter.provider)
 	}

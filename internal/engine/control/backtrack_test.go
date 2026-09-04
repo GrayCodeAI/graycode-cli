@@ -23,7 +23,7 @@ func TestNewBacktrackEngine(t *testing.T) {
 func TestBacktrackEngine_RecordAndFind(t *testing.T) {
 	be := NewBacktrackEngine()
 
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "Fix the bug"},
 		{Role: "assistant", Content: "I'll try approach A"},
 	}
@@ -61,7 +61,7 @@ func TestBacktrackEngine_RecordAndFind(t *testing.T) {
 func TestBacktrackEngine_GenerateRetryPrompt(t *testing.T) {
 	be := NewBacktrackEngine()
 
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "Refactor the function"},
 	}
 
@@ -94,7 +94,7 @@ func TestBacktrackEngine_GenerateRetryPrompt(t *testing.T) {
 func TestBacktrackEngine_RestoreState(t *testing.T) {
 	be := NewBacktrackEngine()
 
-	originalMsgs := []types.EyrieMessage{
+	originalMsgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "Step one"},
 		{Role: "assistant", Content: "Done with step one"},
 		{Role: "user", Content: "Step two"},

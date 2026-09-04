@@ -534,7 +534,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 	case "/session":
 		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nSpec stage: %s\nMessages: %d\nTools: %d\n%s",
 			m.sessionID, m.session.Provider(), m.session.Model(),
-			specStageLabel(m.session), m.session.MessageCount(), len(m.registry.EyrieTools()), m.session.CostValue().Summary())
+			specStageLabel(m.session), m.session.MessageCount(), len(m.registry.GraycodeRouterTools()), m.session.CostValue().Summary())
 		m.messages = append(m.messages, displayMsg{role: "system", content: info})
 		return m, nil
 

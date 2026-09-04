@@ -90,7 +90,7 @@ and finding contracts now live in `eagle/types`.
 
 | Service | Role | Connection |
 |---------|------|------------|
-| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/bird.svg" width="16" height="16" alt="bird" /> **eyrie** | LLM provider runtime | `:8080` — all LLM calls routed here |
+| <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/bird.svg" width="16" height="16" alt="bird" /> **graycode-router** | LLM provider runtime | `:8080` — all LLM calls routed here |
 | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/brain.svg" width="16" height="16" alt="brain" /> **harrier** | Persistent memory | `:3456` — session context, recall |
 | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/eye.svg" width="16" height="16" alt="eye" /> **kestrel** | Code review | Library — diff-based review |
 | <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/search.svg" width="16" height="16" alt="search" /> **merlin** | Security audit | Library — website scanning |
@@ -107,7 +107,7 @@ and finding contracts now live in `eagle/types`.
 
 All three SDKs share types from **eagle** and consume the daemon REST API (:4590).
 
-> <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/lightbulb.svg" width="16" height="16" alt="lightbulb" /> **graycode never talks to LLM APIs directly** — all calls go through eyrie.
+> <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/lightbulb.svg" width="16" height="16" alt="lightbulb" /> **graycode never talks to LLM APIs directly** — all calls go through graycode-router.
 
 ---
 

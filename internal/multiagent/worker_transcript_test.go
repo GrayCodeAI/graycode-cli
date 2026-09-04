@@ -17,7 +17,7 @@ func TestTranscriptRoundTrip(t *testing.T) {
 		t.Fatalf("NewPersistWriter: %v", err)
 	}
 
-	msgs := []types.EyrieMessage{
+	msgs := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "Start working on feature 1"},
 		{Role: "assistant", Content: "I'll explore the codebase first."},
 		{Role: "assistant", Content: "", ToolUse: []types.ToolCall{{Name: "Bash", ID: "tc1"}}},
@@ -74,7 +74,7 @@ func TestTranscriptIncomplete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewPersistWriter: %v", err)
 	}
-	if err := w.Write(types.EyrieMessage{Role: "user", Content: "Start"}); err != nil {
+	if err := w.Write(types.GraycodeRouterMessage{Role: "user", Content: "Start"}); err != nil {
 		t.Fatalf("Write: %v", err)
 	}
 	if err := w.Close(); err != nil {

@@ -33,7 +33,7 @@ users / SDKs / skills / daemon clients
                 v
               graycode
        /        |        \
-    eyrie     harrier       shrike
+    graycode-router     harrier       shrike
     swift     kestrel    merlin
                 |
                 v
@@ -44,8 +44,8 @@ The graph is intentionally directional:
 
 - Graycode owns user-facing orchestration, sessions, tools, permissions,
   composition, and public product surfaces.
-- Eyrie owns provider protocols, routing, credentials, catalogs, and provider
-  execution behind `eyrie/engine`.
+- GraycodeRouter owns provider protocols, routing, credentials, catalogs, and provider
+  execution behind `graycode-router/engine`.
 - Harrier, Shrike, Swift, Kestrel, and Merlin are support engines and must not import
   Graycode internals or one another.
 - Core contracts contain stable cross-repository vocabulary and DTOs, not
@@ -56,14 +56,14 @@ The graph is intentionally directional:
 
 ### Complete or enforced
 
-- Graycode production code uses Eyrie through the `eyrie/engine` facade.
+- Graycode production code uses GraycodeRouter through the `graycode-router/engine` facade.
 - Kestrel and Merlin are integrated through Graycode bridge packages.
 - Support-engine sibling imports and imports of Graycode internals are guarded.
 - The AST/package-graph guard reports production boundary violations with
   file/line diagnostics across Graycode and available support repositories.
 - Persisted tool, review, verification, event, and policy contracts use the
   implemented portions of `eagle`.
-- Native-compaction capability contracts use `eagle/llm`; Eyrie
+- Native-compaction capability contracts use `eagle/llm`; GraycodeRouter
   request translation remains inside `internal/provider/gateway`, keeping the
   engine layer independent of the provider adapter package for this path.
 - Container-required state and its executor are owned by `ToolService` and
@@ -90,7 +90,7 @@ The graph is intentionally directional:
 - Graycode's Harrier and Shrike implementation imports are now concentrated in
   `HarrierBridge` and `internal/token` for the migrated production paths. The
   graph/projection packages used for capture remain explicit integration
-  surfaces; replaceability is improved, but still not equivalent to the Eyrie
+  surfaces; replaceability is improved, but still not equivalent to the GraycodeRouter
   boundary.
 - `PersistenceService` is the in-memory runtime owner for transcript/context
   state and checkpoint metadata. The active durable session path remains
@@ -117,11 +117,11 @@ The `graycode-eco` parent workspace and Graycode's published module pins provide
 local integration without removing independent ownership and release
 boundaries.
 
-### ADR-B02 — Preserve the Eyrie boundary
+### ADR-B02 — Preserve the GraycodeRouter boundary
 
 Provider implementation, catalog metadata, credential mapping, and protocol
-adapters remain owned by Eyrie. Graycode may own product policy and user-facing
-selection, but production provider access remains through `eyrie/engine`.
+adapters remain owned by GraycodeRouter. Graycode may own product policy and user-facing
+selection, but production provider access remains through `graycode-router/engine`.
 
 ### ADR-B03 — Complete internal consolidation before adding new seams
 

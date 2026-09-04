@@ -372,7 +372,7 @@ func toolListSummary(registry *tool.Registry) string {
 	if registry == nil {
 		return "No tools enabled."
 	}
-	tools := registry.EyrieTools()
+	tools := registry.GraycodeRouterTools()
 	registered := len(registry.PrimaryTools())
 	if len(tools) == 0 {
 		return "No tools enabled."
@@ -421,7 +421,7 @@ func configCommandSummary(settings graycodeconfig.Settings) string {
 	_ = settings
 	providerName := displayConfigValue(graycodeconfig.ActiveProvider(context.Background()))
 	modelName := displayConfigValue(graycodeconfig.ActiveModel(context.Background()))
-	return fmt.Sprintf(`Setup (eyrie)
+	return fmt.Sprintf(`Setup (graycode-router)
 
   /config  → paste API key (OS keychain) + pick model
   /path    → verify readiness in TUI
@@ -432,7 +432,7 @@ Current:
   model:    %s
   keys:     %s
 
-Model catalog and routing live in eyrie — graycode is the UI only.`, providerName, modelName, configuredKeyList())
+Model catalog and routing live in graycode-router — graycode is the UI only.`, providerName, modelName, configuredKeyList())
 }
 
 func apiKeyConfigSummary() string {

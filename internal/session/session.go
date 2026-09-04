@@ -16,11 +16,11 @@ import (
 	"sync"
 	"time"
 
-	contracts "github.com/GrayCodeAI/eyrie/tools"
 	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
 	"github.com/GrayCodeAI/graycode-cli/internal/eventlog/zstdz"
 	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	contracts "github.com/GrayCodeAI/graycode-router/tools"
 )
 
 // Message is a persisted conversation message.

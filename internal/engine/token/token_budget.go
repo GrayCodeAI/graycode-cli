@@ -14,7 +14,7 @@ import (
 //
 // Research basis: Output tokens are 3-5x more expensive than input tokens.
 // Most tool-call turns only need 200-2000 tokens of output.
-func DynamicMaxTokens(messages []types.EyrieMessage, contextSize int, taskType string) int {
+func DynamicMaxTokens(messages []types.GraycodeRouterMessage, contextSize int, taskType string) int {
 	base := selectBaseTokens(taskType)
 
 	// Check recent messages for tool-call-heavy pattern.
@@ -69,7 +69,7 @@ func selectBaseTokens(taskType string) int {
 // isRecentToolHeavy returns true if the last N assistant messages all
 // contained tool calls, suggesting the agent is in a tool-use loop where
 // large output budgets are wasted.
-func isRecentToolHeavy(messages []types.EyrieMessage) bool {
+func isRecentToolHeavy(messages []types.GraycodeRouterMessage) bool {
 	const lookback = 3
 	toolTurns := 0
 	assistantSeen := 0
@@ -92,7 +92,7 @@ func isRecentToolHeavy(messages []types.EyrieMessage) bool {
 
 // isTextQuestion returns true if the last user message looks like a
 // question expecting a textual answer rather than a tool invocation.
-func isTextQuestion(messages []types.EyrieMessage) bool {
+func isTextQuestion(messages []types.GraycodeRouterMessage) bool {
 	// Find the last user message (skip tool results).
 	var lastUserMsg string
 	for i := len(messages) - 1; i >= 0; i-- {

@@ -298,7 +298,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings grayco
 	go func() {
 		providerName := effectiveProvider
 		entries, _ := graycodeconfig.ListEngineModels(context.Background(), providerName, false)
-		opts := configModelOptionsFromEyrie(entries)
+		opts := configModelOptionsFromGraycodeRouter(entries)
 		if len(opts) > 0 {
 			modelCacheMu.Lock()
 			modelCache[providerName] = opts
@@ -713,7 +713,7 @@ func runChat() error {
 		m.waiting = true
 	}
 
-	// Suppress library log output (e.g. eyrie retry warnings) from corrupting the TUI.
+	// Suppress library log output (e.g. graycode-router retry warnings) from corrupting the TUI.
 	// Must be set BEFORE tea.NewProgram so no initialization logs leak through.
 	log.SetOutput(io.Discard)
 

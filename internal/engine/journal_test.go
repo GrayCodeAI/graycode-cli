@@ -13,7 +13,7 @@ func TestJournaledAppendKeepsTranscriptAndProjectionInSync(t *testing.T) {
 	ps := NewPersistenceService(nil)
 
 	// No journal yet: appends do not panic and behave like plain transcript writes.
-	ps.AppendUserJournaled(types.EyrieMessage{Role: "user", Content: "pre-journal"})
+	ps.AppendUserJournaled(types.GraycodeRouterMessage{Role: "user", Content: "pre-journal"})
 	if got := ps.MessageCount(); got != 1 {
 		t.Fatalf("messages = %d, want 1", got)
 	}
@@ -22,7 +22,7 @@ func TestJournaledAppendKeepsTranscriptAndProjectionInSync(t *testing.T) {
 	}
 
 	ps.SetJournal(eventlog.New(nil))
-	want := []types.EyrieMessage{
+	want := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "hi"},
 		{Role: "assistant", Content: "hello"},
 	}
@@ -43,7 +43,7 @@ func TestJournaledAppendKeepsTranscriptAndProjectionInSync(t *testing.T) {
 func TestJournaledAppendPreservesToolFactoryRoundTrip(t *testing.T) {
 	ps := NewPersistenceService(nil)
 	ps.SetJournal(eventlog.New(nil))
-	in := types.EyrieMessage{
+	in := types.GraycodeRouterMessage{
 		Role:    "assistant",
 		Content: "did tool call",
 		ToolUse: []types.ToolCall{
@@ -51,7 +51,7 @@ func TestJournaledAppendPreservesToolFactoryRoundTrip(t *testing.T) {
 		},
 	}
 	ps.AppendAssistantJournaled(in)
-	ps.AppendUserJournaled(types.EyrieMessage{
+	ps.AppendUserJournaled(types.GraycodeRouterMessage{
 		Role:    "user",
 		Content: "tool result",
 		ToolResults: []types.ToolResult{
@@ -80,7 +80,7 @@ func TestAddUserAddAssistantRoutesThroughJournal(t *testing.T) {
 	ps.SetJournal(eventlog.New(nil))
 	ps.AddUser("hello")
 	ps.AddAssistant("hi")
-	want := []types.EyrieMessage{
+	want := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "hello"},
 		{Role: "assistant", Content: "hi"},
 	}
@@ -132,7 +132,7 @@ func TestReplayJournalRebuildsLogFromWire(t *testing.T) {
 	}
 	restored.SetJournal(log)
 
-	want := []types.EyrieMessage{
+	want := []types.GraycodeRouterMessage{
 		{Role: "user", Content: "hello"},
 		{Role: "assistant", Content: "hi"},
 	}
@@ -140,7 +140,7 @@ func TestReplayJournalRebuildsLogFromWire(t *testing.T) {
 		t.Fatalf("JournalProjection() = %+v, want %+v", got, want)
 	}
 	// The rebuilt log must continue sequence assignment after the largest Seq.
-	restored.AppendUserJournaled(types.EyrieMessage{Role: "user", Content: "next"})
+	restored.AppendUserJournaled(types.GraycodeRouterMessage{Role: "user", Content: "next"})
 	if got := restored.JournalProjection(); len(got) != 3 {
 		t.Fatalf("projected %d messages after append, want 3", len(got))
 	}
@@ -160,7 +160,7 @@ func TestJournaledAppendContentPartsRoundTrip(t *testing.T) {
 	ps := NewPersistenceService(nil)
 	ps.SetJournal(eventlog.New(nil))
 	img := &types.ImageURLPart{URL: "data:image/png;base64,abc", Detail: "high"}
-	in := types.EyrieMessage{Role: "user", Content: "see image", ContentParts: []types.ContentPart{{Type: "image_url", ImageURL: img}}}
+	in := types.GraycodeRouterMessage{Role: "user", Content: "see image", ContentParts: []types.ContentPart{{Type: "image_url", ImageURL: img}}}
 	ps.AppendUserJournaled(in)
 	got := ps.JournalProjection()[0]
 	if len(got.ContentParts) != 1 {

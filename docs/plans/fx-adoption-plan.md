@@ -45,7 +45,7 @@ features:
 | ACP | `internal/acp` | Extend status/config parity where useful |
 | Swift and replay | sibling `swift` (Swift), `internal/session/replay` | Add terminal-level tape capability |
 | Persistent memory | sibling `harrier` (Harrier) | Do not replace with flat JSON state |
-| Provider runtime | sibling `eyrie` | Do not add provider logic to Graycode |
+| Provider runtime | sibling `graycode-router` | Do not add provider logic to Graycode |
 
 ## Priority Model
 
@@ -67,7 +67,7 @@ when their original command, path, or workspace has changed.
   `internal/engine/safety`.
 - Shared contract changes, if needed: sibling `eagle/policy`.
 - User-facing commands: `cmd` and the existing slash-command surface.
-- No changes to sibling `eyrie` or `falcon`.
+- No changes to sibling `graycode-router` or `falcon`.
 
 ### Required behavior
 
@@ -422,7 +422,7 @@ graycode verify
 
 For sibling-repository changes, run that repository's own tests and boundary checks before
 updating the Graycode pointer. Do not modify provider protocols or adapters in Graycode;
-those belong in the Eyrie repository.
+those belong in the GraycodeRouter repository.
 
 ## Delivery Sequence
 

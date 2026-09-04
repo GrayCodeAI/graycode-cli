@@ -1,5 +1,5 @@
 // Package conformance verifies that emitted telemetry spans always match the
-// documented OpenTelemetry schema (docs/OTEL-CONVENTIONS.md and the eyrie
+// documented OpenTelemetry schema (docs/OTEL-CONVENTIONS.md and the graycode-router
 // gen_ai.* semantic-convention constants), so the schema cannot silently drift
 // across Graycode and its independent ecosystem repositories.
 //
@@ -17,7 +17,7 @@ import (
 
 // Attribute vocabulary shared across the ecosystem. These mirror the keys
 // emitted by the span starters in internal/observability/oteltrace and the
-// gen_ai.* constants in eyrie/internal/observability.
+// gen_ai.* constants in graycode-router/internal/observability.
 const (
 	AttrGenAISystem            = "gen_ai.system"
 	AttrGenAIRequestModel      = "gen_ai.request.model"

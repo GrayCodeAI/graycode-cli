@@ -28,7 +28,7 @@ const (
 // recent clearKeepRecent tool-result messages intact, until estimatedTokens
 // drops below threshold. It returns the new messages and the estimated tokens
 // freed. Adopted from herm's clearOldToolResults.
-func clearOldToolResults(msgs []types.EyrieMessage, estimatedTokens, threshold int) ([]types.EyrieMessage, int) {
+func clearOldToolResults(msgs []types.GraycodeRouterMessage, estimatedTokens, threshold int) ([]types.GraycodeRouterMessage, int) {
 	if threshold <= 0 || estimatedTokens <= 0 || len(msgs) == 0 {
 		return msgs, 0
 	}
@@ -94,7 +94,7 @@ func (s *Session) ClearOldToolResults(ctx context.Context) bool {
 }
 
 // toolResultBytes returns the total byte size of a message's tool results.
-func toolResultBytes(m types.EyrieMessage) int {
+func toolResultBytes(m types.GraycodeRouterMessage) int {
 	total := 0
 	for _, tr := range m.ToolResults {
 		total += len(tr.Content)
@@ -104,7 +104,7 @@ func toolResultBytes(m types.EyrieMessage) int {
 
 // clearMessageToolResults replaces each non-empty tool-result content with the
 // placeholder and returns the estimated tokens freed (~4 bytes per token).
-func clearMessageToolResults(m *types.EyrieMessage) int {
+func clearMessageToolResults(m *types.GraycodeRouterMessage) int {
 	freedBytes := 0
 	for i := range m.ToolResults {
 		c := m.ToolResults[i].Content
@@ -119,8 +119,8 @@ func clearMessageToolResults(m *types.EyrieMessage) int {
 
 // cloneToolResults copies msgs, deep-copying the ToolResults slices so callers
 // can mutate the copy without touching the persisted originals.
-func cloneToolResults(msgs []types.EyrieMessage) []types.EyrieMessage {
-	out := make([]types.EyrieMessage, len(msgs))
+func cloneToolResults(msgs []types.GraycodeRouterMessage) []types.GraycodeRouterMessage {
+	out := make([]types.GraycodeRouterMessage, len(msgs))
 	for i, m := range msgs {
 		out[i] = m
 		if m.ToolResults != nil {

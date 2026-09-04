@@ -12,11 +12,11 @@ Platform/provider capability metadata is separate: [`platform-capabilities.json`
 
 ```jsonc
 {
-  "components":   ["graycode", "eyrie", ...],   // canonical eco roster
-  "dependencies": { "graycode": ["eyrie", ...] }, // who depends on who
+  "components":   ["graycode", "graycode-router", ...],   // canonical eco roster
+  "dependencies": { "graycode": ["graycode-router", ...] }, // who depends on who
   "matrices": [
-    { "name": "stable", "components": { "graycode": "0.1.0", "eyrie": "0.1.0", ... } },
-    { "name": "next",   "components": { "graycode": "main",  "eyrie": "main",  ... } }
+    { "name": "stable", "components": { "graycode": "0.1.0", "graycode-router": "0.1.0", ... } },
+    { "name": "next",   "components": { "graycode": "main",  "graycode-router": "main",  ... } }
   ]
 }
 ```
@@ -59,7 +59,7 @@ It runs on:
 
 ## Why bother
 
-- **Bug reports become triageable.** "I ran graycode 0.4 with eyrie 0.2" — you
+- **Bug reports become triageable.** "I ran graycode 0.4 with graycode-router 0.2" — you
   immediately know whether that combination was ever tested.
 - **Consumers can pin reliably.** Downstream projects that vendor multiple
   eco packages can pin to a known-good stable matrix instead of guessing.
