@@ -30,10 +30,10 @@
       "name": "stable",
       "description": "Latest tested-together stable combination across the eco. This is what new users get when installing.",
       "components": {
-        "graycode":            "0.1.0",
+        "graycode":            "0.0.1",
         "sparrow":     "0.1.0",
         "robin": "0.1.0",
-        "graycode-router":           "0.1.0",
+        "graycode-router":           "0.0.1",
         "kestrel":           "0.1.0",
         "merlin":         "0.1.0",
         "shrike":             "0.1.0",
