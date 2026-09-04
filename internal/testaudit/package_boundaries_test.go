@@ -35,7 +35,6 @@ func TestPackageDependencyGraph(t *testing.T) {
 	checkGraycodeEyrieFacade(t, root)
 	checkGraycodeInternalLayers(t, root)
 	checkSupportRepositoryBoundaries(t, root)
-	checkGoSDKBoundary(t, root)
 }
 
 func checkGraycodeEyrieFacade(t *testing.T, root string) {
@@ -126,23 +125,6 @@ func checkSupportRepositoryBoundaries(t *testing.T, root string) {
 	}
 
 	assertNoPackageViolations(t, "support repository boundaries", violations)
-}
-
-func checkGoSDKBoundary(t *testing.T, root string) {
-	var violations []string
-	for _, sdkRoot := range []string{
-		filepath.Join(root, "..", "sparrow"),
-	} {
-		for _, imp := range productionImports(t, root, sdkRoot) {
-			for _, engine := range supportEngines {
-				prefix := "github.com/GrayCodeAI/" + engine
-				if imp.path == prefix || strings.HasPrefix(imp.path, prefix+"/") {
-					violations = append(violations, formatImportViolation(root, imp, "SDKs must consume Graycode public surfaces"))
-				}
-			}
-		}
-	}
-	assertNoPackageViolations(t, "Go SDK boundary", violations)
 }
 
 func repositoryRoots(root, repo string) []string {

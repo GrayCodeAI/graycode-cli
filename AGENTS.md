@@ -105,10 +105,10 @@ graycode specialist path                       # prints the resolved specialists
 
 graycode ships **no bundled skills** by default. Skills are markdown instruction
 files that extend agent capabilities, sourced from the separate
-`GrayCodeAI/starling` repo and installed on demand:
+`GrayCodeAI/graycode-skills` repo and installed on demand:
 
 ```bash
-graycode skills search <query>          # find skills in starling
+graycode skills search <query>          # find skills in graycode-skills
 graycode skills install <owner/repo> [skill-name]   # install after user approval
 graycode skills list                    # list installed skills
 graycode skills remove <name>

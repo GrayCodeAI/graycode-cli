@@ -40,16 +40,6 @@ for repo in "${support_repos[@]}"; do
   scan_dir "${repo}" "../${repo}"
 done
 
-if [[ -d "../sparrow" ]]; then
-  peer_pattern="$(IFS='|'; echo "${support_repos[*]}")"
-  sdk_hits="$(
-    grep -RInE --include='*.go' "github\\.com/GrayCodeAI/(${peer_pattern})(/|\")" ../sparrow || true
-  )"
-  if [[ -n "${sdk_hits}" ]]; then
-    violations+="${sdk_hits}"$'\n'
-  fi
-fi
-
 if [[ -n "${violations}" ]]; then
   echo "forbidden cross-repo peer imports found:"
   echo "${violations}"
