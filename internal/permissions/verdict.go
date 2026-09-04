@@ -12,7 +12,7 @@
 // (PermissionVerdict). Ported to native Go.
 package permissions
 
-import contracts "github.com/GrayCodeAI/eagle/policy"
+import contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/policy"
 
 // Risk is the severity of a permission verdict.
 type Risk = contracts.Risk

@@ -14,7 +14,7 @@ if [[ -n "${violations}" ]]; then
   echo "forbidden imports of removed github.com/GrayCodeAI/graycode-cli/shared/types found:"
   echo "${violations}"
   echo
-  echo "graycode/shared/types has been removed; use github.com/GrayCodeAI/eagle/types instead"
+  echo "graycode/shared/types has been removed; use internal/contracts instead"
   exit 1
 fi
 

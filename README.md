@@ -437,7 +437,6 @@ graycode/
 Ecosystem sibling repos (independent Git repos in the `graycode-eco` parent
 folder):
 ├── eyrie/              # LLM provider runtime
-├── eagle/              # Shared cross-repo contracts
 ├── merlin/             # Merlin security audit library
 ├── kestrel/            # Kestrel diff-based code review
 ├── shrike/             # Shrike tokenizer, compression, secrets scanning
@@ -452,7 +451,7 @@ three runtime layers plus optional tooling/platform services:
 
 - **Primary product:** **graycode** is the only end-user product surface in this ecosystem.
 - **Support engines mounted by Graycode:** **eyrie**, **harrier**, **shrike**, **swift**, **kestrel**, **merlin**. Graycode imports or shells into these engines behind its own command surface.
-- **Shared foundations:** **eagle** holds neutral cross-repo types and **falcon**
+- **Shared foundations:** **falcon**
   provides shared MCP server scaffolding.
 - **API consumers/extensions:** **sparrow**, **robin**, and **wren** consume
   Graycode's daemon API; **starling** provides Graycode skills.
@@ -462,20 +461,26 @@ three runtime layers plus optional tooling/platform services:
 
 Local development uses:
 
-- **`go.mod` modules:** pinned requirements for the support engines and `eagle`
+- **`go.mod` modules:** pinned requirements for the support engines
 - **Workspace + `go.work`:** sibling support repos are cloned in the `graycode-eco` workspace (as `../<repo>`); `go.work` resolves the module paths to those local checkouts
 - **Module-mode builds:** standalone / Docker builds resolve the pinned `go.mod` versions from the module proxy (no workspace)
 
-Cross-repo contracts now live in **`github.com/GrayCodeAI/eagle`** so support repos do not depend on Graycode internals. The old `graycode/shared/types` path has been removed; use `eagle/types` for shared severity and finding contracts.
+Cross-repo contracts now live in `internal/contracts` (vendored from the
+removed `github.com/GrayCodeAI/eagle` module) so support repos do not depend
+on Graycode internals. The old `graycode/shared/types` path has been removed;
+external consumers should vendor the needed DTOs from `internal/contracts`
+until a published contracts module exists.
 
-Current contract packages:
+Current contract packages (`internal/contracts/`):
 
-- `eagle/types` — severity, findings
-- `eagle/review` — normalized review findings, comments, stats, results
-- `eagle/verify` — normalized verification findings, stats, reports
-- `eagle/tools` — tool call/result contracts
-- `eagle/events` — normalized tool/swift events
-- `eagle/policy` — permission and policy verdict contracts
+- `types` — severity, findings
+- `graph` — portable graph vocabulary: nodes, edges, events, provenance
+- `agent` — typed subagent spawn DTOs and hook events
+- `policy` — permission and policy verdict contracts
+- `contracts/review` — normalized review findings, comments, stats, results
+- `contracts/verify` — normalized verification findings, stats, reports
+- `events` — tool, trace, and usage events
+- `harness` — harness evaluation reports and dimension scores
 
 You may keep a **personal** parent **`go.work`** that lists alternate clones on disk for multi-repo development.
 
@@ -488,7 +493,6 @@ You may keep a **personal** parent **`go.work`** that lists alternate clones on 
 | **shrike** | [GrayCodeAI/shrike](https://github.com/GrayCodeAI/shrike) | Compression, redaction, token/cost budgets, and privacy-safe runtime graph facts |
 | **harrier** | [GrayCodeAI/harrier](https://github.com/GrayCodeAI/harrier) | Graph-based memory |
 | **swift** | [GrayCodeAI/swift](https://github.com/GrayCodeAI/swift) | Session capture and replay engine mounted as `graycode swift ...` |
-| **eagle** | [GrayCodeAI/eagle](https://github.com/GrayCodeAI/eagle) | Shared contracts and neutral cross-repo vocabulary |
 
 For the consolidated repo map and the current-vs-proposed architecture diagrams, see [docs/architecture/graycode-current-vs-proposed.md](docs/architecture/graycode-current-vs-proposed.md).
 For execution-graph ownership, automatic capture seams, export/sync commands,

@@ -1,6 +1,10 @@
 # GrayCode ecosystem wiring
 
-This document is the implementation contract for the 15 repositories in the
+> NOTE (2026-09-04): the `eagle` repository has been removed; its contracts
+> were vendored into graycode-cli's `internal/contracts` and `ecosystem.yaml`
+> no longer lists it. Diagrams below predate the removal.
+
+This document is the implementation contract for the 14 repositories in the
 GrayCodeAI ecosystem. `ecosystem.yaml` is the canonical machine-readable
 inventory; generated workspaces, boundary checks, release parity, and Owl's
 repository catalog derive from it.

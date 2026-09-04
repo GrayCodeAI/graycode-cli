@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	policycontracts "github.com/GrayCodeAI/eagle/policy"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
+	policycontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/policy"
 	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	contracts "github.com/GrayCodeAI/eagle/types"
-	verifycontracts "github.com/GrayCodeAI/eagle/verify"
 	graycodeMerlin "github.com/GrayCodeAI/graycode-cli/internal/bridge/merlin"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
+	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
+	verifycontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/verify"
 	merlinLib "github.com/GrayCodeAI/merlin"
 )
 

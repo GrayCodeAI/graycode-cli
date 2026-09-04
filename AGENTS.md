@@ -7,7 +7,7 @@ alwaysApply: false
 # Extending graycode
 
 graycode is an open-source code intelligence platform. It lives in the `graycode-eco`
-workspace alongside the ecosystem repos that power it (`eyrie`, `eagle`,
+workspace alongside the ecosystem repos that power it (`eyrie`,
 `shrike`, `harrier`, `swift`, `kestrel`, `merlin`). This document describes how to extend
 graycode with custom tools, skills, hooks, and integrations.
 
@@ -187,7 +187,7 @@ graycode verify
 
 ### Architecture note: cross-repo contracts
 
-Legacy `graycode/shared/types` has been removed. Cross-repo severity and finding contracts now live in `github.com/GrayCodeAI/eagle` (`eagle/types`) — extensions and support repos must import that module instead of Graycode internals.
+Legacy `graycode/shared/types` has been removed. Cross-repo severity and finding contracts now live in graycode-cli's `internal/contracts` (vendored from the removed `github.com/GrayCodeAI/eagle` module) — extensions and support repos must vendor the needed DTOs instead of Graycode internals until a published contracts module exists.
 
 ### Architecture note: provider ownership
 
@@ -245,7 +245,7 @@ This project is indexed by GitNexus as **graycode** (97743 symbols, 322940 relat
 
 ### Workspace workflow (sibling repos)
 
-graycode depends on ecosystem repos (`eyrie`, `eagle`, etc.) as independent sibling repos in the `graycode-eco` workspace. Graycode's `go.work` lists them as `../<repo>`, so local changes in any sibling are automatically picked up by graycode. Each sibling is its own git repo, versioned and released independently.
+graycode depends on ecosystem repos (`eyrie`, etc.) as independent sibling repos in the `graycode-eco` workspace. Graycode's `go.work` lists them as `../<repo>`, so local changes in any sibling are automatically picked up by graycode. Each sibling is its own git repo, versioned and released independently.
 
 1. Edit + test in `../<repo>` — run its tests, run `make test` in graycode
 2. Push from the sibling: `git push origin <branch>`

@@ -17,7 +17,6 @@ repo's threshold, update both the CI file and this table in the same PR.**
 | `merlin` | 76% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
 | `sparrow` | 80% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
 | `robin` | 78% | `--cov-fail-under=` in `ci.yml` (python-ci.yml.tmpl) |
-| `eagle` | none enforced | leaf library; add one before it grows past a handful of files |
 | `falcon` | none enforced | leaf library; add one before it grows past a handful of files |
 | `starling` | n/a | no Go/Python test suite (skill/content registry) |
 

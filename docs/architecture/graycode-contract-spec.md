@@ -97,8 +97,8 @@ list in sync with the code (it is the inventory the dependency rules assume).
 ## Current status
 
 - severity and finding contracts are live in `eagle`
-- review result contracts now exist in `eagle/review`
-- verification result contracts now exist in `eagle/verify`
+- review result contracts now exist in `contracts/review`
+- verification result contracts now exist in `contracts/verify`
 - tool contracts now exist in `eagle/tools`
 - event contracts now exist in `eagle/events`
 - policy contracts now exist in `eagle/policy`

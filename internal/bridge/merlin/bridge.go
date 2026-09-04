@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	eagletypes "github.com/GrayCodeAI/eagle/types"
-	verifycontracts "github.com/GrayCodeAI/eagle/verify"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
+	typescontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
+	verifycontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/verify"
 	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
 	merlinLib "github.com/GrayCodeAI/merlin"
 	merlingraph "github.com/GrayCodeAI/merlin/graph"
@@ -77,7 +77,7 @@ func (b *Bridge) RunContracts(ctx context.Context, target string, opts ...merlin
 	if err != nil {
 		return nil, err
 	}
-	return toEagleReport(merlinLib.ToContractReport(report)), nil
+	return toContractReport(merlinLib.ToContractReport(report)), nil
 }
 
 // RunContractsObserved performs a scan, journals Merlin's portable quality
@@ -114,9 +114,9 @@ func (b *Bridge) RunContractsObserved(
 		observation.ToolCallID,
 		stage,
 		"merlin",
-		toEagleNodes(export.Nodes),
-		toEagleEdges(export.Edges),
-		toEagleEvents(export.Events),
+		toContractNodes(export.Nodes),
+		toContractEdges(export.Edges),
+		toContractEvents(export.Events),
 		observedAt,
 	); err != nil {
 		return nil, err
@@ -134,90 +134,90 @@ func (b *Bridge) RunContractsObserved(
 	); err != nil {
 		return nil, err
 	}
-	return toEagleReport(contractReport), nil
+	return toContractReport(contractReport), nil
 }
 
 // The following helpers convert Merlin's vendored contract types into Graycode's
-// eagle/* contract types (and the reverse for scope). The definitions are
+// contracts/* contract types (and the reverse for scope). The definitions are
 // byte-identical, so conversion is a field-by-field copy at the boundary.
 
 func toMerlinScope(s graphcontracts.Scope) merlingraph.Scope {
 	return merlingraph.Scope{TenantID: s.TenantID, ProjectID: s.ProjectID, RepositoryID: s.RepositoryID}
 }
 
-func toEagleNodes(nodes []merlingraph.Node) []graphcontracts.Node {
+func toContractNodes(nodes []merlingraph.Node) []graphcontracts.Node {
 	out := make([]graphcontracts.Node, len(nodes))
 	for i, n := range nodes {
-		out[i] = toEagleNode(n)
+		out[i] = toContractNode(n)
 	}
 	return out
 }
 
-func toEagleNode(n merlingraph.Node) graphcontracts.Node {
+func toContractNode(n merlingraph.Node) graphcontracts.Node {
 	return graphcontracts.Node{
 		ID:          n.ID,
 		Kind:        graphcontracts.NodeKind(n.Kind),
-		Scope:       toEagleScope(n.Scope),
+		Scope:       toContractScope(n.Scope),
 		CreatedAt:   n.CreatedAt,
 		EffectiveAt: n.EffectiveAt,
-		Provenance:  toEagleProvenance(n.Provenance),
+		Provenance:  toContractProvenance(n.Provenance),
 		Attributes:  n.Attributes,
 	}
 }
 
-func toEagleEdges(edges []merlingraph.Edge) []graphcontracts.Edge {
+func toContractEdges(edges []merlingraph.Edge) []graphcontracts.Edge {
 	out := make([]graphcontracts.Edge, len(edges))
 	for i, e := range edges {
-		out[i] = toEagleEdge(e)
+		out[i] = toContractEdge(e)
 	}
 	return out
 }
 
-func toEagleEdge(e merlingraph.Edge) graphcontracts.Edge {
+func toContractEdge(e merlingraph.Edge) graphcontracts.Edge {
 	return graphcontracts.Edge{
 		ID:          e.ID,
 		Kind:        graphcontracts.EdgeKind(e.Kind),
-		From:        toEagleRef(e.From),
-		To:          toEagleRef(e.To),
-		Scope:       toEagleScope(e.Scope),
+		From:        toContractRef(e.From),
+		To:          toContractRef(e.To),
+		Scope:       toContractScope(e.Scope),
 		CreatedAt:   e.CreatedAt,
 		EffectiveAt: e.EffectiveAt,
-		Provenance:  toEagleProvenance(e.Provenance),
+		Provenance:  toContractProvenance(e.Provenance),
 		Attributes:  e.Attributes,
 	}
 }
 
-func toEagleEvents(events []merlingraph.Event) []graphcontracts.Event {
+func toContractEvents(events []merlingraph.Event) []graphcontracts.Event {
 	out := make([]graphcontracts.Event, len(events))
 	for i, ev := range events {
-		out[i] = toEagleEvent(ev)
+		out[i] = toContractEvent(ev)
 	}
 	return out
 }
 
-func toEagleEvent(ev merlingraph.Event) graphcontracts.Event {
+func toContractEvent(ev merlingraph.Event) graphcontracts.Event {
 	return graphcontracts.Event{
 		ID:             ev.ID,
 		Type:           graphcontracts.EventType(ev.Type),
-		Subject:        toEagleRef(ev.Subject),
-		Scope:          toEagleScope(ev.Scope),
+		Subject:        toContractRef(ev.Subject),
+		Scope:          toContractScope(ev.Scope),
 		OccurredAt:     ev.OccurredAt,
 		CorrelationID:  ev.CorrelationID,
 		CausationID:    ev.CausationID,
 		IdempotencyKey: ev.IdempotencyKey,
-		Provenance:     toEagleProvenance(ev.Provenance),
+		Provenance:     toContractProvenance(ev.Provenance),
 	}
 }
 
-func toEagleRef(r merlingraph.Ref) graphcontracts.Ref {
+func toContractRef(r merlingraph.Ref) graphcontracts.Ref {
 	return graphcontracts.Ref{Kind: graphcontracts.NodeKind(r.Kind), ID: r.ID}
 }
 
-func toEagleScope(s merlingraph.Scope) graphcontracts.Scope {
+func toContractScope(s merlingraph.Scope) graphcontracts.Scope {
 	return graphcontracts.Scope{TenantID: s.TenantID, ProjectID: s.ProjectID, RepositoryID: s.RepositoryID}
 }
 
-func toEagleProvenance(p merlingraph.Provenance) graphcontracts.Provenance {
+func toContractProvenance(p merlingraph.Provenance) graphcontracts.Provenance {
 	evidence := make([]graphcontracts.ArtifactRef, len(p.Evidence))
 	for i, a := range p.Evidence {
 		evidence[i] = graphcontracts.ArtifactRef{URI: a.URI, Digest: a.Digest, MediaType: a.MediaType}
@@ -225,7 +225,7 @@ func toEagleProvenance(p merlingraph.Provenance) graphcontracts.Provenance {
 	return graphcontracts.Provenance{Producer: p.Producer, Version: p.Version, SourceID: p.SourceID, Evidence: evidence}
 }
 
-func toEagleReport(r *merlinverify.Report) *verifycontracts.Report {
+func toContractReport(r *merlinverify.Report) *verifycontracts.Report {
 	if r == nil {
 		return nil
 	}
@@ -233,7 +233,7 @@ func toEagleReport(r *merlinverify.Report) *verifycontracts.Report {
 	for i, f := range r.Findings {
 		findings[i] = verifycontracts.Finding{
 			Check:    f.Check,
-			Severity: eagletypes.Severity(f.Severity),
+			Severity: typescontracts.Severity(f.Severity),
 			URL:      f.URL,
 			Element:  f.Element,
 			Message:  f.Message,
@@ -241,9 +241,9 @@ func toEagleReport(r *merlinverify.Report) *verifycontracts.Report {
 			Evidence: f.Evidence,
 		}
 	}
-	bySeverity := make(map[eagletypes.Severity]int, len(r.Stats.BySeverity))
+	bySeverity := make(map[typescontracts.Severity]int, len(r.Stats.BySeverity))
 	for sev, count := range r.Stats.BySeverity {
-		bySeverity[eagletypes.Severity(sev)] = count
+		bySeverity[typescontracts.Severity(sev)] = count
 	}
 	return &verifycontracts.Report{
 		Target:   r.Target,
@@ -257,7 +257,7 @@ func toEagleReport(r *merlinverify.Report) *verifycontracts.Report {
 		},
 		CrawledURLs: r.CrawledURLs,
 		Duration:    r.Duration,
-		FailOn:      eagletypes.Severity(r.FailOn),
+		FailOn:      typescontracts.Severity(r.FailOn),
 		FailOnSet:   r.FailOnSet,
 	}
 }

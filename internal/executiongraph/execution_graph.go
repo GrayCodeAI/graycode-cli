@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	policycontracts "github.com/GrayCodeAI/eagle/policy"
-	verifycontracts "github.com/GrayCodeAI/eagle/verify"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
+	policycontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/policy"
+	verifycontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/verify"
 	"github.com/GrayCodeAI/graycode-cli/internal/session"
 	"github.com/GrayCodeAI/graycode-cli/internal/taskruntime"
 	"github.com/GrayCodeAI/graycode-cli/internal/tool"

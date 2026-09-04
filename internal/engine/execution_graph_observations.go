@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	policycontracts "github.com/GrayCodeAI/eagle/policy"
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
 	eyriegraph "github.com/GrayCodeAI/eyrie/graph"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
+	policycontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/policy"
 	"github.com/GrayCodeAI/graycode-cli/internal/engine/token"
 	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
@@ -162,7 +162,7 @@ func (s *Session) recordShrikeCompressionObservation(source, stage string, stats
 	if err == nil {
 		err = graphjournal.AppendRuntimeGraph(
 			sessionID, "", stage, "shrike",
-			shrikeToEagleNodes(export.Nodes), shrikeToEagleEdges(export.Edges), shrikeToEagleEvents(export.Events), observedAt,
+			shrikeToContractNodes(export.Nodes), shrikeToContractEdges(export.Edges), shrikeToContractEvents(export.Events), observedAt,
 		)
 	}
 	if err != nil {
@@ -200,7 +200,7 @@ func (s *Session) recordShrikeRedactionObservation(source string, matchCount int
 	if err == nil {
 		err = graphjournal.AppendRuntimeGraph(
 			sessionID, "", "response-redaction", "shrike",
-			shrikeToEagleNodes(export.Nodes), shrikeToEagleEdges(export.Edges), shrikeToEagleEvents(export.Events), observedAt,
+			shrikeToContractNodes(export.Nodes), shrikeToContractEdges(export.Edges), shrikeToContractEvents(export.Events), observedAt,
 		)
 	}
 	if err != nil {
@@ -258,7 +258,7 @@ func (s *Session) recordShrikeUsageBudgetObservation(
 	if err == nil {
 		err = graphjournal.AppendRuntimeGraph(
 			sessionID, "", "usage-budget", "shrike",
-			shrikeToEagleNodes(export.Nodes), shrikeToEagleEdges(export.Edges), shrikeToEagleEvents(export.Events), observedAt,
+			shrikeToContractNodes(export.Nodes), shrikeToContractEdges(export.Edges), shrikeToContractEvents(export.Events), observedAt,
 		)
 	}
 	if err != nil {
@@ -323,7 +323,7 @@ func (s *Session) recordEyrieOperationObservation(
 	if err == nil {
 		err = graphjournal.AppendRuntimeGraph(
 			sessionID, "", "model-generation", "eyrie",
-			toEagleNodes(export.Nodes), toEagleEdges(export.Edges), toEagleEvents(export.Events), observedAt,
+			toContractNodes(export.Nodes), toContractEdges(export.Edges), toContractEvents(export.Events), observedAt,
 		)
 	}
 	if err != nil {
@@ -335,82 +335,82 @@ func (s *Session) recordEyrieOperationObservation(
 }
 
 // The following helpers convert Eyrie's vendored graph contract types into
-// Graycode's eagle/graph contract types. The definitions are byte-identical, so
+// Graycode's contracts/graph contract types. The definitions are byte-identical, so
 // conversion is a field-by-field copy at the sibling boundary.
 
-func toEagleNodes(nodes []eyriegraph.Node) []graphcontracts.Node {
+func toContractNodes(nodes []eyriegraph.Node) []graphcontracts.Node {
 	out := make([]graphcontracts.Node, len(nodes))
 	for i, n := range nodes {
-		out[i] = toEagleNode(n)
+		out[i] = toContractNode(n)
 	}
 	return out
 }
 
-func toEagleNode(n eyriegraph.Node) graphcontracts.Node {
+func toContractNode(n eyriegraph.Node) graphcontracts.Node {
 	return graphcontracts.Node{
 		ID:          n.ID,
 		Kind:        graphcontracts.NodeKind(n.Kind),
-		Scope:       toEagleScope(n.Scope),
+		Scope:       toContractScope(n.Scope),
 		CreatedAt:   n.CreatedAt,
 		EffectiveAt: n.EffectiveAt,
-		Provenance:  toEagleProvenance(n.Provenance),
+		Provenance:  toContractProvenance(n.Provenance),
 		Attributes:  n.Attributes,
 	}
 }
 
-func toEagleEdges(edges []eyriegraph.Edge) []graphcontracts.Edge {
+func toContractEdges(edges []eyriegraph.Edge) []graphcontracts.Edge {
 	out := make([]graphcontracts.Edge, len(edges))
 	for i, e := range edges {
-		out[i] = toEagleEdge(e)
+		out[i] = toContractEdge(e)
 	}
 	return out
 }
 
-func toEagleEdge(e eyriegraph.Edge) graphcontracts.Edge {
+func toContractEdge(e eyriegraph.Edge) graphcontracts.Edge {
 	return graphcontracts.Edge{
 		ID:          e.ID,
 		Kind:        graphcontracts.EdgeKind(e.Kind),
-		From:        toEagleRef(e.From),
-		To:          toEagleRef(e.To),
-		Scope:       toEagleScope(e.Scope),
+		From:        toContractRef(e.From),
+		To:          toContractRef(e.To),
+		Scope:       toContractScope(e.Scope),
 		CreatedAt:   e.CreatedAt,
 		EffectiveAt: e.EffectiveAt,
-		Provenance:  toEagleProvenance(e.Provenance),
+		Provenance:  toContractProvenance(e.Provenance),
 		Attributes:  e.Attributes,
 	}
 }
 
-func toEagleEvents(events []eyriegraph.Event) []graphcontracts.Event {
+func toContractEvents(events []eyriegraph.Event) []graphcontracts.Event {
 	out := make([]graphcontracts.Event, len(events))
 	for i, ev := range events {
-		out[i] = toEagleEvent(ev)
+		out[i] = toContractEvent(ev)
 	}
 	return out
 }
 
-func toEagleEvent(ev eyriegraph.Event) graphcontracts.Event {
+func toContractEvent(ev eyriegraph.Event) graphcontracts.Event {
 	return graphcontracts.Event{
 		ID:             ev.ID,
 		Type:           graphcontracts.EventType(ev.Type),
-		Subject:        toEagleRef(ev.Subject),
-		Scope:          toEagleScope(ev.Scope),
+		Subject:        toContractRef(ev.Subject),
+		Scope:          toContractScope(ev.Scope),
 		OccurredAt:     ev.OccurredAt,
 		CorrelationID:  ev.CorrelationID,
 		CausationID:    ev.CausationID,
 		IdempotencyKey: ev.IdempotencyKey,
-		Provenance:     toEagleProvenance(ev.Provenance),
+		Provenance:     toContractProvenance(ev.Provenance),
 	}
 }
 
-func toEagleRef(r eyriegraph.Ref) graphcontracts.Ref {
+func toContractRef(r eyriegraph.Ref) graphcontracts.Ref {
 	return graphcontracts.Ref{Kind: graphcontracts.NodeKind(r.Kind), ID: r.ID}
 }
 
-func toEagleScope(s eyriegraph.Scope) graphcontracts.Scope {
+func toContractScope(s eyriegraph.Scope) graphcontracts.Scope {
 	return graphcontracts.Scope{TenantID: s.TenantID, ProjectID: s.ProjectID, RepositoryID: s.RepositoryID}
 }
 
-func toEagleProvenance(p eyriegraph.Provenance) graphcontracts.Provenance {
+func toContractProvenance(p eyriegraph.Provenance) graphcontracts.Provenance {
 	evidence := make([]graphcontracts.ArtifactRef, len(p.Evidence))
 	for i, a := range p.Evidence {
 		evidence[i] = graphcontracts.ArtifactRef{URI: a.URI, Digest: a.Digest, MediaType: a.MediaType}
@@ -418,82 +418,82 @@ func toEagleProvenance(p eyriegraph.Provenance) graphcontracts.Provenance {
 	return graphcontracts.Provenance{Producer: p.Producer, Version: p.Version, SourceID: p.SourceID, Evidence: evidence}
 }
 
-// Shrike's vendored graph contract types are byte-identical to eagle/graph, so
+// Shrike's vendored graph contract types are byte-identical to contracts/graph, so
 // conversion is a field-by-field copy at the sibling boundary.
 
-func shrikeToEagleNodes(nodes []shrikegraph.Node) []graphcontracts.Node {
+func shrikeToContractNodes(nodes []shrikegraph.Node) []graphcontracts.Node {
 	out := make([]graphcontracts.Node, len(nodes))
 	for i, n := range nodes {
-		out[i] = shrikeToEagleNode(n)
+		out[i] = shrikeToContractNode(n)
 	}
 	return out
 }
 
-func shrikeToEagleNode(n shrikegraph.Node) graphcontracts.Node {
+func shrikeToContractNode(n shrikegraph.Node) graphcontracts.Node {
 	return graphcontracts.Node{
 		ID:          n.ID,
 		Kind:        graphcontracts.NodeKind(n.Kind),
-		Scope:       shrikeToEagleScope(n.Scope),
+		Scope:       shrikeToContractScope(n.Scope),
 		CreatedAt:   n.CreatedAt,
 		EffectiveAt: n.EffectiveAt,
-		Provenance:  shrikeToEagleProvenance(n.Provenance),
+		Provenance:  shrikeToContractProvenance(n.Provenance),
 		Attributes:  n.Attributes,
 	}
 }
 
-func shrikeToEagleEdges(edges []shrikegraph.Edge) []graphcontracts.Edge {
+func shrikeToContractEdges(edges []shrikegraph.Edge) []graphcontracts.Edge {
 	out := make([]graphcontracts.Edge, len(edges))
 	for i, e := range edges {
-		out[i] = shrikeToEagleEdge(e)
+		out[i] = shrikeToContractEdge(e)
 	}
 	return out
 }
 
-func shrikeToEagleEdge(e shrikegraph.Edge) graphcontracts.Edge {
+func shrikeToContractEdge(e shrikegraph.Edge) graphcontracts.Edge {
 	return graphcontracts.Edge{
 		ID:          e.ID,
 		Kind:        graphcontracts.EdgeKind(e.Kind),
-		From:        shrikeToEagleRef(e.From),
-		To:          shrikeToEagleRef(e.To),
-		Scope:       shrikeToEagleScope(e.Scope),
+		From:        shrikeToContractRef(e.From),
+		To:          shrikeToContractRef(e.To),
+		Scope:       shrikeToContractScope(e.Scope),
 		CreatedAt:   e.CreatedAt,
 		EffectiveAt: e.EffectiveAt,
-		Provenance:  shrikeToEagleProvenance(e.Provenance),
+		Provenance:  shrikeToContractProvenance(e.Provenance),
 		Attributes:  e.Attributes,
 	}
 }
 
-func shrikeToEagleEvents(events []shrikegraph.Event) []graphcontracts.Event {
+func shrikeToContractEvents(events []shrikegraph.Event) []graphcontracts.Event {
 	out := make([]graphcontracts.Event, len(events))
 	for i, ev := range events {
-		out[i] = shrikeToEagleEvent(ev)
+		out[i] = shrikeToContractEvent(ev)
 	}
 	return out
 }
 
-func shrikeToEagleEvent(ev shrikegraph.Event) graphcontracts.Event {
+func shrikeToContractEvent(ev shrikegraph.Event) graphcontracts.Event {
 	return graphcontracts.Event{
 		ID:             ev.ID,
 		Type:           graphcontracts.EventType(ev.Type),
-		Subject:        shrikeToEagleRef(ev.Subject),
-		Scope:          shrikeToEagleScope(ev.Scope),
+		Subject:        shrikeToContractRef(ev.Subject),
+		Scope:          shrikeToContractScope(ev.Scope),
 		OccurredAt:     ev.OccurredAt,
 		CorrelationID:  ev.CorrelationID,
 		CausationID:    ev.CausationID,
 		IdempotencyKey: ev.IdempotencyKey,
-		Provenance:     shrikeToEagleProvenance(ev.Provenance),
+		Provenance:     shrikeToContractProvenance(ev.Provenance),
 	}
 }
 
-func shrikeToEagleRef(r shrikegraph.Ref) graphcontracts.Ref {
+func shrikeToContractRef(r shrikegraph.Ref) graphcontracts.Ref {
 	return graphcontracts.Ref{Kind: graphcontracts.NodeKind(r.Kind), ID: r.ID}
 }
 
-func shrikeToEagleScope(s shrikegraph.Scope) graphcontracts.Scope {
+func shrikeToContractScope(s shrikegraph.Scope) graphcontracts.Scope {
 	return graphcontracts.Scope{TenantID: s.TenantID, ProjectID: s.ProjectID, RepositoryID: s.RepositoryID}
 }
 
-func shrikeToEagleProvenance(p shrikegraph.Provenance) graphcontracts.Provenance {
+func shrikeToContractProvenance(p shrikegraph.Provenance) graphcontracts.Provenance {
 	evidence := make([]graphcontracts.ArtifactRef, len(p.Evidence))
 	for i, a := range p.Evidence {
 		evidence[i] = graphcontracts.ArtifactRef{URI: a.URI, Digest: a.Digest, MediaType: a.MediaType}

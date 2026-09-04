@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	agentcontracts "github.com/GrayCodeAI/eagle/agent"
+	agentcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/agent"
 )
 
 func agentSpawnExplore(prompt string) agentcontracts.SpawnRequest {

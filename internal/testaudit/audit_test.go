@@ -283,7 +283,7 @@ func TestNoDirectSharedTypesImports(t *testing.T) {
 					continue
 				}
 				pos := pf.FSet.Position(imp.Pos())
-				t.Fatalf("forbidden direct graycode/shared/types import at %s:%d; the path has been removed, use eagle instead", rel, pos.Line)
+				t.Fatalf("forbidden direct graycode/shared/types import at %s:%d; the path has been removed, use internal/contracts instead", rel, pos.Line)
 			}
 		}
 	}

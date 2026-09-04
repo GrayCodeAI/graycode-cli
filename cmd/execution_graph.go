@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	policycontracts "github.com/GrayCodeAI/eagle/policy"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
+	policycontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/policy"
 	"github.com/GrayCodeAI/graycode-cli/internal/executiongraph"
 	"github.com/GrayCodeAI/graycode-cli/internal/fsutil"
 	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"

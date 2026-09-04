@@ -33,7 +33,7 @@ env:
   # module's dependencies" and that "CI systems should generally not be allowed to
   # use the go.work file". Because ./.github/actions/checkout-eyrie clones the
   # siblings at branch HEAD into the workspace parent, workspace mode would silently
-  # hide version skew (e.g. a eagle pin that no longer matches).
+  # hide version skew (e.g. a shared pin that no longer matches).
   # The `module` job opts back in (GOWORK: "auto") since `go work sync` and the
   # go.work content checks genuinely require the workspace.
   GOWORK: "off"
@@ -141,8 +141,6 @@ jobs:
             (cd "$dir" && GOWORK=off go mod verify)
             (cd "$dir" && GOWORK=off go test ./... -count=1 -timeout=300s -skip='TestDefaultSkillDirsCrossAgent|TestCopySelectionE2E')
           done < <(find . -name go.mod -not -path './.git/*' -print | sort)
-      - name: contracts parity guard
-        run: bash ./scripts/check-contracts-parity.sh
 
   public-modules:
     name: public module graph

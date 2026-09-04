@@ -74,7 +74,6 @@ bash owl/scripts/sync-ecosystem.sh
 Acceptance checks:
 
 ```text
-bash graycode/scripts/check-contracts-parity.sh
 bash graycode/scripts/check-ecosystem-boundaries.sh
 bash graycode/scripts/check-support-repo-coupling.sh
 bash graycode/scripts/check-eyrie-engine-boundary.sh
