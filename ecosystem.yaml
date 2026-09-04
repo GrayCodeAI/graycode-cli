@@ -19,8 +19,8 @@ repositories:
     module: github.com/GrayCodeAI/graycode-cli
     workspace: true
 
-  - directory: eyrie
-    github_repo: eyrie
+  - directory: graycode-router
+    github_repo: graycode-router
     product_name: Eyrie
     kind: engine
     language: go

@@ -30,7 +30,7 @@ graycode is an AI-powered coding agent that lives in your terminal. It reads you
 
 **Developer path:** one machine, keychain credentials, local memory. Run `graycode path` to check readiness.
 
-- **Model-agnostic** — supports 28 first-class providers through [eyrie](https://github.com/GrayCodeAI/eyrie), including Anthropic, OpenAI, Gemini, Fireworks AI, Concentrate AI (pay-as-you-go), DeepSeek, and Ollama
+- **Model-agnostic** — supports 28 first-class providers through [eyrie](https://github.com/GrayCodeAI/graycode-router), including Anthropic, OpenAI, Gemini, Fireworks AI, Concentrate AI (pay-as-you-go), DeepSeek, and Ollama
 - **Zero CGO** — single static binary, cross-compiled for linux/darwin/windows on amd64/arm64
 - **Privacy-first** — your code never leaves your machine except to the LLM API you choose
 - **Docker-only execution** — agent commands run in an isolated container and
@@ -395,7 +395,7 @@ graycode works with any LLM provider. **Developer path:** paste keys in `/config
 | Xiaomi (MiMo) Token Plan | `xiaomi_mimo_token_plan` | `XIAOMI_MIMO_TOKEN_PLAN_API_KEY` (pick region in `/config`) |
 | Ollama (local) | `ollama` | `OLLAMA_BASE_URL` (no API key) |
 
-Provider routing, model resolution, and retries are handled by [eyrie](https://github.com/GrayCodeAI/eyrie).
+Provider routing, model resolution, and retries are handled by [eyrie](https://github.com/GrayCodeAI/graycode-router).
 For deployment-aware routing, set `"deployment_routing": true` in `.graycode/settings.json`
 or export `GRAYCODE_DEPLOYMENT_ROUTING=true`. Graycode will route canonical model IDs through
 Eyrie's deployment catalog, so new models can be exposed by refreshing the catalog
@@ -482,7 +482,7 @@ You may keep a **personal** parent **`go.work`** that lists alternate clones on 
 | Component | Repository | Purpose |
 |---|---|---|
 | **graycode** | This repo | AI coding agent |
-| **eyrie** | [GrayCodeAI/eyrie](https://github.com/GrayCodeAI/eyrie) | LLM provider runtime |
+| **eyrie** | [GrayCodeAI/graycode-router](https://github.com/GrayCodeAI/graycode-router) | LLM provider runtime |
 
 For the consolidated repo map and the current-vs-proposed architecture diagrams, see [docs/architecture/graycode-current-vs-proposed.md](docs/architecture/graycode-current-vs-proposed.md).
 For execution-graph ownership, automatic capture seams, export/sync commands,

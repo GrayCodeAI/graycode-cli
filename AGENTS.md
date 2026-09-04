@@ -192,7 +192,7 @@ Legacy `graycode/shared/types` has been removed. Cross-repo severity and finding
 ### Architecture note: provider ownership
 
 Implement provider protocols, adapters, catalog metadata, credential mappings, and
-provider contract tests in `../eyrie` (the eyrie sibling repo) first. Graycode consumes providers only
+provider contract tests in `../graycode-router` (the eyrie engine's repo) first. Graycode consumes providers only
 through Eyrie's stable engine facade; Graycode changes should be limited to host UX
 and facade integration. Concentrate AI is a pay-as-you-go gateway implemented
 with its native Responses API (`/v1/responses`) under the
