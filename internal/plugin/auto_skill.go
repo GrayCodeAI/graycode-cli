@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // ProjectSignal represents a detected project characteristic.
@@ -183,7 +183,7 @@ func RunAutoSkill(dir string) (string, error) {
 	}
 
 	if installed > 0 {
-		_, _ = fmt.Fprintf(&b, "\nInstalled %d skill(s) to Hawk user state", installed)
+		_, _ = fmt.Fprintf(&b, "\nInstalled %d skill(s) to Graycode user state", installed)
 	}
 	return b.String(), nil
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/go-json-experiment/json/jsontext"
 
-	"github.com/GrayCodeAI/hawk/internal/a11y"
+	"github.com/GrayCodeAI/graycode-cli/internal/a11y"
 )
 
 // Accessibility-tree snapshot support, adopting caveman-browse's contract:

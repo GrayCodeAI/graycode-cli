@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/hawk/internal/feature/fingerprint"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature/fingerprint"
 	"github.com/spf13/cobra"
 )
 
@@ -19,10 +19,10 @@ including detected languages, dependency counts, CI presence, license,
 and git metadata.
 
 Examples:
-  hawk fingerprint
-  hawk fingerprint ./myproject
-  hawk fingerprint --format json .
-  hawk fingerprint --format markdown /path/to/repo`,
+  graycode fingerprint
+  graycode fingerprint ./myproject
+  graycode fingerprint --format json .
+  graycode fingerprint --format markdown /path/to/repo`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := "."

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // SkillRating stores a user's rating for a skill.
@@ -23,7 +23,7 @@ type FeedbackStore struct {
 	path string
 }
 
-// NewFeedbackStore creates a store in Hawk's user state directory.
+// NewFeedbackStore creates a store in Graycode's user state directory.
 func NewFeedbackStore() *FeedbackStore {
 	return &FeedbackStore{path: filepath.Join(storage.StateDir(), "feedback.json")}
 }

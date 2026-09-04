@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// HintsFilenames are the files hawk auto-loads for project context.
-var HintsFilenames = []string{".hawkhints", "AGENTS.md"}
+// HintsFilenames are the files graycode auto-loads for project context.
+var HintsFilenames = []string{".graycodehints", "AGENTS.md"}
 
 // HintsLoader discovers and loads project-specific hint files from the
 // working directory and subdirectories the agent explores.

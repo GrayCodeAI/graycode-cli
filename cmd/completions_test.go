@@ -35,10 +35,10 @@ func TestGenerateBashContainsFunctionDefinition(t *testing.T) {
 	g := NewCompletionGenerator()
 	bash := g.GenerateBash()
 
-	if !strings.Contains(bash, "_hawk_completions()") {
-		t.Error("Bash completion should contain _hawk_completions() function definition")
+	if !strings.Contains(bash, "_graycode_completions()") {
+		t.Error("Bash completion should contain _graycode_completions() function definition")
 	}
-	if !strings.Contains(bash, "complete -F _hawk_completions hawk") {
+	if !strings.Contains(bash, "complete -F _graycode_completions graycode") {
 		t.Error("Bash completion should register the completion function with 'complete'")
 	}
 }
@@ -112,8 +112,8 @@ func TestGenerateZshContainsCompdefHeader(t *testing.T) {
 	g := NewCompletionGenerator()
 	zsh := g.GenerateZsh()
 
-	if !strings.HasPrefix(zsh, "#compdef hawk") {
-		t.Error("Zsh completion should start with #compdef hawk header")
+	if !strings.HasPrefix(zsh, "#compdef graycode") {
+		t.Error("Zsh completion should start with #compdef graycode header")
 	}
 }
 
@@ -121,8 +121,8 @@ func TestGenerateZshContainsFunction(t *testing.T) {
 	g := NewCompletionGenerator()
 	zsh := g.GenerateZsh()
 
-	if !strings.Contains(zsh, "_hawk()") {
-		t.Error("Zsh completion should contain _hawk() function")
+	if !strings.Contains(zsh, "_graycode()") {
+		t.Error("Zsh completion should contain _graycode() function")
 	}
 	if !strings.Contains(zsh, "_arguments") {
 		t.Error("Zsh completion should use _arguments for flag completion")
@@ -171,8 +171,8 @@ func TestGenerateFishContainsCompleteDirectives(t *testing.T) {
 	g := NewCompletionGenerator()
 	fish := g.GenerateFish()
 
-	if !strings.Contains(fish, "complete -c hawk") {
-		t.Error("Fish completion should contain 'complete -c hawk' directives")
+	if !strings.Contains(fish, "complete -c graycode") {
+		t.Error("Fish completion should contain 'complete -c graycode' directives")
 	}
 }
 
@@ -334,8 +334,8 @@ func TestInstallCompletionBash(t *testing.T) {
 	if path == "" {
 		t.Error("InstallCompletion(bash) returned empty path")
 	}
-	if !strings.Contains(path, "hawk") {
-		t.Errorf("Bash install path should contain 'hawk', got %q", path)
+	if !strings.Contains(path, "graycode") {
+		t.Errorf("Bash install path should contain 'graycode', got %q", path)
 	}
 	// Should be a bash-related path
 	if !strings.Contains(path, "bash") && !strings.Contains(path, "completion") {
@@ -351,8 +351,8 @@ func TestInstallCompletionZsh(t *testing.T) {
 	if path == "" {
 		t.Error("InstallCompletion(zsh) returned empty path")
 	}
-	if !strings.Contains(path, "_hawk") {
-		t.Errorf("Zsh install path should contain '_hawk', got %q", path)
+	if !strings.Contains(path, "_graycode") {
+		t.Errorf("Zsh install path should contain '_graycode', got %q", path)
 	}
 }
 
@@ -364,8 +364,8 @@ func TestInstallCompletionFish(t *testing.T) {
 	if path == "" {
 		t.Error("InstallCompletion(fish) returned empty path")
 	}
-	if !strings.Contains(path, "hawk.fish") {
-		t.Errorf("Fish install path should contain 'hawk.fish', got %q", path)
+	if !strings.Contains(path, "graycode.fish") {
+		t.Errorf("Fish install path should contain 'graycode.fish', got %q", path)
 	}
 	if !strings.Contains(path, "fish") {
 		t.Errorf("Fish install path should be fish-related, got %q", path)
@@ -522,8 +522,8 @@ func TestGenerateZshProviderChoices(t *testing.T) {
 	zsh := g.GenerateZsh()
 
 	// The provider completion function should list all providers
-	if !strings.Contains(zsh, "_hawk_providers()") {
-		t.Error("Zsh completion should contain _hawk_providers() function")
+	if !strings.Contains(zsh, "_graycode_providers()") {
+		t.Error("Zsh completion should contain _graycode_providers() function")
 	}
 }
 

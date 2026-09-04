@@ -4,16 +4,16 @@ Status: Proposed
 
 Source: `https://github.com/earendil-works/pi` (MIT, TypeScript/Bun monorepo)
 
-This plan records the features identified as genuinely missing from hawk while
-auditing the Pi agent harness against Hawk and its independent ecosystem
+This plan records the features identified as genuinely missing from graycode while
+auditing the Pi agent harness against Graycode and its independent ecosystem
 repositories. It is
-an adoption plan, not a code-porting plan: hawk reimplements compatible behavior
+an adoption plan, not a code-porting plan: graycode reimplements compatible behavior
 in Go and preserves its existing provider, session, sandbox, permission,
 observability, and protocol boundaries.
 
 ## Executive Decision
 
-Hawk should adopt the following Pi features:
+Graycode should adopt the following Pi features:
 
 1. A Go telemetry conformance suite that verifies emitted OpenTelemetry spans
    and attributes match the documented schema.
@@ -25,21 +25,21 @@ Hawk should adopt the following Pi features:
 5. Kitty graphics protocol support for terminal images.
 6. Session lease/ownership semantics in the daemon protocol.
 
-Hawk should not copy Pi's TypeScript code, replace its Go runtime, adopt Pi's
+Graycode should not copy Pi's TypeScript code, replace its Go runtime, adopt Pi's
 custom CBOR RPC protocol, or remove its native permission/sandboxing model.
 
-## Existing Hawk Capabilities
+## Existing Graycode Capabilities
 
-The audit found that hawk already provides the foundation for most Pi features:
+The audit found that graycode already provides the foundation for most Pi features:
 
-| Pi package | Hawk implementation | Current decision |
+| Pi package | Graycode implementation | Current decision |
 |---|---|---|
-| `pi-ai` (multi-provider) | sibling `eyrie` client + engine facade + catalog + router + credentials | Keep hawk (broader) |
-| `pi-agent-core` (agent loop) | `internal/engine` | Keep hawk |
-| `pi-coding-agent` (CLI) | `cmd` TUI + CLI + daemon | Keep hawk |
-| `pi-session-backends` (storage) | `internal/session` JSONL + zstd + WAL + SQLite index, sibling `swift` (Swift) | Keep hawk |
-| `pi-server` (RPC) | `internal/daemon` + `internal/acp` + `internal/mcp` | Keep hawk (broader) |
-| Permissions/sandbox | `internal/engine/safety` + `internal/sandbox` (seatbelt/landlock/seccomp/ACL/netproxy) | Keep hawk (native, ahead) |
+| `pi-ai` (multi-provider) | sibling `eyrie` client + engine facade + catalog + router + credentials | Keep graycode (broader) |
+| `pi-agent-core` (agent loop) | `internal/engine` | Keep graycode |
+| `pi-coding-agent` (CLI) | `cmd` TUI + CLI + daemon | Keep graycode |
+| `pi-session-backends` (storage) | `internal/session` JSONL + zstd + WAL + SQLite index, sibling `swift` (Swift) | Keep graycode |
+| `pi-server` (RPC) | `internal/daemon` + `internal/acp` + `internal/mcp` | Keep graycode (broader) |
+| Permissions/sandbox | `internal/engine/safety` + `internal/sandbox` (seatbelt/landlock/seccomp/ACL/netproxy) | Keep graycode (native, ahead) |
 | `pi-tui` differential rendering | Bubble Tea v2 full-frame redraw | Adopt line-diff engine |
 | `pi-telemetry` conformance | `docs/OTEL-CONVENTIONS.md`, eyrie `genai_semconv` pinning | Adopt conformance suite |
 | `pi-evals` agent-level eval | `internal/feature/eval` (model benchmark only) | Adopt agent-runtime eval |
@@ -57,7 +57,7 @@ The audit found that hawk already provides the foundation for most Pi features:
 
 Guarantee the emitted OpenTelemetry spans and attributes always match the
 documented `gen_ai.*` / `cost.usd` / `tool.name` / `session.id` / `agent.id`
-contract, so the schema cannot silently drift across Hawk and its independent
+contract, so the schema cannot silently drift across Graycode and its independent
 ecosystem repositories.
 
 ### Scope and ownership
@@ -82,24 +82,24 @@ ecosystem repositories.
    - asserts sensitive attributes never carry raw prompt/response text,
    - asserts parent/child span relationships and settlement semantics,
    - is runner-independent (usable from any Go test harness).
-4. Wire the conformance harness into the hawk and eyrie test suites so CI
+4. Wire the conformance harness into the graycode and eyrie test suites so CI
    enforces the contract.
 5. Keep the conformance layer passive and non-throwing: malformed or unreadable
    telemetry payloads must not break agent execution.
 
 ### Acceptance criteria
 
-- Every span hawk emits is covered by the schema.
+- Every span graycode emits is covered by the schema.
 - A deliberate schema drift (adding a span or attribute) fails the conformance
   test until the schema is updated.
 - No raw prompt/response text appears in recorded attributes.
-- The conformance harness runs green in hawk and eyrie CI.
+- The conformance harness runs green in graycode and eyrie CI.
 
 ## P0: Agent-Runtime Eval Harness
 
 ### Goal
 
-Evaluate the full hawk agent end-to-end (real session, tool loop, planning,
+Evaluate the full graycode agent end-to-end (real session, tool loop, planning,
 sandbox) against tasks, and snapshot session data as artifacts — not just a
 model-level benchmark.
 
@@ -273,7 +273,7 @@ Every implementation phase must preserve:
 - Eval runs the real tool loop end-to-end in an isolated dir.
 - Daemon and ACP parity for leased sessions.
 - fxtape recording/replay across the new renderer.
-- Cross-repo telemetry conformance in hawk and eyrie CI.
+- Cross-repo telemetry conformance in graycode and eyrie CI.
 
 ### Security tests
 
@@ -291,11 +291,11 @@ make test-race
 make vet
 make lint
 make security
-hawk verify
+graycode verify
 ```
 
 For sibling-repository changes, run that repository's own tests and boundary checks before
-updating the Hawk pointer.
+updating the Graycode pointer.
 
 ## Delivery Sequence
 
@@ -310,7 +310,7 @@ updating the Hawk pointer.
 
 - [x] Define the typed span/attribute schema.
 - [x] Implement the conformance harness.
-- [x] Wire hawk and eyrie CI.
+- [x] Wire graycode and eyrie CI.
 - [x] Add schema-drift regression tests.
 
 ### Milestone 2: Agent-runtime eval (P0)
@@ -318,7 +318,7 @@ updating the Hawk pointer.
 - [x] Implement the loop runner over the real Session/tool loop.
 - [x] Add isolated execution and session-JSONL artifacts.
 - [ ] Add comparative and reproducibility reporting.
-- [x] Extend `hawk eval` with a loop mode.
+- [x] Extend `graycode eval` with a loop mode.
 
 ### Milestone 3: Differential renderer (P1)
 
@@ -344,19 +344,19 @@ updating the Hawk pointer.
 ## Deliberately Deferred
 
 - Copying Pi's TypeScript code or adopting its custom CBOR RPC protocol in place
-  of hawk's ACP/MCP/daemon stack.
-- Replacing hawk's native permission/sandbox model with Pi's container-only
+  of graycode's ACP/MCP/daemon stack.
+- Replacing graycode's native permission/sandbox model with Pi's container-only
   approach.
-- Porting Pi's extension system verbatim; hawk's plugin/hook/skills model already
+- Porting Pi's extension system verbatim; graycode's plugin/hook/skills model already
   covers it.
 - Adding a full agent-swarm/graph model beyond current subagent support.
 
 ## Success Criteria
 
-The adoption is successful when hawk closes each confirmed gap while retaining
+The adoption is successful when graycode closes each confirmed gap while retaining
 its stronger architecture:
 
-- Telemetry spans always conform to the documented schema across hawk and its
+- Telemetry spans always conform to the documented schema across graycode and its
   sibling repositories.
 - The agent can be evaluated end-to-end through its real tool loop.
 - The TUI re-renders only changed lines with synchronized output.

@@ -55,11 +55,11 @@ func TestIntegration_EditThenRead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Edit replaces "brown fox" with "red hawk".
+	// Edit replaces "brown fox" with "red graycode".
 	editInput, _ := json.Marshal(map[string]string{
 		"path":    filePath,
 		"old_str": "brown fox",
-		"new_str": "red hawk",
+		"new_str": "red graycode",
 	})
 	editOut, err := FileEditTool{}.Execute(context.Background(), editInput)
 	if err != nil {
@@ -75,7 +75,7 @@ func TestIntegration_EditThenRead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Read error: %v", err)
 	}
-	if readOut != "The quick red hawk jumps over the lazy dog" {
+	if readOut != "The quick red graycode jumps over the lazy dog" {
 		t.Fatalf("expected edited content, got %q", readOut)
 	}
 }
@@ -285,7 +285,7 @@ func TestIntegration_WriteEditRead(t *testing.T) {
 	editInput, _ := json.Marshal(map[string]string{
 		"path":    filePath,
 		"old_str": "World",
-		"new_str": "Hawk",
+		"new_str": "Graycode",
 	})
 	et := FileEditTool{}
 	if _, err := et.Execute(context.Background(), editInput); err != nil {
@@ -299,8 +299,8 @@ func TestIntegration_WriteEditRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if readOut != "Hello Hawk" {
-		t.Fatalf("expected 'Hello Hawk', got %q", readOut)
+	if readOut != "Hello Graycode" {
+		t.Fatalf("expected 'Hello Graycode', got %q", readOut)
 	}
 }
 

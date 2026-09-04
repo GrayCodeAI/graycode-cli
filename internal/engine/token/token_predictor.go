@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/cost"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/cost"
 )
 
 // TokenPredictor estimates how many tokens a task will consume before execution.

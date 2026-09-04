@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/toolset"
+	"github.com/GrayCodeAI/graycode-cli/internal/toolset"
 	"github.com/spf13/cobra"
 )
 
@@ -17,8 +17,8 @@ var toolsetCmd = &cobra.Command{
 	Short: "List or resolve composable tool groups",
 	Long: `Named, composable tool groups for scoping an agent's tool surface.
 
-  hawk toolset            List available toolsets
-  hawk toolset research   Resolve 'research' to its concrete tool list
+  graycode toolset            List available toolsets
+  graycode toolset research   Resolve 'research' to its concrete tool list
 
 Toolsets compose from other toolsets; resolving expands Requires
 transitively (cycle-safe) and de-duplicates.`,

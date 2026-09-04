@@ -1,7 +1,7 @@
-// Package icons is hawk's centralized icon registry.
+// Package icons is graycode's centralized icon registry.
 //
-// Hawk never emits emoji or one-off Unicode glyphs in its CLI/TUI output.
-// Every glyph hawk renders goes through this package. Each glyph has two
+// Graycode never emits emoji or one-off Unicode glyphs in its CLI/TUI output.
+// Every glyph graycode renders goes through this package. Each glyph has two
 // forms:
 //
 //   - A Nerd Font PUA (Private Use Area) codepoint (U+E000–U+F8FF). These
@@ -9,7 +9,7 @@
 //     font installed (https://www.nerdfonts.com).
 //   - An ASCII fallback. The default. Used on any terminal that does not
 //     have a patched font, when stdout is not a TTY (e.g. CI logs,
-//     captured output), or when the user sets HAWK_ICONS=ascii.
+//     captured output), or when the user sets GRAYCODE_ICONS=ascii.
 //
 // No emoji block codepoints (U+1F300–U+1FAFF) and no symbol/dingbat block
 // codepoints (U+2600–U+27BF) are used anywhere. The codepoints defined in

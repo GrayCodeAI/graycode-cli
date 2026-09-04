@@ -6,14 +6,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/autoinit"
+	"github.com/GrayCodeAI/graycode-cli/internal/autoinit"
 )
 
 // TestAutoInitRunner_WritesContextFileOnce verifies the cmd-layer runner
 // produces a recognized context file and that MaybeRun invokes it exactly once
 // for a fresh project, then gates on the marker thereafter.
 func TestAutoInitRunner_WritesContextFileOnce(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", filepath.Join(t.TempDir(), "state"))
+	t.Setenv("GRAYCODE_STATE_DIR", filepath.Join(t.TempDir(), "state"))
 	root := t.TempDir()
 	// A trivial Go file so BuildHierarchy has something to summarize.
 	if err := os.WriteFile(filepath.Join(root, "main.go"), []byte("package main\n\nfunc Foo() {}\n"), 0o644); err != nil {

@@ -34,14 +34,14 @@ func TestSessionPath(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	stateDir := filepath.Join(dir, "state")
-	t.Setenv("HAWK_STATE_DIR", stateDir)
+	t.Setenv("GRAYCODE_STATE_DIR", stateDir)
 
 	path := SessionPath(dir, "test-id")
 	if path == "" {
 		t.Error("SessionPath should return non-empty")
 	}
-	if strings.Contains(path, ".hawk") {
-		t.Fatalf("SessionPath() leaked project .hawk path: %q", path)
+	if strings.Contains(path, ".graycode") {
+		t.Fatalf("SessionPath() leaked project .graycode path: %q", path)
 	}
 	if !strings.HasPrefix(path, stateDir) {
 		t.Fatalf("SessionPath() = %q, want under %q", path, stateDir)
@@ -86,7 +86,7 @@ func TestStats(t *testing.T) {
 func TestLoadLatest(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
-	t.Setenv("HAWK_STATE_DIR", filepath.Join(dir, "state"))
+	t.Setenv("GRAYCODE_STATE_DIR", filepath.Join(dir, "state"))
 
 	sess := &Session{
 		ID: "latest-test", Model: "test", CWD: dir, CreatedAt: time.Now(), UpdatedAt: time.Now(),

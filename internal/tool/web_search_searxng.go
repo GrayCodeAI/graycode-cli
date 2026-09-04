@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/env"
+	"github.com/GrayCodeAI/graycode-cli/internal/env"
 )
 
 // searxngClient is a SearXNG API client.
@@ -70,7 +70,7 @@ func (c *searxngClient) search(ctx context.Context, query string, count int) ([]
 	}
 
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "hawk/0.1.0")
+	req.Header.Set("User-Agent", "graycode/0.1.0")
 
 	resp, err := c.http.Do(req)
 	if err != nil {

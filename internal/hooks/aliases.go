@@ -3,7 +3,7 @@ package hooks
 import (
 	"strings"
 
-	agentcontracts "github.com/GrayCodeAI/eagle/agent"
+	agentcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/agent"
 )
 
 // Extended EventType values (Year 0 PACK-04). Existing snake_case constants in
@@ -19,7 +19,7 @@ const (
 	EventUserPromptSubmit EventType = "user_prompt_submit"
 )
 
-// CanonicalEvent normalizes vendor aliases to Hawk's primary event strings
+// CanonicalEvent normalizes vendor aliases to Graycode's primary event strings
 // used by the decision-hook matcher and registry.
 func CanonicalEvent(s string) string {
 	if s == "" {

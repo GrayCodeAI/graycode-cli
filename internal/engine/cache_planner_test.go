@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 func bigSys(n int) string { return strings.Repeat("s", n) }

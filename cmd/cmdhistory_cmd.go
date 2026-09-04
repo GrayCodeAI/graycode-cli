@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/GrayCodeAI/hawk/internal/cmdhistory"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/cmdhistory"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 	"github.com/spf13/cobra"
 )
 

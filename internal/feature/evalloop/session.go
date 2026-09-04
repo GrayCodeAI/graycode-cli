@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 // SessionRuntime drives the real engine.Session agent loop with an injected

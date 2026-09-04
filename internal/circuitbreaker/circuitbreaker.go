@@ -3,7 +3,7 @@
 // OpenClaude's auto-compact circuit breaker: after a threshold of consecutive
 // failures, the breaker "opens" and skips the operation for a cooldown window,
 // then re-arms in a half-open state so a single success closes it and a single
-// failure re-opens it. Hawk uses it to stop runaway auto-compaction (an
+// failure re-opens it. Graycode uses it to stop runaway auto-compaction (an
 // irrecoverable prompt_too_long would otherwise retry thousands of times).
 package circuitbreaker
 

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -92,23 +92,23 @@ func TestFormatContextUsedLabel(t *testing.T) {
 }
 
 func TestChatConnectionStatus_WithModel(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
 	if err := store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatalf("store.Set: %v", err)
 	}
-	hawkconfig.InvalidateConfigUICache()
-	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
-	_ = hawkconfig.SetActiveModel(ctx, "moonshotai/kimi-k2.6")
-	hawkconfig.RefreshConfigCredSnapshot(ctx)
+	graycodeconfig.InvalidateConfigUICache()
+	_ = graycodeconfig.SetActiveProvider(ctx, "openrouter")
+	_ = graycodeconfig.SetActiveModel(ctx, "moonshotai/kimi-k2.6")
+	graycodeconfig.RefreshConfigCredSnapshot(ctx)
 
 	sess := engine.NewSession("openrouter", "moonshotai/kimi-k2.6", "", nil)
 
@@ -126,23 +126,23 @@ func TestChatConnectionStatus_WithModel(t *testing.T) {
 }
 
 func TestChatConnectionStatus_KeyNoModel(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
 	if err := store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatalf("store.Set: %v", err)
 	}
-	hawkconfig.InvalidateConfigUICache()
-	_ = hawkconfig.ClearActiveSelection(ctx)
-	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
-	hawkconfig.RefreshConfigCredSnapshot(ctx)
+	graycodeconfig.InvalidateConfigUICache()
+	_ = graycodeconfig.ClearActiveSelection(ctx)
+	_ = graycodeconfig.SetActiveProvider(ctx, "openrouter")
+	graycodeconfig.RefreshConfigCredSnapshot(ctx)
 
 	m := chatModel{session: &engine.Session{}}
 	got := m.chatConnectionStatus()
@@ -152,22 +152,22 @@ func TestChatConnectionStatus_KeyNoModel(t *testing.T) {
 }
 
 func TestChatConnectionStatus_NoGatewayNoModel(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
 	if err := store.Set(ctx, gateway.AccountForEnv("ANTHROPIC_API_KEY"), "sk-ant-test-key-long-enough"); err != nil {
 		t.Fatalf("store.Set: %v", err)
 	}
-	hawkconfig.InvalidateConfigUICache()
-	_ = hawkconfig.ClearActiveSelection(ctx)
-	hawkconfig.RefreshConfigCredSnapshot(ctx)
+	graycodeconfig.InvalidateConfigUICache()
+	_ = graycodeconfig.ClearActiveSelection(ctx)
+	graycodeconfig.RefreshConfigCredSnapshot(ctx)
 
 	m := chatModel{session: &engine.Session{}}
 	got := m.chatConnectionStatus()
@@ -210,7 +210,7 @@ func TestStartupWarmMsg_RefreshesFooterCache(t *testing.T) {
 		statusLeftBranch: "main",
 		connStatusVal:    "OpenRouter · gpt-4",
 		connStatusKey:    "cache-key",
-		welcomeSetup:     hawkconfig.SetupState{NeedsSetup: true},
+		welcomeSetup:     graycodeconfig.SetupState{NeedsSetup: true},
 		welcomeAgentsOK:  true,
 	})
 	next := nextModel.(chatModel)
@@ -233,14 +233,14 @@ func TestStartupWarmMsg_RefreshesFooterCache(t *testing.T) {
 
 func TestBuildWelcomeMessage_IncludesDockerWhenEnabled(t *testing.T) {
 	running := true
-	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 80, 24, &running)
+	msg := buildWelcomeMessage(nil, "", nil, nil, graycodeconfig.Settings{}, 0, false, 80, 24, &running)
 	if !strings.Contains(msg, "Container") {
 		t.Fatalf("expected container execution badge in welcome, got:\n%s", msg)
 	}
 }
 
 func TestBuildWelcomeMessage_OmitsDockerWhenDisabled(t *testing.T) {
-	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 80, 24, nil)
+	msg := buildWelcomeMessage(nil, "", nil, nil, graycodeconfig.Settings{}, 0, false, 80, 24, nil)
 	if !strings.Contains(msg, "Container Starting") || strings.Contains(msg, "HOST") {
 		t.Fatalf("expected mandatory container startup badge, got:\n%s", msg)
 	}
@@ -300,7 +300,7 @@ func TestShowWelcomeBanner_WithMessages(t *testing.T) {
 
 func TestBuildWelcomeMessage_UsesDisplayVersion(t *testing.T) {
 	SetVersion("dev")
-	msg := buildWelcomeMessage(nil, "", nil, nil, hawkconfig.Settings{}, 0, false, 80, 24, nil)
+	msg := buildWelcomeMessage(nil, "", nil, nil, graycodeconfig.Settings{}, 0, false, 80, 24, nil)
 	if strings.Contains(msg, "vdev") {
 		t.Fatal("welcome should not show vdev; DisplayVersion should read VERSION file or dev")
 	}

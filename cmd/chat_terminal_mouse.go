@@ -11,7 +11,7 @@ import (
 // scroll events to arrive as literal "[<65;99;16M" KeyRunes in the input.
 const (
 	disableMouseCSI = "\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l"
-	// Explicitly disable any-motion mode left by an older Hawk process, then
+	// Explicitly disable any-motion mode left by an older Graycode process, then
 	// enable button/cell tracking. Wheel and click events still arrive, while
 	// ordinary pointer movement no longer floods the Bubble Tea update loop.
 	enableMouseCSI = "\x1b[?1003l\x1b[?1006h\x1b[?1002h"

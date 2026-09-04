@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
 	"github.com/spf13/cobra"
 )
 

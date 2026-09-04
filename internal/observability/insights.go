@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // InsightsFacet represents an extracted insight category.
@@ -97,7 +97,7 @@ func GenerateInsights(days int, analysisFn func(content string) ([]InsightsFacet
 // ExportInsightsHTML generates an HTML report from insights.
 func ExportInsightsHTML(report *InsightsReport) string {
 	var b strings.Builder
-	b.WriteString(`<!DOCTYPE html><html><head><title>Hawk Insights</title>
+	b.WriteString(`<!DOCTYPE html><html><head><title>Graycode Insights</title>
 <style>
 body { font-family: -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
 h1 { color: #333; } h2 { color: #555; border-bottom: 1px solid #eee; }
@@ -106,7 +106,7 @@ h1 { color: #333; } h2 { color: #555; border-bottom: 1px solid #eee; }
 .rec { padding: 8px; margin: 4px 0; background: #e8fde8; border-radius: 4px; }
 </style></head><body>`)
 
-	b.WriteString(fmt.Sprintf("<h1>Hawk Insights Report</h1><p>Generated: %s | Sessions: %d</p>",
+	b.WriteString(fmt.Sprintf("<h1>Graycode Insights Report</h1><p>Generated: %s | Sessions: %d</p>",
 		report.GeneratedAt.Format("2006-01-02 15:04"), report.SessionsScanned))
 
 	if len(report.TopPatterns) > 0 {

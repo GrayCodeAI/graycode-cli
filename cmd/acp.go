@@ -7,19 +7,19 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/GrayCodeAI/hawk/internal/acp"
-	"github.com/GrayCodeAI/hawk/internal/attachment"
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/acp"
+	"github.com/GrayCodeAI/graycode-cli/internal/attachment"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 	"github.com/spf13/cobra"
 )
 
 var acpCmd = &cobra.Command{
 	Use:   "acp",
-	Short: "Run hawk as an Agent Client Protocol (ACP) server",
-	Long: "Run hawk as an ACP server over stdio (JSON-RPC 2.0) so editors such as " +
+	Short: "Run graycode as an Agent Client Protocol (ACP) server",
+	Long: "Run graycode as an ACP server over stdio (JSON-RPC 2.0) so editors such as " +
 		"Zed can drive it. Tool-permission prompts are routed back to the client " +
 		"via session/request_permission.",
 	RunE: runACP,
@@ -30,8 +30,8 @@ func init() {
 }
 
 func runACP(cmd *cobra.Command, _ []string) error {
-	settings := hawkconfig.LoadSettings()
-	newSession := newConfiguredHawkSessionFactory(settings, logger.New(io.Discard, logger.Error))
+	settings := graycodeconfig.LoadSettings()
+	newSession := newConfiguredGraycodeSessionFactory(settings, logger.New(io.Discard, logger.Error))
 
 	factory := func() (*engine.Session, error) {
 		systemPrompt, err := buildSystemPrompt()

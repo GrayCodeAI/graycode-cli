@@ -15,7 +15,7 @@ else
       '"github\.com/GrayCodeAI/eyrie/[^\"]+"' . || true
   )"
 fi
-# Hawk uses the full vendored Eyrie API surface for provider, graph, and
+# Graycode uses the full vendored Eyrie API surface for provider, graph, and
 # tooling contracts that the engine facade does not re-export.
 violations="$(printf '%s\n' "$eyrie_imports" | grep -vE '"github\.com/GrayCodeAI/eyrie/(engine|llm|graph|tools)(/|\")' || true)"
 
@@ -23,7 +23,7 @@ if [[ -n "$violations" ]]; then
   echo "direct production imports below the eyrie/engine facade found:"
   echo "$violations"
   echo
-  echo "route every Hawk production integration through github.com/GrayCodeAI/eyrie/engine"
+  echo "route every Graycode production integration through github.com/GrayCodeAI/eyrie/engine"
   exit 1
 fi
 
@@ -35,7 +35,7 @@ fi
 if [[ -n "$credential_symbols" ]]; then
 	printf '%s\n' "$credential_symbols"
   echo
-  echo "provider credentials must not enter Hawk's agent/session layer"
+  echo "provider credentials must not enter Graycode's agent/session layer"
   exit 1
 fi
 

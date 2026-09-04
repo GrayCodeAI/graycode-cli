@@ -211,7 +211,7 @@ func classifyMissionAction(toolName, summary string) (string, bool) {
 }
 
 func missionCanonicalTool(name string) string {
-	// Strip any namespace prefix (e.g. "mcp__hawk__Bash" -> "Bash").
+	// Strip any namespace prefix (e.g. "mcp__graycode__Bash" -> "Bash").
 	if idx := strings.LastIndex(name, "__"); idx >= 0 {
 		return name[idx+2:]
 	}

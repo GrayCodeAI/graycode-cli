@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 func TestSession_SanitizeTitle(t *testing.T) {

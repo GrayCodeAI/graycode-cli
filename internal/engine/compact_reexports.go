@@ -4,9 +4,9 @@
 package engine
 
 import (
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/compact"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/compact"
 )
 
 type CompactVariant = compact.CompactVariant
@@ -46,7 +46,7 @@ func ExtractPriorSummary(msgs []types.EyrieMessage) string {
 	return compact.ExtractPriorSummary(msgs)
 }
 
-// PriorSummaryPrefix is the marker prefix hawk prepends to a persisted
+// PriorSummaryPrefix is the marker prefix graycode prepends to a persisted
 // conversation summary message.
 const PriorSummaryPrefix = compact.PriorSummaryPrefix
 

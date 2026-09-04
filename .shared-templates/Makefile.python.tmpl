@@ -63,7 +63,7 @@ fmt: ## Format with ruff.
 vet: ## Type-check with mypy.
 	$(PYTHON) -m mypy src/
 
-boundary-guard: ## Fail if the SDK references support engines or Hawk private packages.
+boundary-guard: ## Fail if the SDK references support engines or Graycode private packages.
 	bash ./scripts/check-consumer-boundaries.sh
 
 lint: ## Lint with ruff.

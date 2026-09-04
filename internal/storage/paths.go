@@ -9,15 +9,15 @@ import (
 )
 
 const (
-	appName           = "hawk"
-	envConfigDir      = "HAWK_CONFIG_DIR"
+	appName           = "graycode"
+	envConfigDir      = "GRAYCODE_CONFIG_DIR"
 	envEyrieConfigDir = "EYRIE_CONFIG_DIR"
-	envStateDir       = "HAWK_STATE_DIR"
-	envCacheDir       = "HAWK_CACHE_DIR"
+	envStateDir       = "GRAYCODE_STATE_DIR"
+	envCacheDir       = "GRAYCODE_CACHE_DIR"
 	projectIDHashLen  = 12
 )
 
-// ConfigDir returns the per-user configuration directory for Hawk.
+// ConfigDir returns the per-user configuration directory for Graycode.
 func ConfigDir() string {
 	if dir := cleanEnvDir(envConfigDir); dir != "" {
 		return dir
@@ -49,7 +49,7 @@ func SettingsPath() string {
 }
 
 func ProviderConfigPath() string {
-	// Eyrie owns provider routing state. Keep HAWK_CONFIG_DIR as the
+	// Eyrie owns provider routing state. Keep GRAYCODE_CONFIG_DIR as the
 	// compatibility fallback, but let Eyrie's host-neutral override win when
 	// both variables are configured.
 	if dir := cleanEnvDir(envEyrieConfigDir); dir != "" {
@@ -124,8 +124,8 @@ func mustUserConfigDir() string {
 		// (e.g. unset HOME in a cron/daemon context). Fall back to a
 		// stable, writable location under the OS temp dir so the process
 		// still functions; the effective paths are also overridable via
-		// HAWK_CONFIG_DIR / HAWK_STATE_DIR / HAWK_CACHE_DIR.
-		return filepath.Join(os.TempDir(), "hawk-config")
+		// GRAYCODE_CONFIG_DIR / GRAYCODE_STATE_DIR / GRAYCODE_CACHE_DIR.
+		return filepath.Join(os.TempDir(), "graycode-config")
 	}
 	return dir
 }
@@ -133,7 +133,7 @@ func mustUserConfigDir() string {
 func mustUserCacheDir() string {
 	dir, err := os.UserCacheDir()
 	if err != nil || dir == "" {
-		return filepath.Join(os.TempDir(), "hawk-cache")
+		return filepath.Join(os.TempDir(), "graycode-cache")
 	}
 	return dir
 }

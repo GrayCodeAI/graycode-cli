@@ -260,7 +260,7 @@ func projectSourceFiles(root, extension string) []string {
 		}
 		if entry.IsDir() {
 			name := entry.Name()
-			if name == ".git" || name == "node_modules" || name == "vendor" || name == ".hawk" {
+			if name == ".git" || name == "node_modules" || name == "vendor" || name == ".graycode" {
 				return filepath.SkipDir
 			}
 			return nil

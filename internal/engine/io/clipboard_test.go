@@ -74,7 +74,7 @@ func TestDetectContentType_URL(t *testing.T) {
 
 func TestDetectContentType_Path(t *testing.T) {
 	tests := []string{
-		"/usr/local/bin/hawk",
+		"/usr/local/bin/graycode",
 		"./src/main.go",
 		"~/Documents/project/file.txt",
 		"src/engine/clipboard.go",
@@ -328,7 +328,7 @@ func TestReadWriteClipboard(t *testing.T) {
 		t.Skipf("unsupported platform: %s", runtime.GOOS)
 	}
 
-	testContent := "hawk clipboard test content 12345"
+	testContent := "graycode clipboard test content 12345"
 	err := WriteClipboard(testContent)
 	if err != nil {
 		t.Skipf("clipboard unavailable: %v", err)

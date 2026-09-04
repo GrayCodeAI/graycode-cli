@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/engine/search"
+import "github.com/GrayCodeAI/graycode-cli/internal/engine/search"
 
 type (
 	URLScraper      = search.URLScraper

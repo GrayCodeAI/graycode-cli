@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 )
 
 type (
@@ -30,7 +30,7 @@ func EffectiveSelectionWithSettings(ctx context.Context, settings Settings, opts
 	return engine.EffectiveSelection(ctx, opts)
 }
 
-// ActiveModel returns the selected model from eyrie provider.json (not hawk settings).
+// ActiveModel returns the selected model from eyrie provider.json (not graycode settings).
 func ActiveModel(ctx context.Context) string {
 	if ctx == nil {
 		ctx = context.Background()
@@ -97,7 +97,7 @@ func SetActiveSelection(ctx context.Context, provider, modelID string) error {
 	return engine.SetSelection(ctx, provider, modelID)
 }
 
-// migrateStoredModelProvider moves model/provider from ~/.hawk/settings.json into eyrie once.
+// migrateStoredModelProvider moves model/provider from ~/.graycode/settings.json into eyrie once.
 func migrateStoredModelProvider(s *Settings) {
 	if s == nil {
 		return

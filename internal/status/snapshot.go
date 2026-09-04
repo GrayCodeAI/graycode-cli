@@ -11,25 +11,25 @@ import (
 // Callers should populate only values they already own; building a snapshot
 // must not start providers, MCP servers, or network operations.
 type Snapshot struct {
-	SchemaVersion string           `json:"schema_version"`
-	HawkVersion   string           `json:"hawk_version,omitempty"`
-	SessionID     string           `json:"session_id,omitempty"`
-	Workspace     string           `json:"workspace,omitempty"`
-	GitBranch     string           `json:"git_branch,omitempty"`
-	Provider      string           `json:"provider,omitempty"`
-	Model         string           `json:"model,omitempty"`
-	Permission    PermissionStatus `json:"permission"`
-	Budgets       BudgetStatus     `json:"budgets"`
-	Subagents     []SubagentStatus `json:"active_subagents,omitempty"`
-	Sessions      ComponentStatus  `json:"sessions"`
-	MCP           ComponentStatus  `json:"mcp"`
-	Skills        ComponentStatus  `json:"skills"`
-	Hooks         ComponentStatus  `json:"hooks"`
-	Recovery      string           `json:"session_recovery_state,omitempty"`
-	ActiveGoal    string           `json:"active_goal,omitempty"`
-	Swift         ComponentStatus  `json:"swift"`
-	Warnings      []string         `json:"warnings,omitempty"`
-	GeneratedAt   time.Time        `json:"generated_at"`
+	SchemaVersion   string           `json:"schema_version"`
+	GraycodeVersion string           `json:"graycode_version,omitempty"`
+	SessionID       string           `json:"session_id,omitempty"`
+	Workspace       string           `json:"workspace,omitempty"`
+	GitBranch       string           `json:"git_branch,omitempty"`
+	Provider        string           `json:"provider,omitempty"`
+	Model           string           `json:"model,omitempty"`
+	Permission      PermissionStatus `json:"permission"`
+	Budgets         BudgetStatus     `json:"budgets"`
+	Subagents       []SubagentStatus `json:"active_subagents,omitempty"`
+	Sessions        ComponentStatus  `json:"sessions"`
+	MCP             ComponentStatus  `json:"mcp"`
+	Skills          ComponentStatus  `json:"skills"`
+	Hooks           ComponentStatus  `json:"hooks"`
+	Recovery        string           `json:"session_recovery_state,omitempty"`
+	ActiveGoal      string           `json:"active_goal,omitempty"`
+	Swift           ComponentStatus  `json:"swift"`
+	Warnings        []string         `json:"warnings,omitempty"`
+	GeneratedAt     time.Time        `json:"generated_at"`
 }
 
 type PermissionStatus struct {

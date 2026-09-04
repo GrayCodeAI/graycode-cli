@@ -4,8 +4,8 @@
 **Date:** 2026-07-16  
 **Horizon:** ~12–18 months (phased; can compress with parallel teams)  
 **Language:** Go only (no Rust ports; reimplement contracts and behavior)  
-**Primary product:** `hawk`  
-**Supporting repositories:** `eagle`, `eyrie`, `harrier` (Harrier), `shrike` (Shrike), `swift` (Swift), `kestrel` (Kestrel), `merlin` (Merlin), `falcon`, `starling`, `sparrow`, `robin`, `wren`, `owl`, and `graycode-platform` (web/BFF/Hawk Cloud; outside the Hawk Go runtime graph)
+**Primary product:** `graycode`  
+**Supporting repositories:** `eagle`, `eyrie`, `harrier` (Harrier), `shrike` (Shrike), `swift` (Swift), `kestrel` (Kestrel), `merlin` (Merlin), `falcon`, `starling`, `sparrow`, `robin`, `wren`, `owl`, and `graycode-platform` (web/BFF/Graycode Cloud; outside the Graycode Go runtime graph)
 
 ---
 
@@ -13,21 +13,21 @@
 
 ### Goal
 
-Bring Hawk to **Grok-class agent control-plane quality** (typed subagents, sandbox profiles, folder trust, hooks, plugins/marketplace, ACP depth, monitor/scheduler, enterprise managed policy) **without** abandoning Hawk’s multi-repo Go platform advantages (eyrie multi-provider, harrier graph memory, shrike compression, mission mode, contracts, cloud ledger).
+Bring Graycode to **Grok-class agent control-plane quality** (typed subagents, sandbox profiles, folder trust, hooks, plugins/marketplace, ACP depth, monitor/scheduler, enterprise managed policy) **without** abandoning Graycode’s multi-repo Go platform advantages (eyrie multi-provider, harrier graph memory, shrike compression, mission mode, contracts, cloud ledger).
 
 ### Non-goals
 
-- Rewrite Hawk in Rust or monorepo-collapse engines into hawk.
+- Rewrite Graycode in Rust or monorepo-collapse engines into graycode.
 - Vendor lock-in to a single LLM host auth model.
 - Replace eyrie/harrier/shrike/swift with Grok-shaped internal crates.
 - Default opt-in product telemetry that violates privacy-first posture.
 
 ### Strategy
 
-1. **Close wiring gaps first** — Hawk already has many *types* and *partial systems* that are not exposed on the Agent tool or unified.
+1. **Close wiring gaps first** — Graycode already has many *types* and *partial systems* that are not exposed on the Agent tool or unified.
 2. **Stabilize contracts** in `eagle` before multi-repo consumers.
 3. **Ship vertical slices** (end-to-end user value) every quarter.
-4. **Keep engines peer-independent**; hawk remains the only product orchestrator.
+4. **Keep engines peer-independent**; graycode remains the only product orchestrator.
 
 ---
 
@@ -110,7 +110,7 @@ This is the single highest-ROI fix: **wire what already exists**, then extend.
 
 ```text
                     ┌──────────────────────────────┐
-                    │  hawk TUI / CLI / daemon/ACP │
+                    │  graycode TUI / CLI / daemon/ACP │
                     └──────────────┬───────────────┘
                                    │
          ┌─────────────────────────┼─────────────────────────┐
@@ -133,7 +133,7 @@ This is the single highest-ROI fix: **wire what already exists**, then extend.
   eyrie     harrier       shrike       swift     kestrel/merlin
 ```
 
-**New core package (proposed):** `hawk/internal/spawn` (or expand `engine/agent`) owning:
+**New core package (proposed):** `graycode/internal/spawn` (or expand `engine/agent`) owning:
 
 - `SpawnRequest` / `SpawnResult` (Go structs aligned with contracts)
 - capability filter, isolation worktree lifecycle
@@ -186,7 +186,7 @@ Legend: **Done** | **Partial** | **Missing** | **N/A (keep engine)**
 | C2 | Vendor event aliases | Missing | Full |
 | C3 | File-discovered hooks | Partial (in-process) | Full |
 | C4 | HTTP hooks | Missing | Full |
-| C5 | Plugin env HAWK_PLUGIN_ROOT/DATA | Missing | Full |
+| C5 | Plugin env GRAYCODE_PLUGIN_ROOT/DATA | Missing | Full |
 | C6 | PreToolUse can deny in CheckTool path | Missing | Full |
 
 ### Wave D — Plugins & marketplace (P3)
@@ -261,7 +261,7 @@ Legend: **Done** | **Partial** | **Missing** | **N/A (keep engine)**
 
 ## 4. Multi-quarter roadmap (long horizon)
 
-Assumes ~1–2 senior Go engineers on hawk core + fractional engine/cloud; scale parallelizes quarters.
+Assumes ~1–2 senior Go engineers on graycode core + fractional engine/cloud; scale parallelizes quarters.
 
 ```text
 Q1  Foundation: contracts + spawn wiring + background unify
@@ -370,13 +370,13 @@ type SpawnResult struct {
 
 **Exit criteria**
 
-- `go test ./...` green; hawk can depend on new pseudo-version without engine imports.
+- `go test ./...` green; graycode can depend on new pseudo-version without engine imports.
 
 ---
 
 ### Phase 2 — Spawn controller & Agent tool (4–6 weeks)  ★ highest ROI
 
-**Repo:** `hawk`  
+**Repo:** `graycode`  
 **Packages:** `internal/engine/agent`, `internal/engine`, `internal/tool`
 
 #### 2.1 Change `AgentSpawnFn` signature
@@ -403,8 +403,8 @@ Migration: temporary adapter for one release if needed; prefer single breaking c
 | 2 | Map `subagent_type` → `SubAgentMode` (+ thoroughness) |
 | 3 | Default capability from mode; allow override |
 | 4 | Apply `FilterToolsForMode` **and** capability filter |
-| 5 | Isolation worktree: create under `.hawk/worktrees/<id>` using shared helper from mission worker |
-| 6 | Persist child session transcript under `~/.hawk/subagents/<id>/` |
+| 5 | Isolation worktree: create under `.graycode/worktrees/<id>` using shared helper from mission worker |
+| 6 | Persist child session transcript under `~/.graycode/subagents/<id>/` |
 | 7 | `resume_from`: load transcript, append prompt, re-spawn with same type |
 | 8 | Return structured `SpawnResult` JSON to model |
 
@@ -449,7 +449,7 @@ Deprecate:
 
 #### 2.6 PR stack (Graphite-friendly)
 
-1. Contracts bump in hawk  
+1. Contracts bump in graycode  
 2. `SpawnRequest` internal + adapter  
 3. Agent tool schema + parse  
 4. Wire modes plan/general/explore  
@@ -474,13 +474,13 @@ Deprecate:
 
 ### Phase 3 — Sandbox profiles + folder trust (4–5 weeks)
 
-**Repo:** `hawk`  
+**Repo:** `graycode`  
 **Packages:** `internal/sandbox`, `internal/trust` (new), `internal/mcp`, `internal/hooks`, `internal/plugin`
 
 #### 3.1 sandbox.toml
 
 ```toml
-# ~/.hawk/sandbox.toml
+# ~/.graycode/sandbox.toml
 [profiles.ci]
 extends = "strict"
 restrict_network = true
@@ -490,7 +490,7 @@ deny = ["**/.env", "**/*.pem", "**/*credentials*"]
 **Loader rules (security-critical):**
 
 1. Load user global.  
-2. Load project `.hawk/sandbox.toml` **additive only** (new names only).  
+2. Load project `.graycode/sandbox.toml` **additive only** (new names only).  
 3. Warn on conflicting redefinition; ignore project redefinition.  
 4. Deny globs applied on top of backend (seatbelt/landlock/bwrap-equivalent).  
 5. Fail closed when deny requested but OS cannot enforce.
@@ -508,7 +508,7 @@ deny = ["**/.env", "**/*.pem", "**/*credentials*"]
 
 #### 3.3 Folder trust
 
-**Store:** `~/.hawk/trusted_folders.toml`
+**Store:** `~/.graycode/trusted_folders.toml`
 
 ```toml
 [[folders]]
@@ -538,7 +538,7 @@ trusted_at = "2026-07-16T00:00:00Z"
 
 ### Phase 4 — Hooks pipeline completion (3–4 weeks)
 
-**Repo:** `hawk`  
+**Repo:** `graycode`  
 **Package:** `internal/hooks`
 
 #### 4.1 Event model expansion
@@ -550,7 +550,7 @@ Keep existing; alias map for Claude/Cursor names.
 
 | Type | Behavior |
 |------|----------|
-| command | shell with timeout, env HAWK_* |
+| command | shell with timeout, env GRAYCODE_* |
 | http | POST JSON, timeout, optional deny on non-2xx for pre_tool |
 
 #### 4.3 Integration into PermissionEngine
@@ -566,8 +566,8 @@ CheckTool:
 
 #### 4.4 File discovery
 
-- `~/.hawk/hooks/*.json`  
-- `.hawk/hooks/*.json` (trust required)  
+- `~/.graycode/hooks/*.json`  
+- `.graycode/hooks/*.json` (trust required)  
 - Compat: `.claude/settings.json` hooks, `.cursor/hooks.json` behind flags  
 
 **Exit criteria**
@@ -582,7 +582,7 @@ CheckTool:
 
 ### Phase 5 — Plugins multi-component + marketplace MVP (6–8 weeks)
 
-**Repos:** `hawk`, `starling`
+**Repos:** `graycode`, `starling`
 
 #### 5.1 Plugin layout (convention)
 
@@ -603,19 +603,19 @@ Loader merges components; tools optional.
 
 1. Session meta / SDK  
 2. `--plugin-dir`  
-3. Project `.hawk/plugins` (trust)  
-4. User `~/.hawk/plugins`  
+3. Project `.graycode/plugins` (trust)  
+4. User `~/.graycode/plugins`  
 5. Config extra paths  
 
 #### 5.3 Marketplace
 
 | Component | Owner |
 |-----------|--------|
-| Source list config | hawk |
-| Index schema | community-skills + hawk |
-| Install resolve (git) | hawk |
-| Audit | hawk plugin malware_check (extend) |
-| CLI `hawk plugins` / TUI tab | hawk |
+| Source list config | graycode |
+| Index schema | community-skills + graycode |
+| Install resolve (git) | graycode |
+| Audit | graycode plugin malware_check (extend) |
+| CLI `graycode plugins` / TUI tab | graycode |
 | Optional web gallery | graycode-platform later |
 
 #### 5.4 Multi-harness skills
@@ -661,7 +661,7 @@ Depends on Phase 2 unified `taskruntime`.
 
 | Work | Detail |
 |------|--------|
-| Plan subagent | Default tool for “design only”; writes plan file under `.hawk/plans/` or specs |
+| Plan subagent | Default tool for “design only”; writes plan file under `.graycode/plans/` or specs |
 | Spec workflow | Document mapping: plan agent → `/spec` stages; avoid double systems |
 | AskUserQuestion | questions[], options, multi_select, other, cancel message |
 | TUI | Reuse autonomy/spec pickers |
@@ -677,7 +677,7 @@ Depends on Phase 2 unified `taskruntime`.
 
 ### Phase 8 — ACP phase-2 + SDKs + OpenAPI (5–7 weeks)
 
-**Repos:** `hawk`, `sparrow`, `robin`
+**Repos:** `graycode`, `sparrow`, `robin`
 
 | Milestone | Scope |
 |-----------|--------|
@@ -686,11 +686,11 @@ Depends on Phase 2 unified `taskruntime`.
 | ACP-3 | permission round-trip hardened |
 | API | OpenAPI fields: spawn options, sandbox, autonomy, plugins meta |
 | SDK | AgentConfig + ChatRequest fields; plugin dirs |
-| Optional | `hawk agent serve --bind` WS |
+| Optional | `graycode agent serve --bind` WS |
 
 **Exit criteria**
 
-- Zed/VS Code can drive hawk ACP for multi-turn with permissions.  
+- Zed/VS Code can drive graycode ACP for multi-turn with permissions.  
 - SDK e2e against daemon contract snapshot tests.
 
 **Effort:** ~7 eng-weeks (+ extension work separate).
@@ -699,13 +699,13 @@ Depends on Phase 2 unified `taskruntime`.
 
 ### Phase 9 — Enterprise managed policy (4–6 weeks)
 
-**Repos:** `graycode-platform/apps/worker` (deployed as `graycode-cloud`), `hawk`, optional `eyrie`
+**Repos:** `graycode-platform/apps/worker` (deployed as `graycode-cloud`), `graycode`, optional `eyrie`
 
 | Piece | Detail |
 |-------|--------|
 | Policy document | models allow/deny, capabilities, sandbox deny, max budget, tool denylist |
-| Signing | Ed25519 envelope; hawk verifies before apply |
-| Apply path | `~/.hawk/managed_policy.json` layers under user config |
+| Signing | Ed25519 envelope; graycode verifies before apply |
+| Apply path | `~/.graycode/managed_policy.json` layers under user config |
 | Default | fail-open for individual; org can require fail-closed |
 | IT tier | non-excludable rules (already sketched in product — finish) |
 | Cloud UI | graycode-platform admin later |
@@ -726,10 +726,10 @@ Build on existing enterprise policyInput (model/capability lists).
 
 | Item | Repo | Detail |
 |------|------|--------|
-| Foreign import | swift + hawk CLI | Claude/Codex session metadata → index |
-| Hunk attribution | hawk | agent vs external edits via fsnotify |
-| Memory UX | harrier + hawk | toggle priority, `/dream` consolidate |
-| Mermaid optional | hawk | sandbox render path |
+| Foreign import | swift + graycode CLI | Claude/Codex session metadata → index |
+| Hunk attribution | graycode | agent vs external edits via fsnotify |
+| Memory UX | harrier + graycode | toggle priority, `/dream` consolidate |
+| Mermaid optional | graycode | sandbox render path |
 
 **Exit criteria**
 
@@ -756,20 +756,20 @@ Build on existing enterprise policyInput (model/capability lists).
 
 | Concept family | Primary | Secondary | Contracts? |
 |----------------|---------|-----------|------------|
-| Spawn / capability / isolation | hawk | — | yes |
-| Sandbox profiles | hawk | — | optional DTO |
-| Folder trust | hawk | — | no |
-| Hooks | hawk | — | event names yes |
-| Plugins / marketplace | hawk | community-skills | manifest schema |
-| Multi-harness skills | hawk | community-skills | no |
-| Monitor/tasks | hawk | — | optional |
-| ACP | hawk | sdk-go/python | OpenAPI |
-| Managed policy | graycode-platform/apps/worker (deployed as `graycode-cloud`) | hawk, graycode-platform/apps/bff | yes DTO |
-| Foreign import | swift | hawk | optional |
-| Memory dream UX | harrier | hawk | no |
+| Spawn / capability / isolation | graycode | — | yes |
+| Sandbox profiles | graycode | — | optional DTO |
+| Folder trust | graycode | — | no |
+| Hooks | graycode | — | event names yes |
+| Plugins / marketplace | graycode | community-skills | manifest schema |
+| Multi-harness skills | graycode | community-skills | no |
+| Monitor/tasks | graycode | — | optional |
+| ACP | graycode | sdk-go/python | OpenAPI |
+| Managed policy | graycode-platform/apps/worker (deployed as `graycode-cloud`) | graycode, graycode-platform/apps/bff | yes DTO |
+| Foreign import | swift | graycode | optional |
+| Memory dream UX | harrier | graycode | no |
 | Token | shrike | — | no change |
-| Providers | eyrie | hawk | no change |
-| Review engines | kestrel/merlin | hawk | findings already |
+| Providers | eyrie | graycode | no change |
+| Review engines | kestrel/merlin | graycode | findings already |
 
 ---
 
@@ -835,7 +835,7 @@ Prefer **secure defaults** (folder trust on) even if noisy.
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Signature change of AgentSpawnFn breaks plugins | High | Adapter release; version min_hawk |
+| Signature change of AgentSpawnFn breaks plugins | High | Adapter release; version min_graycode |
 | Worktree disk bloat | Med | GC old worktrees; symlink shared dirs (already pattern) |
 | Explore still escapes via Bash | High | AST allowlist + sandbox |
 | Marketplace supply chain | High | audit, pin commit SHAs, signatures later |
@@ -886,7 +886,7 @@ docs(user-guide): 01-getting-started …
 
 | Role | Q1–Q2 | Q3–Q4 | Q5–Q8 |
 |------|-------|-------|-------|
-| Hawk core (Go) | 1.5 FTE | 1.5 FTE | 1 FTE |
+| Graycode core (Go) | 1.5 FTE | 1.5 FTE | 1 FTE |
 | Security-minded sandbox | 0.5 FTE | 0.5 FTE | 0.25 FTE |
 | Community-skills / marketplace content | 0.25 | 0.75 | 0.5 |
 | Cloud (TS) | 0 | 0.25 | 0.75 |
@@ -920,21 +920,21 @@ Background:
 
 ---
 
-## 14. Appendix B — Mapping Grok names → Hawk names
+## 14. Appendix B — Mapping Grok names → Graycode names
 
-| Grok | Hawk |
+| Grok | Graycode |
 |------|------|
 | `task` tool | `Agent` / `Task` alias |
 | `general-purpose` | `general` / `general-purpose` |
 | `capability_mode` | same |
 | `isolation: worktree` | same |
 | `resume_from` | same (replace weak `agent_id` semantics) |
-| `sandbox.toml` | `~/.hawk/sandbox.toml` |
-| folder trust | `~/.hawk/trusted_folders.toml` |
+| `sandbox.toml` | `~/.graycode/sandbox.toml` |
+| folder trust | `~/.graycode/trusted_folders.toml` |
 | `/loop` | `/loop` over CronScheduler |
-| plugin marketplace | `hawk plugins` + community registry |
+| plugin marketplace | `graycode plugins` + community registry |
 | managed_config | managed policy via graycode-cloud |
-| ACP | `hawk acp` |
+| ACP | `graycode acp` |
 
 ---
 

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/mcp"
+	"github.com/GrayCodeAI/graycode-cli/internal/mcp"
 )
 
 // MCPAuthState tracks OAuth state for an MCP server.
@@ -74,7 +74,7 @@ func (McpAuthTool) Parameters() map[string]interface{} {
 			},
 			"client_id": map[string]interface{}{
 				"type": "string",
-				"description": "Optional pre-registered OAuth client_id. If omitted, hawk attempts " +
+				"description": "Optional pre-registered OAuth client_id. If omitted, graycode attempts " +
 					"dynamic client registration (RFC 7591) against the server's advertised registration endpoint.",
 			},
 		},
@@ -161,7 +161,7 @@ func failState(serverName string, err error) *MCPAuthState {
 // completeMCPAuth waits for the loopback callback, exchanges the code for
 // tokens, and persists the result. It runs independently of the tool call
 // that started it, since the user completing authorization in their
-// browser is an open-ended, asynchronous step from hawk's perspective.
+// browser is an open-ended, asynchronous step from graycode's perspective.
 func completeMCPAuth(
 	parentCtx context.Context,
 	serverName string,
@@ -224,7 +224,7 @@ func formatAuthMessage(state *MCPAuthState) string {
 	case "pending":
 		return fmt.Sprintf(
 			"Please visit the following URL to authorize: %s\nOnce you approve it, this MCP server "+
-				"will be usable the next time it connects (e.g. restart hawk, or reconfigure it).",
+				"will be usable the next time it connects (e.g. restart graycode, or reconfigure it).",
 			state.AuthURL,
 		)
 	case "authenticated":

@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 // testFactory builds a session backed by the engine's canned mock chat client,
@@ -134,7 +134,7 @@ func TestACP_ParseError(t *testing.T) {
 
 func TestACP_SessionLoad(t *testing.T) {
 	tempDir := t.TempDir()
-	t.Setenv("HAWK_SESSIONS_DIR", tempDir)
+	t.Setenv("GRAYCODE_SESSIONS_DIR", tempDir)
 
 	// Create and persist a session
 	sessID := "acp-load-test-1"
@@ -185,7 +185,7 @@ func TestACP_SessionLoad(t *testing.T) {
 
 func TestACP_SessionList(t *testing.T) {
 	tempDir := t.TempDir()
-	t.Setenv("HAWK_SESSIONS_DIR", tempDir)
+	t.Setenv("GRAYCODE_SESSIONS_DIR", tempDir)
 
 	prior := &session.Session{
 		ID:    "acp-list-test-1",

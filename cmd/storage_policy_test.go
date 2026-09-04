@@ -7,10 +7,10 @@ import (
 	"testing"
 )
 
-func TestStoragePolicyHelpersDoNotCreateProjectHawk(t *testing.T) {
+func TestStoragePolicyHelpersDoNotCreateProjectGraycode(t *testing.T) {
 	project := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", filepath.Join(t.TempDir(), "state"))
-	t.Setenv("HAWK_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
+	t.Setenv("GRAYCODE_STATE_DIR", filepath.Join(t.TempDir(), "state"))
+	t.Setenv("GRAYCODE_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
 	oldwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -21,13 +21,13 @@ func TestStoragePolicyHelpersDoNotCreateProjectHawk(t *testing.T) {
 	}
 
 	planPath := resolvePlanPath("demo")
-	if strings.Contains(planPath, filepath.Join(project, ".hawk")) {
-		t.Fatalf("resolvePlanPath leaked project .hawk: %q", planPath)
+	if strings.Contains(planPath, filepath.Join(project, ".graycode")) {
+		t.Fatalf("resolvePlanPath leaked project .graycode: %q", planPath)
 	}
 	saveInputHistory([]string{"hello"})
 	recordTipShown("slash-help")
 
-	if _, err := os.Stat(filepath.Join(project, ".hawk")); !os.IsNotExist(err) {
-		t.Fatalf("normal storage helpers created project .hawk, stat err=%v", err)
+	if _, err := os.Stat(filepath.Join(project, ".graycode")); !os.IsNotExist(err) {
+		t.Fatalf("normal storage helpers created project .graycode, stat err=%v", err)
 	}
 }

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	"github.com/GrayCodeAI/hawk/internal/executiongraph"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
+	"github.com/GrayCodeAI/graycode-cli/internal/executiongraph"
 )
 
 const portableGraphFilename = "mission-graph.json"
@@ -53,7 +53,7 @@ func (m *Mission) buildPortableGraph(generatedAt time.Time) (executiongraph.Expo
 
 	missionRef := graphcontracts.Ref{Kind: graphcontracts.NodeExecution, ID: portableMissionNodeID(m.ID)}
 	missionCreated := portableGraphTime(m.StartedAt, generatedAt)
-	missionProvenance := portableProvenance(m.ID, "hawk://mission/"+m.ID)
+	missionProvenance := portableProvenance(m.ID, "graycode://mission/"+m.ID)
 	missionNode := graphcontracts.Node{
 		ID:          missionRef.ID,
 		Kind:        missionRef.Kind,
@@ -74,27 +74,27 @@ func (m *Mission) buildPortableGraph(generatedAt time.Time) (executiongraph.Expo
 		return executiongraph.Export{}, err
 	}
 	if err := portableAddEvent(&export, graphcontracts.Event{
-		ID:             "hawk/event/mission/" + m.ID + "/created",
+		ID:             "graycode/event/mission/" + m.ID + "/created",
 		Type:           graphcontracts.EventCreated,
 		Subject:        missionRef,
 		Scope:          scope,
 		OccurredAt:     missionCreated,
 		CorrelationID:  m.ID,
-		IdempotencyKey: "hawk/mission/" + m.ID + "/created",
+		IdempotencyKey: "graycode/mission/" + m.ID + "/created",
 		Provenance:     missionProvenance,
 	}); err != nil {
 		return executiongraph.Export{}, err
 	}
 	if !m.CompletedAt.IsZero() {
 		if err := portableAddEvent(&export, graphcontracts.Event{
-			ID:             "hawk/event/mission/" + m.ID + "/transitioned",
+			ID:             "graycode/event/mission/" + m.ID + "/transitioned",
 			Type:           graphcontracts.EventTransitioned,
 			Subject:        missionRef,
 			Scope:          scope,
 			OccurredAt:     m.CompletedAt.UTC(),
 			CorrelationID:  m.ID,
-			CausationID:    "hawk/event/mission/" + m.ID + "/created",
-			IdempotencyKey: "hawk/mission/" + m.ID + "/transitioned/" + string(m.Status),
+			CausationID:    "graycode/event/mission/" + m.ID + "/created",
+			IdempotencyKey: "graycode/mission/" + m.ID + "/transitioned/" + string(m.Status),
 			Provenance:     missionProvenance,
 		}); err != nil {
 			return executiongraph.Export{}, err
@@ -111,7 +111,7 @@ func (m *Mission) buildPortableGraph(generatedAt time.Time) (executiongraph.Expo
 		if createdAt.Equal(missionCreated) && !feature.CompletedAt.IsZero() {
 			createdAt = portableGraphTime(feature.CompletedAt, missionCreated)
 		}
-		provenance := portableProvenance(featureID, "hawk://mission/"+m.ID+"/feature/"+featureID)
+		provenance := portableProvenance(featureID, "graycode://mission/"+m.ID+"/feature/"+featureID)
 		node := graphcontracts.Node{
 			ID:          ref.ID,
 			Kind:        ref.Kind,
@@ -133,7 +133,7 @@ func (m *Mission) buildPortableGraph(generatedAt time.Time) (executiongraph.Expo
 			return executiongraph.Export{}, err
 		}
 		if err := portableAddEdge(&export, graphcontracts.Edge{
-			ID:         "hawk/edge/mission/" + m.ID + "/contains/" + featureID,
+			ID:         "graycode/edge/mission/" + m.ID + "/contains/" + featureID,
 			Kind:       graphcontracts.EdgeContains,
 			From:       missionRef,
 			To:         ref,
@@ -145,13 +145,13 @@ func (m *Mission) buildPortableGraph(generatedAt time.Time) (executiongraph.Expo
 			return executiongraph.Export{}, err
 		}
 		if err := portableAddEvent(&export, graphcontracts.Event{
-			ID:             "hawk/event/mission-feature/" + m.ID + "/" + featureID + "/observed",
+			ID:             "graycode/event/mission-feature/" + m.ID + "/" + featureID + "/observed",
 			Type:           graphcontracts.EventObserved,
 			Subject:        ref,
 			Scope:          scope,
 			OccurredAt:     portableGraphTime(feature.CompletedAt, createdAt),
 			CorrelationID:  m.ID,
-			IdempotencyKey: "hawk/mission-feature/" + m.ID + "/" + featureID + "/observed/" + string(feature.Status),
+			IdempotencyKey: "graycode/mission-feature/" + m.ID + "/" + featureID + "/observed/" + string(feature.Status),
 			Provenance:     provenance,
 		}); err != nil {
 			return executiongraph.Export{}, err
@@ -163,7 +163,7 @@ func (m *Mission) buildPortableGraph(generatedAt time.Time) (executiongraph.Expo
 		ref := graphcontracts.Ref{Kind: graphcontracts.NodeOperations, ID: portableWaveNodeID(m.ID, join.Wave)}
 		createdAt := portableGraphTime(join.StartedAt, missionCreated)
 		completedAt := portableGraphTime(join.CompletedAt, createdAt)
-		provenance := portableProvenance(waveID, "hawk://mission/"+m.ID+"/wave/"+waveID)
+		provenance := portableProvenance(waveID, "graycode://mission/"+m.ID+"/wave/"+waveID)
 		node := graphcontracts.Node{
 			ID:          ref.ID,
 			Kind:        ref.Kind,
@@ -187,7 +187,7 @@ func (m *Mission) buildPortableGraph(generatedAt time.Time) (executiongraph.Expo
 			return executiongraph.Export{}, err
 		}
 		if err := portableAddEdge(&export, graphcontracts.Edge{
-			ID:         "hawk/edge/mission/" + m.ID + "/produced-wave/" + waveID,
+			ID:         "graycode/edge/mission/" + m.ID + "/produced-wave/" + waveID,
 			Kind:       graphcontracts.EdgeProduced,
 			From:       missionRef,
 			To:         ref,
@@ -204,7 +204,7 @@ func (m *Mission) buildPortableGraph(generatedAt time.Time) (executiongraph.Expo
 				ID:   portableFeatureNodeID(m.ID, featureID),
 			}
 			if err := portableAddEdge(&export, graphcontracts.Edge{
-				ID:         "hawk/edge/mission-wave/" + m.ID + "/" + waveID + "/contains/" + featureID,
+				ID:         "graycode/edge/mission-wave/" + m.ID + "/" + waveID + "/contains/" + featureID,
 				Kind:       graphcontracts.EdgeContains,
 				From:       ref,
 				To:         target,
@@ -219,13 +219,13 @@ func (m *Mission) buildPortableGraph(generatedAt time.Time) (executiongraph.Expo
 			}
 		}
 		if err := portableAddEvent(&export, graphcontracts.Event{
-			ID:             "hawk/event/mission-wave/" + m.ID + "/" + waveID + "/observed",
+			ID:             "graycode/event/mission-wave/" + m.ID + "/" + waveID + "/observed",
 			Type:           graphcontracts.EventObserved,
 			Subject:        ref,
 			Scope:          scope,
 			OccurredAt:     completedAt,
 			CorrelationID:  m.ID,
-			IdempotencyKey: "hawk/mission-wave/" + m.ID + "/" + waveID + "/observed",
+			IdempotencyKey: "graycode/mission-wave/" + m.ID + "/" + waveID + "/observed",
 			Provenance:     provenance,
 		}); err != nil {
 			return executiongraph.Export{}, err
@@ -239,15 +239,15 @@ func (m *Mission) buildPortableGraph(generatedAt time.Time) (executiongraph.Expo
 }
 
 func portableMissionNodeID(missionID string) string {
-	return "hawk/mission/" + strings.TrimSpace(missionID)
+	return "graycode/mission/" + strings.TrimSpace(missionID)
 }
 
 func portableFeatureNodeID(missionID, featureID string) string {
-	return "hawk/mission-feature/" + strings.TrimSpace(missionID) + "/" + strings.TrimSpace(featureID)
+	return "graycode/mission-feature/" + strings.TrimSpace(missionID) + "/" + strings.TrimSpace(featureID)
 }
 
 func portableWaveNodeID(missionID string, wave int) string {
-	return "hawk/mission-wave/" + strings.TrimSpace(missionID) + "/" + strconv.Itoa(wave)
+	return "graycode/mission-wave/" + strings.TrimSpace(missionID) + "/" + strconv.Itoa(wave)
 }
 
 func portableWaveStatus(join WaveJoin) string {
@@ -270,7 +270,7 @@ func portableGraphRepositoryID(repoDir string) string {
 
 func portableProvenance(sourceID, evidenceURI string) graphcontracts.Provenance {
 	provenance := graphcontracts.Provenance{
-		Producer: "hawk",
+		Producer: "graycode",
 		SourceID: strings.TrimSpace(sourceID),
 	}
 	if uri := strings.TrimSpace(evidenceURI); uri != "" {

@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // DiagnosticResult holds the outcome of a single diagnostic check.
@@ -135,7 +135,7 @@ func FormatResults(suite *DiagnosticSuite) string {
 	}
 
 	var b strings.Builder
-	b.WriteString("=== Hawk Diagnostics ===\n\n")
+	b.WriteString("=== Graycode Diagnostics ===\n\n")
 
 	passCount := 0
 	warnCount := 0
@@ -275,7 +275,7 @@ func checkShellAvailable() DiagnosticResult {
 func checkDiskSpace() DiagnosticResult {
 	start := time.Now()
 	// Use a simple heuristic: try to create a temp file to verify we can write
-	tmpFile, err := os.CreateTemp("", "hawk-disk-check-*")
+	tmpFile, err := os.CreateTemp("", "graycode-disk-check-*")
 	if err != nil {
 		return DiagnosticResult{
 			Name:     "disk_space",
@@ -305,7 +305,7 @@ func checkConfigFileValid() DiagnosticResult {
 			Name:     "config_file_valid",
 			Status:   "warn",
 			Message:  fmt.Sprintf("Config file not found at %s", configPath),
-			Fix:      "Run 'hawk init' to create a default configuration",
+			Fix:      "Run 'graycode init' to create a default configuration",
 			Duration: time.Since(start),
 		}
 	}
@@ -314,7 +314,7 @@ func checkConfigFileValid() DiagnosticResult {
 			Name:     "config_file_valid",
 			Status:   "fail",
 			Message:  fmt.Sprintf("Error accessing config: %v", err),
-			Fix:      "Check file permissions on Hawk's config directory",
+			Fix:      "Check file permissions on Graycode's config directory",
 			Duration: time.Since(start),
 		}
 	}
@@ -323,7 +323,7 @@ func checkConfigFileValid() DiagnosticResult {
 			Name:     "config_file_valid",
 			Status:   "warn",
 			Message:  "Config file is empty",
-			Fix:      "Run 'hawk init' to regenerate configuration",
+			Fix:      "Run 'graycode init' to regenerate configuration",
 			Duration: time.Since(start),
 		}
 	}
@@ -349,7 +349,7 @@ func checkAPIKeySet() DiagnosticResult {
 			Name:     "api_key_set",
 			Status:   "fail",
 			Message:  "No API credentials stored in the OS secret store",
-			Fix:      "Run /config to save a key, or hawk credentials status to verify storage",
+			Fix:      "Run /config to save a key, or graycode credentials status to verify storage",
 			Duration: time.Since(start),
 		}
 	}
@@ -364,13 +364,13 @@ func checkAPIKeySet() DiagnosticResult {
 
 func checkModelConfigured() DiagnosticResult {
 	start := time.Now()
-	model := config.Getenv("HAWK_MODEL")
+	model := config.Getenv("GRAYCODE_MODEL")
 	if model == "" {
 		return DiagnosticResult{
 			Name:     "model_configured",
 			Status:   "warn",
-			Message:  "HAWK_MODEL not set, will use default",
-			Fix:      "Set HAWK_MODEL environment variable to specify preferred model",
+			Message:  "GRAYCODE_MODEL not set, will use default",
+			Fix:      "Set GRAYCODE_MODEL environment variable to specify preferred model",
 			Duration: time.Since(start),
 		}
 	}
@@ -460,7 +460,7 @@ func checkProjectDirWritable() DiagnosticResult {
 			Name:     "project_dir_writable",
 			Status:   "fail",
 			Message:  fmt.Sprintf("Could not get working directory: %v", err),
-			Fix:      "Ensure you are running hawk from a valid directory",
+			Fix:      "Ensure you are running graycode from a valid directory",
 			Duration: time.Since(start),
 		}
 	}
@@ -529,7 +529,7 @@ func checkDirWritable(name, dir string, start time.Time) DiagnosticResult {
 	}
 
 	// Try writing a temp file in the directory
-	testFile := filepath.Join(dir, ".hawk-write-test")
+	testFile := filepath.Join(dir, ".graycode-write-test")
 	if err := os.WriteFile(testFile, []byte("test"), 0o600); err != nil {
 		return DiagnosticResult{
 			Name:     name,

@@ -5,10 +5,10 @@ EVAL_DIR="$(cd "$(dirname "$0")" && pwd)"
 DATE=$(date +%Y-%m-%d)
 COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-echo "=== Hawk Skills Eval ==="
+echo "=== Graycode Skills Eval ==="
 echo "Date: $DATE | Commit: $COMMIT"
 echo ""
-echo "Run each scenario in a fresh hawk session and record results."
+echo "Run each scenario in a fresh graycode session and record results."
 echo ""
 
 ROUND_FILE="$EVAL_DIR/rounds/round-$DATE.md"

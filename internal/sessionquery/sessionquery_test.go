@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
 )
 
 func createTestSessionFile(t *testing.T, dir, sessionID, workspace string, messages []session.Message) {
@@ -24,7 +24,7 @@ func createTestSessionFile(t *testing.T, dir, sessionID, workspace string, messa
 	}
 
 	// We set test session dir environment so session.Save and session.Load work
-	t.Setenv("HAWK_STATE_DIR", dir)
+	t.Setenv("GRAYCODE_STATE_DIR", dir)
 	sessDir := filepath.Join(dir, "sessions")
 	_ = os.MkdirAll(sessDir, 0o755)
 
@@ -39,7 +39,7 @@ func setupTestService(t *testing.T) (*Service, string, string) {
 	dbPath := filepath.Join(tmpDir, "test_session_query.db")
 	sessDir := filepath.Join(tmpDir, "sessions")
 	_ = os.MkdirAll(sessDir, 0o755)
-	t.Setenv("HAWK_STATE_DIR", tmpDir)
+	t.Setenv("GRAYCODE_STATE_DIR", tmpDir)
 
 	svc, err := NewService(dbPath, sessDir)
 	if err != nil {

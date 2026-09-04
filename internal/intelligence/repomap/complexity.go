@@ -19,7 +19,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // ComplexityReport holds complexity metrics for a single file.

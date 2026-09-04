@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 )
 
-// ApplyCredentialsResult is Hawk's UI-safe view of an Eyrie catalog/routing
+// ApplyCredentialsResult is Graycode's UI-safe view of an Eyrie catalog/routing
 // application. It intentionally excludes Eyrie setup/config implementation
 // types from the product boundary.
 type ApplyCredentialsResult struct {

@@ -21,7 +21,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: graycodeai/hawk
+  IMAGE_NAME: graycodeai/graycode
 
 jobs:
   # Build each platform natively on its own runner (arm64 natively via the
@@ -59,8 +59,8 @@ jobs:
           push: false
           load: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scan
-          cache-from: type=gha,scope=hawk-amd64
-          cache-to: type=gha,mode=max,scope=hawk-amd64
+          cache-from: type=gha,scope=graycode-amd64
+          cache-to: type=gha,mode=max,scope=graycode-amd64
           build-args: |
             VERSION=${{ github.ref_name }}
             COMMIT=${{ github.sha }}
@@ -98,8 +98,8 @@ jobs:
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:amd64-${{ github.sha }}
-          cache-from: type=gha,scope=hawk-amd64
-          cache-to: type=gha,mode=max,scope=hawk-amd64
+          cache-from: type=gha,scope=graycode-amd64
+          cache-to: type=gha,mode=max,scope=graycode-amd64
           build-args: |
             VERSION=${{ github.ref_name }}
             COMMIT=${{ github.sha }}
@@ -142,8 +142,8 @@ jobs:
           push: false
           load: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scan
-          cache-from: type=gha,scope=hawk-arm64
-          cache-to: type=gha,mode=max,scope=hawk-arm64
+          cache-from: type=gha,scope=graycode-arm64
+          cache-to: type=gha,mode=max,scope=graycode-arm64
           build-args: |
             VERSION=${{ github.ref_name }}
             COMMIT=${{ github.sha }}
@@ -181,8 +181,8 @@ jobs:
           platforms: linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:arm64-${{ github.sha }}
-          cache-from: type=gha,scope=hawk-arm64
-          cache-to: type=gha,mode=max,scope=hawk-arm64
+          cache-from: type=gha,scope=graycode-arm64
+          cache-to: type=gha,mode=max,scope=graycode-arm64
           build-args: |
             VERSION=${{ github.ref_name }}
             COMMIT=${{ github.sha }}
@@ -267,9 +267,9 @@ jobs:
           platforms: linux/amd64
           push: false
           load: true
-          tags: ${{ env.REGISTRY }}/graycodeai/hawk-sandbox:scan
-          cache-from: type=gha,scope=hawk-sandbox
-          cache-to: type=gha,mode=max,scope=hawk-sandbox
+          tags: ${{ env.REGISTRY }}/graycodeai/graycode-sandbox:scan
+          cache-from: type=gha,scope=graycode-sandbox
+          cache-to: type=gha,mode=max,scope=graycode-sandbox
 
       - name: Scan sandbox image
         uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514
@@ -290,7 +290,7 @@ jobs:
             --format sarif \
             --output trivy-sandbox-image.sarif \
             --exit-code 1 \
-            ${{ env.REGISTRY }}/graycodeai/hawk-sandbox:scan
+            ${{ env.REGISTRY }}/graycodeai/graycode-sandbox:scan
 
       - name: Build and publish public sandbox image
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
@@ -300,10 +300,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ${{ env.REGISTRY }}/graycodeai/hawk-sandbox:${{ steps.sandbox-version.outputs.tag }}
-            ${{ env.REGISTRY }}/graycodeai/hawk-sandbox:latest
-          cache-from: type=gha,scope=hawk-sandbox
-          cache-to: type=gha,mode=max,scope=hawk-sandbox
+            ${{ env.REGISTRY }}/graycodeai/graycode-sandbox:${{ steps.sandbox-version.outputs.tag }}
+            ${{ env.REGISTRY }}/graycodeai/graycode-sandbox:latest
+          cache-from: type=gha,scope=graycode-sandbox
+          cache-to: type=gha,mode=max,scope=graycode-sandbox
 
       # Publish the sandbox scan to GitHub code scanning. PRs still run the
       # scan; they just do not publish the release image artifacts.

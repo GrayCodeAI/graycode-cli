@@ -24,7 +24,7 @@ Same as the parent plan:
 
 ## Gap inventory (from the comparison audit)
 
-| # | DSH package(s) | Hawk gap | Port status |
+| # | DSH package(s) | Graycode gap | Port status |
 | --- | --- | --- | --- |
 | 13 | `identity/anonymous-user-id` | no per-home anonymous telemetry identity | **Delivered** |
 | 14 | `web/web-search-deepseek`, `-exa`, `-perplexity` | web search only has Brave/SearXNG/DDG | **Delivered** |
@@ -37,7 +37,7 @@ Same as the parent plan:
 | 21 | `session/session-persistence-sqlite`, `session-query/*sqlite`, `storage/storage-sqlite` | JSONL-only session persistence | deferred |
 | 22 | `e2b/*` | no cloud Linux sandbox | deferred |
 | 23 | `code-runtime/*` | no sandboxed model-written program execution | deferred |
-| 24 | `sdk/client`, `sdk/protocol`, `sdk/server`, `python/sdk` | hawk exposes ACP server instead of DSH JSON-RPC SDK | deferred (keep ACP) |
+| 24 | `sdk/client`, `sdk/protocol`, `sdk/server`, `python/sdk` | graycode exposes ACP server instead of DSH JSON-RPC SDK | deferred (keep ACP) |
 | 25 | `terminal/*`, `tool-terminal` | no PTY terminal tool | deferred |
 | 26 | `client/*`, `web/*`, `website`, `bundle/*-web-app` | web UI layer | out of scope (CLI/TUI) |
 
@@ -46,7 +46,7 @@ Same as the parent plan:
 Port of DSH `identity/anonymous-user-id/src/index.ts`.
 
 - `identity.Identity` — per-harness-home anonymous user id.
-- Resolved once per process (memoized): `$HAWK_HOME`-style home (`~/.hawk`),
+- Resolved once per process (memoized): `$GRAYCODE_HOME`-style home (`~/.graycode`),
   `.anonymous-user-id` file containing a bare random UUID.
 - Never derived from hostname, network address, git remote, or env.
 - Sync read/write; deleting the file mints a fresh identity.
@@ -98,7 +98,7 @@ Port of DSH `attachment/attachment` version-one image path.
   `attachment.Limits` (maxImageBytes, maxImagesPerMessage,
   maxMessageImageBytes, maxImagePixels, mediaTypes), `attachment.SaveImage`,
   `attachment.Stored` (ref + data), `attachment.Store` interface +
-  filesystem `Store` under the hawk home data dir.
+  filesystem `Store` under the graycode home data dir.
 - Validation: declared media type checked against decoded bytes; byte and
   pixel limits enforced; duplicate writes rejected; ID opaque.
 
@@ -118,7 +118,7 @@ Port of DSH `session/session-projection-cache` semantics.
 ## Phase 18 — OTLP log-record export (`internal/observability/otellog`)
 
 Port of DSH `session/session-telemetry-otel` backend semantics (the capture
-coordinator stays out of scope — hawk has no Cordis bus; records reach the
+coordinator stays out of scope — graycode has no Cordis bus; records reach the
 backend via `Emit`/`EmitFeedback`).
 
 - `Record{Channel, Time, Severity, Attributes, Body}` / `Sink` seam —
@@ -139,8 +139,8 @@ backend via `Emit`/`EmitFeedback`).
 - Shutdown races the DSH deadline (default 3s); exporter-shutdown goroutine
   stays observed after the deadline; `Emit` is a non-blocking enqueue.
 - `DefaultConfig()` mirrors oteltrace env conventions
-  (`HAWK_CODE_ENABLE_TELEMETRY=1` + `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`);
-  wired in `cmd/hawk/main.go` and `cmd/daemon.go`.
+  (`GRAYCODE_ENABLE_TELEMETRY=1` + `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`);
+  wired in `cmd/graycode/main.go` and `cmd/daemon.go`.
 - Tests: mode resolution, load-time validation, severity mapping, full/ops/
   ledger emission (in-memory exporter), feedback-only direct-drop,
   disabled-drop, idempotent shutdown, value conversion, attribute filtering.
@@ -148,7 +148,7 @@ backend via `Emit`/`EmitFeedback`).
 ## Gates
 
 Each phase: `gofmt`/`go vet`/`go test` on the touched packages, then `make lint`
-and `hawk verify` — run **twice** (the second pass re-runs the full touched
+and `graycode verify` — run **twice** (the second pass re-runs the full touched
 suite after any fixes). No direct commits to `main`.
 
 ### Verification record (2026-08-17, branch `feat/dsh-harness-port-p0-eventlog`)
@@ -162,14 +162,14 @@ Pass 1:
 - `make lint`: **0 issues** (fixed pre-existing errcheck `check-type-assertions`
   debt + one unused helper in `internal/session/preparations.go`, and an S1000
   single-case select in `internal/jobs/jobs.go`)
-- `hawk verify`: exit 0
+- `graycode verify`: exit 0
 - `scripts/check-internal-layer-imports.sh`: passed
 
 Pass 2 (after lint fixes):
 
 - `gofmt -l`: clean; `go vet`: clean; `go build ./...`: clean
 - `go test -race` (identity, jobs, attachment): ok; `go test` (session, tool): ok
-- `make lint`: 0 issues; `hawk verify`: exit 0
+- `make lint`: 0 issues; `graycode verify`: exit 0
 
 New dependency: `golang.org/x/image v0.45.0` (direct) — webp decode validation
 for `internal/attachment` (stdlib has no webp decoder).
@@ -178,18 +178,18 @@ for `internal/attachment` (stdlib has no webp decoder).
 
 Pass 1:
 
-- `gofmt -l` (cmd/hawk/main.go, cmd/daemon.go, internal/observability/otellog): clean
+- `gofmt -l` (cmd/graycode/main.go, cmd/daemon.go, internal/observability/otellog): clean
 - `go vet` (otellog, cmd): clean
 - `go test -race` (otellog): ok; `go build ./...`: ok
 - `make lint`: **0 issues**
-- `hawk verify`: exit 0
+- `graycode verify`: exit 0
 - `scripts/check-internal-layer-imports.sh`: passed
 
 Pass 2 (uncached re-run, no fixes were needed):
 
 - `gofmt -l`: clean; `go vet`: clean; `go build ./...`: clean
 - `go test -count=1 -race` (otellog): ok
-- `make lint`: 0 issues; `hawk verify`: exit 0
+- `make lint`: 0 issues; `graycode verify`: exit 0
 
 New dependencies (all direct): `go.opentelemetry.io/otel/log v0.20.0`,
 `go.opentelemetry.io/otel/sdk/log v0.20.0`,

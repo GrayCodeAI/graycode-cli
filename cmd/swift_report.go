@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/permissions"
-	"github.com/GrayCodeAI/hawk/internal/swift"
+	"github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/permissions"
+	"github.com/GrayCodeAI/graycode-cli/internal/swift"
 	"github.com/spf13/cobra"
 )
 
@@ -59,7 +59,7 @@ func runSwiftReport(cmd *cobra.Command, _ []string) error {
 		Platform:  runtime.GOOS + "/" + runtime.GOARCH,
 		Model:     config.ActiveModel(context.Background()),
 		Workspace: cwd,
-		SessionID: os.Getenv("HAWK_SESSION_ID"),
+		SessionID: os.Getenv("GRAYCODE_SESSION_ID"),
 		PID:       os.Getpid(),
 		Terminal:  terminalSize(),
 		Env:       selectedEnv(),

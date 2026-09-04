@@ -5,13 +5,13 @@ import (
 )
 
 func TestParseGHRepoView_Github(t *testing.T) {
-	jsonStr := `{"owner":{"login":"GrayCodeAI"},"name":"hawk","url":"https://github.com/GrayCodeAI/hawk"}`
+	jsonStr := `{"owner":{"login":"GrayCodeAI"},"name":"graycode-cli","url":"https://github.com/GrayCodeAI/graycode-cli"}`
 	owner, repo, provider := parseGHRepoView(jsonStr)
 	if owner != "GrayCodeAI" {
 		t.Errorf("owner = %q, want %q", owner, "GrayCodeAI")
 	}
-	if repo != "hawk" {
-		t.Errorf("repo = %q, want %q", repo, "hawk")
+	if repo != "graycode-cli" {
+		t.Errorf("repo = %q, want %q", repo, "graycode-cli")
 	}
 	if provider != "github" {
 		t.Errorf("provider = %q, want %q", provider, "github")
@@ -50,7 +50,7 @@ func TestParseGitConfig_Github(t *testing.T) {
 	ignorecase = true
 	precomposeunicode = true
 [remote "origin"]
-	url = git@github.com:GrayCodeAI/hawk.git
+	url = git@github.com:GrayCodeAI/graycode-cli.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
 [branch "main"]
 	remote = origin
@@ -59,8 +59,8 @@ func TestParseGitConfig_Github(t *testing.T) {
 	if owner != "GrayCodeAI" {
 		t.Errorf("owner = %q, want %q", owner, "GrayCodeAI")
 	}
-	if repo != "hawk" {
-		t.Errorf("repo = %q, want %q", repo, "hawk")
+	if repo != "graycode-cli" {
+		t.Errorf("repo = %q, want %q", repo, "graycode-cli")
 	}
 	if provider != "github" {
 		t.Errorf("provider = %q, want %q", provider, "github")

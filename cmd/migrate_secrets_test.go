@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
 )
 
 func TestLogMigrateProviderSecretsError_Nil_NoOutput(t *testing.T) {
@@ -45,8 +45,8 @@ func TestLogMigrateProviderSecretsError_IncludesRemediationHint(t *testing.T) {
 	logMigrateProviderSecretsError(l, errors.New("boom"))
 
 	out := buf.String()
-	if !strings.Contains(out, "hawk /config") {
-		t.Errorf("expected remediation hint mentioning `hawk /config`, got: %q", out)
+	if !strings.Contains(out, "graycode /config") {
+		t.Errorf("expected remediation hint mentioning `graycode /config`, got: %q", out)
 	}
 	if !strings.Contains(out, "keychain") {
 		t.Errorf("expected remediation hint mentioning keychain, got: %q", out)

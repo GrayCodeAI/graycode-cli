@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/spec"
+	"github.com/GrayCodeAI/graycode-cli/internal/spec"
 )
 
 var (
@@ -67,7 +67,7 @@ func specDir(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(cwd, ".hawk", "specs", slug), nil
+	return filepath.Join(cwd, ".graycode", "specs", slug), nil
 }
 
 func writeSpecArtifact(ctx context.Context, filename, content string) (string, error) {
@@ -86,7 +86,7 @@ func writeSpecArtifactForSlug(ctx context.Context, slug, filename, content strin
 	if err != nil {
 		return "", err
 	}
-	return writeSpecArtifactInDir(filepath.Join(cwd, ".hawk", "specs", slug), filename, content)
+	return writeSpecArtifactInDir(filepath.Join(cwd, ".graycode", "specs", slug), filename, content)
 }
 
 func writeSpecArtifactInDir(dir, filename, content string) (string, error) {
@@ -141,7 +141,7 @@ func (SpecifyTool) Execute(ctx context.Context, input json.RawMessage) (string, 
 		if err := setSpecSlug(ctx, slug); err != nil {
 			return "", err
 		}
-		if err := os.MkdirAll(filepath.Join(".hawk", "specs", slug), 0o700); err != nil {
+		if err := os.MkdirAll(filepath.Join(".graycode", "specs", slug), 0o700); err != nil {
 			return "", fmt.Errorf("mkdir: %w", err)
 		}
 	}
@@ -567,7 +567,7 @@ type SpecListTool struct{}
 func (SpecListTool) Name() string      { return "SpecList" }
 func (SpecListTool) Aliases() []string { return []string{"spec_list"} }
 func (SpecListTool) Description() string {
-	return "List all spec workflows in .hawk/specs/ with their stage and title. Useful for finding existing specs to resume."
+	return "List all spec workflows in .graycode/specs/ with their stage and title. Useful for finding existing specs to resume."
 }
 
 func (SpecListTool) Parameters() map[string]interface{} {
@@ -671,13 +671,13 @@ func (SpecResetTool) Execute(ctx context.Context, input json.RawMessage) (string
 	return fmt.Sprintf("Reset spec %s — stage cleared, artifacts preserved.", slug), nil
 }
 
-// specsDir returns the .hawk/specs directory path.
+// specsDir returns the .graycode/specs directory path.
 func specsDir() (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(cwd, ".hawk", "specs"), nil
+	return filepath.Join(cwd, ".graycode", "specs"), nil
 }
 
 // SpecConfigTool allows the agent to read and update spec configuration.

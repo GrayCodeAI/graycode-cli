@@ -79,7 +79,7 @@ func (FileWriteTool) Execute(ctx context.Context, input json.RawMessage) (string
 	// This prevents file corruption if the process crashes mid-write,
 	// which os.WriteFile (truncate-then-write) cannot guarantee.
 	dir := filepath.Dir(path)
-	tmp, err := os.CreateTemp(dir, ".hawk-write-*")
+	tmp, err := os.CreateTemp(dir, ".graycode-write-*")
 	if err != nil {
 		return "", fmt.Errorf("create temp file: %w", err)
 	}

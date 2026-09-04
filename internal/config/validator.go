@@ -62,7 +62,7 @@ func ValidateSettings(s Settings) ValidationResult {
 	if activeProvider == "" {
 		activeProvider = ActiveProvider(context.Background())
 	}
-	// Hawk: validate API key is in the OS secret store (not in settings)
+	// Graycode: validate API key is in the OS secret store (not in settings)
 	if activeProvider != "" {
 		envKey := ProviderAPIKeyEnv(activeProvider)
 		if envKey != "" && EnvKeyStatus(activeProvider) != "set" {

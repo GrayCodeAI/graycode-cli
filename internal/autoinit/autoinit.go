@@ -1,13 +1,13 @@
 // Package autoinit performs a one-time, automatic codebase-analysis pass the
-// first time hawk runs in a project that has no context files (AGENTS.md /
-// HAWK.md / CLAUDE.md). It mirrors the behaviour of the `init-deep` skill but
+// first time graycode runs in a project that has no context files (AGENTS.md /
+// GRAYCODE.md / CLAUDE.md). It mirrors the behaviour of the `init-deep` skill but
 // is gated so it runs at most once per project and can be disabled entirely.
 //
 // The package is intentionally additive and self-contained: it only inspects
 // the filesystem to decide whether to run, writes a marker file once a run has
 // been attempted, and delegates the actual analysis to a caller-supplied
 // runner. Callers (the cmd layer) wire the runner to whatever drives the
-// init analysis (the init-deep skill / `hawk init`). When no runner is wired,
+// init analysis (the init-deep skill / `graycode init`). When no runner is wired,
 // MaybeRun is a no-op beyond gating, so importing the package never changes
 // behaviour on its own.
 package autoinit
@@ -18,8 +18,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // markerName is the file written under the project's user-state directory once an
@@ -30,12 +30,12 @@ const markerName = "auto-init.done"
 // disableEnv, when set to a truthy value ("1", "true", "yes", "on"), disables
 // auto-init globally. This is the kill switch for users/CI that never want the
 // behaviour.
-const disableEnv = "HAWK_DISABLE_AUTO_INIT"
+const disableEnv = "GRAYCODE_DISABLE_AUTO_INIT"
 
 // contextFiles are the project-level context files whose presence means the
 // project already has context and auto-init should be skipped. This matches
-// the convention files recognized elsewhere in hawk.
-var contextFiles = []string{"AGENTS.md", "HAWK.md", "CLAUDE.md", "CONTEXT.md"}
+// the convention files recognized elsewhere in graycode.
+var contextFiles = []string{"AGENTS.md", "GRAYCODE.md", "CLAUDE.md", "CONTEXT.md"}
 
 // Runner performs the actual codebase analysis for a project rooted at root.
 // It is supplied by the caller so this package carries no dependency on the
@@ -93,7 +93,7 @@ func HasRun(root string) bool {
 // MaybeRun runs the auto-init analysis at most once for opts.Root, subject to
 // the gating rules:
 //
-//  1. Disabled via HAWK_DISABLE_AUTO_INIT  -> skip.
+//  1. Disabled via GRAYCODE_DISABLE_AUTO_INIT  -> skip.
 //  2. Marker file already present          -> skip.
 //  3. Project already has a context file   -> mark + skip (unless Force).
 //  4. Otherwise                            -> run, then mark.

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
 )
 
 func validatePathAllowed(ctx context.Context, path string) error {

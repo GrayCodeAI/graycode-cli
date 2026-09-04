@@ -57,7 +57,7 @@ type Config struct {
 
 func (c *Config) normalize() {
 	if c.SkillsDir == "" {
-		c.SkillsDir = "~/.hawk/skills"
+		c.SkillsDir = "~/.graycode/skills"
 	}
 	if c.IdleDaysBeforeArchive <= 0 {
 		c.IdleDaysBeforeArchive = 30

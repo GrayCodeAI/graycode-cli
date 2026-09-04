@@ -1,19 +1,19 @@
 openapi: "3.1.0"
 info:
-  title: Hawk Daemon API
+  title: Graycode Daemon API
   description: |
-    HTTP API served by the hawk daemon on port 4590.
+    HTTP API served by the graycode daemon on port 4590.
     Used by sparrow, robin, and external integrations.
-    The daemon must be running (`hawk daemon start`) before calling these endpoints.
+    The daemon must be running (`graycode daemon start`) before calling these endpoints.
 
     This spec is kept in lockstep with the registered routes in
     internal/daemon; the daemon test suite fails if they drift.
   version: "0.1.0"
   license:
     name: MIT
-    url: https://github.com/GrayCodeAI/hawk/blob/main/LICENSE
+    url: https://github.com/GrayCodeAI/graycode-cli/blob/main/LICENSE
   contact:
-    url: https://github.com/GrayCodeAI/hawk
+    url: https://github.com/GrayCodeAI/graycode-cli
 
 servers:
   - url: http://127.0.0.1:4590
@@ -60,7 +60,7 @@ components:
           description: Existing directory associated with session metadata. The daemon executes tools from its startup working directory; it never performs a process-wide chdir per request.
         agent:
           type: string
-          description: Named Hawk agent persona to apply. Continuations inherit the persisted persona when omitted.
+          description: Named Graycode agent persona to apply. Continuations inherit the persisted persona when omitted.
 
     ChatResponse:
       type: object
@@ -254,7 +254,7 @@ components:
       properties:
         schema_version:
           type: string
-          enum: [hawk.graph/v1]
+          enum: [graycode.graph/v1]
         generated_at:
           type: string
           format: date-time
@@ -457,7 +457,7 @@ components:
       properties:
         status:
           type: string
-          description: Output of `hawk review status`
+          description: Output of `graycode review status`
 
     Error:
       type: object
@@ -600,7 +600,7 @@ paths:
         Omit `session_id` to create and durably persist a new session. Supply a
         previously returned `session_id` to load its transcript, append a turn,
         and update that same durable session. The returned JSON field and the
-        `X-Hawk-Session-ID` header identify a retrievable `/v1/sessions/{id}`.
+        `X-Graycode-Session-ID` header identify a retrievable `/v1/sessions/{id}`.
       requestBody:
         required: true
         content:
@@ -611,7 +611,7 @@ paths:
         "200":
           description: Agent response (or SSE stream)
           headers:
-            X-Hawk-Session-ID:
+            X-Graycode-Session-ID:
               description: Durable session ID created or continued by this request.
               schema:
                 type: string
@@ -873,10 +873,10 @@ paths:
       tags: [graphs]
       summary: Project a persisted session as a portable execution graph
       description: |
-        Returns Hawk's privacy-safe, read-only `hawk.graph/v1` projection.
+        Returns Graycode's privacy-safe, read-only `graycode.graph/v1` projection.
         Prompt text, tool arguments, tool output, and verification details are
         excluded. Explicit Swift checkpoint IDs are additive to authoritative
-        Swift session correlation performed by Hawk.
+        Swift session correlation performed by Graycode.
       parameters:
         - name: id
           in: path

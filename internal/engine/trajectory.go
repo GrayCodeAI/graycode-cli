@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // TrajectoryRun records a single attempt at completing a task.

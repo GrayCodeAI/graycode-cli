@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Dashboard provides a local telemetry dashboard for hawk showing usage analytics,
+// Dashboard provides a local telemetry dashboard for graycode showing usage analytics,
 // performance metrics, and session history in a terminal-friendly format.
 type Dashboard struct {
 	Sessions     []SessionSummary          `json:"sessions"`
@@ -112,7 +112,7 @@ func (d *Dashboard) RenderOverview() string {
 	botBorder := "+" + strings.Repeat("=", width) + "+"
 
 	b.WriteString(topBorder + "\n")
-	b.WriteString("|" + centerText("hawk Analytics Dashboard", width) + "|\n")
+	b.WriteString("|" + centerText("graycode Analytics Dashboard", width) + "|\n")
 	b.WriteString(midBorder + "\n")
 
 	// Summary stats

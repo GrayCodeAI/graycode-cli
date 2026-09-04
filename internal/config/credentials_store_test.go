@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 )
 
 func TestRemoveStoredCredential_ByProvider(t *testing.T) {

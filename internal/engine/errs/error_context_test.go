@@ -277,7 +277,7 @@ func TestEnrich_SysConnectionRefused(t *testing.T) {
 	}
 }
 
-func TestEnrich_HawkOldStrNotFound(t *testing.T) {
+func TestEnrich_GraycodeOldStrNotFound(t *testing.T) {
 	ec := NewErrorContext()
 	enriched := ec.Enrich("edit failed: old_str not found in file.go")
 	if enriched == nil {
@@ -291,7 +291,7 @@ func TestEnrich_HawkOldStrNotFound(t *testing.T) {
 	}
 }
 
-func TestEnrich_HawkFileTooLarge(t *testing.T) {
+func TestEnrich_GraycodeFileTooLarge(t *testing.T) {
 	ec := NewErrorContext()
 	enriched := ec.Enrich("cannot read: file too large (50MB)")
 	if enriched == nil {
@@ -302,7 +302,7 @@ func TestEnrich_HawkFileTooLarge(t *testing.T) {
 	}
 }
 
-func TestEnrich_HawkBudgetExceeded(t *testing.T) {
+func TestEnrich_GraycodeBudgetExceeded(t *testing.T) {
 	ec := NewErrorContext()
 	enriched := ec.Enrich("session terminated: budget exceeded ($5.00 limit)")
 	if enriched == nil {

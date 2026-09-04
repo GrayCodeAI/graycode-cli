@@ -5,7 +5,7 @@ import (
 )
 
 // redactToolResult strips secrets from tool output before the result is fed
-// back to the model. It uses the session pipeline's OutputRedactor (hawk's 25+
+// back to the model. It uses the session pipeline's OutputRedactor (graycode's 25+
 // built-in patterns plus registered environment secrets) and collapses the
 // user's home directory so absolute paths do not leak. A session without a
 // pipeline (tests, zero-value Session) passes output through unchanged.

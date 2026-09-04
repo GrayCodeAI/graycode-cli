@@ -25,7 +25,7 @@ for f in reexport_files:
 
 # Find external files importing engine
 result = subprocess.run(
-    ['rg', '-l', '"github.com/GrayCodeAI/hawk/internal/engine"', '-g', '*.go'],
+    ['rg', '-l', '"github.com/GrayCodeAI/graycode-cli/internal/engine"', '-g', '*.go'],
     capture_output=True, text=True
 )
 external_files = [f for f in result.stdout.strip().split('\n') if f and 'internal/engine/' not in f]

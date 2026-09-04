@@ -1,5 +1,5 @@
 // Package testaudit provides meta-audit tests that enforce architectural
-// invariants across the hawk codebase using go/ast analysis.
+// invariants across the graycode codebase using go/ast analysis.
 //
 // These tests parse the source tree and fail when forbidden patterns are
 // detected (e.g., raw panic calls, direct os.Getenv usage, missing doc
@@ -74,7 +74,7 @@ func isExemptPackage(filePath string, exemptions map[string]bool) bool {
 	return false
 }
 
-// relPath returns the path relative to the hawk repo root for cleaner test output.
+// relPath returns the path relative to the graycode repo root for cleaner test output.
 func relPath(root, abs string) string {
 	rel, err := filepath.Rel(root, abs)
 	if err != nil {

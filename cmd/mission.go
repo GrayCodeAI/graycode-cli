@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	mission "github.com/GrayCodeAI/hawk/internal/multiagent"
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
-	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	mission "github.com/GrayCodeAI/graycode-cli/internal/multiagent"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 	"github.com/spf13/cobra"
 )
 
@@ -35,10 +35,10 @@ Each feature runs in its own worktree with a full engine session.
 Results are committed on separate branches for review/merge.
 
 Examples:
-  hawk mission "Add auth, rate limiting, and logging to the API"
-  hawk mission --workers 6 "Refactor the database layer into 3 services"
-  hawk mission --model claude-sonnet-4-6 "Add tests for all untested packages"
-  hawk mission --from-tasks`,
+  graycode mission "Add auth, rate limiting, and logging to the API"
+  graycode mission --workers 6 "Refactor the database layer into 3 services"
+  graycode mission --model claude-sonnet-4-6 "Add tests for all untested packages"
+  graycode mission --from-tasks`,
 	Args: cobra.ArbitraryArgs,
 	RunE: runMission,
 }
@@ -60,7 +60,7 @@ func runMission(_ *cobra.Command, args []string) error {
 	cwd, _ := os.Getwd()
 	baseBranch := getCurrentBranch(cwd)
 
-	settings := hawkconfig.LoadSettings()
+	settings := graycodeconfig.LoadSettings()
 	effectiveModel, effectiveProvider := effectiveModelAndProvider(settings)
 	if missionModel != "" {
 		effectiveModel = missionModel
@@ -78,7 +78,7 @@ func runMission(_ *cobra.Command, args []string) error {
 
 	m := mission.New(prompt, cfg)
 	// Clean up the mission's temp directory when the command finishes,
-	// whether it succeeded or failed. Without this, /tmp/hawk-missions/
+	// whether it succeeded or failed. Without this, /tmp/graycode-missions/
 	// accumulates one directory per run indefinitely (C6 fix).
 	defer func() { _ = m.Cleanup() }()
 
@@ -160,7 +160,7 @@ func runMission(_ *cobra.Command, args []string) error {
 
 	// Propagate feature failures as a non-zero exit so CI sees a real
 	// failure instead of green: Mission.Run historically returned nil even
-	// when every feature failed (H9), so `hawk mission` exited 0.
+	// when every feature failed (H9), so `graycode mission` exited 0.
 	failed := 0
 	for _, f := range m.Features {
 		if f.Status == mission.FeatureFailed {
@@ -174,7 +174,7 @@ func runMission(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func planWithLLM(ctx context.Context, prompt, provider, model string, settings hawkconfig.Settings) ([]mission.Feature, error) {
+func planWithLLM(ctx context.Context, prompt, provider, model string, settings graycodeconfig.Settings) ([]mission.Feature, error) {
 	planPrompt := fmt.Sprintf(
 		"Decompose this task into independent features that can be implemented in parallel.\n\n"+
 			"Task: %s\n\n"+
@@ -187,7 +187,7 @@ func planWithLLM(ctx context.Context, prompt, provider, model string, settings h
 	)
 
 	registry, _ := defaultRegistry(settings)
-	sess, err := newConfiguredHawkSession(settings, provider, model, planPrompt, registry, logger.New(io.Discard, logger.Error))
+	sess, err := newConfiguredGraycodeSession(settings, provider, model, planPrompt, registry, logger.New(io.Discard, logger.Error))
 	if err != nil {
 		return nil, err
 	}

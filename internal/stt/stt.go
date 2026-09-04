@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-// Transcriber turns audio bytes into text. hawk does not bundle an STT
+// Transcriber turns audio bytes into text. graycode does not bundle an STT
 // provider; a host wires one in via SetTranscriber. A nil transcriber makes
 // Transcription disabled and returns a clear error.
 type Transcriber interface {
@@ -77,7 +77,7 @@ func DownloadAttachment(ctx context.Context, client *http.Client, downloadURL, d
 	}
 
 	// Create a dedicated temp dir and confine the file to it.
-	dir, err := os.MkdirTemp("", "hawk-stt-*")
+	dir, err := os.MkdirTemp("", "graycode-stt-*")
 	if err != nil {
 		return "", fmt.Errorf("stt: create temp dir: %w", err)
 	}

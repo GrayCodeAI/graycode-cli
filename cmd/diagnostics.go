@@ -11,16 +11,16 @@ import (
 	"strings"
 	"time"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
-	"github.com/GrayCodeAI/hawk/internal/resilience/health"
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
+	"github.com/GrayCodeAI/graycode-cli/internal/resilience/health"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
-func doctorReport(settings hawkconfig.Settings) string {
+func doctorReport(settings graycodeconfig.Settings) string {
 	// Diagnostics must report the requested/effective selection even when its
 	// credential is missing; readiness and health sections explain why it is
 	// not yet usable. Hiding it as auto/default makes misconfiguration harder
@@ -36,7 +36,7 @@ func doctorReport(settings hawkconfig.Settings) string {
 
 	cwd, _ := os.Getwd()
 	var b strings.Builder
-	b.WriteString("Hawk doctor\n")
+	b.WriteString("Graycode doctor\n")
 	b.WriteString(fmt.Sprintf("Version: %s\n", version))
 	b.WriteString(fmt.Sprintf("Go version: %s\n", runtime.Version()))
 	b.WriteString(fmt.Sprintf("Directory: %s\n", cwd))
@@ -68,12 +68,12 @@ func doctorReport(settings hawkconfig.Settings) string {
 			b.WriteString(fmt.Sprintf("  %s (%s): not checked out\n", component.product, component.directory))
 		}
 	}
-	b.WriteString("\n" + hawkconfig.FormatEcosystemPanel(context.Background(), providerName, modelName) + "\n")
-	b.WriteString("\n" + hawkconfig.FormatCatalogHealth(hawkconfig.CatalogHealthReport(context.Background())) + "\n")
-	preflight := hawkconfig.EnginePreflightReportWithSettings(context.Background(), settings, hawkconfig.EnginePreflightOptions{})
-	b.WriteString("\n" + hawkconfig.FormatEnginePreflight(preflight) + "\n")
-	b.WriteString("\n" + hawkconfig.CredentialStorageStatus(context.Background()).Formatted + "\n")
-	if deployReport, err := hawkconfig.DeploymentStatusReportWithSettings(context.Background(), settings, modelName); err == nil {
+	b.WriteString("\n" + graycodeconfig.FormatEcosystemPanel(context.Background(), providerName, modelName) + "\n")
+	b.WriteString("\n" + graycodeconfig.FormatCatalogHealth(graycodeconfig.CatalogHealthReport(context.Background())) + "\n")
+	preflight := graycodeconfig.EnginePreflightReportWithSettings(context.Background(), settings, graycodeconfig.EnginePreflightOptions{})
+	b.WriteString("\n" + graycodeconfig.FormatEnginePreflight(preflight) + "\n")
+	b.WriteString("\n" + graycodeconfig.CredentialStorageStatus(context.Background()).Formatted + "\n")
+	if deployReport, err := graycodeconfig.DeploymentStatusReportWithSettings(context.Background(), settings, modelName); err == nil {
 		b.WriteString("\n" + deployReport + "\n")
 	}
 	b.WriteString("\n" + envSummaryWithSelection(providerName, modelName, false) + "\n")
@@ -85,18 +85,18 @@ func doctorReport(settings hawkconfig.Settings) string {
 	}
 
 	// Project instructions
-	if md := hawkconfig.LoadAgentsMD(); md != "" {
+	if md := graycodeconfig.LoadAgentsMD(); md != "" {
 		b.WriteString("\nProject instructions: found\n")
 	} else {
 		b.WriteString("\nProject instructions: not found (consider creating AGENTS.md)\n")
 	}
 
-	// Installed skills (hawk ships none; skills come from user/marketplace installs)
+	// Installed skills (graycode ships none; skills come from user/marketplace installs)
 	skillsDir := filepath.Join(storage.StateDir(), "skills")
 	if entries, err := os.ReadDir(skillsDir); err == nil && len(entries) > 0 {
 		b.WriteString(fmt.Sprintf("Installed skills: %d\n", len(entries)))
 	} else {
-		b.WriteString("Installed skills: none (install with `hawk skills install`)\n")
+		b.WriteString("Installed skills: none (install with `graycode skills install`)\n")
 	}
 
 	b.WriteString(fmt.Sprintf("Configured MCP servers: %d\n", len(settings.MCPServers)+len(mcpServers)))
@@ -105,7 +105,7 @@ func doctorReport(settings hawkconfig.Settings) string {
 	// Session recovery status
 	recoveryCandidates := session.ScanForRecovery()
 	if len(recoveryCandidates) > 0 {
-		b.WriteString(fmt.Sprintf("\nInterrupted sessions: %d (run hawk recover)\n", len(recoveryCandidates)))
+		b.WriteString(fmt.Sprintf("\nInterrupted sessions: %d (run graycode recover)\n", len(recoveryCandidates)))
 	} else {
 		b.WriteString("\nInterrupted sessions: none\n")
 	}
@@ -114,14 +114,14 @@ func doctorReport(settings hawkconfig.Settings) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func healthCheckReport(settings hawkconfig.Settings, provider string) string {
+func healthCheckReport(settings graycodeconfig.Settings, provider string) string {
 	registry := health.NewRegistry()
 
 	registry.Register("api_key", providerCredentialHealthChecker(provider))
 
 	// Settings validation
 	registry.Register("config", func(ctx context.Context) health.Check {
-		result := hawkconfig.ValidateSettings(settings)
+		result := graycodeconfig.ValidateSettings(settings)
 		if result.Valid {
 			return health.Check{Name: "config", Status: health.Healthy, Message: "Configuration valid"}
 		}
@@ -196,7 +196,7 @@ func providerCredentialHealthChecker(provider string) health.Checker {
 
 		status := health.Unhealthy
 		message := label + " credential not configured"
-		if providerID != "" && hawkconfig.HasStoredCredentialForProvider(ctx, providerID) {
+		if providerID != "" && graycodeconfig.HasStoredCredentialForProvider(ctx, providerID) {
 			status = health.Healthy
 			message = label + " credential configured"
 		}
@@ -214,19 +214,19 @@ func providerCredentialHealthChecker(provider string) health.Checker {
 func diagnosticsProvider(ctx context.Context, provider string) string {
 	provider = strings.TrimSpace(provider)
 	if provider == "" || strings.EqualFold(provider, "auto") {
-		provider = strings.TrimSpace(hawkconfig.ActiveGateway(ctx))
+		provider = strings.TrimSpace(graycodeconfig.ActiveGateway(ctx))
 		if provider == "" || strings.EqualFold(provider, "auto") {
-			provider = strings.TrimSpace(hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{}).Provider)
+			provider = strings.TrimSpace(graycodeconfig.EffectiveSelection(ctx, graycodeconfig.SelectionOptions{}).Provider)
 		}
 	}
-	return hawkconfig.ActiveProviderID(provider)
+	return graycodeconfig.ActiveProviderID(provider)
 }
 
-func settingsSummary(settings hawkconfig.Settings) string {
+func settingsSummary(settings graycodeconfig.Settings) string {
 	return configCommandSummary(settings)
 }
 
-func mcpConfigSummary(settings hawkconfig.Settings) string {
+func mcpConfigSummary(settings graycodeconfig.Settings) string {
 	if len(settings.MCPServers) == 0 && len(mcpServers) == 0 {
 		return "No MCP servers configured."
 	}

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/env"
+	"github.com/GrayCodeAI/graycode-cli/internal/env"
 )
 
 // deepseekSearchClient is a DeepSeek-backed web search provider. It calls the
@@ -126,7 +126,7 @@ func (c *deepseekSearchClient) search(ctx context.Context, query string, count i
 	req.Header.Set("anthropic-version", "2023-06-01")
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("accept", "application/json")
-	req.Header.Set("user-agent", "hawk/0.1.0")
+	req.Header.Set("user-agent", "graycode/0.1.0")
 
 	resp, err := c.http.Do(req)
 	if err != nil {

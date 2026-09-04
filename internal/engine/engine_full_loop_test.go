@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 func TestEngine_FullLoop_TextOnly(t *testing.T) {

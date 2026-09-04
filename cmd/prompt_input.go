@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 )
 
 var errNoInteractivePromptInput = errors.New("no interactive terminal available for permission prompt")

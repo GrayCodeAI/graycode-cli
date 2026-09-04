@@ -6,7 +6,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
 	"github.com/spf13/cobra"
 )
 
@@ -18,14 +18,14 @@ var (
 var searchCmd = &cobra.Command{
 	Use:   "search <query>",
 	Short: "Search across saved sessions",
-	Long: `Full-text search across all saved hawk sessions.
+	Long: `Full-text search across all saved graycode sessions.
 
 Searches message content, tool results, and assistant responses.
 
 Examples:
-  hawk search "authentication"
-  hawk search --limit 5 "database migration"
-  hawk search "func main"`,
+  graycode search "authentication"
+  graycode search --limit 5 "database migration"
+  graycode search "func main"`,
 	Args: cobra.ExactArgs(1),
 	RunE: runSearch,
 }

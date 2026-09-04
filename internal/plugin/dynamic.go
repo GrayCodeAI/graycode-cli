@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/trust"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/trust"
 )
 
 // PluginState represents the lifecycle state of a dynamic plugin.
@@ -147,7 +147,7 @@ func NewDynamicPluginManager(dirs []string, tools ToolRegistrar, hooks HookRegis
 }
 
 // DiscoverAll scans all plugin directories and registers discovered plugins.
-// Project-scoped plugin directories require folder trust when HAWK_Y0_FOLDER_TRUST is on.
+// Project-scoped plugin directories require folder trust when GRAYCODE_Y0_FOLDER_TRUST is on.
 func (dm *DynamicPluginManager) DiscoverAll() error {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
@@ -695,12 +695,12 @@ func manifestV2ToPlugin(m *ManifestV2, path string) *Plugin {
 		Author:      m.Author,
 		Path:        path,
 		Manifest: &ToolManifest{
-			Name:           m.Name,
-			Version:        m.Version,
-			Description:    m.Description,
-			Author:         m.Author,
-			Permissions:    m.Permissions,
-			MinHawkVersion: m.MinHawkVersion,
+			Name:               m.Name,
+			Version:            m.Version,
+			Description:        m.Description,
+			Author:             m.Author,
+			Permissions:        m.Permissions,
+			MinGraycodeVersion: m.MinGraycodeVersion,
 		},
 	}
 

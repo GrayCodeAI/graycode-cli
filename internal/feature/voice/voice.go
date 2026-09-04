@@ -37,7 +37,7 @@ func (t *Transcriber) Transcribe(audioData []byte) (string, error) {
 
 func (t *Transcriber) transcribeWhisper(path string, audioData []byte) (string, error) {
 	// Write audio to temp file
-	tmpFile, err := os.CreateTemp("", "hawk-voice-*.wav")
+	tmpFile, err := os.CreateTemp("", "graycode-voice-*.wav")
 	if err != nil {
 		return "", err
 	}
@@ -66,7 +66,7 @@ func IsAvailable() bool {
 // Keyterms returns common voice command keyterms.
 func Keyterms() []string {
 	return []string{
-		"hawk",
+		"graycode",
 		"run",
 		"test",
 		"build",

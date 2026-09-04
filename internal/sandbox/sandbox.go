@@ -92,7 +92,7 @@ func IsAvailable() bool {
 // setup prepares the sandbox environment.
 func (s *Sandbox) setup() error {
 	// Create temp root for chroot/namespaces
-	root, err := os.MkdirTemp("", "hawk-sandbox-*")
+	root, err := os.MkdirTemp("", "graycode-sandbox-*")
 	if err != nil {
 		return err
 	}
@@ -220,9 +220,9 @@ func (s *Sandbox) runSeatbelt(ctx context.Context, command string) (*exec.Cmd, e
 		workDir = s.config.ReadOnlyDirs[0]
 	}
 
-	policy := DefaultHawkPolicy(workDir, s.config.Security)
+	policy := DefaultGraycodePolicy(workDir, s.config.Security)
 	policy.AllowNetwork = s.config.AllowNetwork
-	// NOTE: AllowWrite is now set by DefaultHawkPolicy based on the
+	// NOTE: AllowWrite is now set by DefaultGraycodePolicy based on the
 	// security (SecurityWorkspace → true, SecurityStrict → false). The legacy
 	// Config.AllowWrite field is preserved for JSON backward compat
 	// but no longer overrides the security.
@@ -269,9 +269,9 @@ func WrapCommand(command string, cfg SandboxConfig) (string, []string, error) {
 			if workDir == "" {
 				workDir, _ = os.Getwd()
 			}
-			policy := DefaultHawkPolicy(workDir, security)
+			policy := DefaultGraycodePolicy(workDir, security)
 			policy.AllowNetwork = cfg.AllowNetwork
-			tmpFile, err := os.CreateTemp("", "hawk-seatbelt-*.sb")
+			tmpFile, err := os.CreateTemp("", "graycode-seatbelt-*.sb")
 			if err == nil {
 				profile := GenerateSeatbeltProfile(policy)
 				_, _ = tmpFile.WriteString(profile)

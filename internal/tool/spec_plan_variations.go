@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/spec"
+	"github.com/GrayCodeAI/graycode-cli/internal/spec"
 )
 
 type SpecPlanVariationsTool struct{}

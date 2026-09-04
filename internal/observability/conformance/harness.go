@@ -3,7 +3,7 @@ package conformance
 import (
 	"context"
 
-	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/oteltrace"
 )
 
 // SpanProducer starts and finishes one span on the given tracer, returning the

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/eyrie/llm"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 type recordingChatClient struct {

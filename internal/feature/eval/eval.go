@@ -1,6 +1,6 @@
 package eval
 
-// Framework for evaluating hawk's coding performance against benchmarks.
+// Framework for evaluating graycode's coding performance against benchmarks.
 
 import (
 	"context"
@@ -173,7 +173,7 @@ func (r *Runner) RunSingle(ctx context.Context, task *BenchmarkTask) (*TaskResul
 		// loop would accumulate every attempt's directory until RunTask returns.
 		passed, attemptErr := func() (bool, error) {
 			// Create isolated work directory for this attempt.
-			workDir, err := os.MkdirTemp("", fmt.Sprintf("hawk-eval-%s-*", task.ID))
+			workDir, err := os.MkdirTemp("", fmt.Sprintf("graycode-eval-%s-*", task.ID))
 			if err != nil {
 				return false, fmt.Errorf("failed to create temp dir: %w", err)
 			}

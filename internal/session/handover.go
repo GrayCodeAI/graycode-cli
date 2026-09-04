@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/safewrite"
+	"github.com/GrayCodeAI/graycode-cli/internal/safewrite"
 )
 
 // Handover represents a session transfer between models, machines, or team members.

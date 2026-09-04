@@ -1,4 +1,4 @@
-// Package lsp provides a Language Server Protocol client for hawk.
+// Package lsp provides a Language Server Protocol client for graycode.
 // It manages LSP server subprocesses with refcounted connection pooling,
 // idle reaping, and typed crash recovery.
 package lsp
@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // ServerConfig defines how to launch a language server for a given language.

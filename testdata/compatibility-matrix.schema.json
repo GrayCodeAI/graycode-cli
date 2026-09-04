@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/GrayCodeAI/hawk/blob/main/compatibility-matrix.schema.json",
+  "$id": "https://github.com/GrayCodeAI/graycode-cli/blob/main/compatibility-matrix.schema.json",
   "title": "GrayCodeAI compatibility matrix",
   "description": "Schema for compatibility-matrix.json — records which combinations of component versions are tested together.",
   "type": "object",

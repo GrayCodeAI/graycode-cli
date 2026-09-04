@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/engine/safety"
+import "github.com/GrayCodeAI/graycode-cli/internal/engine/safety"
 
 type (
 	HallucinationGuard = safety.HallucinationGuard

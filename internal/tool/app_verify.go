@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/appverify"
+	"github.com/GrayCodeAI/graycode-cli/internal/appverify"
 )
 
 // AppVerifyTool implements the "prove it works" workflow: detect a recipe,
@@ -23,7 +23,7 @@ func (AppVerifyTool) Name() string      { return "AppVerify" }
 func (AppVerifyTool) RiskLevel() string { return "medium" }
 func (AppVerifyTool) Aliases() []string { return []string{"app-verify", "verify_app"} }
 func (AppVerifyTool) Description() string {
-	return "Detect how this project boots and prove it runs: infer an install/build/test/start recipe, persist it to .hawk/verify/environment.json as the verification contract, and run a bounded boot smoke check with readiness polling. Use action=detect to inspect, action=manifest to write/update the contract, action=smoke to boot the app and verify readiness."
+	return "Detect how this project boots and prove it runs: infer an install/build/test/start recipe, persist it to .graycode/verify/environment.json as the verification contract, and run a bounded boot smoke check with readiness polling. Use action=detect to inspect, action=manifest to write/update the contract, action=smoke to boot the app and verify readiness."
 }
 
 func (AppVerifyTool) Parameters() map[string]interface{} {
@@ -33,7 +33,7 @@ func (AppVerifyTool) Parameters() map[string]interface{} {
 			"action": map[string]interface{}{
 				"type":        "string",
 				"enum":        []string{"detect", "manifest", "smoke"},
-				"description": "detect infers the recipe; manifest loads-or-detects and persists .hawk/verify/environment.json; smoke boots the app using the recipe's start command and polls readiness.",
+				"description": "detect infers the recipe; manifest loads-or-detects and persists .graycode/verify/environment.json; smoke boots the app using the recipe's start command and polls readiness.",
 			},
 			"path": map[string]interface{}{
 				"type":        "string",

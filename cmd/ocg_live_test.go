@@ -4,7 +4,7 @@
 // Live integration test for the OpenCodeGo provider adapter end-to-end.
 // Opt-in only — not run by default `go test ./...` or CI. Run with:
 //
-//	OPENCODEGO_API_KEY=... go test -tags=live_test -run TestLiveOpenCodeGoMiniMaxM3FullHawkPath ./cmd
+//	OPENCODEGO_API_KEY=... go test -tags=live_test -run TestLiveOpenCodeGoMiniMaxM3FullGraycodePath ./cmd
 //
 // Or via `make test-live` in this repo.
 package cmd
@@ -18,12 +18,12 @@ import (
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
 	"github.com/GrayCodeAI/eyrie/credentials"
 	"github.com/GrayCodeAI/eyrie/setup"
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
 )
 
-func TestLiveOpenCodeGoMiniMaxM3FullHawkPath(t *testing.T) {
+func TestLiveOpenCodeGoMiniMaxM3FullGraycodePath(t *testing.T) {
 	if credentials.LookupSecret(context.Background(), "OPENCODEGO_API_KEY") == "" {
-		t.Skip("OPENCODEGO_API_KEY not configured") // TODO: https://github.com/GrayCodeAI/hawk/issues/29
+		t.Skip("OPENCODEGO_API_KEY not configured") // TODO: https://github.com/GrayCodeAI/graycode-cli/issues/29
 	}
 	settings, err := loadEffectiveSettings()
 	if err != nil {
@@ -43,7 +43,7 @@ func TestLiveOpenCodeGoMiniMaxM3FullHawkPath(t *testing.T) {
 	adapter := setup.ConfiguredDeploymentAdapters(eyriecfg.LoadProviderConfig(""))["opencodego"]
 	t.Logf("adapter_type=%T", adapter.Provider)
 
-	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
+	sess := newGraycodeSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 	sess.SetLogger(logger.New(ioDiscard{}, logger.Info))
 	if cfgErr := configureSession(sess, settings); cfgErr != nil {
 		t.Fatal(cfgErr)

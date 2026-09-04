@@ -170,7 +170,7 @@ func (m *Mission) Plan(ctx context.Context, planFn PlanFunc) error {
 			features[i].ID = fmt.Sprintf("feat-%d", i+1)
 		}
 		features[i].Status = FeaturePending
-		features[i].Branch = fmt.Sprintf("hawk-mission/%s/%s", m.ID, features[i].ID)
+		features[i].Branch = fmt.Sprintf("graycode-mission/%s/%s", m.ID, features[i].ID)
 	}
 	m.Features = features
 	return nil
@@ -263,7 +263,7 @@ func (m *Mission) runFeatureSet(ctx context.Context, workerFn WorkerFunc, missio
 				// guaranteed to fail and leaked the branch. Attempt-suffixed
 				// names make retries fresh; cleanup deletes the branch.
 				m.mu.Lock()
-				feat.Branch = fmt.Sprintf("hawk-mission/%s/%s/attempt-%d", m.ID, feat.ID, attempt+1)
+				feat.Branch = fmt.Sprintf("graycode-mission/%s/%s/attempt-%d", m.ID, feat.ID, attempt+1)
 				m.mu.Unlock()
 
 				workerCtx := ctx
@@ -572,14 +572,14 @@ func (m *Mission) DetectOverlaps() []Overlap {
 }
 
 func (m *Mission) createDir() (string, error) {
-	dir := filepath.Join(os.TempDir(), "hawk-missions", m.ID)
+	dir := filepath.Join(os.TempDir(), "graycode-missions", m.ID)
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return "", err
 	}
 	return dir, nil
 }
 
-// Cleanup removes the mission's temporary directory from /tmp/hawk-missions/.
+// Cleanup removes the mission's temporary directory from /tmp/graycode-missions/.
 // Call this after the mission is complete (success or failure) to prevent
 // unbounded accumulation of mission artifacts. Safe to call multiple times.
 func (m *Mission) Cleanup() error {

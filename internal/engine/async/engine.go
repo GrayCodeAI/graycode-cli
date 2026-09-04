@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 )
 
 // Engine wraps an engine.Session with queue-based async operation.

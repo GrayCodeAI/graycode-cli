@@ -11,7 +11,7 @@ import (
 func TestSecureStorage_GetSet_Fallback(t *testing.T) {
 	// Override config dir to use a temp directory
 	tmpDir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", tmpDir)
+	t.Setenv("GRAYCODE_CONFIG_DIR", tmpDir)
 
 	ss := &SecureStorage{service: "test-service"}
 
@@ -34,7 +34,7 @@ func TestSecureStorage_GetSet_Fallback(t *testing.T) {
 // TestSecureStorage_GetSet_MultipleAccounts tests storing multiple accounts.
 func TestSecureStorage_GetSet_MultipleAccounts(t *testing.T) {
 	tmpDir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", tmpDir)
+	t.Setenv("GRAYCODE_CONFIG_DIR", tmpDir)
 
 	ss := &SecureStorage{service: "test-service"}
 
@@ -67,7 +67,7 @@ func TestSecureStorage_GetSet_MultipleAccounts(t *testing.T) {
 // TestSecureStorage_Get_NonExistent tests getting a token that doesn't exist.
 func TestSecureStorage_Get_NonExistent(t *testing.T) {
 	tmpDir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", tmpDir)
+	t.Setenv("GRAYCODE_CONFIG_DIR", tmpDir)
 
 	ss := &SecureStorage{service: "test-service"}
 
@@ -81,7 +81,7 @@ func TestSecureStorage_Get_NonExistent(t *testing.T) {
 // TestSecureStorage_Set_OverwritesExisting tests that Set overwrites existing tokens.
 func TestSecureStorage_Set_OverwritesExisting(t *testing.T) {
 	tmpDir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", tmpDir)
+	t.Setenv("GRAYCODE_CONFIG_DIR", tmpDir)
 
 	ss := &SecureStorage{service: "test-service"}
 
@@ -108,7 +108,7 @@ func TestSecureStorage_Set_OverwritesExisting(t *testing.T) {
 // TestSecureStorage_GetFile_CorruptJSON tests that corrupt JSON returns an error.
 func TestSecureStorage_GetFile_CorruptJSON(t *testing.T) {
 	tmpDir := t.TempDir()
-	t.Setenv("HAWK_CONFIG_DIR", tmpDir)
+	t.Setenv("GRAYCODE_CONFIG_DIR", tmpDir)
 
 	// Write corrupt JSON to the token file
 	tokenFile := filepath.Join(tmpDir, ".tokens")

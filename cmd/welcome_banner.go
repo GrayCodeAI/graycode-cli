@@ -6,8 +6,8 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-// hawkBlockGlyphs — fixed 8-column ██ font used by the welcome gate banners.
-var hawkBlockGlyphs = map[rune][5]string{
+// graycodeBlockGlyphs — fixed 8-column ██ font used by the welcome gate banners.
+var graycodeBlockGlyphs = map[rune][5]string{
 	'H': {"██   ██ ", "██   ██ ", "███████ ", "██   ██ ", "██   ██ "},
 	'A': {"  ███   ", " █████  ", "███████ ", "██   ██ ", "██   ██ "},
 	'W': {"██   ██ ", "██   ██ ", "██ █ ██ ", "███ ███ ", "██   ██ "},
@@ -20,8 +20,8 @@ var hawkBlockGlyphs = map[rune][5]string{
 	'T': {"████████", "   ██   ", "   ██   ", "   ██   ", "   ██   "},
 }
 
-// hawkLogoArtLines is the canonical HAWK wordmark, with the hawk forming the W.
-var hawkLogoArtLines = []string{
+// graycodeLogoArtLines is the canonical GRAYCODE wordmark, with the graycode forming the W.
+var graycodeLogoArtLines = []string{
 	"                                     .  .",
 	"                                  .  .  .  .",
 	"                                  .  |  |  .",
@@ -40,19 +40,19 @@ var hawkLogoArtLines = []string{
 }
 
 const (
-	hawkBlockCellW     = 8
-	hawkBlockLetterGap = 1
-	hawkBlockWordGap   = 4
+	graycodeBlockCellW     = 8
+	graycodeBlockLetterGap = 1
+	graycodeBlockWordGap   = 4
 )
 
 // welcomeWordLines — "WELCOME" block (row-aligned, fixed grid).
-var welcomeWordLines = composeHawkBlockLines("WELCOME")
+var welcomeWordLines = composeGraycodeBlockLines("WELCOME")
 
 // welcomeToWordLines — "TO" block, centered under WELCOME on the gate.
-var welcomeToWordLines = composeHawkBlockLines("TO")
+var welcomeToWordLines = composeGraycodeBlockLines("TO")
 
 // welcomeToPhraseLines — "WELCOME TO" block for wide welcome gates.
-var welcomeToPhraseLines = composeHawkBlockLines("WELCOME TO")
+var welcomeToPhraseLines = composeGraycodeBlockLines("WELCOME TO")
 
 // welcomeToBannerMinWidth is the visible width for the WELCOME block.
 const welcomeToBannerMinWidth = 61
@@ -60,24 +60,24 @@ const welcomeToBannerMinWidth = 61
 // welcomeToPhraseMinWidth is the visible width for the combined "WELCOME TO" block.
 var welcomeToPhraseMinWidth = blockLinesWidth(welcomeToPhraseLines)
 
-func composeHawkBlockLines(text string) []string {
+func composeGraycodeBlockLines(text string) []string {
 	rows := make([]string, 5)
 	words := strings.Fields(text)
 	for wi, word := range words {
 		for ci, ch := range word {
-			glyph, ok := hawkBlockGlyphs[ch]
+			glyph, ok := graycodeBlockGlyphs[ch]
 			if !ok {
 				continue
 			}
 			for i := range rows {
 				if rows[i] != "" {
 					if ci == 0 && wi > 0 {
-						rows[i] += strings.Repeat(" ", hawkBlockWordGap)
+						rows[i] += strings.Repeat(" ", graycodeBlockWordGap)
 					} else {
-						rows[i] += strings.Repeat(" ", hawkBlockLetterGap)
+						rows[i] += strings.Repeat(" ", graycodeBlockLetterGap)
 					}
 				}
-				cell := padBlockCell(glyph[i], hawkBlockCellW)
+				cell := padBlockCell(glyph[i], graycodeBlockCellW)
 				rows[i] += cell
 			}
 		}

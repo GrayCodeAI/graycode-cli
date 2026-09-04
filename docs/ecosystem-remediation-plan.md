@@ -4,21 +4,21 @@ This document captures the improvement recommendations from the 2026-07-11
 full-ecosystem audit that require significant refactoring and are documented
 here for scheduled execution rather than immediate implementation.
 
-## 1. charmbracelet v1/v2 Dependency Duplication (hawk + swift)
+## 1. charmbracelet v1/v2 Dependency Duplication (graycode + swift)
 
 **Status:** ✅ Done (2026-07-11)
-**Impact:** High — contributed ~20-30MB to hawk binary size
+**Impact:** High — contributed ~20-30MB to graycode binary size
 
 ### Outcome
 
-- Hawk and Swift imports migrated to `charm.land/*/v2` (`bubbles`, `bubbletea`,
+- Graycode and Swift imports migrated to `charm.land/*/v2` (`bubbles`, `bubbletea`,
   `lipgloss`, `huh`, `glamour`).
 - Direct `github.com/charmbracelet/{bubbles,bubbletea,lipgloss}` requires removed
-  from hawk/swift `go.mod`.
+  from graycode/swift `go.mod`.
 - Binary size gate tightened: **110MB → 80MB** (`make size-check`).
-- Verified build: hawk binary **~75 MB** (under gate) after migration.
+- Verified build: graycode binary **~75 MB** (under gate) after migration.
 
-Commits (hawk): `2890c74` (migrate), `ccfa286` (API fixups), `7a42c1e` (size gate).
+Commits (graycode): `2890c74` (migrate), `ccfa286` (API fixups), `7a42c1e` (size gate).
 
 ### Residual notes
 
@@ -38,13 +38,13 @@ Commits (hawk): `2890c74` (migrate), `ccfa286` (API fixups), `7a42c1e` (size gat
   (`replace github.com/GrayCodeAI/harrier => ../..`).
 - Core `github.com/GrayCodeAI/harrier` no longer requires
   `charmbracelet/{bubbles,bubbletea,lipgloss}`.
-- Hawk embeds only the library packages (`engine`, `storage`, `graph`, …), so
-  the default hawk binary does not pull the demo TUI module.
+- Graycode embeds only the library packages (`engine`, `storage`, `graph`, …), so
+  the default graycode binary does not pull the demo TUI module.
 - Verify: `cd harrier && go test ./...`; `cd harrier/cmd/harrier-tui && go test ./...`.
 
 ### Residual notes
 
-- The local `harrier` (Harrier) checkout and Hawk's `go.mod` must resolve to a
+- The local `harrier` (Harrier) checkout and Graycode's `go.mod` must resolve to a
   published matching commit. **Publish Harrier before** relying on
   `GOWORK=off` / module-release parity (the Go proxy must see the commit for
   sumdb download).
@@ -98,13 +98,13 @@ large diffs and bloats the repo.
    `.gitignore`.
 2. **Generate at build/publish time:** Run `python tools/update_registry.py`
    in CI before publishing artifacts.
-3. **Runtime fetch:** Have `hawk` fetch the registry from a CDN or GitHub
+3. **Runtime fetch:** Have `graycode` fetch the registry from a CDN or GitHub
    raw URL rather than embedding it.
 
 ### Risk
 
-If `registry.json` is read offline by hawk, removing it requires adding a
-fetch-or-cache mechanism. Verify how hawk consumes the registry before
+If `registry.json` is read offline by graycode, removing it requires adding a
+fetch-or-cache mechanism. Verify how graycode consumes the registry before
 removing from git.
 
 ---

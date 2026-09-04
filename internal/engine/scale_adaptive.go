@@ -27,7 +27,7 @@ func (s TaskScale) String() string {
 	}
 }
 
-// ScaleBehavior defines how hawk adjusts its behavior per scale.
+// ScaleBehavior defines how graycode adjusts its behavior per scale.
 type ScaleBehavior struct {
 	Scale        TaskScale
 	MaxTurns     int

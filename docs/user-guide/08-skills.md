@@ -1,26 +1,26 @@
 # Skills
 
-Skills are reusable prompt packages that extend Hawk with task-specific instructions. They let you capture a repeatable procedure once, instead of re-explaining it each session.
+Skills are reusable prompt packages that extend Graycode with task-specific instructions. They let you capture a repeatable procedure once, instead of re-explaining it each session.
 
 ---
 
 ## What Are Skills?
 
-A skill is a directory containing a `SKILL.md` file. Its markdown body tells Hawk how to handle a specific type of task: step-by-step instructions, conventions, and tool-usage patterns.
+A skill is a directory containing a `SKILL.md` file. Its markdown body tells Graycode how to handle a specific type of task: step-by-step instructions, conventions, and tool-usage patterns.
 
-Use a skill for a repeatable procedure that's too specific for AGENTS.md but too long to retype each time. Hawk activates a skill when it applies to your current task.
+Use a skill for a repeatable procedure that's too specific for AGENTS.md but too long to retype each time. Graycode activates a skill when it applies to your current task.
 
 ---
 
 ## Skill Locations
 
-Hawk discovers skills from these directories, in priority order:
+Graycode discovers skills from these directories, in priority order:
 
 | Location | Scope | Priority |
 |----------|-------|----------|
-| `.hawk/skills/`, `.hawk/commands/` | Local (CWD) | Highest |
-| `<repo-root>/.hawk/skills/` | Repo | Medium |
-| `~/.hawk/skills/` | User | Lowest |
+| `.graycode/skills/`, `.graycode/commands/` | Local (CWD) | Highest |
+| `<repo-root>/.graycode/skills/` | Repo | Medium |
+| `~/.graycode/skills/` | User | Lowest |
 
 Higher-priority locations override skills with the same name.
 
@@ -33,7 +33,7 @@ Higher-priority locations override skills with the same name.
 Each skill lives in its own directory with a `SKILL.md` file:
 
 ```
-~/.hawk/skills/
+~/.graycode/skills/
   commit/
     SKILL.md
   review-pr/
@@ -103,13 +103,13 @@ Pass arguments after the name:
 When names collide, use qualified forms:
 
 ```
-/local:commit        # From ./.hawk/skills/
-/user:commit         # From ~/.hawk/skills/
+/local:commit        # From ./.graycode/skills/
+/user:commit         # From ~/.graycode/skills/
 ```
 
 ### Automatic Invocation
 
-Hawk can invoke a skill automatically when it recognizes a relevant task. Write specific descriptions in the `description` and `when-to-use` fields.
+Graycode can invoke a skill automatically when it recognizes a relevant task. Write specific descriptions in the `description` and `when-to-use` fields.
 
 ---
 
@@ -119,26 +119,26 @@ Manage skills from the command line:
 
 ```bash
 # Search the community registry
-hawk skills search go
+graycode skills search go
 
 # Install a skill from a source
-hawk skills install go-review
+graycode skills install go-review
 
 # Audit installed skills for security
-hawk skills audit
+graycode skills audit
 ```
 
 ---
 
 ## Installing Skills
 
-Hawk ships **no bundled skills** by default. Skills are installed on demand
+Graycode ships **no bundled skills** by default. Skills are installed on demand
 from the separate `GrayCodeAI/starling` repo (or any GitHub repo):
 
 ```bash
-hawk skills search <query>                  # find a skill in the registry
-hawk skills install <owner/repo> [skill]    # install after user approval
-hawk skills audit                           # security-scan installed skills
+graycode skills search <query>                  # find a skill in the registry
+graycode skills install <owner/repo> [skill]    # install after user approval
+graycode skills audit                           # security-scan installed skills
 ```
 
 Once installed, skills are discovered from the locations listed above.

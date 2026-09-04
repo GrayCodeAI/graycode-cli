@@ -5,7 +5,7 @@
 **Active execution:** [YEAR-0-ACTIVE.md](./YEAR-0-ACTIVE.md) (Year 0 control-plane track)  
 **ADR:** [ADR-0003](../architecture/adr/ADR-0003-grok-behavioral-port-go-multirepo.md)  
 **Meaning of “port”:** Reimplement **every Grok Build capability** in idiomatic **Go** across graycode-eco repos.  
-**Not meaning:** Copy Rust crates, depend on Grok binaries, or collapse hawk into a Rust monorepo.
+**Not meaning:** Copy Rust crates, depend on Grok binaries, or collapse graycode into a Rust monorepo.
 
 **Source tree:** `grok-eco/grok-build` (~1.35M LOC Rust, 1 product monorepo)  
 **Target tree:** `graycode-eco/*` (multi-repo Go platform + cloud/TS/Python)
@@ -18,8 +18,8 @@
 ## 0. Port principles
 
 1. **Behavior parity over code structure** — same user-visible contracts, not same file tree.  
-2. **Go multi-repo stays** — map Grok crates into hawk / engines / contracts / cloud / skills.  
-3. **Prefer wire-first** — Hawk already has partial types; complete wiring before greenfield.  
+2. **Go multi-repo stays** — map Grok crates into graycode / engines / contracts / cloud / skills.  
+3. **Prefer wire-first** — Graycode already has partial types; complete wiring before greenfield.  
 4. **Privacy-first defaults** — Grok Mixpanel/Sentry defaults become **opt-in** OTEL/privacy-safe telemetry.  
 5. **Multi-provider stays** — Grok sampler/auth maps to **eyrie**, not a single-vendor clone.  
 6. **Memory stays harrier** — Grok markdown memory maps to **harrier APIs + UX**, not a second store.
@@ -67,7 +67,7 @@ Critical path remains **months**; **complete parity** including TUI polish and e
 ```text
 grok-eco/grok-build  (one Rust workspace)
         │
-        ├─► hawk                    product CLI/TUI/engine/tools/hooks/plugins/ACP
+        ├─► graycode                    product CLI/TUI/engine/tools/hooks/plugins/ACP
         ├─► eagle     pure DTOs (tool/spawn/hooks/policy)
         ├─► eyrie                   LLM routing/stream/retry/catalog/auth credentials
         ├─► harrier                    memory graph + dream UX
@@ -92,87 +92,87 @@ grok-eco/grok-build  (one Rust workspace)
 
 | Grok crate | ~LOC | Capability | Target repo | Status | Effort | Notes |
 |------------|-----:|------------|-------------|--------|--------|-------|
-| `xai-grok-pager` | 415k | Full TUI | hawk `cmd/` | Partial | XXL | Bubble Tea already; parity of panes/modals/slash is multi-year |
-| `xai-grok-pager-render` | 35k | Render pipeline | hawk | Partial | L | Streaming render, blocks, media |
-| `xai-grok-pager-minimal` | 5.6k | `--minimal` native scrollback | hawk | Partial | M | `hawk --repl` / print modes exist |
-| `xai-grok-pager-bin` | 2.9k | Binary composition root | hawk `cmd/hawk` | Done | — | |
-| `xai-grok-pager-pty-harness` | 10k | PTY test harness | hawk tests | Partial | M | Test infra |
-| `xai-grok-shell` | 336k | Agent runtime host | hawk `internal/engine` | Partial | XXL | Largest runtime port |
-| `xai-grok-shell-base` | 2.7k | Shared shell foundation | hawk | Partial | S | Absorb |
-| `xai-grok-shell-session-support` | 1.5k | Session support extract | hawk `session` | Partial | S | Absorb |
-| `xai-grok-tools` | 112k | Tool implementations | hawk `internal/tool` | Partial | XL | See tool matrix §3 |
-| `xai-grok-tools-api` | 0.7k | Tool API / slash wording | hawk + contracts | Partial | S | |
-| `xai-grok-workspace` | 77k | FS/VCS/permissions/hub | hawk + sandbox + session | Partial | XL | |
+| `xai-grok-pager` | 415k | Full TUI | graycode `cmd/` | Partial | XXL | Bubble Tea already; parity of panes/modals/slash is multi-year |
+| `xai-grok-pager-render` | 35k | Render pipeline | graycode | Partial | L | Streaming render, blocks, media |
+| `xai-grok-pager-minimal` | 5.6k | `--minimal` native scrollback | graycode | Partial | M | `graycode --repl` / print modes exist |
+| `xai-grok-pager-bin` | 2.9k | Binary composition root | graycode `cmd/graycode` | Done | — | |
+| `xai-grok-pager-pty-harness` | 10k | PTY test harness | graycode tests | Partial | M | Test infra |
+| `xai-grok-shell` | 336k | Agent runtime host | graycode `internal/engine` | Partial | XXL | Largest runtime port |
+| `xai-grok-shell-base` | 2.7k | Shared shell foundation | graycode | Partial | S | Absorb |
+| `xai-grok-shell-session-support` | 1.5k | Session support extract | graycode `session` | Partial | S | Absorb |
+| `xai-grok-tools` | 112k | Tool implementations | graycode `internal/tool` | Partial | XL | See tool matrix §3 |
+| `xai-grok-tools-api` | 0.7k | Tool API / slash wording | graycode + contracts | Partial | S | |
+| `xai-grok-workspace` | 77k | FS/VCS/permissions/hub | graycode + sandbox + session | Partial | XL | |
 | `xai-grok-workspace-types` | 9.2k | Workspace wire types | contracts | Partial | M | |
-| `xai-grok-workspace-client` | 0.8k | Workspace RPC client | hawk (if hub) | Port | M | Only if computer-hub ported |
-| `xai-grok-agent` | 21k | Agent defs + system prompt | hawk agent/personas | Partial | L | |
-| `xai-grok-subagent-resolution` | 2.6k | Capability/isolation resolve | hawk + contracts | Port | M | Critical |
-| `xai-chat-state` | 13k | Chat state actor | hawk session/engine | Partial | L | |
-| `xai-grok-markdown` | 22k | Streaming MD TUI | hawk markdown | Partial | L | |
-| `xai-grok-markdown-core` | 1.1k | Headless MD analysis | hawk | Partial | S | |
-| `xai-ratatui-textarea` | 12k | Input widget | hawk (Bubble Tea) | N/A | — | Different UI stack |
-| `xai-ratatui-inline` | 3.7k | Inline render | hawk | N/A | — | UI stack |
-| `xai-fast-worktree` | 19k | CoW worktree speed | hawk worktree | Port | L | Perf enhancement |
-| `xai-file-utils` | 15k | Event tracking / upload | hawk observability | Partial | M | Privacy opt-in |
-| `xai-grok-telemetry` | 14k | Events + OTEL + Mixpanel + Sentry | hawk observability | Partial | L | **Skip Mixpanel default**; keep OTEL |
-| `xai-hunk-tracker` | 13k | Agent vs external hunks | hawk | Port | L | |
+| `xai-grok-workspace-client` | 0.8k | Workspace RPC client | graycode (if hub) | Port | M | Only if computer-hub ported |
+| `xai-grok-agent` | 21k | Agent defs + system prompt | graycode agent/personas | Partial | L | |
+| `xai-grok-subagent-resolution` | 2.6k | Capability/isolation resolve | graycode + contracts | Port | M | Critical |
+| `xai-chat-state` | 13k | Chat state actor | graycode session/engine | Partial | L | |
+| `xai-grok-markdown` | 22k | Streaming MD TUI | graycode markdown | Partial | L | |
+| `xai-grok-markdown-core` | 1.1k | Headless MD analysis | graycode | Partial | S | |
+| `xai-ratatui-textarea` | 12k | Input widget | graycode (Bubble Tea) | N/A | — | Different UI stack |
+| `xai-ratatui-inline` | 3.7k | Inline render | graycode | N/A | — | UI stack |
+| `xai-fast-worktree` | 19k | CoW worktree speed | graycode worktree | Port | L | Perf enhancement |
+| `xai-file-utils` | 15k | Event tracking / upload | graycode observability | Partial | M | Privacy opt-in |
+| `xai-grok-telemetry` | 14k | Events + OTEL + Mixpanel + Sentry | graycode observability | Partial | L | **Skip Mixpanel default**; keep OTEL |
+| `xai-hunk-tracker` | 13k | Agent vs external hunks | graycode | Port | L | |
 | `xai-grok-sampling-types` | 13k | Chat API types | **eyrie** | Done* | — | Different shape; eyrie owns |
 | `xai-grok-sampler` | 11k | HTTP stream + retry | **eyrie** | Done* | — | Do not replace eyrie |
-| `xai-grok-update` | 11k | Auto-update | hawk | Partial | M | |
-| `xai-grok-mcp` | 10k | MCP client (oauth, wire) | hawk `mcp` | Partial | L | |
-| `xai-codebase-graph` | 9.7k | Tree-sitter graph | hawk codegraph/repomap | Partial | L | |
+| `xai-grok-update` | 11k | Auto-update | graycode | Partial | M | |
+| `xai-grok-mcp` | 10k | MCP client (oauth, wire) | graycode `mcp` | Partial | L | |
+| `xai-codebase-graph` | 9.7k | Tree-sitter graph | graycode codegraph/repomap | Partial | L | |
 | `xai-grok-memory` | 9.7k | Cross-session memory | **harrier** | Done* | M | Port UX only |
-| `xai-grok-hooks` | 8.3k | File/HTTP hooks | hawk hooks | Port | L | |
-| `xai-fsnotify` | 6.7k | FS events | hawk (fsnotify) | Partial | S | |
-| `xai-grok-config` | 6k | Config layers + managed | hawk config + cloud | Port | L | |
+| `xai-grok-hooks` | 8.3k | File/HTTP hooks | graycode hooks | Port | L | |
+| `xai-fsnotify` | 6.7k | FS events | graycode (fsnotify) | Partial | S | |
+| `xai-grok-config` | 6k | Config layers + managed | graycode config + cloud | Port | L | |
 | `xai-grok-config-types` | 2.7k | Config DTOs | contracts/config | Partial | S | |
-| `xai-grok-plugin-marketplace` | 5.3k | Marketplace | hawk + community-skills | Port | L | |
-| `xai-grok-shared` | 5.2k | Shared utils | hawk | N/A | — | Absorb |
-| `xai-grok-test-support` | 4.6k | Test harness | hawk testutil | Partial | M | |
-| `xai-grok-sandbox` | 3.9k | OS sandbox profiles | hawk sandbox | Port | L | |
-| `xai-grok-voice` | 2.7k | Streaming STT | hawk | Partial | M | whisper path exists |
-| `xai-acp-lib` | 2.3k | ACP protocol | hawk acp | Port | L | |
-| `xai-grok-mermaid` | 2.2k | Mermaid→PNG | hawk | Port | M | |
-| `xai-crash-handler` | 1.9k | Crash + startup detect | hawk | Port | S | |
-| `ptyctl` | 2.3k | Headless PTY control | hawk | Port | M | |
-| `ptyctl-cli` | 0.8k | PTY CLI | hawk tests/tools | Optional | S | |
-| `xai-tty-utils` | 1.2k | TTY-safe spawn | hawk | Port | S | |
+| `xai-grok-plugin-marketplace` | 5.3k | Marketplace | graycode + community-skills | Port | L | |
+| `xai-grok-shared` | 5.2k | Shared utils | graycode | N/A | — | Absorb |
+| `xai-grok-test-support` | 4.6k | Test harness | graycode testutil | Partial | M | |
+| `xai-grok-sandbox` | 3.9k | OS sandbox profiles | graycode sandbox | Port | L | |
+| `xai-grok-voice` | 2.7k | Streaming STT | graycode | Partial | M | whisper path exists |
+| `xai-acp-lib` | 2.3k | ACP protocol | graycode acp | Port | L | |
+| `xai-grok-mermaid` | 2.2k | Mermaid→PNG | graycode | Port | M | |
+| `xai-crash-handler` | 1.9k | Crash + startup detect | graycode | Port | S | |
+| `ptyctl` | 2.3k | Headless PTY control | graycode | Port | M | |
+| `ptyctl-cli` | 0.8k | PTY CLI | graycode tests/tools | Optional | S | |
+| `xai-tty-utils` | 1.2k | TTY-safe spawn | graycode | Port | S | |
 | `xai-hooks-plugins-types` | 1.2k | Hooks/plugins ACP DTOs | contracts | Port | S | |
-| `xai-sqlite-journal` | 0.8k | SQLite journal mode | hawk/harrier/shrike | Partial | XS | |
-| `xai-system-power` | 0.7k | Sleep/wake notify | hawk sleep_prevent | Partial | S | |
-| `xai-grok-http` | 0.6k | Shared HTTP client | hawk/netutil | Partial | XS | |
-| `xai-agent-lifecycle` | 0.6k | Lifecycle hooks data | hawk hooks/engine | Partial | S | |
-| `xai-gix-status` | 0.6k | Fast git status | hawk git tools | Partial | S | |
-| `xai-grok-paths` | 0.6k | AbsPath types | hawk | N/A | XS | Go path.Clean enough |
+| `xai-sqlite-journal` | 0.8k | SQLite journal mode | graycode/harrier/shrike | Partial | XS | |
+| `xai-system-power` | 0.7k | Sleep/wake notify | graycode sleep_prevent | Partial | S | |
+| `xai-grok-http` | 0.6k | Shared HTTP client | graycode/netutil | Partial | XS | |
+| `xai-agent-lifecycle` | 0.6k | Lifecycle hooks data | graycode hooks/engine | Partial | S | |
+| `xai-gix-status` | 0.6k | Fast git status | graycode git tools | Partial | S | |
+| `xai-grok-paths` | 0.6k | AbsPath types | graycode | N/A | XS | Go path.Clean enough |
 | `xai-grok-secrets` | 0.6k | Secrets helpers | shrike + eyrie | Partial | S | |
-| `xai-grok-announcements` | 0.4k | Release announcements | hawk tips/notify | Port | S | |
-| `xai-grok-auth` | 0.4k | Auth seam | eyrie + hawk auth | Partial | M | Browser OAuth optional |
+| `xai-grok-announcements` | 0.4k | Release announcements | graycode tips/notify | Port | S | |
+| `xai-grok-auth` | 0.4k | Auth seam | eyrie + graycode auth | Partial | M | Browser OAuth optional |
 | `xai-token-estimation` | 0.3k | Bytes/4 heuristic | **shrike** | Skip | — | shrike superior |
-| `xai-tracing-macros` | 0.2k | Log macros | hawk observability | N/A | XS | |
-| `xai-grok-env` | 0.2k | Backend env presets | eyrie/hawk | Partial | XS | |
-| `xai-prompt-queue` | 0.2k | Prompt queue types | hawk | Port | S | |
+| `xai-tracing-macros` | 0.2k | Log macros | graycode observability | N/A | XS | |
+| `xai-grok-env` | 0.2k | Backend env presets | eyrie/graycode | Partial | XS | |
+| `xai-prompt-queue` | 0.2k | Prompt queue types | graycode | Port | S | |
 | `xai-mixpanel` | 0.1k | Mixpanel client | — | **Skip** | — | Privacy; OTEL opt-in |
-| `xai-grok-version` | 0.1k | Version | hawk VERSION | Done | — | |
+| `xai-grok-version` | 0.1k | Version | graycode VERSION | Done | — | |
 | `xai-grok-models` | 0.1k | Default model IDs | eyrie catalog | Done* | — | |
 
 ### 2.2 Common crates (tool protocol / hub / compaction)
 
 | Grok crate | ~LOC | Capability | Target | Status | Effort | Notes |
 |------------|-----:|------------|--------|--------|--------|-------|
-| `xai-computer-hub-sdk` | 14k | Remote tool server SDK | new or hawk | Port (Y2+) | XL | Only if multi-host tools wanted |
+| `xai-computer-hub-sdk` | 14k | Remote tool server SDK | new or graycode | Port (Y2+) | XL | Only if multi-host tools wanted |
 | `xai-computer-hub-core` | 4.2k | Transport/registry | same | Port (Y2+) | L | |
 | `xai-computer-hub-mcp-adapter` | 1k | MCP into hub | falcon | Port (Y2+) | M | |
-| `xai-tool-protocol` | 6.6k | Wire protocol | contracts + hawk | Port (Y2) | L | |
-| `xai-tool-runtime` | 5.4k | Tool trait runtime | hawk tool | Partial | L | |
+| `xai-tool-protocol` | 6.6k | Wire protocol | contracts + graycode | Port (Y2) | L | |
+| `xai-tool-runtime` | 5.4k | Tool trait runtime | graycode tool | Partial | L | |
 | `xai-tool-types` | 3.6k | Spawn/task types | **contracts** | Port | M | **P0** |
-| `xai-grok-compaction` | 6.8k | Compaction engine | hawk engine + shrike | Partial | L | |
+| `xai-grok-compaction` | 6.8k | Compaction engine | graycode engine + shrike | Partial | L | |
 | `xai-circuit-breaker` | 2.2k | HTTP breaker | eyrie/resilience | Partial | S | |
-| `xai-tracing` | 0.8k | Tracing | hawk OTEL | Partial | S | |
-| `xai-test-utils` | 0.4k | Hermetic git tests | hawk testutil | Partial | S | |
-| `xai-interjection-core` | 0.3k | Interjection messaging | hawk | Port | S | Mid-turn user inject |
+| `xai-tracing` | 0.8k | Tracing | graycode OTEL | Partial | S | |
+| `xai-test-utils` | 0.4k | Hermetic git tests | graycode testutil | Partial | S | |
+| `xai-interjection-core` | 0.3k | Interjection messaging | graycode | Port | S | Mid-turn user inject |
 | `xai-proto-build` | — | Build tooling | — | Skip | — | Rust build |
 
-\*Done* = domain covered by hawk engine with different API.
+\*Done* = domain covered by graycode engine with different API.
 
 ---
 
@@ -180,7 +180,7 @@ grok-eco/grok-build  (one Rust workspace)
 
 ### 3.1 Grok Build native tools
 
-| Grok tool | Hawk equivalent | Status | Port work |
+| Grok tool | Graycode equivalent | Status | Port work |
 |-----------|-----------------|--------|-----------|
 | `bash` / `run_terminal_command` | `Bash` | Partial | background flag, timeout, safe-bash, kill |
 | `read_file` | `Read` | Partial | media/PDF page ranges parity |
@@ -210,20 +210,20 @@ grok-eco/grok-build  (one Rust workspace)
 
 Grok vendors codex/opencode tool implementations for compatibility profiles.
 
-| Compat surface | Hawk | Action |
+| Compat surface | Graycode | Action |
 |----------------|------|--------|
-| Codex apply_patch / read / list / grep | hawk tools | Optional compat profile |
-| OpenCode read/write/edit/bash/glob/grep/todo/skill | hawk | Optional `compat.opencode` |
-| Claude import | missing | **Port** into swift/hawk |
+| Codex apply_patch / read / list / grep | graycode tools | Optional compat profile |
+| OpenCode read/write/edit/bash/glob/grep/todo/skill | graycode | Optional `compat.opencode` |
+| Claude import | missing | **Port** into swift/graycode |
 | Cursor skills scan | missing | **Port** |
 
 ---
 
 ## 4. Slash commands & UX (pager)
 
-Grok slash modules (port checklist → hawk `/` commands or CLI):
+Grok slash modules (port checklist → graycode `/` commands or CLI):
 
-| Grok slash | Status in hawk | Action |
+| Grok slash | Status in graycode | Action |
 |------------|----------------|--------|
 | help | Partial | Port completeness |
 | model / effort | Partial | Port effort levels |
@@ -259,17 +259,17 @@ Grok slash modules (port checklist → hawk `/` commands or CLI):
 
 ---
 
-## 5. User-guide docs (port as hawk user-guide)
+## 5. User-guide docs (port as graycode user-guide)
 
 | Grok doc | Port to |
 |----------|---------|
-| 01–05 essentials | `hawk/docs/user-guide/` |
+| 01–05 essentials | `graycode/docs/user-guide/` |
 | 06 theming | same |
 | 07 MCP | same + mcp-servers.md merge |
 | 08 skills | same |
 | 09 plugins | same |
 | 10 hooks | same |
-| 11 custom models | eyrie + hawk |
+| 11 custom models | eyrie + graycode |
 | 12 project rules AGENTS.md | exists Partial |
 | 13 memory | harrier UX |
 | 14 headless | CLI flags doc |
@@ -292,7 +292,7 @@ Grok slash modules (port checklist → hawk `/` commands or CLI):
 
 These are “small” crates/modules but required for **full** port claims:
 
-| Item | Grok home | Hawk action | Effort |
+| Item | Grok home | Graycode action | Effort |
 |------|-----------|-------------|--------|
 | Folder trust | `workspace/folder_trust.rs` | **Port** `internal/trust` | M |
 | envrc / direnv load | `workspace/envrc.rs` | **Port** | S |
@@ -332,7 +332,7 @@ These are “small” crates/modules but required for **full** port claims:
 | Hyperlink routing | pager | Port | S |
 | Config TOML live edit | pager | Port | S |
 | Goal classifier | shell session | Port | S |
-| Swift classifier | shell | map to hawk swift | S |
+| Swift classifier | shell | map to graycode swift | S |
 | Repo changes tracking | shell session | Partial | M |
 | Active sessions multi | shell | Partial | M |
 | MCP doctor | shell mcp_doctor | Port | S |
@@ -349,10 +349,10 @@ These are “small” crates/modules but required for **full** port claims:
 
 | Quarter | Deliverables | Repos |
 |---------|--------------|-------|
-| **Q1** | Contracts spawn DTOs; wire explore/plan/general; stop hardcoded explore; explore bash hard gate; unify taskruntime; structured SpawnResult | contracts, hawk |
-| **Q2** | sandbox.toml; folder trust; safe-bash; permission pipeline hooks-first; PreToolUse deny | hawk |
-| **Q3** | File+HTTP hooks; vendor aliases; multi-harness skills; multi-component plugins; marketplace MVP | hawk, community-skills |
-| **Q4** | Monitor/Wait/Kill; /loop; structured AskUser; plan/spec alignment; user-guide 01–12; crash handler; announcements; prompt queue; interjection | hawk |
+| **Q1** | Contracts spawn DTOs; wire explore/plan/general; stop hardcoded explore; explore bash hard gate; unify taskruntime; structured SpawnResult | contracts, graycode |
+| **Q2** | sandbox.toml; folder trust; safe-bash; permission pipeline hooks-first; PreToolUse deny | graycode |
+| **Q3** | File+HTTP hooks; vendor aliases; multi-harness skills; multi-component plugins; marketplace MVP | graycode, community-skills |
+| **Q4** | Monitor/Wait/Kill; /loop; structured AskUser; plan/spec alignment; user-guide 01–12; crash handler; announcements; prompt queue; interjection | graycode |
 
 **Exit Year 0:** Contributor-ready “Grok-class agent controls” without claiming full TUI parity.
 
@@ -361,7 +361,7 @@ These are “small” crates/modules but required for **full** port claims:
 | Quarter | Deliverables |
 |---------|--------------|
 | **Q5** | ACP session/load/resume; richer updates; OpenAPI; sdk-go/python fields |
-| **Q6** | Managed policy (signed) graycode-cloud → hawk; IT tier; config layer order |
+| **Q6** | Managed policy (signed) graycode-cloud → graycode; IT tier; config layer order |
 | **Q7** | Foreign session import (Claude/Codex); envrc; hunk tracker; fast worktree; mermaid render |
 | **Q8** | Voice streaming upgrade; update checker parity; MCP doctor; slash parity batch 1; user-guide 13–24 |
 
@@ -378,7 +378,7 @@ These are “small” crates/modules but required for **full** port claims:
 
 ### Year 3–5 — Continuous parity
 
-- Diff audit bot: scan Grok public releases → open hawk issues  
+- Diff audit bot: scan Grok public releases → open graycode issues  
 - Enterprise: MDM, SCIM (cloud), fleet policies  
 - Full editor suite (VS Code/Zed via ACP)  
 - Hardening, fuzz, SLSA releases  
@@ -406,11 +406,11 @@ Each pack is a shippable program of work with Definition of Done.
 - [ ] Tests for aliases and validation  
 - [ ] Version release  
 
-**DoD:** hawk can import types; no engine deps.
+**DoD:** graycode can import types; no engine deps.
 
 ### PACK-02: Spawn control plane (6–8 weeks)
 
-**Repo:** `hawk`
+**Repo:** `graycode`
 
 - [ ] Change `AgentSpawnFn` to SpawnRequest/Result  
 - [ ] Agent tool full schema (type, capability, isolation, resume, cwd, model, thoroughness, description, background)  
@@ -440,7 +440,7 @@ Each pack is a shippable program of work with Definition of Done.
 - [ ] File discovery paths  
 - [ ] HTTP runner  
 - [ ] Inject into PermissionEngine before autonomy  
-- [ ] Plugin env HAWK_PLUGIN_ROOT/DATA  
+- [ ] Plugin env GRAYCODE_PLUGIN_ROOT/DATA  
 
 ### PACK-05: Extensions (8–10 weeks)
 
@@ -484,7 +484,7 @@ Each pack is a shippable program of work with Definition of Done.
 ### PACK-10: Enterprise policy (6 weeks)
 
 - [ ] Signed managed policy schema (cloud)  
-- [ ] hawk apply layers  
+- [ ] graycode apply layers  
 - [ ] fail-open vs fail-closed  
 - [ ] IT non-excludable tier end-to-end  
 
@@ -510,7 +510,7 @@ Each pack is a shippable program of work with Definition of Done.
 
 ### PACK-14: TUI parity program (ongoing XL)
 
-Track Grok pager features against hawk Bubble Tea:
+Track Grok pager features against graycode Bubble Tea:
 
 - [ ] Dashboard view parity  
 - [ ] Agents/personas modal  
@@ -545,7 +545,7 @@ Only if product requires remote tool hosts:
 
 ## 9. Per graycode-eco repo full ownership checklist
 
-### `hawk` (majority)
+### `graycode` (majority)
 
 Port/finish: spawn, tools, sandbox, trust, hooks, plugins, marketplace client, TUI, ACP, headless, slash, taskruntime, hunks, mermaid, voice, crash, announcements, queue, interjection, plan, ask user, update, PTY harness, envrc, permissions pipeline, user-guide.
 
@@ -571,7 +571,7 @@ Foreign session import; share/export; session indexing parity with Grok session 
 
 ### `kestrel` / `merlin`
 
-No direct Grok crates; keep peer engines; ensure hawk composition matches Grok “review/merlin” product moments if any.
+No direct Grok crates; keep peer engines; ensure graycode composition matches Grok “review/merlin” product moments if any.
 
 ### `falcon`
 
@@ -608,7 +608,7 @@ Dashboard/usage/marketplace web UI only.
 | Replace eyrie with xai-grok-sampler | Multi-provider better |
 | ratatui widgets | Bubble Tea stack |
 | `xai-proto-build` | Rust build |
-| Closed contribution policy | Hawk is open |
+| Closed contribution policy | Graycode is open |
 
 Skipping is **documented completion**, not unfinished work.
 
@@ -692,7 +692,7 @@ Execute shorter plan as **Year 0** of this master plan.
 
 ## 16. One-line summary
 
-**Port all of grok-eco into graycode-eco = reimplement Grok Build’s full capability surface in Go across graycode-eco repos, map each crate to an owner engine, skip vendor/privacy conflicts, wire Hawk’s existing partial systems first, and run a multi-year program ending in behavioral parity—not a Rust code transplant.**
+**Port all of grok-eco into graycode-eco = reimplement Grok Build’s full capability surface in Go across graycode-eco repos, map each crate to an owner engine, skip vendor/privacy conflicts, wire Graycode’s existing partial systems first, and run a multi-year program ending in behavioral parity—not a Rust code transplant.**
 
 ---
 

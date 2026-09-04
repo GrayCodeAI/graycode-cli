@@ -1,8 +1,8 @@
-# Contributing to hawk
+# Contributing to graycode
 
 Thanks for your interest! This guide covers the conventions used across the
 GrayCodeAI repositories. The shared standards (versioning, release tooling, repo layout)
-are defined in <https://github.com/GrayCodeAI/hawk/blob/main/docs/versioning.md>.
+are defined in <https://github.com/GrayCodeAI/graycode-cli/blob/main/docs/versioning.md>.
 
 ## Quick start
 
@@ -139,8 +139,8 @@ Before requesting review:
 
 ## Reporting bugs
 
-Open an issue using the bug-report template. Include the `hawk`
-version (`hawk --version` for binaries, `hawk.Version` for
+Open an issue using the bug-report template. Include the `graycode`
+version (`graycode --version` for binaries, `graycode.Version` for
 libraries — see this repo's `VERSION` file), reproduction steps, expected
 behaviour, and actual behaviour.
 

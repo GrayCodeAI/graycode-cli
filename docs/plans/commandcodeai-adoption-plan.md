@@ -1,6 +1,6 @@
 # CommandCodeAI Adoption Plan
 
-Status: Implemented in the Hawk working tree where the existing architecture
+Status: Implemented in the Graycode working tree where the existing architecture
 supports a safe, native implementation.
 
 ## Source Review
@@ -13,7 +13,7 @@ The reviewed CommandCodeAI organization contains four relevant categories:
 | `cmd-old-public` | Archived placeholder/documentation repository | No implementation to adopt |
 | `BaseAI` | Archived TypeScript pipe SDK/local provider server; licensing metadata is inconsistent | Reimplement narrow ideas only; do not add as a dependency |
 | `agent-skills` | MIT skill collection with progressive-disclosure guidance | Adopt authoring/process ideas; preserve individual asset licenses |
-| `awesome-agents` | Apache-2.0 example applications | Reference only; do not merge into Hawk skills |
+| `awesome-agents` | Apache-2.0 example applications | Reference only; do not merge into Graycode skills |
 
 `starling` remains the canonical public skill registry. Its
 validator and registry tooling are more complete than the CommandCodeAI
@@ -23,7 +23,7 @@ repositories and should remain authoritative.
 
 ### 5. Kimi Code workflow parity
 
-The Kimi Code comparison confirmed that Hawk already provides native equivalents
+The Kimi Code comparison confirmed that Graycode already provides native equivalents
 for most of its useful workflow ideas. The remaining gaps were addressed without
 adding a second agent runtime:
 
@@ -34,20 +34,20 @@ adding a second agent runtime:
   `UserPromptQueued`, `TurnStarted`, `PostToolFailure`, `PermissionResult`,
   `SessionHeartbeat`, `TaskStarted`, `StopFailure`, `Interrupt`, and
   `Notification`.
-- Hawk's existing permission engine already supports ordered allow/deny rules
+- Graycode's existing permission engine already supports ordered allow/deny rules
   such as `Bash(git status*)` and `Write(*.env)`, pre-tool denial hooks, scoped
   policy snapshots, and destructive-command hard blocks.
-- Hawk's existing goal tracker already provides durable objective state,
+- Graycode's existing goal tracker already provides durable objective state,
   dependencies, progress, token budgets, continuation prompts, and lifecycle
   events. A second `GOAL.md` state machine would duplicate this implementation.
 
 The comparison also found no reason to adopt Kimi Code's two-engine split or
-replace Hawk's stronger Harrier memory, Shrike token controls, Swift replay, Kestrel
+replace Graycode's stronger Harrier memory, Shrike token controls, Swift replay, Kestrel
 review, Merlin auditing, or Eyrie provider runtime.
 
 ### 1. Skill metadata interoperability
 
-Hawk's smart-skill parser accepts both hyphenated and community-schema
+Graycode's smart-skill parser accepts both hyphenated and community-schema
 snake_case keys:
 
 - `auto-invoke` / `auto_invoke`
@@ -66,7 +66,7 @@ metadata.
 
 ### 2. Local skill validation
 
-Hawk's existing Unicode audit remains the runtime security scanner. A new
+Graycode's existing Unicode audit remains the runtime security scanner. A new
 structural validator complements it by checking:
 
 - required `name` and `description`
@@ -77,13 +77,13 @@ structural validator complements it by checking:
 - `SKILL.md` size
 - `@ref(...)` path containment
 
-`hawk skills audit` now reports both Unicode and structural findings. This is a
+`graycode skills audit` now reports both Unicode and structural findings. This is a
 small Go-native subset of the community repository's broader validation model;
 it does not duplicate the registry's Python implementation.
 
 ### 3. Transparent preference model
 
-Hawk already has `internal/feature/taste` with confidence, sample count,
+Graycode already has `internal/feature/taste` with confidence, sample count,
 decay, project identity, merge, reset, prompt projection, and accept/edit
 signals. No second preference database was created. The user-facing model and
 policy are documented in `docs/user-guide/26-learned-preferences.md`:
@@ -96,12 +96,12 @@ policy are documented in `docs/user-guide/26-learned-preferences.md`:
 
 ### 4. Workflow and harness documentation
 
-CommandCodeAI's strongest product contribution is discoverability. Hawk now
+CommandCodeAI's strongest product contribution is discoverability. Graycode now
 documents its existing capabilities in:
 
 - `docs/user-guide/26-learned-preferences.md`
 - `docs/user-guide/27-workflows.md`
-- `docs/architecture/hawk-harness.md`
+- `docs/architecture/graycode-harness.md`
 - `docs/user-guide/28-workflow-budgets.md`
 
 These cover slash/shell/file-context input, headless review, MCP-backed
@@ -112,21 +112,21 @@ tool, depth, time, token, and cost budgets.
 ## Deliberately Not Adopted
 
 - CommandCodeAI provider adapters: Eyrie owns provider protocols and routing.
-- BaseAI remote pipes: incompatible with Hawk's local authority and durable
+- BaseAI remote pipes: incompatible with Graycode's local authority and durable
   event model.
-- BaseAI `lowdb` JSON memory: weaker than Harrier and Hawk persistence.
+- BaseAI `lowdb` JSON memory: weaker than Harrier and Graycode persistence.
 - Unconditional parallel tool execution: unsafe for mutations and approvals.
 - Historical `gpt3-agent`: no permissions, sandbox, path guard, audit, or tests.
-- Media/UI/status repositories: outside Hawk's code-intelligence boundary.
+- Media/UI/status repositories: outside Graycode's code-intelligence boundary.
 - CommandCodeAI branding, proprietary model claims, and undocumented services.
 
 ## Verification Plan
 
-1. Run formatting and static checks on all changed Hawk Go files.
+1. Run formatting and static checks on all changed Graycode Go files.
 2. Run focused parser, validator, taste, engine, and command tests.
-3. Run the full Hawk test suite and vet.
+3. Run the full Graycode test suite and vet.
 4. Repeat the focused and full checks independently.
 5. Merlin the final diff, worktree, and sibling-repository status.
 
 The Eyrie repository remains a separate repository change and must be published
-through its own feature branch and PR before updating Hawk's module pin.
+through its own feature branch and PR before updating Graycode's module pin.

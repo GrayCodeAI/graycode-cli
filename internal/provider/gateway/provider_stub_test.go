@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // stubProvider proves the Provider interface is swappable: a test can inject a

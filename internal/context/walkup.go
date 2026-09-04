@@ -1,4 +1,4 @@
-// Package context provides hierarchical context discovery for hawk.
+// Package context provides hierarchical context discovery for graycode.
 // It implements walk-up AGENTS.md discovery (pi-nested-agents-md pattern):
 // when an agent reads a file, the discoverer traverses upward collecting
 // convention files at each directory level with session-scoped deduplication.
@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/hooks"
+	"github.com/GrayCodeAI/graycode-cli/internal/hooks"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 
 // DefaultConventionFiles lists the files to discover at each directory level.
 var DefaultConventionFiles = []string{
-	"AGENTS.md", "HAWK.md", "CLAUDE.md", "CONTEXT.md",
+	"AGENTS.md", "GRAYCODE.md", "CLAUDE.md", "CONTEXT.md",
 }
 
 // InjectionCache tracks which files have already been injected this session.

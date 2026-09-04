@@ -4,10 +4,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // PersistenceService is the Session's view of the conversation store:
@@ -35,7 +35,7 @@ type PersistenceService struct {
 	autoCompactThresholdPct int
 	// contextWindowCached is the catalog context window; 0 → governor default.
 	contextWindowCached int
-	// graph is Hawk's product-owned conversation graph (for branching).
+	// graph is Graycode's product-owned conversation graph (for branching).
 	graph *session.ConversationGraph
 	// journal is the append-only session event spine. It is attached by the
 	// composition root; nil means journaling is disabled (pure in-memory mode).
@@ -146,7 +146,7 @@ func (s *PersistenceService) RawMessagesView() []types.EyrieMessage {
 	return s.messages
 }
 
-// Graph returns Hawk's product-owned conversation graph.
+// Graph returns Graycode's product-owned conversation graph.
 func (s *PersistenceService) Graph() *session.ConversationGraph { return s.graph }
 
 // SetGraph attaches the conversation graph.

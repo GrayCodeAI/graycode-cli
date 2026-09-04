@@ -1,18 +1,18 @@
 # Vercel fx Adoption Plan
 
-Status: Implemented in Hawk's native Go architecture
+Status: Implemented in Graycode's native Go architecture
 
 Source: `https://github.com/vercel-labs/fx`
 
 This plan records the useful ideas identified while comparing Vercel Labs'
-`fx` Unix-like coding agent with Hawk and its independent ecosystem repositories. It is an
-adoption plan, not a code-porting plan. Hawk should reimplement compatible
+`fx` Unix-like coding agent with Graycode and its independent ecosystem repositories. It is an
+adoption plan, not a code-porting plan. Graycode should reimplement compatible
 behavior in Go and preserve its existing provider, memory, review, audit,
 session, and security boundaries.
 
 ## Executive Decision
 
-Hawk should adopt the following `fx` ideas:
+Graycode should adopt the following `fx` ideas:
 
 1. Stable identities and operational commands for persisted permission rules.
 2. A unified machine-readable runtime status snapshot.
@@ -21,21 +21,21 @@ Hawk should adopt the following `fx` ideas:
    user authority.
 5. Compatibility aliases for common permission modes in CLI and ACP surfaces.
 6. Stronger subagent lifecycle and permission observability.
-7. A narrow embeddable host API over Hawk's existing daemon and ACP surfaces.
+7. A narrow embeddable host API over Graycode's existing daemon and ACP surfaces.
 
-Hawk should not copy `fx` source code, replace its Go runtime with Zig, create a
+Graycode should not copy `fx` source code, replace its Go runtime with Zig, create a
 second permission system, or reduce its code-intelligence tool surface merely to
 match `fx`'s smaller binary.
 
-## Existing Hawk Capabilities
+## Existing Graycode Capabilities
 
-The comparison found that Hawk already provides the foundation for most `fx`
+The comparison found that Graycode already provides the foundation for most `fx`
 features:
 
-| `fx` capability | Hawk implementation | Current decision |
+| `fx` capability | Graycode implementation | Current decision |
 |---|---|---|
-| Native single binary | Go static binary and cross-platform release builds | Keep Hawk implementation |
-| Agent loop | `internal/engine` | Keep Hawk implementation |
+| Native single binary | Go static binary and cross-platform release builds | Keep Graycode implementation |
+| Agent loop | `internal/engine` | Keep Graycode implementation |
 | Permission and sandbox split | `internal/engine/safety`, `internal/sandbox` | Harden and document |
 | `ask`/automatic approval behavior | Autonomy profiles, governance, grants, hooks | Add compatibility aliases only |
 | Child agents | `internal/multiagent`, continuable children, cold resume | Add observability and configuration polish |
@@ -45,7 +45,7 @@ features:
 | ACP | `internal/acp` | Extend status/config parity where useful |
 | Swift and replay | sibling `swift` (Swift), `internal/session/replay` | Add terminal-level tape capability |
 | Persistent memory | sibling `harrier` (Harrier) | Do not replace with flat JSON state |
-| Provider runtime | sibling `eyrie` | Do not add provider logic to Hawk |
+| Provider runtime | sibling `eyrie` | Do not add provider logic to Graycode |
 
 ## Priority Model
 
@@ -63,7 +63,7 @@ when their original command, path, or workspace has changed.
 
 ### Scope and ownership
 
-- Primary implementation: Hawk `internal/permissions` and
+- Primary implementation: Graycode `internal/permissions` and
   `internal/engine/safety`.
 - Shared contract changes, if needed: sibling `eagle/policy`.
 - User-facing commands: `cmd` and the existing slash-command surface.
@@ -88,12 +88,12 @@ when their original command, path, or workspace has changed.
 ### Proposed interfaces
 
 ```text
-hawk permissions list [--json]
-hawk permissions revoke <rule-id>
-hawk permissions reset [--scope user|project]
+graycode permissions list [--json]
+graycode permissions revoke <rule-id>
+graycode permissions reset [--scope user|project]
 ```
 
-The exact command names may follow existing Hawk conventions, but the typed
+The exact command names may follow existing Graycode conventions, but the typed
 operation should be shared by CLI, TUI, daemon, and ACP.
 
 ### Acceptance criteria
@@ -155,7 +155,7 @@ the daemon, ACP clients, and the interactive UI.
 
 ### Ownership
 
-- Snapshot contract: Hawk root or `eagle` if consumed cross-repo.
+- Snapshot contract: Graycode root or `eagle` if consumed cross-repo.
 - Assembly: `internal/engine`, `internal/session`, `internal/mcp`,
   `internal/permissions`, `internal/multiagent`.
 - Rendering: CLI/TUI and daemon adapters.
@@ -164,7 +164,7 @@ the daemon, ACP clients, and the interactive UI.
 
 ```text
 schema_version
-hawk_version
+graycode_version
 session_id
 workspace
 git_branch
@@ -193,8 +193,8 @@ identifiers rather than raw secrets.
 ### Required interfaces
 
 ```text
-hawk status
-hawk status --json
+graycode status
+graycode status --json
 ```
 
 The daemon and ACP should expose the same snapshot schema, with transport
@@ -212,14 +212,14 @@ metadata kept outside the product snapshot.
 
 ### Goal
 
-Add `fx`-style terminal byte and resize recording to complement Hawk's existing
+Add `fx`-style terminal byte and resize recording to complement Graycode's existing
 agent-session swift and replay features.
 
 ### Ownership
 
 - Preferred home: sibling `swift` (Swift) if the capability is intended for reuse by
   other agents.
-- Hawk integration: `internal/swift` or the TUI composition layer.
+- Graycode integration: `internal/swift` or the TUI composition layer.
 - Do not put terminal tape parsing in the agent engine.
 
 ### Required behavior
@@ -237,10 +237,10 @@ agent-session swift and replay features.
 ### Proposed interfaces
 
 ```text
-hawk swift record --output <path>
-hawk swift replay <path>
-hawk swift replay <path> --frames
-hawk swift replay <path> --json
+graycode swift record --output <path>
+graycode swift replay <path>
+graycode swift replay <path> --frames
+graycode swift replay <path> --json
 ```
 
 Existing Swift session capture remains the source of prompts, tool calls, git
@@ -260,35 +260,35 @@ ID.
 
 ### Goal
 
-Expose familiar `fx` permission names without weakening Hawk's richer policy
+Expose familiar `fx` permission names without weakening Graycode's richer policy
 engine.
 
 ### Mapping
 
-| Compatibility name | Hawk behavior |
+| Compatibility name | Graycode behavior |
 |---|---|
 | `ask` | Supervised or equivalent prompt-required policy |
 | `auto` | Automatic review/approval behavior where configured |
 | `yolo` | Explicit high-autonomy mode, still subject to governance, sandbox, and destructive-command hard blocks |
 
-These are aliases or presentation-layer modes, not a replacement for Hawk's
+These are aliases or presentation-layer modes, not a replacement for Graycode's
 autonomy tiers, governance ceiling, spec gates, and sandbox policy.
 
 ### Required behavior
 
 1. Accept names in configuration, CLI, and ACP only where the surface supports
    them.
-2. Display the effective Hawk tier and hard safety constraints.
+2. Display the effective Graycode tier and hard safety constraints.
 3. Never let `yolo` bypass governance, hard-deny rules, destructive-command
    blocks, or mandatory spec approval.
-4. Persist the canonical Hawk representation, not an ambiguous alias.
+4. Persist the canonical Graycode representation, not an ambiguous alias.
 5. Add migration and invalid-value diagnostics.
 
 ## P1: Subagent Lifecycle and Authority Observability
 
 ### Goal
 
-Adopt `fx`'s useful child-agent visibility while retaining Hawk's continuable
+Adopt `fx`'s useful child-agent visibility while retaining Graycode's continuable
 child sessions, worktree isolation, model routing, and delegated policy
 inheritance.
 
@@ -319,7 +319,7 @@ inheritance.
 ### Goal
 
 Improve discoverability and trust reporting using `fx`'s clear status model,
-without changing Hawk's existing MCP and skills architecture.
+without changing Graycode's existing MCP and skills architecture.
 
 ### Required behavior
 
@@ -344,7 +344,7 @@ without changing Hawk's existing MCP and skills architecture.
 ### Goal
 
 Offer a supported embedding boundary inspired by `fx`'s ACP and WASM surfaces,
-without committing Hawk to a WASM rewrite.
+without committing Graycode to a WASM rewrite.
 
 ### First implementation
 
@@ -417,11 +417,11 @@ make test-race
 make vet
 make lint
 make security
-hawk verify
+graycode verify
 ```
 
 For sibling-repository changes, run that repository's own tests and boundary checks before
-updating the Hawk pointer. Do not modify provider protocols or adapters in Hawk;
+updating the Graycode pointer. Do not modify provider protocols or adapters in Graycode;
 those belong in the Eyrie repository.
 
 ## Delivery Sequence
@@ -456,7 +456,7 @@ those belong in the Eyrie repository.
 
 - Design and review the versioned swift artifact format in sibling `swift` (Swift).
 - Implement recording, replay, redaction, and deterministic golden tests.
-- Integrate recording controls into Hawk without coupling tape parsing to the
+- Integrate recording controls into Graycode without coupling tape parsing to the
   agent loop.
 
 ### Milestone 5: Host integration and trust UX
@@ -469,18 +469,18 @@ those belong in the Eyrie repository.
 ## Deliberately Rejected
 
 - Copying Zig implementation code from `vercel-labs/fx`.
-- Replacing Hawk's Go runtime or independent ecosystem repositories.
+- Replacing Graycode's Go runtime or independent ecosystem repositories.
 - Adding a second permission evaluator.
 - Replacing Harrier with flat JSON memory.
 - Replacing Swift session capture with terminal tapes.
-- Removing Hawk's code intelligence, review, audit, token, or provider features
+- Removing Graycode's code intelligence, review, audit, token, or provider features
   to target `fx`'s binary size.
 - Automatically executing repository-local MCP servers or hooks.
 - Adding WASM before daemon and ACP contracts are stable and proven.
 
 ## Success Criteria
 
-The adoption is successful when Hawk can provide the operational clarity of
+The adoption is successful when Graycode can provide the operational clarity of
 `fx` while retaining its stronger ecosystem architecture:
 
 - Every persistent permission rule can be listed and revoked by stable ID.
@@ -488,7 +488,7 @@ The adoption is successful when Hawk can provide the operational clarity of
 - TUI failures can be reproduced from a credential-free terminal tape.
 - Project configuration cannot silently grant private authority.
 - Child-agent authority, lifecycle, model, and budget state are inspectable.
-- Existing Hawk memory, provider, review, audit, MCP, ACP, and session behavior
+- Existing Graycode memory, provider, review, audit, MCP, ACP, and session behavior
   remains intact.
 
 ## Implemented Scope
@@ -504,7 +504,7 @@ The adoption is successful when Hawk can provide the operational clarity of
   continuable children, and cold resume retained as the authoritative runtime.
 
 The remaining items in this document are future refinements to the already
-implemented surfaces, not missing baseline features. Hawk's subprocess LSP
+implemented surfaces, not missing baseline features. Graycode's subprocess LSP
 manager remains a separate integration task: the current main `LSP` tool uses
 the codegraph path, while `internal/lsp` provides the richer language-server
 client and is not yet attached to the primary tool registry.

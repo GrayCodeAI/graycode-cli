@@ -3,7 +3,7 @@ package cmd
 import (
 	"testing"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 )
 
 func TestFilterConfigModelOptions(t *testing.T) {
@@ -45,7 +45,7 @@ func TestModelOptionIsActive(t *testing.T) {
 }
 
 func TestConfigModelOptionsCarryResolvedEngineIdentity(t *testing.T) {
-	opts := configModelOptionsFromEyrie([]hawkconfig.EngineModel{{
+	opts := configModelOptionsFromEyrie([]graycodeconfig.EngineModel{{
 		ID: "models/gemini-pro", CanonicalID: "google/gemini-pro",
 		ProviderID: "google", GatewayID: "gemini", Capabilities: []string{"tools", "vision"},
 	}})

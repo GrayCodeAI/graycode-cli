@@ -1,6 +1,6 @@
 package cmd
 
-import "github.com/GrayCodeAI/hawk/internal/textutil"
+import "github.com/GrayCodeAI/graycode-cli/internal/textutil"
 
 // truncateWithEllipsis truncates s to at most max runes, appending "..." when
 // content is dropped. Rune-safe: never splits a multi-byte character.

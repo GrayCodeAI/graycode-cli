@@ -63,7 +63,7 @@ const (
 )
 
 // registry maps the human-friendly glyph name to (Nerd, ASCII) pair.
-// Order is also the order returned by Names() and used by hawk harness
+// Order is also the order returned by Names() and used by graycode harness
 // for its icons section. Keep grouped by family.
 var registry = []struct {
 	name  string

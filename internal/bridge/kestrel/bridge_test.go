@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	"github.com/GrayCodeAI/hawk/internal/graphjournal"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
+	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
 )
 
 func TestReviewContractsObservedRecordsQualityGraph(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	bridge := &Bridge{}
 	at := time.Date(2026, time.July, 25, 13, 0, 0, 0, time.UTC)
 	result, err := bridge.ReviewContractsObserved(

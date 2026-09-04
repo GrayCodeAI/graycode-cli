@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
 )
 
 // TestCheckTool_SpecStageBlocksEvenYOLO verifies the core guarantee documented
@@ -43,7 +43,7 @@ func TestCheckTool_SpecStageAllowsWorkflowAndReadTools(t *testing.T) {
 	os.Chdir(tmpDir)
 	t.Cleanup(func() { os.Chdir(origDir) })
 
-	constitutionDir := filepath.Join(tmpDir, ".hawk", "specs", "test-spec")
+	constitutionDir := filepath.Join(tmpDir, ".graycode", "specs", "test-spec")
 	os.MkdirAll(constitutionDir, 0o700)
 	os.WriteFile(filepath.Join(constitutionDir, "constitution.md"), []byte("## Constitution\n"), 0o600)
 

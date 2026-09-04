@@ -1,4 +1,4 @@
-// Package tool provides built-in tools for the hawk coding agent.
+// Package tool provides built-in tools for the graycode coding agent.
 //
 // Deprecated APIs: parser.ParseDir and ast.Package are deprecated since Go 1.25/1.22.
 // A future refactor should migrate to golang.org/x/tools/go/packages, but the current
@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // APISnapshot captures the full public API surface of a Go package.

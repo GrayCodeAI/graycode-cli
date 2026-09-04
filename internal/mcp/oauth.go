@@ -2,7 +2,7 @@ package mcp
 
 // OAuth support for connecting to auth-gated remote MCP servers.
 //
-// hawk has zero MCP SDK dependency (see mcp.go/http.go/ws.go's hand-rolled
+// graycode has zero MCP SDK dependency (see mcp.go/http.go/ws.go's hand-rolled
 // JSON-RPC) — this stays consistent with that and hand-rolls OAuth too,
 // rather than adopting a third-party client library.
 //
@@ -143,7 +143,7 @@ func RegisterClient(ctx context.Context, registrationEndpoint, redirectURI strin
 		TokenEndpointAuthMethod: "none",
 		GrantTypes:              []string{"authorization_code", "refresh_token"},
 		ResponseTypes:           []string{"code"},
-		ClientName:              "hawk",
+		ClientName:              "graycode",
 	})
 	if err != nil {
 		return "", err
@@ -236,7 +236,7 @@ func StartLoopbackCallback(ctx context.Context, timeout time.Duration) (redirect
 			_, _ = w.Write([]byte("<html><body>Authorization failed. You can close this tab.</body></html>"))
 		} else {
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("<html><body>Authorized. You can close this tab and return to hawk.</body></html>"))
+			_, _ = w.Write([]byte("<html><body>Authorized. You can close this tab and return to graycode.</body></html>"))
 		}
 		once.Do(func() {
 			select {

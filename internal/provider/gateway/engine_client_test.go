@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
-func TestEngineAdapterPreservesHawkRequestOptions(t *testing.T) {
+func TestEngineAdapterPreservesGraycodeRequestOptions(t *testing.T) {
 	topP := 0.75
 	thinking := true
 	request := toEngineRequest(
@@ -21,7 +21,7 @@ func TestEngineAdapterPreservesHawkRequestOptions(t *testing.T) {
 			Tools:  []types.EyrieTool{{Name: "read_file", Description: "read", Parameters: map[string]interface{}{"type": "object"}}},
 			System: "system", EnableCaching: true, ReasoningEffort: "high",
 			GLMThinkingEnabled: &thinking, TopP: &topP, ServiceTier: "priority",
-			MetadataUserID: "hawk-user-1",
+			MetadataUserID: "graycode-user-1",
 			ResponseFormat: &types.ResponseFormat{Type: "json_schema", Schema: `{"type":"object"}`},
 		},
 		types.ContinuationConfig{MaxContinuations: 2, MaxTotalTokens: 9000},
@@ -38,7 +38,7 @@ func TestEngineAdapterPreservesHawkRequestOptions(t *testing.T) {
 	if !request.Options.EnableCaching || request.Options.ReasoningEffort != "high" || request.Options.ThinkingEnabled == nil || request.Options.GLMThinkingEnabled == nil || request.Options.TopP == nil || request.Options.ServiceTier != "priority" {
 		t.Fatalf("advanced options lost: %+v", request.Options)
 	}
-	if request.Metadata.UserID != "hawk-user-1" {
+	if request.Metadata.UserID != "graycode-user-1" {
 		t.Fatalf("metadata user ID lost: %+v", request.Metadata)
 	}
 	if len(request.Messages) != 1 || len(request.Messages[0].ContentParts) != 1 || request.Messages[0].ContentParts[0].ImageURL == nil || request.Messages[0].ContentParts[0].ImageURL.URL == "" {
@@ -61,7 +61,7 @@ func TestEngineAdapterOnlyRequiresGLMReasoningWhenEnabled(t *testing.T) {
 	}
 }
 
-func TestEngineAdapterNormalizesEventsForHawkLoop(t *testing.T) {
+func TestEngineAdapterNormalizesEventsForGraycodeLoop(t *testing.T) {
 	tests := []struct {
 		in       eyrieengine.Event
 		wantType string

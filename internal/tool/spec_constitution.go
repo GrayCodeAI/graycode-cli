@@ -11,7 +11,7 @@ import (
 
 // ConstitutionTool manages the project's constitution — a set of
 // non-negotiable rules and constraints that all specs and implementations
-// must follow. The constitution is stored in .hawk/specs/constitution.md
+// must follow. The constitution is stored in .graycode/specs/constitution.md
 // and referenced during spec validation.
 type ConstitutionTool struct{}
 

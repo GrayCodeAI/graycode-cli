@@ -1,5 +1,5 @@
-// Package prompts manages workspace context for hawk sessions.
-// This file implements auto-accumulation of learnings into Hawk user state.
+// Package prompts manages workspace context for graycode sessions.
+// This file implements auto-accumulation of learnings into Graycode user state.
 package prompts
 
 import (
@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // AgentsAccumulator captures learnings from successful edits and appends
@@ -51,7 +51,7 @@ func (a *AgentsAccumulator) Record(context string, pattern string, files []strin
 	})
 }
 
-// Flush writes all buffered learnings to Hawk user state.
+// Flush writes all buffered learnings to Graycode user state.
 func (a *AgentsAccumulator) Flush() error {
 	a.mu.Lock()
 	learnings := make([]Learning, len(a.buffer))

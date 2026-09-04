@@ -61,7 +61,7 @@ func (WebFetchTool) Execute(ctx context.Context, input json.RawMessage) (string,
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", "hawk/0.1.0")
+	req.Header.Set("User-Agent", "graycode/0.1.0")
 	// Preserve the original Host header so virtual-host routing works
 	// correctly. validateURLPublic pins the connection to the validated
 	// IP (preventing DNS rebinding), but replaces the URL host with the IP.

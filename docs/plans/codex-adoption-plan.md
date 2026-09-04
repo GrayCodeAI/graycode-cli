@@ -1,6 +1,6 @@
 # OpenAI Codex CLI Adoption Plan
 
-Status: Audited. Core ideas already implemented natively in hawk; remaining
+Status: Audited. Core ideas already implemented natively in graycode; remaining
 deltas recorded as future RFCs.
 
 Source: `https://github.com/openai/codex` (Apache-2.0, Rust workspace
@@ -8,9 +8,9 @@ Source: `https://github.com/openai/codex` (Apache-2.0, Rust workspace
 
 ## Executive Decision
 
-The audit found that every codex-rs capability relevant to hawk's security and
+The audit found that every codex-rs capability relevant to graycode's security and
 runtime model already has a native Go implementation, several of them deeper
-than codex's equivalents because they build on Hawk's independent ecosystem
+than codex's equivalents because they build on Graycode's independent ecosystem
 repositories.
 No second runtime, sandbox layer, or policy engine was created.
 
@@ -23,18 +23,18 @@ Three codex ideas are deliberately deferred as future RFCs; see
 
 ## Capability Audit
 
-| codex-rs crate/concept | hawk implementation | Decision |
+| codex-rs crate/concept | graycode implementation | Decision |
 |---|---|---|
-| `core` agent loop | `internal/engine` | Keep hawk |
-| `tui`, `ansi-escape`, `terminal-detection` | Bubble Tea/Lipgloss TUI | Keep hawk |
-| `rollout`, `thread-store`, `history` JSONL sessions with resume/fork | `internal/session` JSONL + WAL + named checkpoints + fork + recovery + handover | Keep hawk (richer) |
-| `app-server-daemon`, `app-server-protocol` (JSON-RPC for IDE/desktop) | `internal/daemon` HTTP/SSE on 4590 + `internal/acp` | Keep hawk |
-| `mcp-server`, `codex-mcp`, `rmcp-client`, `connectors` | `internal/mcp` client+server, sibling `falcon` scaffolding | Keep hawk |
-| `skills`, `plugin`, `hooks` | community skill registry + structural validator, plugins, expanded lifecycle hook events | Keep hawk |
-| `login`, `keyring-store`, `aws-auth` | eyrie credential store in OS keychain across 28 providers | Keep hawk (broader) |
-| `model-provider(-info)`, `models-manager`, `ollama`, `lmstudio` | sibling `eyrie` adapters, catalog, cascade routing | Keep hawk (much broader) |
-| `memories`, `agent-graph-store`, `context-fragments` | sibling `harrier` (Harrier) graph memory; eventlog/graphjournal projections | Keep hawk |
-| `apply-patch`, `file-search`, `file-watcher`, `git-utils` | edit tools, codegraph, git tooling, watcher hooks | Keep hawk |
+| `core` agent loop | `internal/engine` | Keep graycode |
+| `tui`, `ansi-escape`, `terminal-detection` | Bubble Tea/Lipgloss TUI | Keep graycode |
+| `rollout`, `thread-store`, `history` JSONL sessions with resume/fork | `internal/session` JSONL + WAL + named checkpoints + fork + recovery + handover | Keep graycode (richer) |
+| `app-server-daemon`, `app-server-protocol` (JSON-RPC for IDE/desktop) | `internal/daemon` HTTP/SSE on 4590 + `internal/acp` | Keep graycode |
+| `mcp-server`, `codex-mcp`, `rmcp-client`, `connectors` | `internal/mcp` client+server, sibling `falcon` scaffolding | Keep graycode |
+| `skills`, `plugin`, `hooks` | community skill registry + structural validator, plugins, expanded lifecycle hook events | Keep graycode |
+| `login`, `keyring-store`, `aws-auth` | eyrie credential store in OS keychain across 28 providers | Keep graycode (broader) |
+| `model-provider(-info)`, `models-manager`, `ollama`, `lmstudio` | sibling `eyrie` adapters, catalog, cascade routing | Keep graycode (much broader) |
+| `memories`, `agent-graph-store`, `context-fragments` | sibling `harrier` (Harrier) graph memory; eventlog/graphjournal projections | Keep graycode |
+| `apply-patch`, `file-search`, `file-watcher`, `git-utils` | edit tools, codegraph, git tooling, watcher hooks | Keep graycode |
 | `external-agent-migration` | swift reads Claude Code / Codex / Gemini CLI / OpenCode / Cursor sessions | Parity |
 | **`linux-sandbox`** (Landlock + seccomp-bpf) | `internal/sandbox/landlock.go`, `seccomp.go` — raw syscalls and BPF filter, no external tools | Already implemented |
 | **macOS Seatbelt** | `internal/sandbox/seatbelt.go` — SBPL profile generator with per-policy read/write/process/network rules | Already implemented |
@@ -47,7 +47,7 @@ Three codex ideas are deliberately deferred as future RFCs; see
 
 ### Adopted in this change
 
-- Status transparency: `hawk status` (text and `--json`) now resolves the
+- Status transparency: `graycode status` (text and `--json`) now resolves the
   effective sandbox backend via `sandbox.SelectSandbox` and reports it as
   `permission.sandbox_backend`, so operators can confirm real kernel-level
   isolation (seatbelt on macOS, landlock/seccomp on Linux, ACL on Windows,
@@ -67,19 +67,19 @@ Three codex ideas are deliberately deferred as future RFCs; see
   the safe read-only fan-out case. Arbitrary-script execution still requires an
   embedded runtime, capabilities model, and output-trust threat model; track as
   a standalone RFC.
-- **Agent identity signing** (`agent-identity`): hawk already provides a
+- **Agent identity signing** (`agent-identity`): graycode already provides a
   per-harness anonymous user identity (`internal/identity`) and a tamper-evident
   HMAC-chained security log with session-scoped events (`internal/securitylog`).
   Signed subagent delegation chains are worth a focused design once multi-org
   delegation exists.
 - **Cloud tasks client** (`cloud-tasks*`): remote task queue integration.
-  Hawk Cloud already provides sync/review surfaces; a queue protocol would
+  Graycode Cloud already provides sync/review surfaces; a queue protocol would
   duplicate that until a concrete consumer exists.
 
 ## Verification
 
 - `go test ./...` full suite green.
-- `make vet`, `make lint`, `hawk verify` green.
+- `make vet`, `make lint`, `graycode verify` green.
 - Repo-owned markdown passes `markdownlint-cli2 '**/*.md'` (CI scope);
   findings under sibling repositories belong to those repositories and follow
   their own contribution flow.

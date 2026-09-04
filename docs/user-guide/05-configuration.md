@@ -1,6 +1,6 @@
 # Configuration
 
-Hawk reads configuration from settings files, environment variables, and has defaults for all options. This document covers the common configuration options.
+Graycode reads configuration from settings files, environment variables, and has defaults for all options. This document covers the common configuration options.
 
 ---
 
@@ -8,19 +8,21 @@ Hawk reads configuration from settings files, environment variables, and has def
 
 Configuration is resolved in this order (highest priority first):
 
-1. **CLI flags** (e.g., `--provider`, `--model`)
-2. **Environment variables**
-3. **User settings** (`~/.hawk/settings.json`)
-4. **Project settings** (`.hawk/settings.json`)
-5. **Built-in defaults**
+1. **CLI `--settings` JSON override** (`LoadSettingsWithOverride`)
+2. **Per-command CLI flags** (e.g., `--provider`, `--model`)
+3. **Environment variables** (only where explicitly read; there is no global env layer)
+4. **Project settings** (`.graycode/settings.json`, repository-safe subset only —
+   `model`, `provider`, permissions, MCP servers and providers are stripped)
+5. **User settings** (`~/.graycode/settings.json`)
+6. **Built-in defaults**
 
 ---
 
 ## Settings File
 
-Location: `~/.hawk/settings.json`
+Location: `~/.graycode/settings.json`
 
-This is the main configuration file. Hawk writes to it when you save changes via `/config` or `/autonomy save`.
+This is the main configuration file. Graycode writes to it when you save changes via `/config` or `/autonomy save`.
 
 ### Basic Settings
 
@@ -51,7 +53,7 @@ This is the main configuration file. Hawk writes to it when you save changes via
 - `operator` — full tool access for trusted operations
 - `autonomous` — no permission prompts
 
-**Sandbox profiles** control permissions inside Hawk's mandatory Docker
+**Sandbox profiles** control permissions inside Graycode's mandatory Docker
 execution boundary:
 - `off` — no additional policy restrictions
 - `workspace` — filesystem access limited to project directory
@@ -110,34 +112,34 @@ Key environment variables for configuration.
 
 | Variable | Description |
 |----------|-------------|
-| `HAWK_Y0_FOLDER_TRUST` | Folder trust feature flag (default: `1`) |
-| `HAWK_Y0_MARKETPLACE` | Marketplace feature flag (default: `0`) |
-| `HAWK_DEPLOYMENT_ROUTING` | Enable deployment-aware routing |
+| `GRAYCODE_Y0_FOLDER_TRUST` | Folder trust feature flag (default: `1`) |
+| `GRAYCODE_Y0_MARKETPLACE` | Marketplace feature flag (default: `1`, set `0` to disable remote installs) |
+| `GRAYCODE_DEPLOYMENT_ROUTING` | Not an environment variable: set `deployment_routing` in `settings.json` |
 
 ### Paths
 
 | Variable | Description |
 |----------|-------------|
-| `HAWK_HOME` | Override config directory (default: `~/.hawk`) |
+| `GRAYCODE_HOME` | Harness home override used by identity only (default: `~/.graycode`); most config paths honor `GRAYCODE_CONFIG_DIR` / `GRAYCODE_STATE_DIR` / `GRAYCODE_CACHE_DIR` instead |
 
 ---
 
 ## Project Configuration
 
-Place configuration in `.hawk/` within your repository:
+Place configuration in `.graycode/` within your repository:
 
 | File | Purpose |
 |------|---------|
-| `.hawk/settings.json` | Project settings (autonomy, rules) |
-| `.hawk/sandbox.toml` | Custom sandbox profiles |
-| `.hawk/lsp.json` | LSP server configuration |
+| `.graycode/settings.json` | Project settings (autonomy, rules) |
+| `.graycode/sandbox.toml` | Custom sandbox profiles |
+| `.graycode/lsp.json` | LSP server configuration |
 | `AGENTS.md` | Project instructions |
 
 ---
 
 ## Sandbox Profiles
 
-Location: `~/.hawk/sandbox.toml` (user) or `.hawk/sandbox.toml` (project)
+Location: `~/.graycode/sandbox.toml` (user) or `.graycode/sandbox.toml` (project)
 
 Define custom sandbox profiles:
 
@@ -161,7 +163,10 @@ network = "deny"
 
 ## MCP Servers
 
-Configure MCP servers in `.hawk/settings.json` or project `.hawk/settings.json`:
+Configure MCP servers in global `~/.graycode/settings.json` only — project
+`.graycode/settings.json` cannot register MCP servers (stripped by
+`projectSafeSettings`; project automation additionally requires folder trust,
+see below):
 
 ```json
 {
@@ -195,7 +200,7 @@ Folder trust controls whether project automation (hooks, plugins, MCP, LSP) can 
 
 ### Trust Store
 
-Location: `~/.hawk/trusted_folders.toml`
+Location: `~/.graycode/trusted_folders.toml`
 
 ```toml
 [[folders]]

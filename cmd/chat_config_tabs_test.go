@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 func TestRenderConfigTabBar_DotIndicators(t *testing.T) {
@@ -28,12 +28,12 @@ func TestRenderConfigTabBar_DotIndicators(t *testing.T) {
 }
 
 func TestOpenConfigPanel_FirstRunOpensGateways(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	m := chatModel{}
@@ -47,12 +47,12 @@ func TestOpenConfigPanel_FirstRunOpensGateways(t *testing.T) {
 }
 
 func TestOpenConfigAtTab_ModelsWithoutCredentialsFallsBackToGateways(t *testing.T) {
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 
 	m := chatModel{}

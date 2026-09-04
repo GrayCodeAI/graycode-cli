@@ -1,5 +1,5 @@
-// Package providers catalogs the AI coding agents that hawk can be
-// invoked from. The matrix is built into GrayCode Hawk's
+// Package providers catalogs the AI coding agents that graycode can be
+// invoked from. The matrix is built into GrayCode Graycode's
 // bin/install.js (PROVIDERS array, 34 entries) and adapted to native Go.
 //
 // Each entry in the matrix describes:
@@ -30,7 +30,7 @@ import (
 	"strings"
 	"sync"
 
-	homepkg "github.com/GrayCodeAI/hawk/internal/home"
+	homepkg "github.com/GrayCodeAI/graycode-cli/internal/home"
 )
 
 // Mech describes how a provider is installed.

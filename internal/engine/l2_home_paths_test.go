@@ -9,18 +9,18 @@ import (
 // TestL2PipelineStatePathsAreHomeRelative is a regression guard for L2 —
 // the three learning-pipeline stores (ExperienceStore, KnowledgeBase,
 // FeedbackCollector) created by NewIntegrationPipeline must write to
-// ~/.hawk/{experience,knowledge,feedback}/, not to <cwd>/.hawk/...
+// ~/.graycode/{experience,knowledge,feedback}/, not to <cwd>/.graycode/...
 //
 // Pre-fix, NewIntegrationPipeline passed the literal strings
-// ".hawk/experience", ".hawk/knowledge", ".hawk/feedback" to those
-// constructors, which leaked into <cwd>/cmd/.hawk/ when hawk was run
+// ".graycode/experience", ".graycode/knowledge", ".graycode/feedback" to those
+// constructors, which leaked into <cwd>/cmd/.graycode/ when graycode was run
 // from its own source tree.
 func TestL2PipelineStatePathsAreHomeRelative(t *testing.T) {
-	// Make the test independent of the caller's HOME/HAWK_STATE_DIR. The
+	// Make the test independent of the caller's HOME/GRAYCODE_STATE_DIR. The
 	// production contract is the configured per-user state root, and tests may
 	// intentionally redirect that root to an isolated temporary directory.
 	stateRoot := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", stateRoot)
+	t.Setenv("GRAYCODE_STATE_DIR", stateRoot)
 	wantPrefix := filepath.Clean(stateRoot) + string(filepath.Separator)
 
 	check := func(name, got string) {

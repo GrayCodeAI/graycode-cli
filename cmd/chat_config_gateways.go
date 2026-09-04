@@ -7,8 +7,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 type configGatewayRow struct {
@@ -47,7 +47,7 @@ func (m chatModel) loadConfigGatewayRows() []configGatewayRow {
 	if m.session != nil {
 		activeModel = strings.TrimSpace(m.session.Model())
 	}
-	statuses := hawkconfig.GatewayStatuses(ctx, active, activeModel)
+	statuses := graycodeconfig.GatewayStatuses(ctx, active, activeModel)
 	rows := make([]configGatewayRow, 0, len(statuses))
 	for _, status := range statuses {
 		if status.ID == "" {
@@ -64,10 +64,10 @@ func (m chatModel) loadConfigGatewayRows() []configGatewayRow {
 		hasKey := status.HasStoredCredential
 		credentialEnv, keyConflict := "", false
 		if hasKey {
-			credentialEnv, keyConflict = hawkconfig.CredentialEnvironmentConflict(ctx, status.ID)
+			credentialEnv, keyConflict = graycodeconfig.CredentialEnvironmentConflict(ctx, status.ID)
 		}
 		display := status.DisplayName
-		if status.RegionRequired || status.RegionLabel != "" || hawkconfig.HasRegionOptions(status.ID) {
+		if status.RegionRequired || status.RegionLabel != "" || graycodeconfig.HasRegionOptions(status.ID) {
 			if reg := status.RegionLabel; reg != "" {
 				display += " · " + reg
 			} else if status.RegionRequired {
@@ -82,7 +82,7 @@ func (m chatModel) loadConfigGatewayRows() []configGatewayRow {
 			HasKey:         hasKey,
 			Configured:     status.HasConfiguredDeployment || hasKey,
 			ModelCount:     count,
-			Active:         status.Active || hawkconfig.ActiveProviderID(status.ID) == hawkconfig.ActiveProviderID(active),
+			Active:         status.Active || graycodeconfig.ActiveProviderID(status.ID) == graycodeconfig.ActiveProviderID(active),
 			RegionLabel:    status.RegionLabel,
 			RegionRequired: status.RegionRequired,
 			CredentialEnv:  credentialEnv,
@@ -266,18 +266,18 @@ func (m chatModel) configGatewaysView() string {
 	ctx := context.Background()
 	indent := strings.Repeat(" ", configTableIndent)
 	if m.configKeysPendingRemove != "" {
-		name := hawkconfig.GatewayDisplayName(m.configKeysPendingRemove)
+		name := graycodeconfig.GatewayDisplayName(m.configKeysPendingRemove)
 		b.WriteString("\n" + mutedStyle.Render(indent+configGatewayRemovePrompt(m.configKeysRemoveStep, name)))
-	} else if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
+	} else if !graycodeconfig.HasConfiguredDeploymentCached(ctx) {
 		hint := "Select a gateway · enter · paste API key · then Models tab"
-		if targetIdx >= 0 && targetIdx < len(rows) && (rows[targetIdx].RegionRequired || rows[targetIdx].RegionLabel != "" || hawkconfig.HasRegionOptions(rows[targetIdx].ID)) {
+		if targetIdx >= 0 && targetIdx < len(rows) && (rows[targetIdx].RegionRequired || rows[targetIdx].RegionLabel != "" || graycodeconfig.HasRegionOptions(rows[targetIdx].ID)) {
 			hint = rows[targetIdx].DisplayName + ": enter pick region then key · g change region"
 		}
 
 		b.WriteString("\n" + mutedStyle.Render(indent+hint))
 	} else {
 		hints := "enter use gateway · k view key · delete remove · r refresh"
-		if targetIdx >= 0 && targetIdx < len(rows) && (rows[targetIdx].RegionRequired || rows[targetIdx].RegionLabel != "" || hawkconfig.HasRegionOptions(rows[targetIdx].ID)) {
+		if targetIdx >= 0 && targetIdx < len(rows) && (rows[targetIdx].RegionRequired || rows[targetIdx].RegionLabel != "" || graycodeconfig.HasRegionOptions(rows[targetIdx].ID)) {
 			hints = "enter · g region · k key · delete · r refresh"
 		}
 
@@ -321,7 +321,7 @@ func (m chatModel) handleConfigGatewaysSelect() (chatModel, tea.Cmd) {
 		return m, nil
 	}
 	row := rows[m.configSel]
-	if (row.RegionRequired || hawkconfig.HasRegionOptions(row.ID)) && (!row.HasKey || row.RegionRequired) {
+	if (row.RegionRequired || graycodeconfig.HasRegionOptions(row.ID)) && (!row.HasKey || row.RegionRequired) {
 		m.configGatewayFocus = m.configSel
 		return m.startConfigGatewayRegion(row.ID), nil
 	}
@@ -336,8 +336,8 @@ func (m chatModel) handleConfigGatewaysSelect() (chatModel, tea.Cmd) {
 	gw := row.ID
 	m.configGatewayFocus = m.configSel
 	m.configModelProvider = gw
-	_ = hawkconfig.SetGlobalSetting("provider", gw)
-	if active := hawkconfig.ActiveProvider(context.Background()); active != "" {
+	_ = graycodeconfig.SetGlobalSetting("provider", gw)
+	if active := graycodeconfig.ActiveProvider(context.Background()); active != "" {
 		m.session.SetProvider(active)
 	}
 	m.configTab = configTabModels
@@ -349,7 +349,7 @@ func (m chatModel) handleConfigGatewaysSelect() (chatModel, tea.Cmd) {
 
 func refreshGatewayAsync(providerID string) tea.Cmd {
 	return func() tea.Msg {
-		summary, err := hawkconfig.RefreshGatewayCatalog(context.Background(), providerID)
+		summary, err := graycodeconfig.RefreshGatewayCatalog(context.Background(), providerID)
 		return configGatewayRefreshMsg{providerID: providerID, summary: summary, err: err}
 	}
 }
@@ -359,7 +359,7 @@ func (m chatModel) handleConfigGatewayRefreshMsg(msg configGatewayRefreshMsg) ch
 	InvalidateModelCacheProvider(msg.providerID)
 	m = m.refreshConfigGatewayRows()
 	if msg.err != nil {
-		m.configNotice = sanitizeConfigNotice(hawkconfig.FormatConfigProviderError(msg.providerID, msg.err))
+		m.configNotice = sanitizeConfigNotice(graycodeconfig.FormatConfigProviderError(msg.providerID, msg.err))
 		return m
 	}
 	m.configNotice = msg.summary

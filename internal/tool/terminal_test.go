@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/terminal"
+	"github.com/GrayCodeAI/graycode-cli/internal/terminal"
 )
 
 func TestTerminalTools_FullLifecycle(t *testing.T) {

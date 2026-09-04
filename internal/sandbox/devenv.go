@@ -108,7 +108,7 @@ func (d *DevEnvManager) GetOrBuild(ctx context.Context, dockerfile string) (stri
 		return cached.Tag, nil
 	}
 
-	tag := fmt.Sprintf("hawk-devenv-%s:%s", key, hash[:12])
+	tag := fmt.Sprintf("graycode-devenv-%s:%s", key, hash[:12])
 
 	if err := d.buildFn(ctx, buildPath, tag); err != nil {
 		return "", fmt.Errorf("building image: %w", err)
@@ -193,7 +193,7 @@ func (d *DevEnvManager) RebuildAndForceSwap(ctx context.Context, dockerfilePath 
 
 // augmentDockerfile reads the Dockerfile at path, appends the runtime
 // extra-deps RUN layers, and writes the result to a sibling
-// "Dockerfile.hawk-runtime" file. Returns the path to the augmented file. The
+// "Dockerfile.graycode-runtime" file. Returns the path to the augmented file. The
 // caller holds d.mu.
 func (d *DevEnvManager) augmentDockerfile(path string) (string, error) {
 	data, err := os.ReadFile(path) // #nosec G304 -- path is the project's own Dockerfile path passed by the caller
@@ -201,7 +201,7 @@ func (d *DevEnvManager) augmentDockerfile(path string) (string, error) {
 		return "", err
 	}
 	augmented := d.runtime.AppendExtraDeps(string(data))
-	outPath := filepath.Join(filepath.Dir(path), "Dockerfile.hawk-runtime")
+	outPath := filepath.Join(filepath.Dir(path), "Dockerfile.graycode-runtime")
 	if err := os.WriteFile(outPath, []byte(augmented), 0o600); err != nil { // #nosec G703 -- sibling output is derived from the caller's project Dockerfile
 		return "", err
 	}

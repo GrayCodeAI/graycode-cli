@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/installtxn"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/installtxn"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 const defaultIndexURL = "https://raw.githubusercontent.com/GrayCodeAI/starling/main/registry.json"
@@ -238,7 +238,7 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 	_ = os.MkdirAll(destBase, 0o750)
 
 	// Clone into a temp dir, then copy the skill(s).
-	tmpDir, err := os.MkdirTemp("", "hawk-skill-*")
+	tmpDir, err := os.MkdirTemp("", "graycode-skill-*")
 	if err != nil {
 		return "", fmt.Errorf("create temp dir: %w", err)
 	}
@@ -369,7 +369,7 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 	return msg, nil
 }
 
-// Remove uninstalls a skill by name from Hawk user state.
+// Remove uninstalls a skill by name from Graycode user state.
 func Remove(name string) error {
 	dirs := []string{
 		filepath.Join(storage.StateDir(), "skills", name),

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/systemcontext"
+	"github.com/GrayCodeAI/graycode-cli/internal/systemcontext"
 )
 
 // Section defines a dynamic, incrementally-rendered system-prompt section. It
-// is the hawk-host integration of the systemcontext package: each section is a
+// is the graycode-host integration of the systemcontext package: each section is a
 // typed context source whose value is loaded on demand, and only sections that
 // actually change are re-rendered as a mid-conversation update rather than
 // rebuilding the entire system prompt.
@@ -146,7 +146,7 @@ func renderSection(header, value string) string {
 func keyScope(key string) string {
 	// A section key like "memories" or "scope/name" maps to a valid
 	// namespaced source key.
-	return "hawk"
+	return "graycode"
 }
 
 func keyName(key string) string {
@@ -154,7 +154,7 @@ func keyName(key string) string {
 }
 
 // DefaultIncrementalSections returns a reasonable set of dynamic sections for
-// a session, wired to the same loaders hawk already uses for each. It is a
+// a session, wired to the same loaders graycode already uses for each. It is a
 // convenience for hosts that want to enable incremental context without
 // hand-assembling sections. Loaders may be nil-able wrappers; the returned
 // sections must be configured with their Load funcs by the caller.

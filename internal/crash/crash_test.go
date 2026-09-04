@@ -5,14 +5,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/crash"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/crash"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // reportRoot returns the crash report dir by appending the subdir name to the
 // state dir, matching the layout crash.WriteReport uses. We go through the
 // public storage.StateDir so the test stays in-package-friendly and inherits
-// the same HAWK_STATE_DIR override production uses.
+// the same GRAYCODE_STATE_DIR override production uses.
 func reportRoot(t *testing.T) string {
 	t.Helper()
 	base := storage.StateDir()
@@ -23,10 +23,10 @@ func reportRoot(t *testing.T) string {
 }
 
 func TestReportPath_InStateDir(t *testing.T) {
-	// HAWK_STATE_DIR must be set before Install/crash writes anything; mirror
+	// GRAYCODE_STATE_DIR must be set before Install/crash writes anything; mirror
 	// the convention storage's own tests use.
 	dir := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", dir)
+	t.Setenv("GRAYCODE_STATE_DIR", dir)
 
 	got, err := crash.WriteReport("boom", []byte("goroutine 1 [running]:\nmain.main()\n"))
 	if err != nil {
@@ -43,7 +43,7 @@ func TestReportPath_InStateDir(t *testing.T) {
 
 func TestInstall_DoesNotPanic(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", dir)
+	t.Setenv("GRAYCODE_STATE_DIR", dir)
 
 	// Install must be safe and idempotent.
 	crash.Install()

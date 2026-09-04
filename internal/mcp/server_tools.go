@@ -19,27 +19,27 @@ func readOnlyAnnotations(title string) *ToolAnnotations {
 	return &ToolAnnotations{Title: title, ReadOnlyHint: boolPtr(true), DestructiveHint: boolPtr(false)}
 }
 
-// RegisterDefaultTools registers hawk's standard capabilities as MCP tools.
-// If executor is non-nil, tools that delegate to hawk's tool registry will
+// RegisterDefaultTools registers graycode's standard capabilities as MCP tools.
+// If executor is non-nil, tools that delegate to graycode's tool registry will
 // use it for execution; otherwise those tools return a not-configured error.
 func RegisterDefaultTools(server *MCPServer, executor ToolExecutor) {
-	server.RegisterTool(hawkChatTool(executor))
-	server.RegisterTool(hawkSearchTool(executor))
-	server.RegisterTool(hawkMemoryRecallTool(executor))
-	server.RegisterTool(hawkMemoryStoreTool(executor))
-	server.RegisterTool(hawkReviewTool(executor))
-	server.RegisterTool(hawkScanTool(executor))
-	server.RegisterTool(hawkCompressTool(executor))
+	server.RegisterTool(graycodeChatTool(executor))
+	server.RegisterTool(graycodeSearchTool(executor))
+	server.RegisterTool(graycodeMemoryRecallTool(executor))
+	server.RegisterTool(graycodeMemoryStoreTool(executor))
+	server.RegisterTool(graycodeReviewTool(executor))
+	server.RegisterTool(graycodeScanTool(executor))
+	server.RegisterTool(graycodeCompressTool(executor))
 }
 
-// hawkChatTool sends a prompt to hawk and returns the response.
-func hawkChatTool(executor ToolExecutor) MCPToolHandler {
+// graycodeChatTool sends a prompt to graycode and returns the response.
+func graycodeChatTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
-		Name: "hawk_chat",
-		Description: "Send a prompt to the hawk AI coding agent and receive a response. " +
+		Name: "graycode_chat",
+		Description: "Send a prompt to the graycode AI coding agent and receive a response. " +
 			"WARNING: this runs an autonomous agent that may execute shell commands and modify files.",
 		Annotations: &ToolAnnotations{
-			Title:           "Run hawk agent",
+			Title:           "Run graycode agent",
 			ReadOnlyHint:    boolPtr(false),
 			DestructiveHint: boolPtr(true),
 			OpenWorldHint:   boolPtr(true),
@@ -49,7 +49,7 @@ func hawkChatTool(executor ToolExecutor) MCPToolHandler {
 			"properties": map[string]interface{}{
 				"prompt": map[string]interface{}{
 					"type":        "string",
-					"description": "The prompt or question to send to hawk.",
+					"description": "The prompt or question to send to graycode.",
 				},
 			},
 			"required": []string{"prompt"},
@@ -69,12 +69,12 @@ func hawkChatTool(executor ToolExecutor) MCPToolHandler {
 	}
 }
 
-// hawkSearchTool searches across hawk sessions.
-func hawkSearchTool(executor ToolExecutor) MCPToolHandler {
+// graycodeSearchTool searches across graycode sessions.
+func graycodeSearchTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
-		Name:        "hawk_search",
-		Description: "Search across hawk sessions and conversation history.",
-		Annotations: readOnlyAnnotations("Search hawk sessions"),
+		Name:        "graycode_search",
+		Description: "Search across graycode sessions and conversation history.",
+		Annotations: readOnlyAnnotations("Search graycode sessions"),
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -105,12 +105,12 @@ func hawkSearchTool(executor ToolExecutor) MCPToolHandler {
 	}
 }
 
-// hawkMemoryRecallTool recalls information from harrier memory.
-func hawkMemoryRecallTool(executor ToolExecutor) MCPToolHandler {
+// graycodeMemoryRecallTool recalls information from harrier memory.
+func graycodeMemoryRecallTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
-		Name:        "hawk_memory_recall",
-		Description: "Recall stored information from hawk's persistent memory (harrier).",
-		Annotations: readOnlyAnnotations("Recall from hawk memory"),
+		Name:        "graycode_memory_recall",
+		Description: "Recall stored information from graycode's persistent memory (harrier).",
+		Annotations: readOnlyAnnotations("Recall from graycode memory"),
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -141,13 +141,13 @@ func hawkMemoryRecallTool(executor ToolExecutor) MCPToolHandler {
 	}
 }
 
-// hawkMemoryStoreTool stores information to harrier memory.
-func hawkMemoryStoreTool(executor ToolExecutor) MCPToolHandler {
+// graycodeMemoryStoreTool stores information to harrier memory.
+func graycodeMemoryStoreTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
-		Name:        "hawk_memory_store",
-		Description: "Store information in hawk's persistent memory (harrier) for future recall.",
+		Name:        "graycode_memory_store",
+		Description: "Store information in graycode's persistent memory (harrier) for future recall.",
 		Annotations: &ToolAnnotations{
-			Title:           "Store in hawk memory",
+			Title:           "Store in graycode memory",
 			ReadOnlyHint:    boolPtr(false),
 			DestructiveHint: boolPtr(false), // additive write, does not destroy existing data
 		},
@@ -186,11 +186,11 @@ func hawkMemoryStoreTool(executor ToolExecutor) MCPToolHandler {
 	}
 }
 
-// hawkReviewTool triggers a code review via kestrel.
-func hawkReviewTool(executor ToolExecutor) MCPToolHandler {
+// graycodeReviewTool triggers a code review via kestrel.
+func graycodeReviewTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
-		Name:        "hawk_review",
-		Description: "Trigger a code review using hawk's kestrel module. Analyzes code for quality, style, and potential issues.",
+		Name:        "graycode_review",
+		Description: "Trigger a code review using graycode's kestrel module. Analyzes code for quality, style, and potential issues.",
 		Annotations: readOnlyAnnotations("Review code (kestrel)"),
 		InputSchema: map[string]interface{}{
 			"type": "object",
@@ -222,11 +222,11 @@ func hawkReviewTool(executor ToolExecutor) MCPToolHandler {
 	}
 }
 
-// hawkScanTool triggers a security scan via merlin.
-func hawkScanTool(executor ToolExecutor) MCPToolHandler {
+// graycodeScanTool triggers a security scan via merlin.
+func graycodeScanTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
-		Name:        "hawk_scan",
-		Description: "Trigger a security scan using hawk's merlin module. Identifies vulnerabilities and security issues.",
+		Name:        "graycode_scan",
+		Description: "Trigger a security scan using graycode's merlin module. Identifies vulnerabilities and security issues.",
 		Annotations: readOnlyAnnotations("Security scan (merlin)"),
 		InputSchema: map[string]interface{}{
 			"type": "object",
@@ -259,11 +259,11 @@ func hawkScanTool(executor ToolExecutor) MCPToolHandler {
 	}
 }
 
-// hawkCompressTool compresses text via shrike.
-func hawkCompressTool(executor ToolExecutor) MCPToolHandler {
+// graycodeCompressTool compresses text via shrike.
+func graycodeCompressTool(executor ToolExecutor) MCPToolHandler {
 	return MCPToolHandler{
-		Name:        "hawk_compress",
-		Description: "Compress text using hawk's shrike module to reduce token usage while preserving meaning.",
+		Name:        "graycode_compress",
+		Description: "Compress text using graycode's shrike module to reduce token usage while preserving meaning.",
 		Annotations: readOnlyAnnotations("Compress text (shrike)"),
 		InputSchema: map[string]interface{}{
 			"type": "object",

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/llm"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 type resilienceBoundaryClient struct {
@@ -140,7 +140,7 @@ func TestAgentLoopResilienceBoundary_ThinkingOnlyRecovery(t *testing.T) {
 	}
 	fallback := &types.EyrieResponse{Content: "compatibility reply", FinishReason: "end_turn"}
 
-	t.Run("engine facade does not trigger Hawk protocol recovery", func(t *testing.T) {
+	t.Run("engine facade does not trigger Graycode protocol recovery", func(t *testing.T) {
 		base := &resilienceBoundaryClient{
 			streams:       [][]types.EyrieStreamEvent{thinkingOnly},
 			chatResponses: []*types.EyrieResponse{fallback},
@@ -151,7 +151,7 @@ func TestAgentLoopResilienceBoundary_ThinkingOnlyRecovery(t *testing.T) {
 			t.Fatalf("calls = stream %d, chat %d; want one stream and no protocol fallback", streamCalls, chatCalls)
 		}
 		if hasBoundaryEvent(events, "content", "compatibility reply") {
-			t.Fatalf("managed client unexpectedly used Hawk thinking fallback: %#v", events)
+			t.Fatalf("managed client unexpectedly used Graycode thinking fallback: %#v", events)
 		}
 	})
 
@@ -221,7 +221,7 @@ func TestAgentLoopResilienceBoundary_MaxTokensContinuation(t *testing.T) {
 	})
 }
 
-func TestAgentLoopResilienceBoundary_KeepsHawkToolAuthorizationAndMutation(t *testing.T) {
+func TestAgentLoopResilienceBoundary_KeepsGraycodeToolAuthorizationAndMutation(t *testing.T) {
 	base := &resilienceBoundaryClient{streams: [][]types.EyrieStreamEvent{
 		{
 			{Type: "tool_call", ToolCall: &types.ToolCall{ID: "write-1", Name: "Write", Arguments: map[string]interface{}{"file_path": "blocked.txt", "content": "no"}}},
@@ -240,14 +240,14 @@ func TestAgentLoopResilienceBoundary_KeepsHawkToolAuthorizationAndMutation(t *te
 
 	streamCalls, chatCalls := base.counts()
 	if streamCalls != 2 || chatCalls != 0 {
-		t.Fatalf("calls = stream %d, chat %d; want one facade call per Hawk agent turn", streamCalls, chatCalls)
+		t.Fatalf("calls = stream %d, chat %d; want one facade call per Graycode agent turn", streamCalls, chatCalls)
 	}
 	if !hasBoundaryEvent(events, "tool_result", "dry-run") {
-		t.Fatalf("Hawk tool denial was not emitted: %#v", events)
+		t.Fatalf("Graycode tool denial was not emitted: %#v", events)
 	}
 	secondRequest := base.messagesForCall(1)
 	if len(secondRequest) < 3 || len(secondRequest[1].ToolUse) != 1 || len(secondRequest[2].ToolResults) != 1 {
-		t.Fatalf("Hawk did not persist tool call/result conversation shape: %#v", secondRequest)
+		t.Fatalf("Graycode did not persist tool call/result conversation shape: %#v", secondRequest)
 	}
 	if !secondRequest[2].ToolResults[0].IsError || !strings.Contains(secondRequest[2].ToolResults[0].Content, "dry-run") {
 		t.Fatalf("tool authorization result = %#v, want persisted denial", secondRequest[2].ToolResults[0])

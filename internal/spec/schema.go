@@ -108,7 +108,7 @@ func FindSchema(name string) (*Schema, error) {
 	}
 	cwd, err := os.Getwd()
 	if err == nil {
-		projDir := filepath.Join(cwd, ".hawk", "spec-schemas")
+		projDir := filepath.Join(cwd, ".graycode", "spec-schemas")
 		path := filepath.Join(projDir, name+".yaml")
 		if _, err := os.Stat(path); err == nil {
 			return LoadSchema(path)

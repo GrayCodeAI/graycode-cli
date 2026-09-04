@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	// SQLite driver (pure Go) is already a direct dependency of hawk and is
+	// SQLite driver (pure Go) is already a direct dependency of graycode and is
 	// registered under the "sqlite" driver name.
 	_ "modernc.org/sqlite"
 )
@@ -18,7 +18,7 @@ import (
 // a database via database/sql, runs a single query, and returns the rows
 // formatted as a plain-text table.
 //
-// Only the SQLite driver ships with hawk today (via modernc.org/sqlite). The
+// Only the SQLite driver ships with graycode today (via modernc.org/sqlite). The
 // Postgres and MySQL dialects are recognized so callers get a clear error
 // instead of a confusing "unknown driver" failure: pull in a driver and the
 // dialect light up without further changes here.
@@ -73,7 +73,7 @@ func (SQLTool) Parameters() map[string]interface{} {
 }
 
 // driverName maps a user-facing dialect to its database/sql driver name. The
-// bool reports whether hawk bundles a driver for that dialect.
+// bool reports whether graycode bundles a driver for that dialect.
 func sqlDriverName(dialect string) (driver string, bundled bool, err error) {
 	switch strings.ToLower(strings.TrimSpace(dialect)) {
 	case "", "sqlite", "sqlite3":
@@ -275,7 +275,7 @@ func (t SQLTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 		return "", err
 	}
 	if !bundled {
-		return "", fmt.Errorf("the %s driver is not compiled into this build of hawk; only sqlite is available", driver)
+		return "", fmt.Errorf("the %s driver is not compiled into this build of graycode; only sqlite is available", driver)
 	}
 
 	statements, err := splitSQLStatements(p.Query)

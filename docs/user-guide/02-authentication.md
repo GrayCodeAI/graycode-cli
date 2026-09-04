@@ -1,14 +1,14 @@
 # Authentication
 
-Hawk supports several authentication methods, including API key configuration through the TUI and multi-provider support via Eyrie.
+Graycode supports several authentication methods, including API key configuration through the TUI and multi-provider support via Eyrie.
 
 ---
 
 ## API Key Configuration
 
-On first launch, Hawk opens the TUI where you can configure credentials. Press `/config` or `/autonomy` to open the configuration picker. Your API keys are stored in your OS keychain (macOS Keychain or Linux keyring), never in plain text or environment variables.
+On first launch, Graycode opens the TUI where you can configure credentials. Press `/config` or `/autonomy` to open the configuration picker. Your API keys are stored in your OS keychain (macOS Keychain or Linux keyring), never in plain text or environment variables.
 
-Hawk supports multiple providers:
+Graycode supports multiple providers:
 
 | Provider | ID | Key |
 |----------|----|-----|
@@ -24,10 +24,10 @@ Hawk supports multiple providers:
 
 ```bash
 # Verify credential status
-hawk credentials status
+graycode credentials status
 
 # Run the TUI and use /config to set keys interactively
-hawk
+graycode
 ```
 
 ### Environment Variables (Fallback)
@@ -36,7 +36,7 @@ For CI/CD or headless environments, you can set API keys as environment variable
 
 ```bash
 export XAI_API_KEY="xai-..."
-hawk
+graycode
 ```
 
 Fireworks uses its OpenAI-compatible API. Set `FIREWORKS_API_KEY`; the default
@@ -49,19 +49,19 @@ base URL is `https://api.fireworks.ai/inference/v1`. See the official
 
 ## Provider Configuration
 
-Hawk uses Eyrie for provider routing, health checks, and retry logic. To configure providers:
+Graycode uses Eyrie for provider routing, health checks, and retry logic. To configure providers:
 
 ```bash
 # In the TUI, press /config to open provider settings
-hawk
+graycode
 
 # Or validate readiness
-hawk path
+graycode path
 ```
 
 ### Deployment-Aware Routing
 
-For deployment-aware routing, set in `.hawk/settings.json`:
+For deployment-aware routing, set in `.graycode/settings.json`:
 
 ```json
 {
@@ -72,10 +72,10 @@ For deployment-aware routing, set in `.hawk/settings.json`:
 Or export:
 
 ```bash
-export HAWK_DEPLOYMENT_ROUTING=true
+export GRAYCODE_DEPLOYMENT_ROUTING=true
 ```
 
-Hawk will route canonical model IDs through Eyrie's deployment catalog. Refresh the catalog with:
+Graycode will route canonical model IDs through Eyrie's deployment catalog. Refresh the catalog with:
 
 ```
 /refresh-model-catalog
@@ -90,7 +90,7 @@ Authenticate developers through your own Identity Provider (IdP) — such as Okt
 ### Configure via Settings
 
 ```json
-// .hawk/settings.json
+// .graycode/settings.json
 {
   "oidc": {
     "issuer": "https://acme.okta.com",
@@ -99,7 +99,7 @@ Authenticate developers through your own Identity Provider (IdP) — such as Okt
 }
 ```
 
-Hawk discovers endpoints via `{issuer}/.well-known/openid-configuration`, opens the IdP login page, and stores tokens in the keychain. Tokens auto-refresh silently via the stored `refresh_token`.
+Graycode discovers endpoints via `{issuer}/.well-known/openid-configuration`, opens the IdP login page, and stores tokens in the keychain. Tokens auto-refresh silently via the stored `refresh_token`.
 
 ### Required Scopes
 
@@ -116,7 +116,7 @@ When browser-based login isn't possible — for example, on sandboxed VMs, CI ru
 
 ### How It Works
 
-1. Hawk runs your command via `sh -c "<command>"`
+1. Graycode runs your command via `sh -c "<command>"`
 2. Your binary runs whatever auth flow it needs
 3. **stdout** is captured and parsed as an access token
 4. **stderr** carries human-readable output surfaced to the user
@@ -139,7 +139,7 @@ JSON with optional refresh token:
 ### Configuration
 
 ```json
-// .hawk/settings.json
+// .graycode/settings.json
 {
   "auth_provider_command": "/usr/local/bin/my-auth-provider",
   "auth_provider_label": "Acme Corp"
@@ -149,17 +149,17 @@ JSON with optional refresh token:
 Or via environment variables:
 
 ```bash
-export HAWK_AUTH_PROVIDER_COMMAND="/usr/local/bin/my-auth-provider"
-export HAWK_AUTH_PROVIDER_LABEL="Acme Corp"
+export GRAYCODE_AUTH_PROVIDER_COMMAND="/usr/local/bin/my-auth-provider"
+export GRAYCODE_AUTH_PROVIDER_LABEL="Acme Corp"
 ```
 
 ### Token Refresh
 
-When Hawk needs to refresh an expired token, it re-runs your binary with `HAWK_AUTH_EXPIRED=1` set in the environment:
+When Graycode needs to refresh an expired token, it re-runs your binary with `GRAYCODE_AUTH_EXPIRED=1` set in the environment:
 
 ```bash
 #!/bin/sh
-if [ "$HAWK_AUTH_EXPIRED" = "1" ]; then
+if [ "$GRAYCODE_AUTH_EXPIRED" = "1" ]; then
     echo "Refreshing token..." >&2
     TOKEN=$(my-company-auth --refresh --silent)
 else
@@ -182,7 +182,7 @@ echo "{\"access_token\": \"$TOKEN\", \"expires_in\": 3600}"
 Check credential status at any time:
 
 ```bash
-hawk credentials status
+graycode credentials status
 ```
 
 This verifies keychain entries and validates Eyrie's provider status.
@@ -191,7 +191,7 @@ This verifies keychain entries and validates Eyrie's provider status.
 
 ## Credential Precedence
 
-Hawk resolves credentials in this order:
+Graycode resolves credentials in this order:
 
 1. **Per-model configuration** — set via `/config` or settings
 2. **Keychain entry** — obtained through TUI configuration
@@ -203,7 +203,7 @@ During a session, the active method handles all refreshes.
 
 ## Multi-Provider Support
 
-Hawk works with any LLM provider through Eyrie's adapter system:
+Graycode works with any LLM provider through Eyrie's adapter system:
 
 | Provider | Status |
 |----------|--------|

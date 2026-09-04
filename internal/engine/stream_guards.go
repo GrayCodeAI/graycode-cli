@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/branching"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/branching"
 )
 
 // gracefulExhaustionEnv opts the guard path into exhaustion synthesis. Off by
 // default: synthesis is a blocking provider call and the default loop must
 // stop immediately when limits are hit.
-const gracefulExhaustionEnv = "HAWK_GRACEFUL_EXHAUSTION"
+const gracefulExhaustionEnv = "GRAYCODE_GRACEFUL_EXHAUSTION"
 
 // checkGuardConditions runs all pre-turn guard checks.
 // Returns false when the loop should stop (abort conditions met).
@@ -70,7 +70,7 @@ func (s *Session) checkGuardConditions(ctx context.Context, ch chan<- StreamEven
 // unavailable or fails.
 //
 // Synthesis performs a blocking provider call, so it is opt-in via
-// HAWK_GRACEFUL_EXHAUSTION=1: the guard path must stay fast and non-blocking
+// GRAYCODE_GRACEFUL_EXHAUSTION=1: the guard path must stay fast and non-blocking
 // by default (a stalled guard delays every terminal event downstream).
 func (s *Session) emitExhaustion(ctx context.Context, ch chan<- StreamEvent, reason string) {
 	if gracefulExhaustionEnabled() {

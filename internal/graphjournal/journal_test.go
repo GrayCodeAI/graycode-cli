@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	policycontracts "github.com/GrayCodeAI/eagle/policy"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
+	policycontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/policy"
 )
 
 func TestJournalRoundTripDoesNotPersistSensitivePayloads(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	occurredAt := time.Date(2026, time.July, 25, 4, 0, 0, 0, time.UTC)
 
 	verdict := policycontracts.Deny("private policy reason", "protected-path")
@@ -63,7 +63,7 @@ func TestJournalRoundTripDoesNotPersistSensitivePayloads(t *testing.T) {
 }
 
 func TestAppendContextGraphRoundTrip(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	occurredAt := time.Date(2026, time.July, 25, 4, 30, 0, 0, time.UTC)
 	node := graphcontracts.Node{
 		ID:        "harrier/memory/memory-1",
@@ -107,7 +107,7 @@ func TestAppendContextGraphRoundTrip(t *testing.T) {
 }
 
 func TestAppendQualityGraphRoundTrip(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	occurredAt := time.Date(2026, time.July, 25, 5, 0, 0, 0, time.UTC)
 	node := graphcontracts.Node{
 		ID:        "merlin/report/report-1",
@@ -150,7 +150,7 @@ func TestAppendQualityGraphRoundTrip(t *testing.T) {
 }
 
 func TestLoadMissingJournalReturnsEmpty(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	entries, err := Load("missing")
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)

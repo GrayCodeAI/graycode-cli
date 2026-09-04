@@ -7,7 +7,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/hawk/internal/catalogtest"
+	"github.com/GrayCodeAI/graycode-cli/internal/catalogtest"
 )
 
 func TestIsCatalogCacheRequired(t *testing.T) {

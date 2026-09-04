@@ -14,7 +14,7 @@ import (
 // loader (Apache-2.0, Copyright 2025 Autohand AI LLC): bounded file size,
 // duplicate-JSON-key rejection, and strict identity patterns. Duplicate
 // keys matter because encoding/json silently keeps the last occurrence,
-// letting a hostile manifest show reviewers one value and hawk another.
+// letting a hostile manifest show reviewers one value and graycode another.
 
 const maxManifestBytes = 64 * 1024
 
@@ -26,7 +26,7 @@ var (
 // readBoundedManifestFile reads a regular, non-symlink file enforcing a
 // size cap and valid UTF-8.
 func readBoundedManifestFile(path string) ([]byte, error) {
-	info, err := os.Lstat(path) // #nosec G304 -- path is pluginDir/plugin.json under a Hawk-managed plugins root
+	info, err := os.Lstat(path) // #nosec G304 -- path is pluginDir/plugin.json under a Graycode-managed plugins root
 	if err != nil {
 		return nil, fmt.Errorf("stat manifest: %w", err)
 	}

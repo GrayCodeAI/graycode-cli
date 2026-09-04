@@ -325,7 +325,7 @@ func TestConcurrentLogging(t *testing.T) {
 func TestRotatingWriter(t *testing.T) {
 	dir := t.TempDir()
 
-	rw, err := NewRotatingWriter(dir, "hawk")
+	rw, err := NewRotatingWriter(dir, "graycode")
 	if err != nil {
 		t.Fatalf("failed to create rotating writer: %v", err)
 	}
@@ -362,9 +362,9 @@ func TestRotatingWriter(t *testing.T) {
 	}
 
 	// Verify main log file exists.
-	mainLog := filepath.Join(dir, "hawk.log")
+	mainLog := filepath.Join(dir, "graycode.log")
 	if _, err := os.Stat(mainLog); os.IsNotExist(err) {
-		t.Error("expected main log file hawk.log to exist")
+		t.Error("expected main log file graycode.log to exist")
 	}
 }
 

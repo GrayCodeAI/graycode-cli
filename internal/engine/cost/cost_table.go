@@ -4,7 +4,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/routing"
 )
 
 // Tier-based default pricing when catalog data is unavailable.

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 // lruCache is a simple fixed-size LRU cache for directory listing results.

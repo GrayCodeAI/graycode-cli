@@ -11,7 +11,7 @@ func TestSubprocessEnv_ScrubsCredentials(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "sk-openai-secret")
 	t.Setenv("HOME", "/Users/test")
 	t.Setenv("PATH", "/usr/bin:/bin")
-	t.Setenv("HAWK_SESSION_ID", "abc123")
+	t.Setenv("GRAYCODE_SESSION_ID", "abc123")
 
 	got := SubprocessEnv()
 
@@ -35,8 +35,8 @@ func TestSubprocessEnv_ScrubsCredentials(t *testing.T) {
 	if values["PATH"] != "/usr/bin:/bin" {
 		t.Fatalf("PATH should pass through, got %q", values["PATH"])
 	}
-	if values["HAWK_SESSION_ID"] != "abc123" {
-		t.Fatalf("non-credential vars should pass through, got %q", values["HAWK_SESSION_ID"])
+	if values["GRAYCODE_SESSION_ID"] != "abc123" {
+		t.Fatalf("non-credential vars should pass through, got %q", values["GRAYCODE_SESSION_ID"])
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 )
 
 // PersistAPIKey saves a provider API key via eyrie (OS secret store).
@@ -136,7 +136,7 @@ func ConfiguredCredentialProviders() []string {
 	return configuredCredentialProvidersCached(context.Background())
 }
 
-// FormatCredentialCLIStatus returns hawk credentials status output (providers, not raw env names).
+// FormatCredentialCLIStatus returns graycode credentials status output (providers, not raw env names).
 func FormatCredentialCLIStatus(ctx context.Context) string {
 	if ctx == nil {
 		ctx = context.Background()

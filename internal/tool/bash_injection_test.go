@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// TestBashInjectionPatternCoverage locks in hawk's safety layer against
+// TestBashInjectionPatternCoverage locks in graycode's safety layer against
 // common shell-injection patterns that the existing test set
 // (tool_test.go:TestBashDangerous/TestBashSuspicious) does not explicitly
 // cover. Each case asserts the *expected* outcome (deny / require-approval)
@@ -231,6 +231,6 @@ func mustJSON(t *testing.T, v any) []byte {
 // stream_tool_exec.go and will be updated separately.
 func TestExtractTargetsSchemaAware(t *testing.T) {
 	_ = filepath.Join // keep the filepath import in scope for future use
-	// FIXME: extractTargets enhancement tracked in fix/hawk-safety-and-tool-hardening
-	t.Skip("extractTargets enhancement tracked in fix/hawk-safety-and-tool-hardening")
+	// FIXME: extractTargets enhancement tracked in fix/graycode-safety-and-tool-hardening
+	t.Skip("extractTargets enhancement tracked in fix/graycode-safety-and-tool-hardening")
 }

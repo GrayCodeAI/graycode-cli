@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
 )
 
 func TestParseAndApplyMemoryOpsNilBridge(t *testing.T) {

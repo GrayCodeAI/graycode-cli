@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 )
 
 func TestNewDiagnostics(t *testing.T) {
@@ -143,7 +143,7 @@ func TestFormatResults(t *testing.T) {
 
 	output := FormatResults(suite)
 
-	if !strings.Contains(output, "Hawk Diagnostics") {
+	if !strings.Contains(output, "Graycode Diagnostics") {
 		t.Error("Output should contain header")
 	}
 	if !strings.Contains(output, "test_pass") {
@@ -363,23 +363,23 @@ func TestCheckAPIKeySet(t *testing.T) {
 }
 
 func TestCheckModelConfigured(t *testing.T) {
-	orig := os.Getenv("HAWK_MODEL")
-	os.Unsetenv("HAWK_MODEL")
+	orig := os.Getenv("GRAYCODE_MODEL")
+	os.Unsetenv("GRAYCODE_MODEL")
 	defer func() {
 		if orig != "" {
-			os.Setenv("HAWK_MODEL", orig)
+			os.Setenv("GRAYCODE_MODEL", orig)
 		}
 	}()
 
 	result := checkModelConfigured()
 	if result.Status != "warn" {
-		t.Errorf("Expected warn when HAWK_MODEL not set, got %q", result.Status)
+		t.Errorf("Expected warn when GRAYCODE_MODEL not set, got %q", result.Status)
 	}
 
-	os.Setenv("HAWK_MODEL", "claude-opus-4-20250514")
+	os.Setenv("GRAYCODE_MODEL", "claude-opus-4-20250514")
 	result = checkModelConfigured()
 	if result.Status != "pass" {
-		t.Errorf("Expected pass when HAWK_MODEL is set, got %q", result.Status)
+		t.Errorf("Expected pass when GRAYCODE_MODEL is set, got %q", result.Status)
 	}
 }
 

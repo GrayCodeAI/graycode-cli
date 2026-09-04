@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/spec"
+	"github.com/GrayCodeAI/graycode-cli/internal/spec"
 )
 
 type ClarifyTool struct{}

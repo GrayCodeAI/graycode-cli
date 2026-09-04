@@ -12,12 +12,12 @@ import (
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/spec"
-	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/spec"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // This file holds the Bubble Tea event loop for the chat TUI: the central
@@ -584,7 +584,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			chosen, handled := m.themePicker.Update(msg)
 			if handled {
 				if chosen != nil {
-					if err := hawkconfig.SetGlobalSetting("theme", chosen.Name); err != nil {
+					if err := graycodeconfig.SetGlobalSetting("theme", chosen.Name); err != nil {
 						m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 					} else {
 						// Apply immediately — repaints with full palette on next frame.
@@ -801,7 +801,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Container failed and is retryable. Hawk is fail-closed: the only
+		// Container failed and is retryable. Graycode is fail-closed: the only
 		// recovery path is to restore Docker isolation.
 		if m.containerRetryable {
 			switch msg.String() {
@@ -1099,7 +1099,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.configSaving = false
 		if msg.err != nil {
 			if m.configOpen {
-				m.configNotice = sanitizeConfigNotice(hawkconfig.FormatConfigProviderError(msg.provider, msg.err))
+				m.configNotice = sanitizeConfigNotice(graycodeconfig.FormatConfigProviderError(msg.provider, msg.err))
 				m.viewDirty = true
 				m.updateViewportContent()
 			}
@@ -1116,7 +1116,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.configNotice = ""
 			}
 		} else if m.configOpen {
-			m.configNotice = hawkconfig.CatalogEmptyHint(context.Background())
+			m.configNotice = graycodeconfig.CatalogEmptyHint(context.Background())
 		}
 		if m.session != nil && msg.provider != "" {
 			gw, _ := m.sessionGatewayModel()
@@ -1411,8 +1411,8 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		line := fmt.Sprintf(
 			"Context compacted (%s): ~%s → ~%s tokens",
 			msg.strategy,
-			formatHawkTokenCount(msg.tokensBefore),
-			formatHawkTokenCount(msg.tokensAfter),
+			formatGraycodeTokenCount(msg.tokensBefore),
+			formatGraycodeTokenCount(msg.tokensAfter),
 		)
 		m.messages = append(m.messages, displayMsg{role: "system", content: line})
 		m.invalidateConnStatus()
@@ -1496,7 +1496,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Send terminal notification if terminal was not focused during the
 		// turn and the agent produced output (not just tool activity).
 		if m.backgrounded && !wasCancelled && hadOutput {
-			sendTerminalNotification("hawk", "Agent turn complete")
+			sendTerminalNotification("graycode", "Agent turn complete")
 		}
 		m.backgrounded = false
 		m.notifiedComplete = false

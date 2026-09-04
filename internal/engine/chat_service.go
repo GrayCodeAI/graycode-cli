@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/GrayCodeAI/eyrie/engine"
-	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
-	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
-	"github.com/GrayCodeAI/hawk/internal/resilience/retry"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/metrics"
+	"github.com/GrayCodeAI/graycode-cli/internal/resilience/ratelimit"
+	"github.com/GrayCodeAI/graycode-cli/internal/resilience/retry"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // ChatService is the Session's view of the LLM transport. It owns the
@@ -207,7 +207,7 @@ func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens i
 	if outputSchema != "" {
 		opts.ResponseFormat = &types.ResponseFormat{Type: "json_schema", Schema: outputSchema}
 	}
-	// Opt-in tool-catalog compression (HAWK_TOOL_SHRINK=1): fail-open, so the
+	// Opt-in tool-catalog compression (GRAYCODE_TOOL_SHRINK=1): fail-open, so the
 	// returned tools equal the input whenever anything is off or drifts.
 	opts.Tools = shrinkEyrieTools(opts.Tools)
 	return opts
@@ -224,7 +224,7 @@ func (c *ChatService) BuildOptions(systemPrompt, activeModel string, maxTokens i
 //
 // Eyrie facade clients advertise that they manage provider resilience. For
 // those clients this service records the product metric and delegates exactly
-// once; injected legacy clients retain Hawk's compatibility retry/rate layer.
+// once; injected legacy clients retain Graycode's compatibility retry/rate layer.
 func (c *ChatService) Stream(ctx context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.StreamResult, error) {
 	c.mu.RLock()
 	client := c.client

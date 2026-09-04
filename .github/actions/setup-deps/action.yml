@@ -28,8 +28,17 @@ runs:
         ws_parent="$(cd "${GITHUB_WORKSPACE}/.." && pwd)"
         mkdir -p "$ws_parent"
         while IFS= read -r repo; do
-          [ "$repo" = hawk ] && continue
-          clone_with_retry "$repo" "$ws_parent/$repo" main
+          [ "$repo" = graycode-cli ] && continue
+          dest="$ws_parent/$repo"
+          if [ -d "$dest/.git" ]; then
+            echo "$repo already present at $dest"
+            continue
+          fi
+          if ! git ls-remote "https://x-access-token:${GH_TOKEN}@github.com/GrayCodeAI/${repo}.git" HEAD >/dev/null 2>&1; then
+            echo "WARNING: GrayCodeAI/${repo} is not reachable; skipping checkout"
+            continue
+          fi
+          clone_with_retry "$repo" "$dest" main
         done < <(./scripts/ecosystem-manifest.sh list workspace)
 
     - name: Set up Go

@@ -28,7 +28,7 @@ func TestAuditEntry_Record(t *testing.T) {
 }
 
 func TestFormatAuditSummary_Empty(t *testing.T) {
-	// FormatAuditSummary reads from ~/.hawk/audit/<today>.jsonl.
+	// FormatAuditSummary reads from ~/.graycode/audit/<today>.jsonl.
 	// If no entries exist, it returns the "No file modifications" message.
 	summary := FormatAuditSummary()
 	// Either "No file modifications recorded today." or a real summary — both are valid.

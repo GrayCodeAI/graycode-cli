@@ -12,7 +12,7 @@ import (
 var manpageCmd = &cobra.Command{
 	Use:   "manpage",
 	Short: "Generate man page in roff format",
-	Long:  "Generate a man page for hawk in roff format and print it to stdout.\nRedirect to a file in your man path, e.g.: hawk manpage > /usr/local/share/man/man1/hawk.1",
+	Long:  "Generate a man page for graycode in roff format and print it to stdout.\nRedirect to a file in your man path, e.g.: graycode manpage > /usr/local/share/man/man1/graycode.1",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if _, err := fmt.Fprint(cmd.OutOrStdout(), GenerateManPage()); err != nil {
@@ -22,7 +22,7 @@ var manpageCmd = &cobra.Command{
 	},
 }
 
-// GenerateManPage produces a man page in roff format for hawk.
+// GenerateManPage produces a man page in roff format for graycode.
 // The OPTIONS section is generated from the live Cobra flag set so it
 // never drifts from the actual CLI surface.
 func GenerateManPage() string {
@@ -35,19 +35,19 @@ func GenerateManPage() string {
 	var b strings.Builder
 
 	// Header
-	b.WriteString(fmt.Sprintf(`.TH HAWK 1 "%s" "%s" "User Commands"`, date, ver))
+	b.WriteString(fmt.Sprintf(`.TH GRAYCODE 1 "%s" "%s" "User Commands"`, date, ver))
 	b.WriteString("\n")
 
 	// Name
-	b.WriteString(".SH NAME\nhawk \\- AI coding agent powered by eyrie\n")
+	b.WriteString(".SH NAME\ngraycode \\- AI coding agent powered by eyrie\n")
 
 	// Synopsis
 	b.WriteString(".SH SYNOPSIS\n")
-	b.WriteString(".B hawk\n[\\fIOPTIONS\\fR] [\\fIPROMPT\\fR]\n")
+	b.WriteString(".B graycode\n[\\fIOPTIONS\\fR] [\\fIPROMPT\\fR]\n")
 
 	// Description
 	b.WriteString(".SH DESCRIPTION\n")
-	b.WriteString("hawk is an AI coding agent that reads, writes, and runs code in your terminal.\n")
+	b.WriteString("graycode is an AI coding agent that reads, writes, and runs code in your terminal.\n")
 	fmt.Fprintf(&b, "It connects to %d first-class LLM providers through eyrie, executes tools (file I/O,\n", registeredProviderCount())
 	b.WriteString("shell, git, web search), and manages sessions from a keyboard-driven TUI\n")
 	b.WriteString("or headless mode for scripts and CI.\n")
@@ -81,7 +81,7 @@ func GenerateManPage() string {
 		if sub.Hidden {
 			continue
 		}
-		b.WriteString(fmt.Sprintf(".TP\n\\fBhawk %s\\fR\n%s\n", sub.Use, sub.Short))
+		b.WriteString(fmt.Sprintf(".TP\n\\fBgraycode %s\\fR\n%s\n", sub.Use, sub.Short))
 	}
 
 	// Slash Commands
@@ -99,7 +99,7 @@ func GenerateManPage() string {
 		{"/review", "Code review"},
 		{"/doctor", "Run diagnostics"},
 		{"/tools", "List enabled tools"},
-		{"/quit", "Exit hawk"},
+		{"/quit", "Exit graycode"},
 	}
 	for _, sc := range slashCmds {
 		b.WriteString(fmt.Sprintf(".TP\n\\fB%s\\fR\n%s\n", sc.cmd, sc.desc))
@@ -107,17 +107,17 @@ func GenerateManPage() string {
 
 	// Files
 	b.WriteString(".SH FILES\n")
-	b.WriteString(".TP\n\\fBHawk user config directory\\fR\nGlobal configuration files\n")
+	b.WriteString(".TP\n\\fBGraycode user config directory\\fR\nGlobal configuration files\n")
 	b.WriteString(".TP\n\\fBAGENTS.md\\fR\nProject instructions file\n")
-	b.WriteString(".TP\n\\fBHawk user state directory\\fR\nSaved session data, plans, skills, and runtime state\n")
+	b.WriteString(".TP\n\\fBGraycode user state directory\\fR\nSaved session data, plans, skills, and runtime state\n")
 
 	// Credentials
 	b.WriteString(".SH CREDENTIALS\n")
 	b.WriteString("API keys are stored in the OS secret service (macOS Keychain or Linux GNOME Keyring / KWallet).\n")
-	b.WriteString("Use \\fBhawk\\fR and \\fB/config\\fR to save keys; hawk does not read API keys from .env files.\n")
-	b.WriteString(".TP\n\\fBhawk credentials status\\fR\nShow secure storage status\n")
-	b.WriteString(".TP\n\\fBhawk credentials remove <provider|env-var>\\fR\nRemove a stored API key from the OS secret store\n")
-	b.WriteString(".TP\n\\fBhawk credentials migrate\\fR\nImport legacy plaintext credential files into the OS store\n")
+	b.WriteString("Use \\fBgraycode\\fR and \\fB/config\\fR to save keys; graycode does not read API keys from .env files.\n")
+	b.WriteString(".TP\n\\fBgraycode credentials status\\fR\nShow secure storage status\n")
+	b.WriteString(".TP\n\\fBgraycode credentials remove <provider|env-var>\\fR\nRemove a stored API key from the OS secret store\n")
+	b.WriteString(".TP\n\\fBgraycode credentials migrate\\fR\nImport legacy plaintext credential files into the OS store\n")
 
 	// Environment
 	b.WriteString(".SH ENVIRONMENT\n")
@@ -125,14 +125,14 @@ func GenerateManPage() string {
 	envVars := []struct{ env, desc string }{
 		{"OPENAI_MODEL", "Override default OpenAI model"},
 		{"OLLAMA_BASE_URL", "Ollama server URL (also saved via /config for Ollama)"},
-		{"HAWK_CONFIG_DIR", "Override hawk config directory"},
+		{"GRAYCODE_CONFIG_DIR", "Override graycode config directory"},
 	}
 	for _, ev := range envVars {
 		b.WriteString(fmt.Sprintf(".TP\n\\fB%s\\fR\n%s\n", ev.env, ev.desc))
 	}
 
 	// Authors
-	b.WriteString(".SH AUTHORS\nGrayCode AI <https://github.com/GrayCodeAI/hawk>\n")
+	b.WriteString(".SH AUTHORS\nGrayCode AI <https://github.com/GrayCodeAI/graycode-cli>\n")
 
 	return b.String()
 }

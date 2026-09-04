@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
 )
 
 func TestSkillTool_PolicyAndRendering(t *testing.T) {

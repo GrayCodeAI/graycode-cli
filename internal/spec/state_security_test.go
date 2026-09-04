@@ -13,7 +13,7 @@ func TestSpecSlugRejectsTraversal(t *testing.T) {
 }
 
 func TestWriteStageMetaRejectsTraversal(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	if err := WriteStageMeta("../escape", "specify", "", ""); err == nil {
 		t.Fatal("expected traversal slug to be rejected")
 	}

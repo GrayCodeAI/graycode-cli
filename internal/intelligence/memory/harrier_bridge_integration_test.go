@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	"github.com/GrayCodeAI/hawk/internal/graphjournal"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
+	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
 )
 
 func newTestBridge(t *testing.T) *HarrierBridge {
@@ -65,7 +65,7 @@ func TestHarrierBridge_Recall(t *testing.T) {
 }
 
 func TestHarrierBridgeRecallRecordsPortableContextGraph(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	b := newTestBridge(t)
 	if !b.ready {
 		// TODO: track hermetic harrier availability so this test runs without skipping.
@@ -78,7 +78,7 @@ func TestHarrierBridgeRecallRecordsPortableContextGraph(t *testing.T) {
 	}
 	b.ConfigureGraphObservation(
 		"session-context",
-		graphcontracts.Scope{RepositoryID: "hawk"},
+		graphcontracts.Scope{RepositoryID: "graycode"},
 	)
 	if _, err := b.Recall("private graph context", 500); err != nil {
 		t.Fatalf("Recall() error = %v", err)
@@ -109,7 +109,7 @@ func TestHarrierBridgeRecallRecordsPortableContextGraph(t *testing.T) {
 }
 
 func TestHarrierBridgeCodeSearchRecordsPortableContextGraph(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	b := newTestBridge(t)
 	if !b.ready {
 		// TODO: track hermetic harrier availability so this test runs without skipping.
@@ -134,7 +134,7 @@ func TestHarrierBridgeCodeSearchRecordsPortableContextGraph(t *testing.T) {
 	}
 	b.ConfigureGraphObservation(
 		"session-code-context",
-		graphcontracts.Scope{RepositoryID: "hawk"},
+		graphcontracts.Scope{RepositoryID: "graycode"},
 	)
 	if _, err := b.SearchCode("privateAuthenticationImplementation", 5); err != nil {
 		t.Fatalf("SearchCode() error = %v", err)

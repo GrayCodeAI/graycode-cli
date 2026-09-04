@@ -1,5 +1,5 @@
 // Package lint provides a per-language linter/auto-fix cycle that can be
-// invoked after hawk writes or edits a file. Linters are looked up by
+// invoked after graycode writes or edits a file. Linters are looked up by
 // language (derived from the file extension) and run against a single file.
 // A non-zero linter exit surfaces the captured output so an agent can
 // auto-fix the reported issues.

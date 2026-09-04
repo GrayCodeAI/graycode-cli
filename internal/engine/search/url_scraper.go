@@ -41,7 +41,7 @@ func NewURLScraper() *URLScraper {
 		Enabled:   true,
 		MaxSize:   1 << 20, // 1MB
 		Timeout:   15 * time.Second,
-		UserAgent: "hawk/1.0",
+		UserAgent: "graycode/1.0",
 		Cache:     make(map[string]*ScrapeResult),
 	}
 }

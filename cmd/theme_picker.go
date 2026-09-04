@@ -7,13 +7,13 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	internaltheme "github.com/GrayCodeAI/hawk/internal/theme"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	internaltheme "github.com/GrayCodeAI/graycode-cli/internal/theme"
 )
 
 // detectAutoIsDark returns whether "auto" theme currently resolves to dark.
 func detectAutoIsDark() bool {
-	settings := hawkconfig.LoadGlobalSettings()
+	settings := graycodeconfig.LoadGlobalSettings()
 	return settings.Theme == "auto" || settings.Theme == "system" || internaltheme.DetectOSTheme() != "light"
 }
 
@@ -152,7 +152,7 @@ func (tp *ThemePicker) View() tea.View {
 	}
 
 	titleStyle := lipgloss.NewStyle().
-		Background(hawkColor).
+		Background(graycodeColor).
 		Foreground(lipgloss.Color("#FFFFFF")).
 		Bold(true).
 		Padding(0, 1)
@@ -166,9 +166,9 @@ func (tp *ThemePicker) View() tea.View {
 
 	for i, e := range tp.entries {
 		if i == tp.sel {
-			rowStyle := lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+			rowStyle := lipgloss.NewStyle().Foreground(graycodeColor).Bold(true)
 			b.WriteString(fmt.Sprintf("  ▶ %s\n", rowStyle.Render(e.Name)))
-			b.WriteString(fmt.Sprintf("    %s\n", lipgloss.NewStyle().Foreground(hawkColor).Render(e.Desc)))
+			b.WriteString(fmt.Sprintf("    %s\n", lipgloss.NewStyle().Foreground(graycodeColor).Render(e.Desc)))
 		} else {
 			nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#D0D0D0"))
 			b.WriteString(fmt.Sprintf("    %s\n", nameStyle.Render(e.Name)))

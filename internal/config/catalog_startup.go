@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/env"
+	"github.com/GrayCodeAI/graycode-cli/internal/env"
 )
 
 type gatewayModelCount struct {
@@ -78,7 +78,7 @@ func CatalogReady(ctx context.Context) bool {
 	return h.Error == "" && h.Models > 0 && !h.Stale
 }
 
-// CatalogStartupOptions controls automatic catalog refresh at hawk startup.
+// CatalogStartupOptions controls automatic catalog refresh at graycode startup.
 type CatalogStartupOptions struct {
 	ForceRefresh    bool
 	SkipAutoRefresh bool
@@ -86,7 +86,7 @@ type CatalogStartupOptions struct {
 }
 
 // PrepareCatalogForSession ensures a usable, fresh catalog before chat/print.
-// By default hawk auto-discovers when the cache is missing, empty, or stale.
+// By default graycode auto-discovers when the cache is missing, empty, or stale.
 func PrepareCatalogForSession(ctx context.Context, out io.Writer, opts CatalogStartupOptions) error {
 	h := CatalogHealthReport(ctx)
 	if !catalogNeedsAutoRefresh(h, opts) {
@@ -180,7 +180,7 @@ func AutoRefreshCatalog(ctx context.Context, out io.Writer, verbose bool) error 
 // TryAutoRefreshCatalog refreshes once when the cache cannot be read (e.g. mid-session).
 func TryAutoRefreshCatalog(ctx context.Context) error {
 	if !autoRefreshCatalogEnabled() {
-		return fmt.Errorf("automatic catalog refresh is disabled (HAWK_AUTO_REFRESH_CATALOG=0)")
+		return fmt.Errorf("automatic catalog refresh is disabled (GRAYCODE_AUTO_REFRESH_CATALOG=0)")
 	}
 	return AutoRefreshCatalog(ctx, nil, false)
 }
@@ -209,7 +209,7 @@ func StartupCatalogPrefetch(ctx context.Context) {
 	}()
 }
 
-// DiscoverCatalogAfterSetup runs during optional hawk setup after API keys are saved.
+// DiscoverCatalogAfterSetup runs during optional graycode setup after API keys are saved.
 func DiscoverCatalogAfterSetup(ctx context.Context, out io.Writer) {
 	if out == nil {
 		out = os.Stdout
@@ -225,11 +225,11 @@ func catalogRefreshFailureHint(ctx context.Context) string {
 	if !HasConfiguredDeployment(ctx) {
 		return "No API keys in " + CredentialStoreName() + ". Run /config to paste a key or set up Ollama."
 	}
-	return "Check network access and stored keys (" + CredentialStoreName() + "). Run hawk preflight or /config."
+	return "Check network access and stored keys (" + CredentialStoreName() + "). Run graycode preflight or /config."
 }
 
 func autoRefreshCatalogEnabled() bool {
-	switch strings.ToLower(strings.TrimSpace(env.Getenv("HAWK_AUTO_REFRESH_CATALOG"))) {
+	switch strings.ToLower(strings.TrimSpace(env.Getenv("GRAYCODE_AUTO_REFRESH_CATALOG"))) {
 	case "0", "false", "no", "off":
 		return false
 	default:
@@ -238,7 +238,7 @@ func autoRefreshCatalogEnabled() bool {
 }
 
 func catalogRefreshAlways() bool {
-	switch strings.ToLower(strings.TrimSpace(env.Getenv("HAWK_CATALOG_REFRESH_ALWAYS"))) {
+	switch strings.ToLower(strings.TrimSpace(env.Getenv("GRAYCODE_CATALOG_REFRESH_ALWAYS"))) {
 	case "1", "true", "yes", "on":
 		return true
 	default:

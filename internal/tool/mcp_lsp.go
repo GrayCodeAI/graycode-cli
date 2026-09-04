@@ -9,7 +9,7 @@ import (
 
 // MCPLanguageServerTool provides deep code understanding via MCP language server.
 // Based on isaacphi/mcp-language-server - wraps LSP capabilities as MCP tools.
-// This gives hawk go-to-definition, find-references, and rename capabilities
+// This gives graycode go-to-definition, find-references, and rename capabilities
 // across multiple languages without running a language server directly.
 type MCPLanguageServerTool struct{}
 

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 const maxHistoryEntries = 1000
@@ -15,7 +15,7 @@ func historyFilePath() string {
 	return filepath.Join(storage.StateDir(), "history")
 }
 
-// loadInputHistory loads input history from Hawk's user state directory.
+// loadInputHistory loads input history from Graycode's user state directory.
 // Returns an empty slice if the file does not exist.
 func loadInputHistory() []string {
 	data, err := os.ReadFile(historyFilePath())
@@ -33,7 +33,7 @@ func loadInputHistory() []string {
 	return entries
 }
 
-// saveInputHistory writes the history list to Hawk's user state directory.
+// saveInputHistory writes the history list to Graycode's user state directory.
 // Deduplicates entries (keeping the last occurrence) and caps at maxHistoryEntries.
 func saveInputHistory(history []string) {
 	// Deduplicate: keep the last occurrence of each entry

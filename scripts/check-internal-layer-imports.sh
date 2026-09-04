@@ -7,7 +7,7 @@ check_layer() {
   local directory=$1
   local forbidden=$2
   local matches
-  matches=$(git grep -n -E "github.com/GrayCodeAI/hawk/(${forbidden})([\"/])" -- "${directory}/**/*.go" \
+  matches=$(git grep -n -E "github.com/GrayCodeAI/graycode-cli/(${forbidden})([\"/])" -- "${directory}/**/*.go" \
     ':(exclude)**/*_test.go' 2>/dev/null || true)
   if [[ -n "$matches" ]]; then
     echo "forbidden upward/sideways imports from ${directory}:" >&2
@@ -26,7 +26,7 @@ check_layer internal/platform 'cmd|internal/daemon|internal/engine|internal/brid
 check_layer internal/bridge 'cmd|internal/daemon|internal/engine|internal/platform'
 
 if ((failed)); then
-  echo "Hawk internal layer boundary check failed" >&2
+  echo "Graycode internal layer boundary check failed" >&2
   exit 1
 fi
-echo "Hawk internal layer boundary check passed"
+echo "Graycode internal layer boundary check passed"

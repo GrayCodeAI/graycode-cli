@@ -16,7 +16,7 @@ func TestCreateWorktreeCleansUpOnFailure(t *testing.T) {
 	// We need a git repo to make git worktree add fail in a realistic way.
 	// Use a temp dir with a git init, then pass a nonexistent base branch
 	// so git worktree add fails.
-	tmpRepo, err := os.MkdirTemp("", "hawk-worktree-test-*")
+	tmpRepo, err := os.MkdirTemp("", "graycode-worktree-test-*")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,8 +28,8 @@ func TestCreateWorktreeCleansUpOnFailure(t *testing.T) {
 	}
 	// CI runners have no global git identity; commits fail without one.
 	for _, args := range [][]string{
-		{"git", "-C", tmpRepo, "config", "user.email", "hawk-test@example.com"},
-		{"git", "-C", tmpRepo, "config", "user.name", "hawk test"},
+		{"git", "-C", tmpRepo, "config", "user.email", "graycode-test@example.com"},
+		{"git", "-C", tmpRepo, "config", "user.name", "graycode test"},
 	} {
 		if out, err := exec.CommandContext(context.Background(), args[0], args[1:]...).CombinedOutput(); err != nil {
 			t.Fatalf("git config failed: %v\n%s", err, out)
@@ -73,7 +73,7 @@ func TestCreateWorktreeCleansUpOnFailure(t *testing.T) {
 // removeWorktreeDetached uses its own context (not the cancelled caller
 // context) so cleanup actually runs (C4 fix).
 func TestRemoveWorktreeDetachedSurvivesCancellation(t *testing.T) {
-	tmpRepo, err := os.MkdirTemp("", "hawk-worktree-cleanup-test-*")
+	tmpRepo, err := os.MkdirTemp("", "graycode-worktree-cleanup-test-*")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,8 +85,8 @@ func TestRemoveWorktreeDetachedSurvivesCancellation(t *testing.T) {
 	}
 	// CI runners have no global git identity; commits fail without one.
 	for _, args := range [][]string{
-		{"git", "-C", tmpRepo, "config", "user.email", "hawk-test@example.com"},
-		{"git", "-C", tmpRepo, "config", "user.name", "hawk test"},
+		{"git", "-C", tmpRepo, "config", "user.email", "graycode-test@example.com"},
+		{"git", "-C", tmpRepo, "config", "user.name", "graycode test"},
 	} {
 		if out, err := exec.CommandContext(context.Background(), args[0], args[1:]...).CombinedOutput(); err != nil {
 			t.Fatalf("git config failed: %v\n%s", err, out)
@@ -154,7 +154,7 @@ func TestRemoveWorktreeDetachedSurvivesCancellation(t *testing.T) {
 // reusing an implementation branch), createWorktree checks it out instead of
 // failing.
 func TestCreateWorktreeChecksOutExistingBranch(t *testing.T) {
-	tmpRepo, err := os.MkdirTemp("", "hawk-worktree-existing-*")
+	tmpRepo, err := os.MkdirTemp("", "graycode-worktree-existing-*")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,8 +164,8 @@ func TestCreateWorktreeChecksOutExistingBranch(t *testing.T) {
 		t.Fatalf("git init failed: %v\n%s", err, out)
 	}
 	for _, args := range [][]string{
-		{"git", "-C", tmpRepo, "config", "user.email", "hawk-test@example.com"},
-		{"git", "-C", tmpRepo, "config", "user.name", "hawk test"},
+		{"git", "-C", tmpRepo, "config", "user.email", "graycode-test@example.com"},
+		{"git", "-C", tmpRepo, "config", "user.name", "graycode test"},
 	} {
 		if out, err := exec.CommandContext(context.Background(), args[0], args[1:]...).CombinedOutput(); err != nil {
 			t.Fatalf("git config failed: %v\n%s", err, out)

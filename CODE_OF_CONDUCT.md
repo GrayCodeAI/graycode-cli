@@ -2,7 +2,7 @@
 
 ## Our pledge
 
-We — the maintainers and contributors of the hawk project — pledge to
+We — the maintainers and contributors of the graycode project — pledge to
 make participation in our community a harassment-free experience for everyone,
 regardless of age, body size, visible or invisible disability, ethnicity, sex
 characteristics, gender identity and expression, level of experience,
@@ -45,7 +45,7 @@ offensive, or harmful.
 Instances of abusive, harassing, or otherwise unacceptable behaviour may be
 reported to the maintainers via the contact in `SECURITY.md` or by opening a
 confidential GitHub Security Advisory at
-<https://github.com/GrayCodeAI/hawk/security/advisories>. All
+<https://github.com/GrayCodeAI/graycode-cli/security/advisories>. All
 complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of

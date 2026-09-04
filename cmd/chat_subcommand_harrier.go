@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
 )
 
 // harrierSubcommand implements the /harrier slash command. It shows a

@@ -13,28 +13,28 @@ cd "$ROOT_DIR"
 
 # =============================================================================
 # VARIANT 1 — Support engine (eyrie, harrier, shrike, swift, kestrel, merlin).
-# Engines are peers: they may depend on eagle and falcon,
-# but never on hawk/internal/* or another engine.
+# Engines are peers: they may depend on falcon,
+# but never on graycode/internal/* or another engine.
 # =============================================================================
-FORBIDDEN_HAWK='github\.com/GrayCodeAI/hawk/(internal/|shared/types)'
+FORBIDDEN_GRAYCODE='github\.com/GrayCodeAI/graycode-cli/(internal/|shared/types)'
 FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(harrier|shrike|swift|kestrel|merlin)(/|")'
 # ^ list every OTHER engine here — never include yourself.
 
 exit_code=0
 
 if command -v rg >/dev/null 2>&1; then
-  violations="$(rg -n "$FORBIDDEN_HAWK" --glob '*.go' . || true)"
+  violations="$(rg -n "$FORBIDDEN_GRAYCODE" --glob '*.go' . || true)"
   engine_violations="$(rg -n "$FORBIDDEN_ENGINES" --glob '*.go' . || true)"
 else
-  violations="$(grep -rn --include='*.go' -E "$FORBIDDEN_HAWK" . || true)"
+  violations="$(grep -rn --include='*.go' -E "$FORBIDDEN_GRAYCODE" . || true)"
   engine_violations="$(grep -rn --include='*.go' -E "$FORBIDDEN_ENGINES" . || true)"
 fi
 
 if [[ -n "${violations}" ]]; then
-  echo "forbidden Hawk imports found:"
+  echo "forbidden Graycode imports found:"
   echo "${violations}"
   echo
-  echo "support repos must use eagle or local contracts, not hawk/internal or removed hawk/shared/types"
+  echo "support repos must use local contracts, not graycode/internal or removed graycode/shared/types"
   exit_code=1
 fi
 
@@ -53,7 +53,7 @@ fi
 echo "ecosystem boundary guard passed"
 
 # =============================================================================
-# VARIANT 2 — Foundation repo (eagle, falcon).
+# VARIANT 2 — Foundation repo (falcon).
 # Foundation repos sit below everything: zero graycode-eco dependencies at all.
 # =============================================================================
 #
@@ -70,7 +70,7 @@ echo "ecosystem boundary guard passed"
 #   echo "forbidden graycode-eco imports found in {{OWN_MODULE}}:"
 #   echo "${violations}"
 #   echo
-#   echo "{{OWN_MODULE}} is a foundation repo — it must not depend on hawk, engines, or any other GrayCodeAI/* package"
+#   echo "{{OWN_MODULE}} is a foundation repo — it must not depend on graycode, engines, or any other GrayCodeAI/* package"
 #   exit 1
 # fi
 #
@@ -78,12 +78,12 @@ echo "ecosystem boundary guard passed"
 
 # =============================================================================
 # VARIANT 3 — SDK / skills consumer (sparrow, robin,
-# starling). Consumers may depend on hawk's public surfaces
-# only — never on a support engine directly, and never on hawk/internal.
+# starling). Consumers may depend on graycode's public surfaces
+# only — never on a support engine directly, and never on graycode/internal.
 # =============================================================================
 #
 # FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(eyrie|harrier|shrike|swift|kestrel|merlin)(/|")'
-# FORBIDDEN_INTERNAL='github\.com/GrayCodeAI/hawk/internal'
+# FORBIDDEN_INTERNAL='github\.com/GrayCodeAI/graycode-cli/internal'
 #
 # (same rg/grep + report pattern as Variant 1, naming "SDKs/skills must go
-# through hawk's public API, not engines directly" as the violation message)
+# through graycode's public API, not engines directly" as the violation message)

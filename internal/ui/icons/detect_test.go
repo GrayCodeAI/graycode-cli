@@ -4,30 +4,30 @@ import (
 	"testing"
 )
 
-func TestMode_HAWKIconsNerdOverrides(t *testing.T) {
-	t.Setenv("HAWK_ICONS", "nerd")
+func TestMode_GRAYCODEIconsNerdOverrides(t *testing.T) {
+	t.Setenv("GRAYCODE_ICONS", "nerd")
 	t.Setenv("TERM", "dumb")
 	t.Setenv("NO_COLOR", "1")
-	// Even with NO_COLOR and a dumb TERM, HAWK_ICONS=nerd wins.
+	// Even with NO_COLOR and a dumb TERM, GRAYCODE_ICONS=nerd wins.
 	withInjectedTTY(t, true)
 	SetMode(ModeAuto)
 	if Mode() != ModeNerd {
-		t.Errorf("HAWK_ICONS=nerd should win, got %s", Mode())
+		t.Errorf("GRAYCODE_ICONS=nerd should win, got %s", Mode())
 	}
 }
 
-func TestMode_HAWKIconsAsciiOverrides(t *testing.T) {
-	t.Setenv("HAWK_ICONS", "ascii")
+func TestMode_GRAYCODEIconsAsciiOverrides(t *testing.T) {
+	t.Setenv("GRAYCODE_ICONS", "ascii")
 	t.Setenv("TERM", "xterm-256color")
 	withInjectedTTY(t, true)
 	SetMode(ModeAuto)
 	if Mode() != ModeASCII {
-		t.Errorf("HAWK_ICONS=ascii should win, got %s", Mode())
+		t.Errorf("GRAYCODE_ICONS=ascii should win, got %s", Mode())
 	}
 }
 
 func TestMode_NoColorForcesAscii(t *testing.T) {
-	t.Setenv("HAWK_ICONS", "")
+	t.Setenv("GRAYCODE_ICONS", "")
 	t.Setenv("NO_COLOR", "1")
 	t.Setenv("TERM", "xterm-256color")
 	t.Setenv("TERM_PROGRAM", "")
@@ -40,7 +40,7 @@ func TestMode_NoColorForcesAscii(t *testing.T) {
 }
 
 func TestMode_NonTTYForcesAscii(t *testing.T) {
-	t.Setenv("HAWK_ICONS", "")
+	t.Setenv("GRAYCODE_ICONS", "")
 	t.Setenv("NO_COLOR", "")
 	t.Setenv("TERM", "xterm-256color")
 	t.Setenv("TERM_PROGRAM", "")
@@ -55,7 +55,7 @@ func TestMode_NonTTYForcesAscii(t *testing.T) {
 func TestMode_TTYDefaultsToNerd(t *testing.T) {
 	for _, term := range []string{"xterm-256color", "tmux-256color", "screen-256color", "alacritty", "wezterm", "kitty", "ghostty"} {
 		t.Run(term, func(t *testing.T) {
-			t.Setenv("HAWK_ICONS", "")
+			t.Setenv("GRAYCODE_ICONS", "")
 			t.Setenv("NO_COLOR", "")
 			t.Setenv("TERM", term)
 			t.Setenv("TERM_PROGRAM", "")
@@ -72,7 +72,7 @@ func TestMode_TTYDefaultsToNerd(t *testing.T) {
 func TestMode_TERMProgramDoesNotAffectMode(t *testing.T) {
 	for _, program := range []string{"iTerm.app", "WezTerm", "Ghostty", "vscode", "hyper"} {
 		t.Run(program, func(t *testing.T) {
-			t.Setenv("HAWK_ICONS", "")
+			t.Setenv("GRAYCODE_ICONS", "")
 			t.Setenv("NO_COLOR", "")
 			t.Setenv("TERM", "dumb")
 			t.Setenv("LC_TERMINAL", "")
@@ -87,7 +87,7 @@ func TestMode_TERMProgramDoesNotAffectMode(t *testing.T) {
 }
 
 func TestMode_UTF8LocaleDoesNotAffectMode(t *testing.T) {
-	t.Setenv("HAWK_ICONS", "")
+	t.Setenv("GRAYCODE_ICONS", "")
 	t.Setenv("NO_COLOR", "")
 	t.Setenv("TERM", "xterm")
 	t.Setenv("TERM_PROGRAM", "")
@@ -102,7 +102,7 @@ func TestMode_UTF8LocaleDoesNotAffectMode(t *testing.T) {
 }
 
 func TestMode_InteractiveTTYDefaultsToNerd(t *testing.T) {
-	t.Setenv("HAWK_ICONS", "")
+	t.Setenv("GRAYCODE_ICONS", "")
 	t.Setenv("NO_COLOR", "")
 	t.Setenv("TERM", "dumb")
 	t.Setenv("TERM_PROGRAM", "")
@@ -118,7 +118,7 @@ func TestMode_InteractiveTTYDefaultsToNerd(t *testing.T) {
 }
 
 func TestSetMode_OverridesCaching(t *testing.T) {
-	t.Setenv("HAWK_ICONS", "")
+	t.Setenv("GRAYCODE_ICONS", "")
 	t.Setenv("NO_COLOR", "")
 	t.Setenv("TERM", "xterm-256color")
 	withInjectedTTY(t, true)

@@ -7,12 +7,12 @@ import (
 	"os"
 	"strings"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	internaltheme "github.com/GrayCodeAI/hawk/internal/theme"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	internaltheme "github.com/GrayCodeAI/graycode-cli/internal/theme"
 	"github.com/mattn/go-runewidth"
 	"golang.org/x/term"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 const (
@@ -23,9 +23,9 @@ const (
 	reset = "\033[0m"
 )
 
-// Welcome prints the hawk welcome banner.
+// Welcome prints the graycode welcome banner.
 func Welcome(version string) {
-	hawkC := internaltheme.BrandANSI
+	graycodeC := internaltheme.BrandANSI
 
 	totalW := 80
 	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 40 {
@@ -55,7 +55,7 @@ func Welcome(version string) {
 	fmt.Println()
 	for _, line := range art {
 		w := runewidth.StringWidth(line)
-		fmt.Println(center(hawkC+line+reset, w))
+		fmt.Println(center(graycodeC+line+reset, w))
 	}
 
 	fmt.Println()
@@ -63,28 +63,28 @@ func Welcome(version string) {
 	fmt.Println(center(dim+verLine+reset, len(verLine)))
 
 	fmt.Println()
-	fmt.Println(center(bold+"Welcome to Hawk!"+reset, 16))
+	fmt.Println(center(bold+"Welcome to Graycode!"+reset, 16))
 	fmt.Println(center(dim+"Built for developers — one machine, keychain credentials"+reset, 48))
 
 	fmt.Println()
 	fmt.Println(center(bold+"Quick start:"+reset, 12))
-	fmt.Println(center(hawkC+"hawk"+reset+"                            interactive REPL (/config on first run)", 58))
-	fmt.Println(center(hawkC+"hawk path"+reset+"                       check readiness", 49))
-	fmt.Println(center(hawkC+"hawk exec"+reset+" \"explain this repo\"   headless / CI (add --json --ephemeral)", 58))
-	fmt.Println(center(hawkC+"hawk"+reset+" -c                          continue last session", 54))
-	fmt.Println(center(hawkC+"/config"+reset+"                         API key (keychain) + model", 54))
+	fmt.Println(center(graycodeC+"graycode"+reset+"                            interactive REPL (/config on first run)", 58))
+	fmt.Println(center(graycodeC+"graycode path"+reset+"                       check readiness", 49))
+	fmt.Println(center(graycodeC+"graycode exec"+reset+" \"explain this repo\"   headless / CI (add --json --ephemeral)", 58))
+	fmt.Println(center(graycodeC+"graycode"+reset+" -c                          continue last session", 54))
+	fmt.Println(center(graycodeC+"/config"+reset+"                         API key (keychain) + model", 54))
 
 	fmt.Println()
 	fmt.Println(center(bold+"Control plane (in chat):"+reset, 24))
-	fmt.Println(center(hawkC+"/start"+reset+"  ·  "+hawkC+"/mode plan|act"+reset+"  ·  "+hawkC+"/isolation"+reset+"  ·  "+hawkC+"/trust"+reset, 52))
+	fmt.Println(center(graycodeC+"/start"+reset+"  ·  "+graycodeC+"/mode plan|act"+reset+"  ·  "+graycodeC+"/isolation"+reset+"  ·  "+graycodeC+"/trust"+reset, 52))
 
 	fmt.Println()
-	fmt.Println(center(hawkC+"? for shortcuts"+reset, 15))
+	fmt.Println(center(graycodeC+"? for shortcuts"+reset, 15))
 	fmt.Println()
 }
 
-// NeedsSetup returns true only when hawk setup is explicitly requested.
-// Normal hawk startup uses /config inside the TUI instead of blocking setup.
+// NeedsSetup returns true only when graycode setup is explicitly requested.
+// Normal graycode startup uses /config inside the TUI instead of blocking setup.
 func NeedsSetup() bool {
 	return false
 }
@@ -95,7 +95,7 @@ func RunSetup() error {
 
 	fmt.Println(teal + bold + "  Developer setup" + reset)
 	fmt.Println()
-	fmt.Println(dim + "  Keys are stored in " + hawkconfig.CredentialStoreName() + ", not .env or shell env." + reset)
+	fmt.Println(dim + "  Keys are stored in " + graycodeconfig.CredentialStoreName() + ", not .env or shell env." + reset)
 	fmt.Println()
 
 	// Provider selection
@@ -149,7 +149,7 @@ func RunSetup() error {
 	fmt.Printf("  Selected: %s%s%s\n", teal, selected.name, reset)
 
 	// API key input
-	if selected.envKey != "" && !hawkconfig.HasStoredCredentialForProvider(context.Background(), selected.name) {
+	if selected.envKey != "" && !graycodeconfig.HasStoredCredentialForProvider(context.Background(), selected.name) {
 		fmt.Println()
 		fmt.Printf("  Enter your %s API key:\n", selected.name)
 		fmt.Printf("  %s(Get one at the provider's website)%s\n", dim, reset)
@@ -159,7 +159,7 @@ func RunSetup() error {
 		apiKey = strings.TrimSpace(apiKey)
 
 		if apiKey == "" {
-			fmt.Println(red + "  No API key entered. Run hawk and use /config to save a key securely." + reset)
+			fmt.Println(red + "  No API key entered. Run graycode and use /config to save a key securely." + reset)
 			return fmt.Errorf("no API key")
 		}
 
@@ -173,23 +173,23 @@ func RunSetup() error {
 		}
 
 		ctx := context.Background()
-		if err := hawkconfig.PersistAPIKey(ctx, selected.envKey, apiKey); err != nil {
+		if err := graycodeconfig.PersistAPIKey(ctx, selected.envKey, apiKey); err != nil {
 			fmt.Printf("  %sWarning: couldn't save API key: %s%s\n", dim, err, reset)
 			return err
 		}
 
-		if err := hawkconfig.SetActiveProvider(context.Background(), selected.name); err != nil {
+		if err := graycodeconfig.SetActiveProvider(context.Background(), selected.name); err != nil {
 			fmt.Printf("  %sWarning: couldn't save provider: %s%s\n", dim, err, reset)
 		}
 
 		fmt.Println()
-		fmt.Printf("  %s"+icons.CheckBold()+" API key saved to %s%s\n", teal, hawkconfig.CredentialStoreName(), reset)
+		fmt.Printf("  %s"+icons.CheckBold()+" API key saved to %s%s\n", teal, graycodeconfig.CredentialStoreName(), reset)
 	} else if selected.name == "ollama" {
-		_ = hawkconfig.SetActiveProvider(context.Background(), "ollama")
+		_ = graycodeconfig.SetActiveProvider(context.Background(), "ollama")
 		fmt.Printf("  %s"+icons.CheckBold()+" Ollama selected (make sure ollama is running)%s\n", teal, reset)
 	} else {
-		_ = hawkconfig.SetActiveProvider(context.Background(), selected.name)
-		fmt.Printf("  %s"+icons.CheckBold()+" Using %s (credential already in %s)%s\n", teal, selected.name, hawkconfig.CredentialStoreName(), reset)
+		_ = graycodeconfig.SetActiveProvider(context.Background(), selected.name)
+		fmt.Printf("  %s"+icons.CheckBold()+" Using %s (credential already in %s)%s\n", teal, selected.name, graycodeconfig.CredentialStoreName(), reset)
 	}
 
 	// Security notes
@@ -197,8 +197,8 @@ func RunSetup() error {
 	fmt.Println(dim + "  ─────────────────────────────────────────" + reset)
 	fmt.Println()
 	fmt.Println("  " + bold + "Security notes:" + reset)
-	fmt.Println("  1. hawk can make mistakes — always review changes")
-	fmt.Println("  2. hawk will ask before running commands or writing files")
+	fmt.Println("  1. graycode can make mistakes — always review changes")
+	fmt.Println("  2. graycode will ask before running commands or writing files")
 	fmt.Println("  3. Use /autonomy allow <tool> to auto-approve tools")
 	fmt.Println()
 	fmt.Println(dim + "  ─────────────────────────────────────────" + reset)
@@ -206,7 +206,7 @@ func RunSetup() error {
 	fmt.Print("  Press Enter to start... ")
 	_, _ = reader.ReadString('\n')
 
-	hawkconfig.DiscoverCatalogAfterSetup(context.Background(), os.Stdout)
+	graycodeconfig.DiscoverCatalogAfterSetup(context.Background(), os.Stdout)
 
 	return nil
 }

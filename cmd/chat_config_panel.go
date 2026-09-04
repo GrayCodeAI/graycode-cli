@@ -9,8 +9,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 func configModelChoices(opts []configModelOption, showProvider bool) []string {
@@ -87,11 +87,11 @@ func (m chatModel) configProviderKeyView() string {
 	title := icons.Key() + " Paste API key"
 	hint := "validates with provider API · stored in " + credentialsStoreLabel()
 	if providerName != "" {
-		title = icons.Key() + " " + hawkconfig.GatewayDisplayName(providerName)
+		title = icons.Key() + " " + graycodeconfig.GatewayDisplayName(providerName)
 		hint = "paste key for this gateway only · " + hint
 	}
-	if providerName == hawkconfig.ProviderXiaomiTokenPlan {
-		reg := hawkconfig.XiaomiTokenPlanRegionLabel()
+	if providerName == graycodeconfig.ProviderXiaomiTokenPlan {
+		reg := graycodeconfig.GatewayRegionLabel(graycodeconfig.ProviderXiaomiTokenPlan)
 		if reg == "" {
 			reg = "not set — esc and pick region with g or enter on gateway row"
 		}
@@ -198,7 +198,7 @@ func (m chatModel) configModelsTabView() string {
 		gw = strings.TrimSpace(m.session.Provider())
 	}
 	if gw != "" {
-		body.WriteString(renderConfigGatewayLine(hawkconfig.GatewayDisplayName(gw)) + "\n\n")
+		body.WriteString(renderConfigGatewayLine(graycodeconfig.GatewayDisplayName(gw)) + "\n\n")
 	}
 
 	if len(m.configModelOptions) > 0 || m.configModelSearchActive {
@@ -245,15 +245,15 @@ func (m chatModel) startConfigModelSearch() (chatModel, tea.Cmd) {
 	m.configInput.EchoCharacter = 0
 	m.configInput.SetStyles(textinput.Styles{
 		Focused: textinput.StyleState{
-			Prompt: lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Prompt: lipgloss.NewStyle().Foreground(graycodeColor).Bold(true),
 			Text:   lipgloss.NewStyle().Foreground(textPrimary),
 		},
 		Blurred: textinput.StyleState{
-			Prompt: lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Prompt: lipgloss.NewStyle().Foreground(graycodeColor).Bold(true),
 			Text:   lipgloss.NewStyle().Foreground(textPrimary),
 		},
 		Cursor: textinput.CursorStyle{
-			Color: hawkColor,
+			Color: graycodeColor,
 		},
 	})
 	m.configInput.Focus()
@@ -333,11 +333,11 @@ func (m chatModel) configActiveModelID() string {
 			return modelName
 		}
 	}
-	return strings.TrimSpace(hawkconfig.ActiveModel(context.Background()))
+	return strings.TrimSpace(graycodeconfig.ActiveModel(context.Background()))
 }
 
 func modelOptionIsActive(opt configModelOption, activeModelID string) bool {
-	return modelOptionIsActiveResolved(opt, activeModelID, hawkconfig.CanonicalModelID(context.Background(), activeModelID))
+	return modelOptionIsActiveResolved(opt, activeModelID, graycodeconfig.CanonicalModelID(context.Background(), activeModelID))
 }
 
 func modelOptionIsActiveResolved(opt configModelOption, activeModelID, activeCanonicalID string) bool {
@@ -364,7 +364,7 @@ func (m chatModel) focusConfigActiveModelSelection() chatModel {
 		return m
 	}
 	activeID := m.configActiveModelID()
-	activeCanonicalID := hawkconfig.CanonicalModelID(context.Background(), activeID)
+	activeCanonicalID := graycodeconfig.CanonicalModelID(context.Background(), activeID)
 	windowSize := m.configVisibleRows()
 	for i, opt := range opts {
 		if modelOptionIsActiveResolved(opt, activeID, activeCanonicalID) {
@@ -405,7 +405,7 @@ func (m chatModel) configModelsBody() string {
 	total := len(opts)
 	allTotal := len(m.configModelOptions)
 	activeModelID := m.configActiveModelID()
-	activeCanonicalID := hawkconfig.CanonicalModelID(context.Background(), activeModelID)
+	activeCanonicalID := graycodeconfig.CanonicalModelID(context.Background(), activeModelID)
 	windowSize := m.configVisibleRows()
 	maxScroll := maxInt(0, total-windowSize)
 	if m.configScroll > maxScroll {
@@ -446,7 +446,7 @@ func (m chatModel) configModelsBody() string {
 			return b.String()
 		}
 		b.WriteString(mutedStyle.Render("  No models available.") + "\n")
-		if hint := hawkconfig.CatalogEmptyHint(context.Background()); hint != "" {
+		if hint := graycodeconfig.CatalogEmptyHint(context.Background()); hint != "" {
 			b.WriteString(mutedStyle.Render("  "+hint) + "\n")
 		}
 		if gw == configProviderOllama {
@@ -523,15 +523,15 @@ func (m chatModel) startConfigEntry(kind, provider string) (chatModel, tea.Cmd) 
 	m.configInput.EchoCharacter = '*'
 	m.configInput.SetStyles(textinput.Styles{
 		Focused: textinput.StyleState{
-			Prompt: lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Prompt: lipgloss.NewStyle().Foreground(graycodeColor).Bold(true),
 			Text:   lipgloss.NewStyle().Foreground(textPrimary),
 		},
 		Blurred: textinput.StyleState{
-			Prompt: lipgloss.NewStyle().Foreground(hawkColor).Bold(true),
+			Prompt: lipgloss.NewStyle().Foreground(graycodeColor).Bold(true),
 			Text:   lipgloss.NewStyle().Foreground(textPrimary),
 		},
 		Cursor: textinput.CursorStyle{
-			Color: hawkColor,
+			Color: graycodeColor,
 		},
 	})
 	m.configInput.Focus()
@@ -580,7 +580,7 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 			m.restoreChatInput()
 			return m, nil
 		}
-		if providerName == hawkconfig.ProviderXiaomiTokenPlan && hawkconfig.NeedsXiaomiTokenPlanRegion(providerName) {
+		if providerName == graycodeconfig.ProviderXiaomiTokenPlan && graycodeconfig.NeedsGatewayRegion(providerName) {
 			m.configEntry = configEntryNone
 			m.wipeConfigKeyInput()
 			m.restoreChatInput()
@@ -592,7 +592,7 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 		m.configProvider = ""
 		m.wipeConfigKeyInput()
 		m.restoreChatInput()
-		inference, err := hawkconfig.CredentialInferenceForProvider(providerName)
+		inference, err := graycodeconfig.CredentialInferenceForProvider(providerName)
 		if err != nil {
 			m.configTab = configTabGateways
 			m.configNotice = "Could not save key: " + sanitizeConfigNotice(err.Error())
@@ -604,7 +604,7 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 		m.configPostSaveKeysProvider = providerName
 		m.configSaving = true
 		notice := fmt.Sprintf("Validating key for %s…", inference.DisplayName)
-		if hint := hawkconfig.CredentialGuidance(providerName, value); hint != "" {
+		if hint := graycodeconfig.CredentialGuidance(providerName, value); hint != "" {
 			notice = hint + " · " + notice
 		}
 		m.configNotice = notice
@@ -867,7 +867,7 @@ func (m chatModel) handleConfigKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
 				return m.startConfigKeyView(row.ID), nil
 			}
 		case "g", "G":
-			if row, ok := m.selectedConfigGateway(); ok && row.ID == hawkconfig.ProviderXiaomiTokenPlan {
+			if row, ok := m.selectedConfigGateway(); ok && row.ID == graycodeconfig.ProviderXiaomiTokenPlan {
 				return m.startConfigGatewayRegion(row.ID), nil
 			}
 		}
@@ -960,7 +960,7 @@ func (m chatModel) selectConfigModelFromOptions(opts []configModelOption) (chatM
 	}
 	selected := opts[m.configSel]
 	modelID := selected.ID
-	if err := hawkconfig.SetGlobalSetting("model", modelID); err != nil {
+	if err := graycodeconfig.SetGlobalSetting("model", modelID); err != nil {
 		m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		return m.closeConfigPanel(), nil
 	}
@@ -976,7 +976,7 @@ func (m chatModel) selectConfigModelFromOptions(opts []configModelOption) (chatM
 		provider = prov
 	}
 	if provider != "" {
-		if err := hawkconfig.SetGlobalSetting("provider", provider); err != nil {
+		if err := graycodeconfig.SetGlobalSetting("provider", provider); err != nil {
 			m.messages = append(m.messages, displayMsg{role: "error", content: "model set, but saving provider failed: " + err.Error()})
 		}
 	}
@@ -986,7 +986,7 @@ func (m chatModel) selectConfigModelFromOptions(opts []configModelOption) (chatM
 	next.invalidateConnStatus()
 	next = next.stopConfigModelSearch(true)
 	next = next.closeConfigPanel()
-	if !hawkconfig.EvaluateSetupCached(context.Background()).NeedsSetup {
+	if !graycodeconfig.EvaluateSetupCached(context.Background()).NeedsSetup {
 		next.messages = append(next.messages, displayMsg{
 			role:    "setup_complete",
 			content: next.session.Model(),
@@ -1001,19 +1001,19 @@ func (m chatModel) toggleConfigModelThinking() (chatModel, tea.Cmd) {
 		return m, nil
 	}
 	selected := opts[m.configSel]
-	if !hawkconfig.ModelCapabilitySupportsThinking(selected.Capabilities) {
+	if !graycodeconfig.ModelCapabilitySupportsThinking(selected.Capabilities) {
 		m.configNotice = "Thinking not supported for this model"
 		return m, nil
 	}
-	settings := hawkconfig.LoadSettings()
-	pref := hawkconfig.ThinkingPrefForModel(settings, selected.ID)
+	settings := graycodeconfig.LoadSettings()
+	pref := graycodeconfig.ThinkingPrefForModel(settings, selected.ID)
 	// Current effective display: unset → off. Toggle flips that.
 	currentlyOn := false
 	if pref != nil {
 		currentlyOn = *pref
 	}
 	next := !currentlyOn
-	if err := hawkconfig.SetModelThinking(selected.ID, next); err != nil {
+	if err := graycodeconfig.SetModelThinking(selected.ID, next); err != nil {
 		m.configNotice = err.Error()
 		return m, nil
 	}
@@ -1027,7 +1027,7 @@ func (m chatModel) toggleConfigModelThinking() (chatModel, tea.Cmd) {
 		m.configNotice = label + " thinking → off"
 	}
 	// If this is the active model, apply immediately.
-	if m.session != nil && modelOptionIsActiveResolved(selected, m.configActiveModelID(), hawkconfig.CanonicalModelID(context.Background(), m.configActiveModelID())) {
+	if m.session != nil && modelOptionIsActiveResolved(selected, m.configActiveModelID(), graycodeconfig.CanonicalModelID(context.Background(), m.configActiveModelID())) {
 		m.session.SetThinkingEnabled(&next)
 	}
 	return m, nil
@@ -1037,7 +1037,7 @@ func (m chatModel) applyModelThinkingPref(selected configModelOption) {
 	if m.session == nil {
 		return
 	}
-	settings := hawkconfig.LoadSettings()
+	settings := graycodeconfig.LoadSettings()
 	provider := strings.TrimSpace(m.configModelProvider)
 	if provider == "" {
 		provider = strings.TrimSpace(selected.GatewayID)
@@ -1045,5 +1045,5 @@ func (m chatModel) applyModelThinkingPref(selected configModelOption) {
 	if provider == "" {
 		provider = strings.TrimSpace(selected.ProviderID)
 	}
-	m.session.SetThinkingEnabled(hawkconfig.ResolveThinkingForModel(settings, selected.ID, provider))
+	m.session.SetThinkingEnabled(graycodeconfig.ResolveThinkingForModel(settings, selected.ID, provider))
 }

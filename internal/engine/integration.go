@@ -8,15 +8,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/ctxmgr"
-	"github.com/GrayCodeAI/hawk/internal/engine/token"
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
-	"github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/ctxmgr"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/token"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // ---------------------------------------------------------------------------
-// Integration Pipeline — connects hawk's subsystems into working pipelines.
+// Integration Pipeline — connects graycode's subsystems into working pipelines.
 //
 // The pipeline orchestrates pre-query, post-response, post-tool, and session
 // end phases. Each phase delegates to the relevant subsystems, gathers their
@@ -199,7 +199,7 @@ type SessionSummary struct {
 // pipeline orchestrator.
 func NewIntegrationPipeline() *IntegrationPipeline {
 	// Resolve the user's home dir once so the learning-pipeline stores do not
-	// leak into <cwd>/.hawk/ when hawk is run from inside its own source tree.
+	// leak into <cwd>/.graycode/ when graycode is run from inside its own source tree.
 	// See L2 in docs/plans/fix-critical-and-high-review.md.
 	stateRoot := storage.StateDir()
 
@@ -375,7 +375,7 @@ func (p *IntegrationPipeline) PostResponse(response string, messages []types.Eyr
 	// 3. Detect file mentions
 	result.MentionedFiles = p.FileMentionDetector.DetectMentions(result.FormattedResponse)
 
-	// 4. Redact secrets from output (hawk's patterns + shrike's 27 patterns)
+	// 4. Redact secrets from output (graycode's patterns + shrike's 27 patterns)
 	result.FormattedResponse = p.OutputRedactor.Redact(result.FormattedResponse)
 	secretDetector := token.DefaultSecretDetector()
 	secretMatches := secretDetector.DetectSecrets(result.FormattedResponse)

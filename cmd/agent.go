@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"text/tabwriter"
 
-	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
+	"github.com/GrayCodeAI/graycode-cli/internal/multiagent/agents"
 	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -16,7 +16,7 @@ import (
 var agentCmd = &cobra.Command{
 	Use:   "agent",
 	Short: "Manage custom agent personas",
-	Long:  "Create, list, and manage custom agent personas stored in Hawk user state.",
+	Long:  "Create, list, and manage custom agent personas stored in Graycode user state.",
 }
 
 var agentListJSON bool
@@ -81,7 +81,7 @@ func runAgentList(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 	if len(all) == 0 {
-		fmt.Printf("No agents found. Create one with: hawk agent create <name>\n")
+		fmt.Printf("No agents found. Create one with: graycode agent create <name>\n")
 		fmt.Printf("Agent directory: %s\n", agents.DefaultDir())
 		return nil
 	}

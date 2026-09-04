@@ -1,12 +1,12 @@
 # Keyboard Shortcuts
 
-Reference for key bindings in the Hawk TUI. Bindings are built-in and cannot currently be remapped.
+Reference for key bindings in the Graycode TUI. Bindings are built-in and cannot currently be remapped.
 
 ---
 
 ## Input Modes
 
-Hawk has two input modes that control how you navigate the scrollback:
+Graycode has two input modes that control how you navigate the scrollback:
 
 - **Simple mode** (default): Arrow keys for navigation, `Shift+Arrow` for turn navigation, `Space` to focus the prompt
 - **Vim mode** (opt-in): `j`/`k` for navigation, `H`/`L` for turn navigation, `h`/`l` for fold, `Tab` to focus the prompt
@@ -17,7 +17,7 @@ Simple mode is active by default. To switch to Vim mode:
 /vim-mode
 ```
 
-Or set `vim_mode = true` under `[ui]` in `~/.hawk/settings.json`:
+Or set `vim_mode = true` under `[ui]` in `~/.graycode/settings.json`:
 
 ```json
 {

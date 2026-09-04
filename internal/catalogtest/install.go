@@ -20,7 +20,7 @@ var (
 // Call from TestMain; returns cleanup to unset env.
 func InstallGlobal() (cleanup func()) {
 	globalOnce.Do(func() {
-		dir, err := os.MkdirTemp("", "hawk-catalog-*")
+		dir, err := os.MkdirTemp("", "graycode-catalog-*")
 		if err != nil {
 			// In TestMain, we can't use t.Fatal, so log and exit.
 			// This is a test helper, so panicking is acceptable but we'll use a clearer message.

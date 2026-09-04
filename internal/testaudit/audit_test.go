@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-// repoRoot returns the hawk repo root directory.
+// repoRoot returns the graycode repo root directory.
 // It walks up from the test file's location to find go.mod.
 func repoRoot(t *testing.T) string {
 	t.Helper()
@@ -52,8 +52,8 @@ var getEnvExemptions = map[string]bool{
 	"terminal_context.go":        true, // TMUX, STY, TERM_PROGRAM for terminal detection
 	"sandbox/seatbelt.go":        true, // HOME, GOPATH for sandbox policy
 	"prompts/loader.go":          true, // SHELL for prompt context
-	"health/diagnostics.go":      true, // SHELL, HAWK_MODEL for health checks
-	"tool/safety.go":             true, // HAWK_CONFIG_DIR for security checks
+	"health/diagnostics.go":      true, // SHELL, GRAYCODE_MODEL for health checks
+	"tool/safety.go":             true, // GRAYCODE_CONFIG_DIR for security checks
 	"tool/treesitter.go":         true, // HOME for grammar dir (uses os.UserHomeDir)
 	"tool/web_search_brave.go":   true, // BRAVE_SEARCH_API_KEY
 	"tool/web_search_searxng.go": true, // SEARXNG_URL
@@ -184,7 +184,7 @@ func TestNoDirectOsGetenvInInternal(t *testing.T) {
 	t.Logf("Total os.Getenv violations in internal/: %d (logged as tech debt)", violationCount)
 }
 
-// TestNoDirectLowerEyrieImports verifies production Hawk code uses only
+// TestNoDirectLowerEyrieImports verifies production Graycode code uses only
 // Eyrie's stable engine facade. Tests may import lower packages for fixtures.
 func TestNoDirectLowerEyrieImports(t *testing.T) {
 	root := repoRoot(t)
@@ -207,7 +207,7 @@ func TestNoDirectLowerEyrieImports(t *testing.T) {
 					strings.HasPrefix(path, "github.com/GrayCodeAI/eyrie/engine/") {
 					continue
 				}
-				// Hawk uses the full vendored Eyrie API surface for provider,
+				// Graycode uses the full vendored Eyrie API surface for provider,
 				// graph, and tooling contracts that the engine facade does not
 				// re-export.
 				switch path {
@@ -216,8 +216,8 @@ func TestNoDirectLowerEyrieImports(t *testing.T) {
 					"github.com/GrayCodeAI/eyrie/tools":
 					continue
 				}
-				// The gateway package is Hawk's single Eyrie boundary; it may
-				// import eyrie/credentials to declare Hawk's OS keychain service
+				// The gateway package is Graycode's single Eyrie boundary; it may
+				// import eyrie/credentials to declare Graycode's OS keychain service
 				// name (the host-neutral default would otherwise orphan existing
 				// secrets). All other production code must use eyrie/engine only.
 				if strings.HasPrefix(rel, "internal/provider/gateway/") &&
@@ -231,9 +231,9 @@ func TestNoDirectLowerEyrieImports(t *testing.T) {
 	}
 }
 
-// TestNoLazyProviderConstructionInHawk verifies Hawk does not construct lazy
+// TestNoLazyProviderConstructionInGraycode verifies Graycode does not construct lazy
 // provider transports directly. Provider/model transport resolution belongs in Eyrie.
-func TestNoLazyProviderConstructionInHawk(t *testing.T) {
+func TestNoLazyProviderConstructionInGraycode(t *testing.T) {
 	root := repoRoot(t)
 	paths := []string{
 		filepath.Join(root, "internal"),
@@ -264,7 +264,7 @@ func TestNoLazyProviderConstructionInHawk(t *testing.T) {
 	}
 }
 
-// TestNoDirectSharedTypesImports verifies Hawk does not reintroduce the removed
+// TestNoDirectSharedTypesImports verifies Graycode does not reintroduce the removed
 // legacy shared/types import path into production code.
 func TestNoDirectSharedTypesImports(t *testing.T) {
 	root := repoRoot(t)
@@ -279,11 +279,11 @@ func TestNoDirectSharedTypesImports(t *testing.T) {
 			rel := relPath(root, pf.Path)
 			for _, imp := range pf.File.Imports {
 				path := strings.Trim(imp.Path.Value, `"`)
-				if path != "github.com/GrayCodeAI/hawk/shared/types" {
+				if path != "github.com/GrayCodeAI/graycode-cli/shared/types" {
 					continue
 				}
 				pos := pf.FSet.Position(imp.Pos())
-				t.Fatalf("forbidden direct hawk/shared/types import at %s:%d; the path has been removed, use eagle instead", rel, pos.Line)
+				t.Fatalf("forbidden direct graycode/shared/types import at %s:%d; the path has been removed, use internal/contracts instead", rel, pos.Line)
 			}
 		}
 	}

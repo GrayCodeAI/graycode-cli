@@ -48,11 +48,11 @@ type Configuration struct {
 	Properties map[string]interface{} `json:"properties"`
 }
 
-// DefaultManifest returns the default Hawk IDE extension manifest.
+// DefaultManifest returns the default Graycode IDE extension manifest.
 func DefaultManifest() *ExtensionManifest {
 	return &ExtensionManifest{
-		Name:        "hawk",
-		DisplayName: "Hawk AI Agent",
+		Name:        "graycode",
+		DisplayName: "Graycode AI Agent",
 		Version:     "0.1.0",
 		Publisher:   "graycodeai",
 		Description: "AI coding agent integration for VS Code",
@@ -61,34 +61,34 @@ func DefaultManifest() *ExtensionManifest {
 			"vscode": "^1.74.0",
 		},
 		Categories: []string{"Machine Learning", "Programming Languages"},
-		Activation: []string{"onCommand:hawk.start", "onCommand:hawk.explain", "onCommand:hawk.fix"},
+		Activation: []string{"onCommand:graycode.start", "onCommand:graycode.explain", "onCommand:graycode.fix"},
 		Contributes: &Contributes{
 			Commands: []Command{
-				{Command: "hawk.start", Title: "Start Hawk Chat", Category: "Hawk"},
-				{Command: "hawk.explain", Title: "Explain Selection", Category: "Hawk"},
-				{Command: "hawk.fix", Title: "Fix Selection", Category: "Hawk"},
-				{Command: "hawk.review", Title: "Review File", Category: "Hawk"},
-				{Command: "hawk.test", Title: "Generate Tests", Category: "Hawk"},
+				{Command: "graycode.start", Title: "Start Graycode Chat", Category: "Graycode"},
+				{Command: "graycode.explain", Title: "Explain Selection", Category: "Graycode"},
+				{Command: "graycode.fix", Title: "Fix Selection", Category: "Graycode"},
+				{Command: "graycode.review", Title: "Review File", Category: "Graycode"},
+				{Command: "graycode.test", Title: "Generate Tests", Category: "Graycode"},
 			},
 			Keybindings: []Keybinding{
-				{Command: "hawk.start", Key: "ctrl+shift+h", When: "editorTextFocus"},
-				{Command: "hawk.explain", Key: "ctrl+shift+e", When: "editorHasSelection"},
+				{Command: "graycode.start", Key: "ctrl+shift+h", When: "editorTextFocus"},
+				{Command: "graycode.explain", Key: "ctrl+shift+e", When: "editorHasSelection"},
 			},
 			Configuration: &Configuration{
-				Title: "Hawk",
+				Title: "Graycode",
 				Properties: map[string]interface{}{
-					"hawk.apiKey": map[string]interface{}{
+					"graycode.apiKey": map[string]interface{}{
 						"type":        "string",
 						"default":     "",
 						"description": "API key for the AI provider",
 					},
-					"hawk.provider": map[string]interface{}{
+					"graycode.provider": map[string]interface{}{
 						"type":        "string",
 						"default":     "anthropic",
 						"enum":        []string{"anthropic", "openai", "google", "ollama"},
 						"description": "AI provider to use",
 					},
-					"hawk.model": map[string]interface{}{
+					"graycode.model": map[string]interface{}{
 						"type":        "string",
 						"default":     "",
 						"description": "Model to use (leave empty for provider default)",
@@ -108,10 +108,10 @@ func GeneratePackageJSON() ([]byte, error) {
 // Hints returns IDE integration hints for the current project.
 func Hints() []string {
 	return []string{
-		"Install the Hawk VSCode extension for inline AI assistance",
-		"Use Ctrl+Shift+H to open Hawk chat from VSCode",
+		"Install the Graycode VSCode extension for inline AI assistance",
+		"Use Ctrl+Shift+H to open Graycode chat from VSCode",
 		"Use Ctrl+Shift+E to explain selected code",
-		"Configure hawk.provider and hawk.model in VSCode settings",
+		"Configure graycode.provider and graycode.model in VSCode settings",
 	}
 }
 

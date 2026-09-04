@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 func TestParseManifestValid(t *testing.T) {
@@ -31,7 +31,7 @@ func TestParseManifestValid(t *testing.T) {
 			}
 		],
 		"permissions": ["filesystem"],
-		"min_hawk_version": "0.1.0"
+		"min_graycode_version": "0.1.0"
 	}`
 	if err := os.WriteFile(filepath.Join(dir, "plugin.json"), []byte(manifest), 0o644); err != nil {
 		t.Fatal(err)
@@ -72,8 +72,8 @@ func TestParseManifestValid(t *testing.T) {
 	if len(m.Permissions) != 1 || m.Permissions[0] != "filesystem" {
 		t.Errorf("expected permissions ['filesystem'], got %v", m.Permissions)
 	}
-	if m.MinHawkVersion != "0.1.0" {
-		t.Errorf("expected min_hawk_version '0.1.0', got %q", m.MinHawkVersion)
+	if m.MinGraycodeVersion != "0.1.0" {
+		t.Errorf("expected min_graycode_version '0.1.0', got %q", m.MinGraycodeVersion)
 	}
 }
 

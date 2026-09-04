@@ -1,4 +1,4 @@
-// Package env provides environment helpers for hawk's process management.
+// Package env provides environment helpers for graycode's process management.
 package env
 
 import (

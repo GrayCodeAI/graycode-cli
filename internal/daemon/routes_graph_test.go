@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/executiongraph"
-	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/executiongraph"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
 )
 
 func TestGetSessionGraphProjectsBoundedRequest(t *testing.T) {
@@ -27,7 +27,7 @@ func TestGetSessionGraphProjectsBoundedRequest(t *testing.T) {
 
 	request := httptest.NewRequest(
 		http.MethodGet,
-		"/v1/sessions/session-1/graph?repository=hawk&swift_checkpoint=012345abcdef&swift_checkpoint=fedcba987654",
+		"/v1/sessions/session-1/graph?repository=graycode&swift_checkpoint=012345abcdef&swift_checkpoint=fedcba987654",
 		nil,
 	)
 	request.Header.Set("Authorization", "Bearer secret")
@@ -37,7 +37,7 @@ func TestGetSessionGraphProjectsBoundedRequest(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200: %s", response.Code, response.Body.String())
 	}
-	if captured.SessionID != "session-1" || captured.RepositoryID != "hawk" {
+	if captured.SessionID != "session-1" || captured.RepositoryID != "graycode" {
 		t.Fatalf("captured request = %#v", captured)
 	}
 	wantCheckpoints := []string{"012345abcdef", "fedcba987654"}
@@ -92,7 +92,7 @@ func TestGetSessionGraphRejectsInvalidInputBeforeFactory(t *testing.T) {
 		},
 		{
 			name: "repository control character",
-			url:  "/v1/sessions/session-1/graph?repository=hawk%0Aother",
+			url:  "/v1/sessions/session-1/graph?repository=graycode%0Aother",
 			code: "invalid_repository",
 		},
 		{

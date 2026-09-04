@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
 )
 
 func TestSandboxPolicy_FoldLastSwitchWins(t *testing.T) {

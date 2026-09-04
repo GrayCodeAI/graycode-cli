@@ -237,7 +237,7 @@ func (m chatModel) effectiveWheelY(msg tea.MouseMsg) int {
 	return y
 }
 
-// syncViewportMouseWheel disables bubbletea viewport auto-wheel; hawk routes wheel
+// syncViewportMouseWheel disables bubbletea viewport auto-wheel; graycode routes wheel
 // events manually so chat scrolls only when the pointer is over the chat pane.
 func (m chatModel) syncViewportMouseWheel() chatModel {
 	m.viewport.MouseWheelEnabled = false

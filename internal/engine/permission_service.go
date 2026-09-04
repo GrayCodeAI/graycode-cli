@@ -9,15 +9,15 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/safety"
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
-	"github.com/GrayCodeAI/hawk/internal/governance"
-	"github.com/GrayCodeAI/hawk/internal/observability/logger"
-	"github.com/GrayCodeAI/hawk/internal/permissions"
-	"github.com/GrayCodeAI/hawk/internal/permissions/stableid"
-	"github.com/GrayCodeAI/hawk/internal/permissions/turnrecovery"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
-	"github.com/GrayCodeAI/hawk/internal/spec"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/safety"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/governance"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
+	"github.com/GrayCodeAI/graycode-cli/internal/permissions"
+	"github.com/GrayCodeAI/graycode-cli/internal/permissions/stableid"
+	"github.com/GrayCodeAI/graycode-cli/internal/permissions/turnrecovery"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/spec"
 )
 
 // PermissionService is the Session's view of the safety/approval layer.

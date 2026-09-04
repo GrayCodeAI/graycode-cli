@@ -108,7 +108,7 @@ func TestListAll_FromDir(t *testing.T) {
 	defer os.Setenv("HOME", origHome) //nolint:errcheck
 
 	stateDir := filepath.Join(dir, "state")
-	t.Setenv("HAWK_STATE_DIR", stateDir)
+	t.Setenv("GRAYCODE_STATE_DIR", stateDir)
 	agentDir := filepath.Join(stateDir, "agents")
 	if err := os.MkdirAll(agentDir, 0o755); err != nil {
 		t.Fatal(err)

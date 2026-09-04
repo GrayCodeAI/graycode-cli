@@ -13,7 +13,7 @@ import (
 )
 
 func TestInitializeHandshake(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 	server.RegisterTool(MCPToolHandler{
 		Name:        "test_tool",
 		Description: "A test tool",
@@ -48,8 +48,8 @@ func TestInitializeHandshake(t *testing.T) {
 	if !ok {
 		t.Fatal("expected serverInfo in result")
 	}
-	if si["name"] != "hawk" {
-		t.Errorf("expected server name hawk, got %v", si["name"])
+	if si["name"] != "graycode" {
+		t.Errorf("expected server name graycode, got %v", si["name"])
 	}
 	if si["version"] != "1.0.0" {
 		t.Errorf("expected server version 1.0.0, got %v", si["version"])
@@ -66,7 +66,7 @@ func TestInitializeHandshake(t *testing.T) {
 }
 
 func TestInitializedNotification(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 
 	// initialized is a notification (has no response)
 	req := `{"jsonrpc":"2.0","method":"initialized"}` + "\n"
@@ -79,7 +79,7 @@ func TestInitializedNotification(t *testing.T) {
 }
 
 func TestToolsList(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 	server.RegisterTool(MCPToolHandler{
 		Name:        "alpha",
 		Description: "Alpha tool",
@@ -152,7 +152,7 @@ func TestToolsList(t *testing.T) {
 }
 
 func TestToolsListAnnotations(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 	server.RegisterTool(MCPToolHandler{
 		Name:        "danger",
 		Description: "Runs an agent",
@@ -196,7 +196,7 @@ func TestToolsListAnnotations(t *testing.T) {
 // carries a risk hint, so a future tool addition can't silently ship without
 // one for connecting clients to self-throttle on.
 func TestDefaultToolsHaveAnnotations(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 	RegisterDefaultTools(server, nil)
 
 	resp := sendRequest(t, server, `{"jsonrpc":"2.0","id":8,"method":"tools/list"}`+"\n")
@@ -216,7 +216,7 @@ func TestDefaultToolsHaveAnnotations(t *testing.T) {
 }
 
 func TestToolExecution(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 	server.RegisterTool(MCPToolHandler{
 		Name:        "echo",
 		Description: "Echoes input",
@@ -270,7 +270,7 @@ func TestToolExecution(t *testing.T) {
 }
 
 func TestToolExecutionError(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 	server.RegisterTool(MCPToolHandler{
 		Name:        "failing",
 		Description: "Always fails",
@@ -308,7 +308,7 @@ func TestToolExecutionError(t *testing.T) {
 }
 
 func TestUnknownMethod(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 
 	req := `{"jsonrpc":"2.0","id":5,"method":"nonexistent/method"}` + "\n"
 	resp := sendRequest(t, server, req)
@@ -325,7 +325,7 @@ func TestUnknownMethod(t *testing.T) {
 }
 
 func TestUnknownTool(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 
 	req := `{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"does_not_exist","arguments":{}}}` + "\n"
 	resp := sendRequest(t, server, req)
@@ -342,7 +342,7 @@ func TestUnknownTool(t *testing.T) {
 }
 
 func TestInvalidParams(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 	server.RegisterTool(MCPToolHandler{
 		Name:        "tool1",
 		Description: "A tool",
@@ -365,7 +365,7 @@ func TestInvalidParams(t *testing.T) {
 }
 
 func TestParseError(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 
 	// Send garbage that isn't valid JSON
 	out := runServer(t, server, "this is not json\n")
@@ -383,7 +383,7 @@ func TestParseError(t *testing.T) {
 }
 
 func TestPing(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 
 	req := `{"jsonrpc":"2.0","id":8,"method":"ping"}` + "\n"
 	resp := sendRequest(t, server, req)
@@ -402,7 +402,7 @@ func TestPing(t *testing.T) {
 }
 
 func TestConcurrentRequests(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 	server.RegisterTool(MCPToolHandler{
 		Name:        "slow",
 		Description: "Simulates slow work",
@@ -452,7 +452,7 @@ func TestConcurrentRequests(t *testing.T) {
 }
 
 func TestRegisterToolOverwrite(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 
 	server.RegisterTool(MCPToolHandler{
 		Name:        "dup",
@@ -487,7 +487,7 @@ func TestRegisterToolOverwrite(t *testing.T) {
 }
 
 func TestConcurrentRegisterAndCall(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 	server.RegisterTool(MCPToolHandler{
 		Name:        "base",
 		Description: "Base tool",
@@ -539,7 +539,7 @@ func TestConcurrentRegisterAndCall(t *testing.T) {
 }
 
 func TestMultipleRequestsInSequence(t *testing.T) {
-	server := NewMCPServer(ServerInfo{Name: "hawk", Version: "1.0.0"})
+	server := NewMCPServer(ServerInfo{Name: "graycode", Version: "1.0.0"})
 	server.RegisterTool(MCPToolHandler{
 		Name:        "greet",
 		Description: "Greets",

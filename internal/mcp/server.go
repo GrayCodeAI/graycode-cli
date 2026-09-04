@@ -42,7 +42,7 @@ func (rl *rateLimiter) allow() bool {
 	return true
 }
 
-// MCPServer exposes hawk's capabilities as an MCP server that external
+// MCPServer exposes graycode's capabilities as an MCP server that external
 // clients (IDEs, agents, CLI tools) can connect to via JSON-RPC 2.0 over stdio.
 type MCPServer struct {
 	tools  map[string]MCPToolHandler
@@ -349,13 +349,13 @@ func (s *MCPServer) handleToolsCall(ctx context.Context, req *JSONRPCRequest) *J
 func (s *MCPServer) handleResourcesList(req *JSONRPCRequest) *JSONRPCResponse {
 	resources := []map[string]interface{}{
 		{
-			"uri":         "hawk://workspace",
+			"uri":         "graycode://workspace",
 			"name":        "workspace",
 			"description": "Current workspace directory listing",
 			"mimeType":    "text/plain",
 		},
 		{
-			"uri":         "hawk://session",
+			"uri":         "graycode://session",
 			"name":        "session",
 			"description": "Current session messages",
 			"mimeType":    "application/json",
@@ -383,7 +383,7 @@ func (s *MCPServer) handleResourcesRead(req *JSONRPCRequest) *JSONRPCResponse {
 
 	var content string
 	switch params.URI {
-	case "hawk://workspace":
+	case "graycode://workspace":
 		entries, err := os.ReadDir(".")
 		if err != nil {
 			content = "Error reading workspace: " + err.Error()
@@ -398,7 +398,7 @@ func (s *MCPServer) handleResourcesRead(req *JSONRPCRequest) *JSONRPCResponse {
 			}
 			content = "Workspace files:\n" + strings.Join(names, "\n")
 		}
-	case "hawk://session":
+	case "graycode://session":
 		content = "{}" // placeholder
 	default:
 		return &JSONRPCResponse{

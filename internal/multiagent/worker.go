@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
-	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // EngineWorker returns a WorkerFunc that runs an actual engine session
@@ -54,11 +54,11 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 
 		// Create engine session with tools
 		registry := tool.NewRegistry(baseWorkerTools()...)
-		selection := hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{
+		selection := graycodeconfig.EffectiveSelection(ctx, graycodeconfig.SelectionOptions{
 			ProviderOverride: provider,
 			ModelOverride:    model,
 		})
-		sess := engine.NewHawkSession(ctx, selection, provider, model, systemPrompt, registry)
+		sess := engine.NewGraycodeSession(ctx, selection, provider, model, systemPrompt, registry)
 
 		// DSH 2.4: Inherit delegated sandbox policy from parent if configured.
 		if cfg.ParentSession != nil {
@@ -242,11 +242,11 @@ func ReadOnlyValidationWorker(provider, model, systemPrompt string) WorkerFunc {
 		)
 
 		registry := tool.NewRegistry(readOnlyWorkerTools()...)
-		selection := hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{
+		selection := graycodeconfig.EffectiveSelection(ctx, graycodeconfig.SelectionOptions{
 			ProviderOverride: provider,
 			ModelOverride:    model,
 		})
-		sess := engine.NewHawkSession(ctx, selection, provider, model, systemPrompt, registry)
+		sess := engine.NewGraycodeSession(ctx, selection, provider, model, systemPrompt, registry)
 
 		level := engine.AutonomyLevel(cfg.AutonomyLevel)
 		if level < engine.AutonomyFull {

@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
-	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 type orderedReadTool struct{}
@@ -293,15 +293,15 @@ func TestToolServiceWorkingDirPropagatesContext(t *testing.T) {
 	capture := &contextCaptureTool{}
 	sess := NewSession("test", "test", "system", tool.NewRegistry(capture))
 	sess.PermSvc().SetAutonomy(AutonomyYOLO)
-	sess.Tools().SetWorkingDir("/tmp/hawk-working-dir")
+	sess.Tools().SetWorkingDir("/tmp/graycode-working-dir")
 
 	ch := make(chan StreamEvent, 4)
 	res := sess.executeSingleTool(context.Background(), types.ToolCall{Name: "Read", ID: "cwd"}, ch, 0, "")
 	if res.isErr || capture.ctx == nil {
 		t.Fatalf("tool failed or context missing: %#v", res)
 	}
-	if capture.ctx.WorkingDir != "/tmp/hawk-working-dir" {
-		t.Fatalf("WorkingDir = %q, want %q", capture.ctx.WorkingDir, "/tmp/hawk-working-dir")
+	if capture.ctx.WorkingDir != "/tmp/graycode-working-dir" {
+		t.Fatalf("WorkingDir = %q, want %q", capture.ctx.WorkingDir, "/tmp/graycode-working-dir")
 	}
 }
 

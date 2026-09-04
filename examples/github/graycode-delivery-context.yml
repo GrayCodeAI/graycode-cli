@@ -1,0 +1,47 @@
+# Graycode Delivery Context
+#
+# Copy to .github/workflows/graycode-delivery-context.yml. This workflow assumes
+# `graycode` is available on PATH (install it using your team's normal release
+# mechanism before this reporting step).
+#
+# Create a dedicated, revocable Graycode Cloud device token for CI. Do not reuse a
+# developer's local device token. Store all three values as repository secrets.
+name: Graycode Delivery Context
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  report-delivery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # Install Graycode here using the release package your organization pins.
+      # The remaining steps are intentionally independent of the installer.
+      - name: Connect CI device to Graycode Cloud
+        run: |
+          graycode cloud connect \
+            --endpoint "$GRAYCODE_CLOUD_URL" \
+            --device-id "$GRAYCODE_CLOUD_DEVICE_ID" \
+            --project-id "$GRAYCODE_CLOUD_PROJECT_ID" \
+            --token "$GRAYCODE_CLOUD_DEVICE_TOKEN"
+        env:
+          GRAYCODE_CLOUD_URL: ${{ secrets.GRAYCODE_CLOUD_URL }}
+          GRAYCODE_CLOUD_DEVICE_ID: ${{ secrets.GRAYCODE_CLOUD_DEVICE_ID }}
+          GRAYCODE_CLOUD_PROJECT_ID: ${{ secrets.GRAYCODE_CLOUD_PROJECT_ID }}
+          GRAYCODE_CLOUD_DEVICE_TOKEN: ${{ secrets.GRAYCODE_CLOUD_DEVICE_TOKEN }}
+
+      - name: Report successful CI run
+        if: ${{ success() }}
+        run: graycode cloud context --ci-status succeeded
+
+      - name: Report failed CI run
+        if: ${{ failure() }}
+        run: graycode cloud context --ci-status failed

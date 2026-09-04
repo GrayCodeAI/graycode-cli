@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +19,7 @@ var credentialsStatusCmd = &cobra.Command{
 	Short: "Show where API keys are stored",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
-		cmd.Println(hawkconfig.FormatCredentialCLIStatus(ctx))
+		cmd.Println(graycodeconfig.FormatCredentialCLIStatus(ctx))
 		return nil
 	},
 }
@@ -30,11 +30,11 @@ var credentialsRemoveCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
-		removed, err := hawkconfig.RemoveStoredCredential(ctx, args[0])
+		removed, err := graycodeconfig.RemoveStoredCredential(ctx, args[0])
 		if err != nil {
 			return err
 		}
-		cmd.Printf("Removed %d key(s) from %s: %s\n", len(removed), hawkconfig.CredentialStoreName(), strings.Join(removed, ", "))
+		cmd.Printf("Removed %d key(s) from %s: %s\n", len(removed), graycodeconfig.CredentialStoreName(), strings.Join(removed, ", "))
 		return nil
 	},
 }
@@ -44,18 +44,18 @@ var credentialsMigrateCmd = &cobra.Command{
 	Short: "Import plaintext credential files into the OS secret store",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
-		storage := hawkconfig.CredentialStorageStatus(ctx)
+		storage := graycodeconfig.CredentialStorageStatus(ctx)
 		if !storage.Writable {
 			return fmt.Errorf("cannot migrate: %s", storage.Detail)
 		}
-		n, err := hawkconfig.MigrateEnvFileCredentials(ctx)
+		n, err := graycodeconfig.MigrateEnvFileCredentials(ctx)
 		if err != nil {
 			return err
 		}
 		if n == 0 {
 			cmd.Println("No plaintext credential files found (already using secure storage).")
 		} else {
-			cmd.Printf("Migrated %d key(s) to %s and removed plaintext credential files.\n", n, hawkconfig.CredentialStoreName())
+			cmd.Printf("Migrated %d key(s) to %s and removed plaintext credential files.\n", n, graycodeconfig.CredentialStoreName())
 		}
 		return nil
 	},

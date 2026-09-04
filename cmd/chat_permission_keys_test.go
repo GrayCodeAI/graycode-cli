@@ -6,8 +6,8 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	contracts "github.com/GrayCodeAI/eagle/policy"
-	"github.com/GrayCodeAI/hawk/internal/engine"
+	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/policy"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 )
 
 func TestPermissionAlwaysAllowDoesNotNilDeref(t *testing.T) {

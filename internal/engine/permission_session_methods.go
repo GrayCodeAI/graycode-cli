@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/spec"
+	"github.com/GrayCodeAI/graycode-cli/internal/spec"
 )
 
 // specConfigForPrompt loads the user's spec configuration and returns it
@@ -75,7 +75,7 @@ func constitutionForPrompt(slug string) string {
 	if err != nil {
 		return ""
 	}
-	path := filepath.Join(cwd, ".hawk", "specs", slug, "constitution.md")
+	path := filepath.Join(cwd, ".graycode", "specs", slug, "constitution.md")
 
 	constitutionCache.Lock()
 	if constitutionCache.path == path {

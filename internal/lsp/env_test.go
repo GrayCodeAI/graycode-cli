@@ -107,10 +107,10 @@ func TestScrubEnvironment(t *testing.T) {
 }
 
 func TestScrubEnvironment_NilAmbient(t *testing.T) {
-	os.Setenv("HAWK_TEST_SAFE_VAR", "safe_value")
-	os.Setenv("HAWK_TEST_SECRET_KEY", "hidden_secret")
-	defer os.Unsetenv("HAWK_TEST_SAFE_VAR")
-	defer os.Unsetenv("HAWK_TEST_SECRET_KEY")
+	os.Setenv("GRAYCODE_TEST_SAFE_VAR", "safe_value")
+	os.Setenv("GRAYCODE_TEST_SECRET_KEY", "hidden_secret")
+	defer os.Unsetenv("GRAYCODE_TEST_SAFE_VAR")
+	defer os.Unsetenv("GRAYCODE_TEST_SECRET_KEY")
 
 	scrubbed := ScrubEnvironment(nil, map[string]string{"INJECTED": "yes"})
 
@@ -119,10 +119,10 @@ func TestScrubEnvironment_NilAmbient(t *testing.T) {
 	foundInjected := false
 
 	for _, entry := range scrubbed {
-		if strings.HasPrefix(entry, "HAWK_TEST_SAFE_VAR=") {
+		if strings.HasPrefix(entry, "GRAYCODE_TEST_SAFE_VAR=") {
 			foundSafe = true
 		}
-		if strings.HasPrefix(entry, "HAWK_TEST_SECRET_KEY=") {
+		if strings.HasPrefix(entry, "GRAYCODE_TEST_SECRET_KEY=") {
 			foundSecret = true
 		}
 		if entry == "INJECTED=yes" {
@@ -131,10 +131,10 @@ func TestScrubEnvironment_NilAmbient(t *testing.T) {
 	}
 
 	if !foundSafe {
-		t.Error("expected HAWK_TEST_SAFE_VAR to be present")
+		t.Error("expected GRAYCODE_TEST_SAFE_VAR to be present")
 	}
 	if foundSecret {
-		t.Error("expected HAWK_TEST_SECRET_KEY to be scrubbed")
+		t.Error("expected GRAYCODE_TEST_SECRET_KEY to be scrubbed")
 	}
 	if !foundInjected {
 		t.Error("expected INJECTED=yes to be present")

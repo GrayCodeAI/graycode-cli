@@ -17,10 +17,10 @@ import (
 	"time"
 
 	contracts "github.com/GrayCodeAI/eyrie/tools"
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
-	"github.com/GrayCodeAI/hawk/internal/eventlog/zstdz"
-	"github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog/zstdz"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // Message is a persisted conversation message.
@@ -127,7 +127,7 @@ func saveWithCompression(s *Session, compress bool) error {
 
 	// Write to temp file, then atomic rename. The temp name is namespaced
 	// with getpid() so two processes (or two saves of the same session from
-	// different hawk instances) don't clobber each other's temp file.
+	// different graycode instances) don't clobber each other's temp file.
 	target := jsonlPathFor(s.ID)
 	tmp := fmt.Sprintf("%s.tmp.%d", target, os.Getpid())
 
@@ -291,7 +291,7 @@ func saveWithCompression(s *Session, compress bool) error {
 }
 
 // WAL (Write-Ahead Log) appends messages incrementally for crash recovery.
-// Each message is appended immediately — if hawk crashes, the WAL has everything.
+// Each message is appended immediately — if graycode crashes, the WAL has everything.
 type WAL struct {
 	mu   sync.Mutex
 	f    *os.File

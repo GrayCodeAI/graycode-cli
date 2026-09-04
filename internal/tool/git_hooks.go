@@ -8,11 +8,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // GitHookInstaller manages installation and lifecycle of git hooks for
-// hawk agent integration.
+// graycode agent integration.
 type GitHookInstaller struct {
 	HooksDir  string
 	Installed map[string]bool
@@ -46,11 +46,11 @@ func NewGitHookInstaller(projectDir string) *GitHookInstaller {
 		Installed: make(map[string]bool),
 	}
 
-	// Probe existing hawk-managed hooks.
+	// Probe existing graycode-managed hooks.
 	for _, name := range []string{"pre-commit", "post-commit", "prepare-commit-msg", "pre-push"} {
 		hookPath := filepath.Join(hooksDir, name)
 		data, err := readPinnedFile(hookPath)
-		if err == nil && strings.Contains(string(data), "# hawk-managed") {
+		if err == nil && strings.Contains(string(data), "# graycode-managed") {
 			installer.Installed[name] = true
 		}
 	}
@@ -77,14 +77,14 @@ func (g *GitHookInstaller) Install(hook HookConfig) error {
 
 	hookPath := filepath.Join(g.HooksDir, hook.Name)
 
-	// Preserve existing hook if present and not hawk-managed.
+	// Preserve existing hook if present and not graycode-managed.
 	existing, err := readPinnedFile(hookPath)
-	if err == nil && !strings.Contains(string(existing), "# hawk-managed") {
+	if err == nil && !strings.Contains(string(existing), "# graycode-managed") {
 		// Back up and chain existing hook.
 		if backupErr := g.backupExisting(hook.Name); backupErr != nil {
 			return fmt.Errorf("backup existing hook: %w", backupErr)
 		}
-		// Chain: run existing hook first, then hawk hook.
+		// Chain: run existing hook first, then graycode hook.
 		script := hook.Script + "\n\n# --- chained previous hook ---\n" + string(existing)
 		hook.Script = script
 	}
@@ -98,7 +98,7 @@ func (g *GitHookInstaller) Install(hook HookConfig) error {
 	return nil
 }
 
-// Uninstall removes a hawk-managed hook. If a backup exists it is restored.
+// Uninstall removes a graycode-managed hook. If a backup exists it is restored.
 func (g *GitHookInstaller) Uninstall(hookName string) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -124,7 +124,7 @@ func (g *GitHookInstaller) Uninstall(hookName string) error {
 	return nil
 }
 
-// InstallAll installs the default set of hawk hooks for agent integration.
+// InstallAll installs the default set of graycode hooks for agent integration.
 func (g *GitHookInstaller) InstallAll() error {
 	hooks := []HookConfig{
 		{Name: "pre-commit", Script: g.GeneratePreCommit(), Enabled: true, Priority: 1},
@@ -150,18 +150,18 @@ func (g *GitHookInstaller) InstallAll() error {
 // secret scan before allowing a commit.
 func (g *GitHookInstaller) GeneratePreCommit() string {
 	return `#!/bin/sh
-# hawk-managed: pre-commit hook
+# graycode-managed: pre-commit hook
 # Runs format check, lint, and secret scan.
 
 set -e
 
-echo "[hawk] Running pre-commit checks..."
+echo "[graycode] Running pre-commit checks..."
 
 # Format check
 if command -v gofmt >/dev/null 2>&1; then
     UNFORMATTED=$(gofmt -l . 2>/dev/null || true)
     if [ -n "$UNFORMATTED" ]; then
-        echo "[hawk] ERROR: Unformatted files detected:"
+        echo "[graycode] ERROR: Unformatted files detected:"
         echo "$UNFORMATTED"
         exit 1
     fi
@@ -173,28 +173,28 @@ if command -v golangci-lint >/dev/null 2>&1; then
 fi
 
 # Secret scan
-if command -v hawk >/dev/null 2>&1; then
-    hawk scan --secrets --staged || exit 1
+if command -v graycode >/dev/null 2>&1; then
+    graycode scan --secrets --staged || exit 1
 fi
 
-echo "[hawk] Pre-commit checks passed."
+echo "[graycode] Pre-commit checks passed."
 `
 }
 
-// GeneratePrepareCommitMsg returns a shell script that invokes hawk to generate
+// GeneratePrepareCommitMsg returns a shell script that invokes graycode to generate
 // an AI-powered commit message.
 func (g *GitHookInstaller) GeneratePrepareCommitMsg() string {
 	return `#!/bin/sh
-# hawk-managed: prepare-commit-msg hook
-# Calls hawk to generate an AI-assisted commit message.
+# graycode-managed: prepare-commit-msg hook
+# Calls graycode to generate an AI-assisted commit message.
 
 COMMIT_MSG_FILE="$1"
 COMMIT_SOURCE="$2"
 
 # Only generate for normal commits (not merge, squash, etc.)
 if [ -z "$COMMIT_SOURCE" ]; then
-    if command -v hawk >/dev/null 2>&1; then
-        GENERATED=$(hawk commit-msg --staged 2>/dev/null || true)
+    if command -v graycode >/dev/null 2>&1; then
+        GENERATED=$(graycode commit-msg --staged 2>/dev/null || true)
         if [ -n "$GENERATED" ]; then
             printf '%s\n\n%s' "$GENERATED" "$(cat "$COMMIT_MSG_FILE")" > "$COMMIT_MSG_FILE"
         fi
@@ -203,17 +203,17 @@ fi
 `
 }
 
-// GeneratePostCommit returns a shell script that notifies the hawk swift system
+// GeneratePostCommit returns a shell script that notifies the graycode swift system
 // for session capture after a commit.
 func (g *GitHookInstaller) GeneratePostCommit() string {
 	return `#!/bin/sh
-# hawk-managed: post-commit hook
-# Notifies hawk swift for session capture.
+# graycode-managed: post-commit hook
+# Notifies graycode swift for session capture.
 
-if command -v hawk >/dev/null 2>&1; then
+if command -v graycode >/dev/null 2>&1; then
     COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null)
     COMMIT_MSG=$(git log -1 --format='%s' 2>/dev/null)
-    hawk swift --event post-commit --hash "$COMMIT_HASH" --message "$COMMIT_MSG" 2>/dev/null &
+    graycode swift --event post-commit --hash "$COMMIT_HASH" --message "$COMMIT_MSG" 2>/dev/null &
 fi
 `
 }
@@ -222,12 +222,12 @@ fi
 // allowing a push.
 func (g *GitHookInstaller) GeneratePrePush() string {
 	return `#!/bin/sh
-# hawk-managed: pre-push hook
+# graycode-managed: pre-push hook
 # Runs the test suite before push.
 
 set -e
 
-echo "[hawk] Running pre-push tests..."
+echo "[graycode] Running pre-push tests..."
 
 if [ -f "go.mod" ]; then
     go test -race -short ./... || exit 1
@@ -237,11 +237,11 @@ elif [ -f "Makefile" ]; then
     make test || exit 1
 fi
 
-echo "[hawk] Pre-push tests passed."
+echo "[graycode] Pre-push tests passed."
 `
 }
 
-// ListInstalled returns the names of all currently installed hawk-managed hooks.
+// ListInstalled returns the names of all currently installed graycode-managed hooks.
 func (g *GitHookInstaller) ListInstalled() []string {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -254,7 +254,7 @@ func (g *GitHookInstaller) ListInstalled() []string {
 	return names
 }
 
-// IsInstalled reports whether a hawk-managed hook is installed for the given name.
+// IsInstalled reports whether a graycode-managed hook is installed for the given name.
 func (g *GitHookInstaller) IsInstalled(hookName string) bool {
 	g.mu.Lock()
 	defer g.mu.Unlock()

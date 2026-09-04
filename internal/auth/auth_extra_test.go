@@ -23,33 +23,6 @@ func TestNewTokenStore(t *testing.T) {
 	}
 }
 
-func TestTokenStore_Load(t *testing.T) {
-	ts := NewTokenStore()
-	// Pre-populate
-	ts.tokens["test"] = "old"
-	err := ts.Load()
-	if err != nil {
-		t.Fatalf("Load() error: %v", err)
-	}
-	// Load should reset to empty
-	if len(ts.tokens) != 0 {
-		t.Errorf("expected empty tokens after Load, got %d", len(ts.tokens))
-	}
-}
-
-func TestTokenStore_Save(t *testing.T) {
-	ts := NewTokenStore()
-	ts.tokens["test"] = "secret"
-	err := ts.Save()
-	if err != nil {
-		t.Fatalf("Save() error: %v", err)
-	}
-	// Save is a no-op stub, tokens should still be in memory
-	if ts.tokens["test"] != "secret" {
-		t.Error("token should still be in memory after Save")
-	}
-}
-
 func TestTokenStore_Get(t *testing.T) {
 	ts := NewTokenStore()
 	ts.tokens["provider1"] = "token1"
@@ -100,7 +73,7 @@ func TestNewSecureStorage(t *testing.T) {
 
 func TestSecureStorage_GetFile_NonExistent(t *testing.T) {
 	// Override the config directory to a temp dir so .tokens definitely doesn't exist
-	t.Setenv("HAWK_CONFIG_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_CONFIG_DIR", t.TempDir())
 
 	ss := &SecureStorage{service: "test"}
 	// getFile will fail because the file doesn't exist in the temp dir

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // Convention represents a single coding convention that can be enforced on generated code.

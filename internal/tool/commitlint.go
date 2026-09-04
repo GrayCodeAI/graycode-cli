@@ -10,7 +10,7 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // CommitLinter validates commit messages against configurable rules following

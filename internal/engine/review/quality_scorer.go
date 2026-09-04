@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/mathutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/mathutil"
 )
 
 // QualityScorer evaluates LLM response quality across multiple dimensions

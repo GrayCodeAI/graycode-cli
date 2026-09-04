@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 const noToolsPreamble = `CRITICAL: Respond with TEXT ONLY. Do NOT call any tools.
@@ -121,7 +121,7 @@ func BuildIncrementalCompactPrompt(priorSummary string) string {
 		fmt.Sprintf(incrementalUpdateTemplate, priorSummary)
 }
 
-// PriorSummaryPrefix is the marker prefix hawk prepends to a persisted
+// PriorSummaryPrefix is the marker prefix graycode prepends to a persisted
 // conversation summary message.
 const PriorSummaryPrefix = "[Conversation summary]"
 

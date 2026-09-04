@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	contracts "github.com/GrayCodeAI/eagle/policy"
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/policy"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 func TestSubAgentDelegatedPolicy_InheritsParentExplicitMode(t *testing.T) {

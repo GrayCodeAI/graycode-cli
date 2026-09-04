@@ -14,10 +14,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/GrayCodeAI/hawk/internal/textutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/textutil"
 )
 
-// SearchEngine provides full-text search across hawk sessions/conversations.
+// SearchEngine provides full-text search across graycode sessions/conversations.
 type SearchEngine struct {
 	SessionDir string
 	Index      map[string]*SessionIndex

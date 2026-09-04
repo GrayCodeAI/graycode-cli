@@ -67,11 +67,11 @@ alwaysApply: true
 		}
 	}
 
-	// 3. Repair missing .hawk/specs/ directory
-	specsDir := filepath.Join(root, ".hawk", "specs")
+	// 3. Repair missing .graycode/specs/ directory
+	specsDir := filepath.Join(root, ".graycode", "specs")
 	if !dirExists(specsDir) {
 		if err := os.MkdirAll(specsDir, 0o750); err == nil {
-			result.RepairsPerformed = append(result.RepairsPerformed, "Created .hawk/specs/ directory for task specification management")
+			result.RepairsPerformed = append(result.RepairsPerformed, "Created .graycode/specs/ directory for task specification management")
 		}
 	}
 

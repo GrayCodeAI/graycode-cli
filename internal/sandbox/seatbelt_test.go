@@ -108,9 +108,9 @@ func TestGenerateSeatbeltProfile_Sysctl(t *testing.T) {
 	}
 }
 
-func TestDefaultHawkPolicy_IncludesWorkDir(t *testing.T) {
+func TestDefaultGraycodePolicy_IncludesWorkDir(t *testing.T) {
 	workDir := "/Users/dev/myproject"
-	policy := DefaultHawkPolicy(workDir, TierOff)
+	policy := DefaultGraycodePolicy(workDir, TierOff)
 
 	found := false
 	for _, p := range policy.ReadablePaths {
@@ -120,7 +120,7 @@ func TestDefaultHawkPolicy_IncludesWorkDir(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Error("DefaultHawkPolicy should include workDir in ReadablePaths")
+		t.Error("DefaultGraycodePolicy should include workDir in ReadablePaths")
 	}
 
 	found = false
@@ -131,27 +131,27 @@ func TestDefaultHawkPolicy_IncludesWorkDir(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Error("DefaultHawkPolicy should include workDir in WritablePaths")
+		t.Error("DefaultGraycodePolicy should include workDir in WritablePaths")
 	}
 }
 
-func TestDefaultHawkPolicy_NetworkAllowed(t *testing.T) {
-	policy := DefaultHawkPolicy("/tmp/work", TierOff)
+func TestDefaultGraycodePolicy_NetworkAllowed(t *testing.T) {
+	policy := DefaultGraycodePolicy("/tmp/work", TierOff)
 	if !policy.AllowNetwork {
-		t.Error("DefaultHawkPolicy should allow network by default")
+		t.Error("DefaultGraycodePolicy should allow network by default")
 	}
 }
 
-func TestDefaultHawkPolicy_ProcessAllowed(t *testing.T) {
-	policy := DefaultHawkPolicy("/tmp/work", TierOff)
+func TestDefaultGraycodePolicy_ProcessAllowed(t *testing.T) {
+	policy := DefaultGraycodePolicy("/tmp/work", TierOff)
 	if !policy.AllowProcess {
-		t.Error("DefaultHawkPolicy should allow process execution by default")
+		t.Error("DefaultGraycodePolicy should allow process execution by default")
 	}
 }
 
-func TestDefaultHawkPolicy_ProfileProducesValidSBPL(t *testing.T) {
+func TestDefaultGraycodePolicy_ProfileProducesValidSBPL(t *testing.T) {
 	workDir := "/tmp/testproject"
-	policy := DefaultHawkPolicy(workDir, TierOff)
+	policy := DefaultGraycodePolicy(workDir, TierOff)
 	profile := GenerateSeatbeltProfile(policy)
 
 	// Check SBPL structure requirements

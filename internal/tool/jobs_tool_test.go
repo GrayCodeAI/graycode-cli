@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/jobs"
+	"github.com/GrayCodeAI/graycode-cli/internal/jobs"
 )
 
 // resetJobsRegistry swaps the package-level registry for a fresh one and

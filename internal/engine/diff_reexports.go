@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/engine/diff"
+import "github.com/GrayCodeAI/graycode-cli/internal/engine/diff"
 
 // Types from diff sub-package.
 

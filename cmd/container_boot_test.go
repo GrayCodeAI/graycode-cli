@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 )
 
 func TestShouldUseContainerAlwaysTrue(t *testing.T) {
-	t.Setenv("HAWK_NO_CONTAINER", "1")
+	t.Setenv("GRAYCODE_NO_CONTAINER", "1")
 	if !shouldUseContainer() {
-		t.Fatal("Hawk must require Docker even when the legacy opt-out variable is set")
+		t.Fatal("Graycode must require Docker even when the legacy opt-out variable is set")
 	}
 }
 

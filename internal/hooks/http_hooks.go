@@ -92,7 +92,7 @@ func invokeHTTPHook(client *http.Client, url, event string, data map[string]inte
 		return hookError(failOpen, event, "build request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "hawk-hooks/1.0")
+	req.Header.Set("User-Agent", "graycode-hooks/1.0")
 	resp, err := client.Do(req)
 	if err != nil {
 		return hookError(failOpen, event, "request failed: %v", err)
@@ -131,7 +131,7 @@ func firstNonEmpty(vals ...string) string {
 }
 
 // ValidateHTTPHookURL is a light SSRF guard: only http(s) and no localhost unless
-// HAWK_HOOKS_ALLOW_LOCAL=1. Callers may skip this for tests.
+// GRAYCODE_HOOKS_ALLOW_LOCAL=1. Callers may skip this for tests.
 func ValidateHTTPHookURL(raw string) error {
 	if raw == "" {
 		return fmt.Errorf("empty hook URL")

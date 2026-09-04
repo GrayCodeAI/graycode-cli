@@ -7,7 +7,7 @@ import (
 )
 
 // ClipboardBridge enables paste-from-browser workflows.
-// Paste code/errors from browser, hawk processes them as context.
+// Paste code/errors from browser, graycode processes them as context.
 type ClipboardBridge struct{}
 
 // ReadClipboard returns the current clipboard content.

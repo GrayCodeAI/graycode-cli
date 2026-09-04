@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/fsutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/fsutil"
 )
 
 // ArtifactState represents the current status of an artifact in the workflow.
@@ -41,7 +41,7 @@ type ArtifactStatus struct {
 // specific change directory.
 type Graph struct {
 	schema    *Schema
-	changeDir string // root of the current spec directory (e.g. .hawk/specs/<slug>/)
+	changeDir string // root of the current spec directory (e.g. .graycode/specs/<slug>/)
 	artifacts []Artifact
 	// adjacency list: artifact ID -> IDs that depend on it
 	dependents map[string][]string

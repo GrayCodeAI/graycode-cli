@@ -1,16 +1,16 @@
 # Plan Mode
 
-Plan mode is a structured planning phase where Hawk explores the codebase and designs an implementation before writing code. Use it when tasks have genuine ambiguity about the right approach.
+Plan mode is a structured planning phase where Graycode explores the codebase and designs an implementation before writing code. Use it when tasks have genuine ambiguity about the right approach.
 
 ---
 
 ## What Plan Mode Does
 
-When plan mode is active, Hawk:
+When plan mode is active, Graycode:
 
 1. Reads and searches the codebase to understand patterns
 2. Designs an implementation approach
-3. Writes the plan to a file under `.hawk/specs/`
+3. Writes the plan to a file under `.graycode/specs/`
 4. May ask clarifying questions via `/ask`
 5. Calls `exit_plan_mode` to request approval
 
@@ -45,7 +45,7 @@ Or press **Ctrl+Shift+P** to cycle modes.
 
 ## The Plan File
 
-Plans are written to `.hawk/specs/<slug>/plan.md`:
+Plans are written to `.graycode/specs/<slug>/plan.md`:
 
 - **Context** — Why the change is needed
 - **Approach** — Recommended implementation strategy
@@ -56,7 +56,7 @@ Plans are written to `.hawk/specs/<slug>/plan.md`:
 
 ## Plan Approval
 
-When planning completes, Hawk opens a preview with action bar:
+When planning completes, Graycode opens a preview with action bar:
 
 | Key | Action |
 |-----|--------|

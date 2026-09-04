@@ -12,7 +12,7 @@ func TestDetectGitContext(t *testing.T) {
 	runCloudGit = func(_ context.Context, args ...string) (string, error) {
 		switch args[0] {
 		case "config":
-			return "git@github.com:GrayCodeAI/hawk.git", nil
+			return "git@github.com:GrayCodeAI/graycode-cli.git", nil
 		case "branch":
 			return "main", nil
 		case "rev-parse":
@@ -25,7 +25,7 @@ func TestDetectGitContext(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Repository != "GrayCodeAI/hawk" || got.Provider != "github" || got.Branch != "main" || got.Commit != "abc123" {
+	if got.Repository != "GrayCodeAI/graycode-cli" || got.Provider != "github" || got.Branch != "main" || got.Commit != "abc123" {
 		t.Fatalf("context = %+v", got)
 	}
 }

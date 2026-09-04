@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	homepkg "github.com/GrayCodeAI/hawk/internal/home"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	homepkg "github.com/GrayCodeAI/graycode-cli/internal/home"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // managedSource is the synthetic source name for IT-managed (org policy) rules.
@@ -23,10 +23,10 @@ const managedSource = "managed"
 func defaultManagedPaths() []string {
 	switch runtime.GOOS {
 	case "darwin":
-		return []string{"/Library/Application Support/HawkCode/HAWK.md"}
+		return []string{"/Library/Application Support/Graycode/GRAYCODE.md"}
 	default:
 		// Linux and other unix-like systems.
-		return []string{"/etc/hawk-code/HAWK.md"}
+		return []string{"/etc/graycode/GRAYCODE.md"}
 	}
 }
 
@@ -55,7 +55,7 @@ var DefaultRuleSources = []RuleSource{
 	{".cursor/rules", 4, true},
 	{".github/instructions", 5, true},
 	{"AGENTS.md", 10, false},
-	{"HAWK.md", 11, false},
+	{"GRAYCODE.md", 11, false},
 	{"CLAUDE.md", 12, false},
 	{"CONTEXT.md", 13, false},
 	{".github/copilot-instructions.md", 14, false},

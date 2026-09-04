@@ -8,7 +8,7 @@ repo's threshold, update both the CI file and this table in the same PR.**
 
 | Repo | Threshold | Mechanism |
 |---|---|---|
-| `hawk` | 60% | inline `bc` check in `ci.yml` |
+| `graycode` | 60% | inline `bc` check in `ci.yml` |
 | `eyrie` | 60% | inline `bc` check in `ci.yml` |
 | `harrier` | 49% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
 | `shrike` | 38% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
@@ -17,7 +17,6 @@ repo's threshold, update both the CI file and this table in the same PR.**
 | `merlin` | 76% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
 | `sparrow` | 80% | `THRESHOLD=` in `ci.yml` (go-ci.yml.tmpl) |
 | `robin` | 78% | `--cov-fail-under=` in `ci.yml` (python-ci.yml.tmpl) |
-| `eagle` | none enforced | leaf library; add one before it grows past a handful of files |
 | `falcon` | none enforced | leaf library; add one before it grows past a handful of files |
 | `starling` | n/a | no Go/Python test suite (skill/content registry) |
 

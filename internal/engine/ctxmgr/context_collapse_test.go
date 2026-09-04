@@ -3,7 +3,7 @@ package ctxmgr
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 func TestCollapseRepeatedMessages_NoCollapse(t *testing.T) {

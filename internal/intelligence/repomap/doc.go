@@ -1,4 +1,4 @@
-// Package repomap is the deep code-analysis engine that powers hawk's
+// Package repomap is the deep code-analysis engine that powers graycode's
 // repository-mapping, symbol-extraction, and code-quality features.
 //
 // The package is built around the entry point Generate (in repomap.go), which
@@ -24,16 +24,16 @@
 //
 // The package is intentionally stdlib-only at its core (go/parser, go/ast,
 // go/token, encoding/*); the only third-party dependency is github.com/fsnotify
-// /fsnotify for file watching, plus hawk's own internal/scoring and
+// /fsnotify for file watching, plus graycode's own internal/scoring and
 // internal/ui/icons helpers where they are used. Tree-sitter is not required:
 // Go is parsed with go/ast and other languages are handled by an enhanced
 // regex extractor (see treesitter.go and parser_langs.go).
 //
 // # Dual-package relationship
 //
-// hawk ships a second package, internal/context/repomap, that exposes a much
+// graycode ships a second package, internal/context/repomap, that exposes a much
 // narrower surface - essentially just RepoMap(root, budget) (string, error).
-// That package is the prompt-injection shim: it is what hawk's context layer
+// That package is the prompt-injection shim: it is what graycode's context layer
 // calls when it needs a budgeted overview for the system prompt. It does its
 // own AST parsing, PageRank pass, and rendering, and shares no code with this
 // package beyond the name. The package you are reading is the deeper
@@ -58,7 +58,7 @@
 // (default 500). The symbol cache (cache.go) is an in-process LRU keyed by
 // (path, modtime) that is cleared on process exit; the IncrementalMap
 // (incremental_map.go) provides a persistent on-disk cache at
-// .hawk/repomap-cache.json keyed by SHA-256. Callers that need to operate on
+// .graycode/repomap-cache.json keyed by SHA-256. Callers that need to operate on
 // repositories with tens of thousands of files should set MaxFiles
 // appropriately and prefer the incremental path. Static-analysis passes such
 // as BuildCallGraph, BuildDepGraph, and the PageRank iteration in pagerank.go

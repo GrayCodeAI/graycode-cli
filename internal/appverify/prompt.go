@@ -7,7 +7,7 @@ import (
 
 // EvidenceDir is the stable, workspace-relative directory for verification
 // artifacts. Stable paths let reports and downstream tooling rely on them.
-const EvidenceDir = ".hawk/verify/artifacts"
+const EvidenceDir = ".graycode/verify/artifacts"
 
 // BuildVerifyPrompt renders the phased QA-engineer prompt for the recipe. The
 // discipline it encodes (adopted from grok-cli) is that build/test passing

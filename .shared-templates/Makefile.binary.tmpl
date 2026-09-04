@@ -2,13 +2,13 @@
 # Source of truth: .shared-templates/Makefile.binary.tmpl at the eco root.
 # Placeholders rendered per repo: {{NAME}}, {{MAIN_PKG}}.
 #
-# hawk is currently the only Go binary repo in the ecosystem, and its real
-# Makefile extends this core with hawk-specific targets (workspace `setup`,
+# graycode is currently the only Go binary repo in the ecosystem, and its real
+# Makefile extends this core with graycode-specific targets (workspace `setup`,
 # `compat-test`/`compat-check`, `sync-submodules`/`sync-external`,
 # `build-all`/`build-static`/`size-check`, and split `*-guard` boundary
 # checks instead of the single generic `boundaries` below). Treat this file
 # as the floor every Go binary repo starts from, not a literal copy of
-# hawk/Makefile.
+# graycode/Makefile.
 
 # ---------------------------------------------------------------------------
 # Project metadata
@@ -18,7 +18,7 @@ MAIN_PKG  := {{MAIN_PKG}}
 
 # ---------------------------------------------------------------------------
 # Versioning — sourced from VERSION file; falls back to git describe.
-# See https://github.com/GrayCodeAI/hawk/blob/main/docs/versioning.md.
+# See https://github.com/GrayCodeAI/graycode-cli/blob/main/docs/versioning.md.
 # ---------------------------------------------------------------------------
 VERSION ?= $(shell v=$$(cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]'); if [ -n "$$v" ]; then echo "$$v"; else git describe --tags --always --dirty 2>/dev/null || echo "dev"; fi)
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
@@ -138,5 +138,5 @@ hooks: ## Install git hooks via lefthook (formatting, linting, conventional comm
 # ---------------------------------------------------------------------------
 # Repo-specific extensions go below this line — workspace setup, submodule
 # sync, cross-platform build matrices, compatibility-matrix checks, etc.
-# See hawk/Makefile for the real, extended reference implementation.
+# See graycode/Makefile for the real, extended reference implementation.
 # ---------------------------------------------------------------------------

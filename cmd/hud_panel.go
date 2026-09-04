@@ -6,7 +6,7 @@ import (
 
 	lipgloss "charm.land/lipgloss/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // HUDData is a snapshot of agent/mission/memory state rendered by the HUD panel.

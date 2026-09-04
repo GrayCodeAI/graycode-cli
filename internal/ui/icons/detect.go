@@ -44,10 +44,10 @@ func init() {
 // Resolution is explicit and deterministic: interactive TTYs use real Nerd
 // Font glyphs by default, while captured/non-interactive output uses ASCII.
 // A terminal name cannot prove which font is configured, so users can select
-// the tier directly with HAWK_ICONS=nerd|ascii.
+// the tier directly with GRAYCODE_ICONS=nerd|ascii.
 //
 // Precedence:
-//  1. HAWK_ICONS=nerd|ascii → ModeNerd / ModeASCII
+//  1. GRAYCODE_ICONS=nerd|ascii → ModeNerd / ModeASCII
 //  2. NO_COLOR set          → ModeASCII
 //  3. !stdoutIsTTY()        → ModeASCII  (piped output stays clean)
 //  4. otherwise             → ModeNerd (interactive TTY)
@@ -68,7 +68,7 @@ func SetMode(m IconMode) {
 }
 
 func resolveMode() IconMode {
-	switch strings.ToLower(os.Getenv("HAWK_ICONS")) {
+	switch strings.ToLower(os.Getenv("GRAYCODE_ICONS")) {
 	case "nerd", "nerdfont", "pua":
 		return ModeNerd
 	case "ascii", "off", "no", "0":

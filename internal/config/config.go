@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
 )
 
 // LoadAgentsMD reads AGENTS.md from the current directory or parents.

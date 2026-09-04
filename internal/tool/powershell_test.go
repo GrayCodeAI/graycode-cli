@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
 )
 
 func TestPowerShellTool_EmptyCommand(t *testing.T) {

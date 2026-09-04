@@ -72,7 +72,7 @@ func (t *Tracer) StartSpan(ctx context.Context, name string) (context.Context, *
 
 	// If the global OTel tracer provider is set, create a real span.
 	// otel.Tracer uses the global provider set by InitOTelSDK.
-	ctx, otelSpan := otel.Tracer("hawk-code").Start(ctx, name)
+	ctx, otelSpan := otel.Tracer("graycode").Start(ctx, name)
 	span.otelSpan = otelSpan
 
 	t.mu.Lock()

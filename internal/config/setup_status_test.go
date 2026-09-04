@@ -7,7 +7,7 @@ import (
 
 	"github.com/GrayCodeAI/eyrie/catalog"
 	"github.com/GrayCodeAI/eyrie/credentials"
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 func TestHasConfiguredDeployment_FromStore(t *testing.T) {

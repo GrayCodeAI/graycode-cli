@@ -54,7 +54,7 @@ if [[ -n "${violations}" ]]; then
   echo "forbidden cross-repo peer imports found:"
   echo "${violations}"
   echo
-  echo "support engines must not import each other; Hawk is the orchestrator and shared contracts belong in eagle"
+  echo "support engines must not import each other; Graycode is the orchestrator and shared contracts belong in graycode's internal/contracts"
   exit 1
 fi
 

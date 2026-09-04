@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 func TestStreamUsageLedgerRecordsDoneOnlyUsage(t *testing.T) {

@@ -14,8 +14,8 @@ go test ./internal/config/ -run 'Verify_|HasConfigured|EvaluateSetup' -count=1
 go test ./internal/tool/ -run 'IsSensitivePath' -count=1
 
 echo "== developer path CLI =="
-BIN="${DEV_PATH_HAWK_BIN:-/tmp/hawk-path-verify}"
-go build -mod=readonly -o "$BIN" ./cmd/hawk
+BIN="${DEV_PATH_GRAYCODE_BIN:-/tmp/graycode-path-verify}"
+go build -mod=readonly -o "$BIN" ./cmd/graycode
 set +o pipefail
 "$BIN" path >/dev/null 2>&1 || true
 set -o pipefail

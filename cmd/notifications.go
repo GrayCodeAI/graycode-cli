@@ -15,7 +15,7 @@ func notifyCompletion(duration time.Duration) {
 		return
 	}
 
-	msg := "Hawk query completed"
+	msg := "Graycode query completed"
 
 	switch runtime.GOOS {
 	case "darwin":
@@ -23,10 +23,10 @@ func notifyCompletion(duration time.Duration) {
 		_ = exec.CommandContext(
 			context.Background(),
 			"osascript", "-e",
-			`display notification "`+msg+`" with title "Hawk"`,
+			`display notification "`+msg+`" with title "Graycode"`,
 		).Start()
 	case "linux":
 		// Linux: use notify-send if available
-		_ = exec.CommandContext(context.Background(), "notify-send", "Hawk", msg).Start()
+		_ = exec.CommandContext(context.Background(), "notify-send", "Graycode", msg).Start()
 	}
 }

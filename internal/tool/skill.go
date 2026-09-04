@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/intelligence/skillcurator"
-	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/skillcurator"
+	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
 )
 
 type SkillTool struct{}
@@ -17,7 +17,7 @@ type SkillTool struct{}
 func (SkillTool) Name() string      { return "Skill" }
 func (SkillTool) Aliases() []string { return []string{"skill"} }
 func (SkillTool) Description() string {
-	return "Load instructions from a local Hawk skill. Use without a skill name to list available skills."
+	return "Load instructions from a local Graycode skill. Use without a skill name to list available skills."
 }
 
 func (SkillTool) Parameters() map[string]interface{} {
@@ -53,7 +53,7 @@ func (SkillTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 		}
 
 		if len(modelSkills) == 0 {
-			return "No skills found in Hawk user state, .agents/skills, or .codex/skills.", nil
+			return "No skills found in Graycode user state, .agents/skills, or .codex/skills.", nil
 		}
 		names := make([]string, 0, len(modelSkills))
 		for _, s := range modelSkills {
@@ -88,7 +88,7 @@ func (SkillTool) Execute(ctx context.Context, input json.RawMessage) (string, er
 	sb.WriteString(entry.Content)
 	// Best-effort skill-usage recording for the curator (opt-in). Never
 	// interrupts skill execution.
-	if strings.EqualFold(os.Getenv("HAWK_SKILL_CURATOR"), "1") {
+	if strings.EqualFold(os.Getenv("GRAYCODE_SKILL_CURATOR"), "1") {
 		skillcurator.RecordSkillUsage(p.Skill)
 	}
 	return sb.String(), nil

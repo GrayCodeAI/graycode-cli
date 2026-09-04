@@ -22,12 +22,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/netutil"
-	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
-	"github.com/GrayCodeAI/hawk/internal/securitylog"
-	hawksession "github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/netutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/metrics"
+	"github.com/GrayCodeAI/graycode-cli/internal/securitylog"
+	graycodesession "github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 const maxRequestBodyBytes = 1 << 20
@@ -74,10 +74,10 @@ func (e *InvalidChatRequestError) Unwrap() error { return e.Err }
 // version is set via SetVersion from main.go at startup.
 var version = "0.0.0"
 
-// SetVersion propagates the canonical hawk version into the daemon.
+// SetVersion propagates the canonical graycode version into the daemon.
 func SetVersion(v string) { version = v }
 
-// Server is the hawk daemon HTTP server for programmatic/CI access.
+// Server is the graycode daemon HTTP server for programmatic/CI access.
 type Server struct {
 	addr      string
 	mux       *http.ServeMux
@@ -99,7 +99,7 @@ type Server struct {
 	readyMu sync.RWMutex
 	readyFn func() (bool, string)
 
-	// graphFactory projects a persisted Hawk session into the portable,
+	// graphFactory projects a persisted Graycode session into the portable,
 	// privacy-safe execution graph. The composition root supplies the builder;
 	// the daemon owns only HTTP validation, authentication, and encoding.
 	graphMu      sync.RWMutex
@@ -343,7 +343,7 @@ func (s *Server) Start() (string, error) {
 		s.gateways.Start(context.Background())
 	}
 
-	slog.Info("hawk daemon started", "addr", actualAddr)
+	slog.Info("graycode daemon started", "addr", actualAddr)
 	return actualAddr, nil
 }
 
@@ -382,7 +382,7 @@ func (s *Server) warnInsecureAuthConfig() {
 		return
 	}
 	slog.Warn(
-		"hawk daemon started without API key authentication; only loopback access allowed",
+		"graycode daemon started without API key authentication; only loopback access allowed",
 		"addr", s.addr,
 		"hint", "Set Config.APIKey to enable authentication, or keep the default loopback bind.",
 	)
@@ -540,11 +540,11 @@ func (s *Server) cancelSession(sessionID string) bool {
 	return true
 }
 
-// maxConcurrentFromEnv reads HAWK_DAEMON_MAX_CONCURRENT (clamped to >= 1) so
+// maxConcurrentFromEnv reads GRAYCODE_DAEMON_MAX_CONCURRENT (clamped to >= 1) so
 // operators can tune the global chat concurrency cap without a rebuild.
 func maxConcurrentFromEnv() int {
 	n := defaultMaxConcurrentChat
-	if raw := os.Getenv("HAWK_DAEMON_MAX_CONCURRENT"); raw != "" {
+	if raw := os.Getenv("GRAYCODE_DAEMON_MAX_CONCURRENT"); raw != "" {
 		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
 			n = parsed
 		}
@@ -706,12 +706,12 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	lock.Lock()
 	defer lock.Unlock()
 
-	var saved *hawksession.Session
+	var saved *graycodesession.Session
 	if requestedID != "" {
 		var loadErr error
-		saved, loadErr = hawksession.Load(sessionID)
+		saved, loadErr = graycodesession.Load(sessionID)
 		if loadErr != nil {
-			if !errors.Is(loadErr, hawksession.ErrNotFound) {
+			if !errors.Is(loadErr, graycodesession.ErrNotFound) {
 				slog.Error("load continuation session failed", "err", loadErr, "session_id", sessionID)
 				writeJSON(w, http.StatusInternalServerError, ErrorResponse{
 					Error: "session load failed",
@@ -783,7 +783,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if saved != nil {
-		sess.LoadMessages(hawksession.ToRuntimeMessages(saved.Messages))
+		sess.LoadMessages(graycodesession.ToRuntimeMessages(saved.Messages))
 		if err := sess.ReplayJournal(saved.Events); err != nil {
 			slog.Error("replay session event journal failed", "err", err, "session_id", sessionID)
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "session event journal replay failed"})
@@ -807,7 +807,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		}
 		if requested > max {
 			writeJSON(w, http.StatusBadRequest, ErrorResponse{
-				Error: fmt.Sprintf("autonomy %q exceeds the daemon's configured maximum (%s); the daemon is non-interactive and cannot approve escalated permissions. Raise Config.MaxAutonomy (HAWK_DAEMON_AUTONOMY) to allow it", requested.String(), max.String()),
+				Error: fmt.Sprintf("autonomy %q exceeds the daemon's configured maximum (%s); the daemon is non-interactive and cannot approve escalated permissions. Raise Config.MaxAutonomy (GRAYCODE_DAEMON_AUTONOMY) to allow it", requested.String(), max.String()),
 				Code:  "autonomy_denied",
 			})
 			return
@@ -867,11 +867,11 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 // streamSSE writes a streaming response as SSE events, observing client
 // disconnect via r.Context().Done() so the handler does not keep pushing
 // events to a dead connection.
-func streamSSE(s *Server, w http.ResponseWriter, r *http.Request, events <-chan engine.StreamEvent, sessionID string, req ChatRequest, sess *engine.Session, saved *hawksession.Session, start time.Time) {
+func streamSSE(s *Server, w http.ResponseWriter, r *http.Request, events <-chan engine.StreamEvent, sessionID string, req ChatRequest, sess *engine.Session, saved *graycodesession.Session, start time.Time) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("X-Hawk-Session-ID", sessionID)
+	w.Header().Set("X-Graycode-Session-ID", sessionID)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("X-Frame-Options", "DENY")
 	flusher, _ := w.(http.Flusher)
@@ -962,7 +962,7 @@ func (s *Server) abortStreamedSession(sessionID string) {
 }
 
 // writeJSONResponse accumulates events and writes a single JSON response.
-func writeJSONResponse(s *Server, w http.ResponseWriter, events <-chan engine.StreamEvent, sessionID string, req ChatRequest, sess *engine.Session, saved *hawksession.Session, start time.Time) {
+func writeJSONResponse(s *Server, w http.ResponseWriter, events <-chan engine.StreamEvent, sessionID string, req ChatRequest, sess *engine.Session, saved *graycodesession.Session, start time.Time) {
 	var response strings.Builder
 	var totalIn, totalOut, turns int
 
@@ -985,7 +985,7 @@ func writeJSONResponse(s *Server, w http.ResponseWriter, events <-chan engine.St
 		return
 	}
 	s.trackSession(sessionID, req, saved, start, turns)
-	w.Header().Set("X-Hawk-Session-ID", sessionID)
+	w.Header().Set("X-Graycode-Session-ID", sessionID)
 
 	writeJSON(w, http.StatusOK, ChatResponse{
 		SessionID:  sessionID,
@@ -998,7 +998,7 @@ func writeJSONResponse(s *Server, w http.ResponseWriter, events <-chan engine.St
 }
 
 func validSessionID(id string) bool {
-	return hawksession.ValidID(id)
+	return graycodesession.ValidID(id)
 }
 
 // CancelRequest is the JSON body for POST /v1/cancel.
@@ -1077,7 +1077,7 @@ func (s *Server) sessionLock(id string) *sync.Mutex {
 	return &s.sessionLocks[hash%uint64(len(s.sessionLocks))]
 }
 
-func persistDaemonSession(id string, req ChatRequest, sess *engine.Session, previous *hawksession.Session, startedAt time.Time) error {
+func persistDaemonSession(id string, req ChatRequest, sess *engine.Session, previous *graycodesession.Session, startedAt time.Time) error {
 	createdAt := startedAt
 	name := ""
 	if previous != nil {
@@ -1092,20 +1092,20 @@ func persistDaemonSession(id string, req ChatRequest, sess *engine.Session, prev
 	if j := sess.Persistence().Journal(); j != nil {
 		j.AppendSessionTitle(name)
 	}
-	return hawksession.Save(&hawksession.Session{
+	return graycodesession.Save(&graycodesession.Session{
 		ID:        id,
 		Model:     sess.Model(),
 		Provider:  sess.Provider(),
 		Agent:     req.Agent,
 		CWD:       req.CWD,
 		Name:      name,
-		Messages:  hawksession.FromRuntimeMessages(sess.RawMessages()),
+		Messages:  graycodesession.FromRuntimeMessages(sess.RawMessages()),
 		Events:    sess.JournalWire(),
 		CreatedAt: createdAt,
 	})
 }
 
-func (s *Server) trackSession(id string, req ChatRequest, previous *hawksession.Session, startedAt time.Time, turns int) {
+func (s *Server) trackSession(id string, req ChatRequest, previous *graycodesession.Session, startedAt time.Time, turns int) {
 	createdAt := startedAt
 	if previous != nil && !previous.CreatedAt.IsZero() {
 		createdAt = previous.CreatedAt

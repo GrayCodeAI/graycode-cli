@@ -25,12 +25,12 @@ import (
 
 // Markdown rendering styles using the project's purpose-named palette.
 var (
-	mdH1Style         = lipgloss.NewStyle().Foreground(hawkColor).Bold(true).Underline(true)
+	mdH1Style         = lipgloss.NewStyle().Foreground(graycodeColor).Bold(true).Underline(true)
 	mdH2Style         = lipgloss.NewStyle().Foreground(successTeal).Bold(true)
 	mdH3Style         = lipgloss.NewStyle().Foreground(infoSky).Bold(true)
 	mdH4Style         = lipgloss.NewStyle().Foreground(costViolet).Bold(true)
 	mdHeaderStyle     = lipgloss.NewStyle().Foreground(textPrimary).Bold(true)
-	mdBoldStyle       = lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
+	mdBoldStyle       = lipgloss.NewStyle().Foreground(graycodeColor).Bold(true)
 	mdItalicStyle     = lipgloss.NewStyle().Italic(true)
 	mdInlineCodeStyle = lipgloss.NewStyle().Foreground(infoSky)
 	mdCodeBlockStyle  = lipgloss.NewStyle().Background(bgCode)
@@ -621,13 +621,13 @@ func protectInlineCode(text string, render func(string) string) (string, func(st
 		if len(parts) < 2 {
 			return m
 		}
-		placeholder := fmt.Sprintf("\x00HAWK_INLINE_CODE_%d\x00", len(replacements))
+		placeholder := fmt.Sprintf("\x00GRAYCODE_INLINE_CODE_%d\x00", len(replacements))
 		replacements = append(replacements, render(parts[1]))
 		return placeholder
 	})
 	restore := func(s string) string {
 		for i, repl := range replacements {
-			s = strings.ReplaceAll(s, fmt.Sprintf("\x00HAWK_INLINE_CODE_%d\x00", i), repl)
+			s = strings.ReplaceAll(s, fmt.Sprintf("\x00GRAYCODE_INLINE_CODE_%d\x00", i), repl)
 		}
 		return s
 	}

@@ -3,7 +3,7 @@
 // during the Stage 2 migration. See docs/plans/engine-refactor-plan.md.
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/engine/project"
+import "github.com/GrayCodeAI/graycode-cli/internal/engine/project"
 
 type (
 	ProjectAnalysis      = project.ProjectAnalysis

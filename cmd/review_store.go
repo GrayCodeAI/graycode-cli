@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	reviewcontracts "github.com/GrayCodeAI/eagle/review"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	reviewcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/review"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // ReviewStatus represents the state of a review.

@@ -1,6 +1,6 @@
 // Package testrunner auto-discovers test/verify commands from project files and
 // parses runner output into structured, machine-readable results. Adopted from
-// Zero (internal/testrunner) to upgrade hawk's verify/self-verification loop:
+// Zero (internal/testrunner) to upgrade graycode's verify/self-verification loop:
 // instead of blindly running one hard-coded command, Detect finds the right
 // checks (Go, bun/npm/pnpm/yarn, pytest, cargo) and ParseSummary turns raw
 // output into counts and failure locations.

@@ -8,7 +8,7 @@ import (
 	shrikegraph "github.com/GrayCodeAI/shrike/runtimegraph"
 )
 
-// These tests guard the dependency boundary: they verify hawk's token package
+// These tests guard the dependency boundary: they verify graycode's token package
 // forwards to the external shrike library correctly so wiring regressions (wrong
 // arg order, dropped params) surface in CI without needing the library's own
 // test suite.

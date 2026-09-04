@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/mcp"
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/mcp"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 // fakeTokenBackend is an in-memory stand-in for the OS keychain — tests in

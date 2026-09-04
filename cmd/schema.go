@@ -9,13 +9,13 @@ import (
 
 var schemaCmd = &cobra.Command{
 	Use:   "schema",
-	Short: "Output JSON schema for hawk settings.json",
-	Long:  "Prints the JSON schema for hawk's settings.json configuration file. Use with $schema for IDE autocompletion.",
+	Short: "Output JSON schema for graycode settings.json",
+	Long:  "Prints the JSON schema for graycode's settings.json configuration file. Use with $schema for IDE autocompletion.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		schema := map[string]interface{}{
 			"$schema":     "http://json-schema.org/draft-07/schema#",
-			"title":       "Hawk Settings",
-			"description": "Configuration for the Hawk AI coding agent",
+			"title":       "Graycode Settings",
+			"description": "Configuration for the Graycode AI coding agent",
 			"type":        "object",
 			"properties": map[string]interface{}{
 				"model":    map[string]interface{}{"type": "string", "description": "Default model (e.g. claude-sonnet-4-20250514)"},
@@ -56,7 +56,7 @@ var schemaCmd = &cobra.Command{
 					"type": "object",
 					"properties": map[string]interface{}{
 						"trailer_style":  map[string]interface{}{"type": "string", "enum": []string{"none", "assisted-by"}, "default": "none"},
-						"generated_with": map[string]interface{}{"type": "boolean", "description": "Append 'Generated with Hawk' to commits"},
+						"generated_with": map[string]interface{}{"type": "boolean", "description": "Append 'Generated with Graycode' to commits"},
 					},
 				},
 				"repo_map":                   map[string]interface{}{"type": "boolean"},

@@ -7,17 +7,17 @@ Every graycode-ecosystem repo's `Makefile`, `lefthook.yml`, and
 # Source of truth: .shared-templates/Makefile.library.tmpl at the eco root.
 ```
 
-This directory is that source of truth. It lives here, in `hawk`, because
-`hawk` is the one repo every consumer already depends on or references —
+This directory is that source of truth. It lives here, in `graycode-cli`, because
+`graycode-cli` is the one repo every consumer already depends on or references —
 there is no separate monorepo at the workspace root to hold it.
 
-**This directory is not built or run by hawk itself.** It is a template
+**This directory is not built or run by graycode itself.** It is a template
 library that other graycode-ecosystem repos copy from and diff against.
 
 ## Layout
 
 - `Makefile.library.tmpl` — Go library repos (engines, SDKs, foundation repos)
-- `Makefile.binary.tmpl` — Go binary repos (currently only `hawk`)
+- `Makefile.binary.tmpl` — Go binary repos (currently only `graycode`)
 - `Makefile.python.tmpl` — Python repos (`robin`)
 - `lefthook.yml.tmpl` — git hooks config, identical across all Go repos
 - `.goreleaser.yml.tmpl` — goreleaser config for Go binary repos
@@ -28,7 +28,7 @@ library that other graycode-ecosystem repos copy from and diff against.
 - `workflows/python-release.yml.tmpl` — PyPI publish workflow (Trusted Publishing)
 - `workflows/compatibility-test.yml.tmpl` — cross-repo compatibility matrix check (see `docs/compatibility.md`)
 - `scripts/check-ecosystem-boundaries.sh.tmpl` — the import-boundary guard, parameterized per repo role
-- `scripts/sync-external.sh` — read-only drift report for `hawk`'s `external/` submodule pins (hawk-specific, not templated elsewhere)
+- `scripts/sync-external.sh` — read-only drift report for `graycode`'s `external/` submodule pins (graycode-specific, not templated elsewhere)
 - `docs/coverage-matrix.md` — per-repo test coverage thresholds enforced in CI, kept in one place so they don't silently drift out of sync with each repo's `go-ci.yml`
 
 ## How repos use this
@@ -37,9 +37,9 @@ There is currently no rendering tool — repos copy a template, replace the
 placeholders marked `{{LIKE_THIS}}`, and keep the "Source of truth" header
 comment pointing back here. When you change a template, the repos that
 copied it are now stale; update them in the same PR or file a follow-up
-per repo. `hawk`'s own `Makefile`/`lefthook.yml`/CI predate this directory
+per repo. `graycode`'s own `Makefile`/`lefthook.yml`/CI predate this directory
 and intentionally diverge in a few binary-specific ways (see
-`Makefile.binary.tmpl`, which documents the real deltas against `hawk`'s
+`Makefile.binary.tmpl`, which documents the real deltas against `graycode`'s
 Makefile).
 
 ## Boundary rule

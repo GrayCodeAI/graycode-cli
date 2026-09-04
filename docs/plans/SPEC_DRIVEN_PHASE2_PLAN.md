@@ -69,7 +69,7 @@
 
 **Changes:**
 1. Create `internal/tool/spec_version.go` — SpecVersionTool
-   - Stage .hawk/specs/ changes
+   - Stage .graycode/specs/ changes
    - Generate commit message referencing REQ IDs
    - Link code commits to spec requirements
 

@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 func TestJournaledAppendKeepsTranscriptAndProjectionInSync(t *testing.T) {

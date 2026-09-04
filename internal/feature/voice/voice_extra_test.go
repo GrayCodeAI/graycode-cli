@@ -124,7 +124,7 @@ func TestSTTConfig_JSONRoundTrip(t *testing.T) {
 
 func TestKeyterms_ContainsExpectedTerms(t *testing.T) {
 	terms := Keyterms()
-	expected := []string{"hawk", "run", "test", "build", "yes", "no", "stop"}
+	expected := []string{"graycode", "run", "test", "build", "yes", "no", "stop"}
 	for _, e := range expected {
 		found := false
 		for _, t := range terms {

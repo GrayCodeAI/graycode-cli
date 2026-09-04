@@ -201,7 +201,7 @@ func runCodeMatch(ctx context.Context, root, pattern, language string, limit int
 		}
 		if d.IsDir() {
 			name := d.Name()
-			if name == ".git" || name == "node_modules" || name == "vendor" || name == ".hawk" || name == "__pycache__" || name == "dist" || name == "target" {
+			if name == ".git" || name == "node_modules" || name == "vendor" || name == ".graycode" || name == "__pycache__" || name == "dist" || name == "target" {
 				return filepath.SkipDir
 			}
 			return nil

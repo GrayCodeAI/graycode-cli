@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
-	"github.com/GrayCodeAI/hawk/internal/eventlog/zstdz"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog/zstdz"
 )
 
 func TestSaveWithZstdRoundTrip(t *testing.T) {

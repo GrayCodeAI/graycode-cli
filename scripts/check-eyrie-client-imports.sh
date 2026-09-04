@@ -20,7 +20,7 @@ if [[ -n "${violations}" ]]; then
   echo "forbidden direct imports of github.com/GrayCodeAI/eyrie/client found:"
   echo "${violations}"
   echo
-  echo "Hawk production code must go through github.com/GrayCodeAI/eyrie/engine"
+  echo "Graycode production code must go through github.com/GrayCodeAI/eyrie/engine"
   exit 1
 fi
 

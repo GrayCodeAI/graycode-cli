@@ -1,6 +1,6 @@
 # Workflow Budgets
 
-Hawk exposes several independent limits. Configure the smallest useful scope
+Graycode exposes several independent limits. Configure the smallest useful scope
 for automation and distinguish them when diagnosing termination.
 
 | Budget | Limits | Purpose |

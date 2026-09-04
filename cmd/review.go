@@ -10,17 +10,17 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 var reviewCmd = &cobra.Command{
 	Use:   "review",
 	Short: "Continuous AI code review on commits",
-	Long: `hawk review provides continuous background code review.
+	Long: `graycode review provides continuous background code review.
 
-Run 'hawk review init' to install a post-commit hook, then every commit
-is automatically reviewed using kestrel. View findings with 'hawk review tui'
-or fix them with 'hawk review fix'.`,
+Run 'graycode review init' to install a post-commit hook, then every commit
+is automatically reviewed using kestrel. View findings with 'graycode review tui'
+or fix them with 'graycode review fix'.`,
 }
 
 var reviewInitCmd = &cobra.Command{
@@ -38,10 +38,10 @@ func init() {
 }
 
 const hookScript = `#!/bin/sh
-# hawk review — continuous code review hook
-# Installed by 'hawk review init'
+# graycode review — continuous code review hook
+# Installed by 'graycode review init'
 SHA=$(git rev-parse HEAD)
-hawk review run "$SHA" --background &
+graycode review run "$SHA" --background &
 `
 
 func runReviewInit(_ *cobra.Command, _ []string) error {
@@ -60,8 +60,8 @@ func runReviewInit(_ *cobra.Command, _ []string) error {
 	// Check for existing hook.
 	if _, err := os.Stat(hookPath); err == nil && !reviewInitForce {
 		existing, _ := os.ReadFile(hookPath) // #nosec G304 -- hookPath built from internal hooksDir constant, not external input
-		if strings.Contains(string(existing), "hawk review") {
-			fmt.Println(icons.CheckBold() + " hawk review hook already installed")
+		if strings.Contains(string(existing), "graycode review") {
+			fmt.Println(icons.CheckBold() + " graycode review hook already installed")
 			return nil
 		}
 		return fmt.Errorf("post-commit hook already exists at %s\nUse --force to overwrite, or manually add:\n  %s", hookPath, strings.TrimSpace(hookScript))
@@ -74,8 +74,8 @@ func runReviewInit(_ *cobra.Command, _ []string) error {
 
 	fmt.Printf("%s Installed post-commit hook at %s\n", icons.CheckBold(), hookPath)
 	fmt.Println("  Every commit will now be reviewed automatically.")
-	fmt.Println("  View reviews: hawk review status")
-	fmt.Println("  Interactive:  hawk review tui")
+	fmt.Println("  View reviews: graycode review status")
+	fmt.Println("  Interactive:  graycode review tui")
 	return nil
 }
 

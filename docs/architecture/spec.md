@@ -1,8 +1,8 @@
-# Hawk Architecture Specification
+# Graycode Architecture Specification
 
 ## Problem Statement
 
-Hawk is an AI-powered coding agent for the terminal. This specification defines the complete architecture: repository structure, agent loop, agile workflow, feedback loops, and edge case handling. It serves as the authoritative reference for how hawk works.
+Graycode is an AI-powered coding agent for the terminal. This specification defines the complete architecture: repository structure, agent loop, agile workflow, feedback loops, and edge case handling. It serves as the authoritative reference for how graycode works.
 
 ## Scope
 
@@ -20,15 +20,15 @@ Hawk is an AI-powered coding agent for the terminal. This specification defines 
 
 ### REQ-1: Repository Structure
 
-Hawk SHALL be organized as a Go repository and workspace entry point within a
-multi-repository ecosystem. The Hawk repository has the following top-level
+Graycode SHALL be organized as a Go repository and workspace entry point within a
+multi-repository ecosystem. The Graycode repository has the following top-level
 layout:
 
 | Directory | Purpose |
 |-----------|---------|
 | `cmd/` | CLI entry point (Cobra) and TUI (Bubble Tea) |
 | `internal/` | Private Go packages (not importable by external repos) |
-| Parent `go.work` | Resolves the nine local Go siblings: hawk, eagle, falcon, eyrie, harrier (Harrier), shrike (Shrike), swift (Swift), kestrel (Kestrel), and merlin (Merlin) |
+| Parent `go.work` | Resolves the nine local Go siblings: graycode, eagle, falcon, eyrie, harrier (Harrier), shrike (Shrike), swift (Swift), kestrel (Kestrel), and merlin (Merlin) |
 | `spec/` | OpenSpec schema consumed by `internal/spec` |
 | `docs/` | Architecture docs, design docs, plans |
 | `rules/` | User-defined rules |
@@ -64,7 +64,7 @@ The `internal/` directory SHALL contain the following packages:
 | `system/` | Bus, shutdown, retention, cron, staleness |
 | `storage/` | State directory management |
 | `snapshot/` | File snapshots for undo |
-| `hawk-skills/` | Bundled skills (32 skills) |
+| `graycode-skills/` | Bundled skills (32 skills) |
 
 ### REQ-3: Engine Sub-Systems
 
@@ -74,7 +74,7 @@ The `internal/engine/` package SHALL contain the following sub-systems:
 |------------|---------|
 | `stream.go` | The agent loop (agentLoop) - main orchestration |
 | `session.go` | Session struct and sub-services |
-| `chat_service.go` | Hawk ChatClient port, engine adapter coordination, compact |
+| `chat_service.go` | Graycode ChatClient port, engine adapter coordination, compact |
 | `safety/` | Permission engine, trust tiers, spec gate |
 | `compact/` | Context compaction (collapse, micro, smart, truncate) |
 | `ctxmgr/` | Context providers, packing, visualization |
@@ -94,17 +94,17 @@ The `internal/engine/` package SHALL contain the following sub-systems:
 Provider boundary invariant:
 
 ```text
-Hawk CLI/TUI + conversation + tools
+Graycode CLI/TUI + conversation + tools
                   |
-        Hawk-owned ports/DTOs
+        Graycode-owned ports/DTOs
                   |
                   v
             eyrie/engine
  credentials -> catalog -> routing -> generate/stream
 ```
 
-No production Hawk package may import a lower Eyrie package. Custom gateways
-are supplied per Engine instance, and Eyrie DTOs are not Hawk persistence or
+No production Graycode package may import a lower Eyrie package. Custom gateways
+are supplied per Engine instance, and Eyrie DTOs are not Graycode persistence or
 CLI output schemas.
 
 ### REQ-4: Agent Loop Lifecycle

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
 )
 
 // ErrInvalidMode is returned when an unrecognized sandbox mode string is supplied.

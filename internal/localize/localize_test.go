@@ -7,10 +7,10 @@ import (
 	"testing"
 )
 
-// testRoot returns the hawk repo root (grandparent of internal/localize/).
+// testRoot returns the graycode repo root (grandparent of internal/localize/).
 func testRoot(t *testing.T) string {
 	t.Helper()
-	// We are in hawk/internal/localize, so root is two directories up.
+	// We are in graycode/internal/localize, so root is two directories up.
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)

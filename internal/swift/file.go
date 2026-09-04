@@ -59,7 +59,7 @@ func WriteReportFile(s *Snapshot) (string, error) {
 	now := time.Now()
 	for attempt := 0; attempt < 8; attempt++ {
 		hexBytes := randomHex(3) // 6 hex chars
-		name := "hawk-swift-" + fileNameSuffix(now, hexBytes) + ".md"
+		name := "graycode-swift-" + fileNameSuffix(now, hexBytes) + ".md"
 		path := filepath.Join(dir, name)
 		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 		if err != nil {

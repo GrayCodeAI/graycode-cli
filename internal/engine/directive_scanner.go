@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// Directive is a parsed hawk: comment from source code.
+// Directive is a parsed graycode: comment from source code.
 type Directive struct {
 	File    string
 	Line    int
@@ -17,9 +17,9 @@ type Directive struct {
 	Context string
 }
 
-var hawkDirectivePattern = regexp.MustCompile(`(?i)(?://|#|--|/\*)\s*hawk:\s*(.+?)(?:\s*\*/)?$`)
+var graycodeDirectivePattern = regexp.MustCompile(`(?i)(?://|#|--|/\*)\s*graycode:\s*(.+?)(?:\s*\*/)?$`)
 
-// ScanDirectives finds all `// hawk: <command>` comments in source files.
+// ScanDirectives finds all `// graycode: <command>` comments in source files.
 func ScanDirectives(dir string) []Directive {
 	var directives []Directive
 	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
@@ -28,7 +28,7 @@ func ScanDirectives(dir string) []Directive {
 		}
 		if d.IsDir() {
 			name := d.Name()
-			if name == ".git" || name == "node_modules" || name == "vendor" || name == ".hawk" {
+			if name == ".git" || name == "node_modules" || name == "vendor" || name == ".graycode" {
 				return filepath.SkipDir
 			}
 			return nil
@@ -45,7 +45,7 @@ func ScanDirectives(dir string) []Directive {
 		}
 		lines := strings.Split(string(data), "\n")
 		for i, line := range lines {
-			matches := hawkDirectivePattern.FindStringSubmatch(line)
+			matches := graycodeDirectivePattern.FindStringSubmatch(line)
 			if len(matches) > 1 {
 				start := i - 3
 				if start < 0 {
@@ -73,5 +73,5 @@ func DirectivePrompt(d Directive) string {
 	return "File: " + d.File + " (line " + fmt.Sprintf("%d", d.Line) + ")\n" +
 		"Directive: " + d.Command + "\n" +
 		"Context:\n```\n" + d.Context + "\n```\n\n" +
-		"Implement what the hawk: comment asks for. Remove the hawk: comment after implementing."
+		"Implement what the graycode: comment asks for. Remove the graycode: comment after implementing."
 }

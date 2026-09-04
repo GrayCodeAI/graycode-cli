@@ -5,16 +5,16 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 violations="$(
-  git grep -n 'github\.com/GrayCodeAI/hawk/shared/types' -- '*.go' \
+  git grep -n 'github\.com/GrayCodeAI/graycode-cli/shared/types' -- '*.go' \
     ':(exclude)shared/types/**' \
     ':(exclude)internal/testaudit/audit_test.go' || true
 )"
 
 if [[ -n "${violations}" ]]; then
-  echo "forbidden imports of removed github.com/GrayCodeAI/hawk/shared/types found:"
+  echo "forbidden imports of removed github.com/GrayCodeAI/graycode-cli/shared/types found:"
   echo "${violations}"
   echo
-  echo "hawk/shared/types has been removed; use github.com/GrayCodeAI/eagle/types instead"
+  echo "graycode/shared/types has been removed; use internal/contracts instead"
   exit 1
 fi
 

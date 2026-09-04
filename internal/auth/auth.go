@@ -13,8 +13,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/safewrite"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/safewrite"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // TokenStore manages authentication tokens.
@@ -25,25 +25,6 @@ type TokenStore struct {
 // NewTokenStore creates a new token store.
 func NewTokenStore() *TokenStore {
 	return &TokenStore{tokens: make(map[string]string)}
-}
-
-// Load loads tokens from secure storage.
-// Deprecated: Use SecureStorage directly to load tokens. This stub always
-// returns an empty token map. Migrate callers to SecureStorage.Get/Set.
-func (t *TokenStore) Load() error {
-	// Stub: no-op. Existing callers that relied on this get an empty token
-	// map. New code should use SecureStorage directly.
-	t.tokens = make(map[string]string)
-	return nil
-}
-
-// Save saves tokens to secure storage.
-// Deprecated: Use SecureStorage directly to persist tokens. This stub is a
-// no-op. Migrate callers to SecureStorage.Set.
-func (t *TokenStore) Save() error {
-	// Stub: no-op. Tokens held in-memory only; they are lost on process exit.
-	// Use SecureStorage for persistent, OS-keychain-backed storage.
-	return nil
 }
 
 // Get returns a token for a provider.

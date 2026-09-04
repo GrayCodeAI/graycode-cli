@@ -9,7 +9,7 @@ NAME := {{NAME}}
 
 # ---------------------------------------------------------------------------
 # Versioning — sourced from VERSION file; falls back to git describe.
-# See https://github.com/GrayCodeAI/hawk/blob/main/VERSIONING.md.
+# See https://github.com/GrayCodeAI/graycode-cli/blob/main/VERSIONING.md.
 # ---------------------------------------------------------------------------
 VERSION ?= $(shell v=$$(cat VERSION 2>/dev/null | head -n1 | tr -d '[:space:]'); if [ -n "$$v" ]; then echo "$$v"; else git describe --tags --always --dirty 2>/dev/null || echo "dev"; fi)
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")

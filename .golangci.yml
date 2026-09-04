@@ -24,7 +24,7 @@ linters:
       # production code with this set). Deliberately excluded floods:
       #   G104 — unhandled errors, already covered by errcheck
       #   G301/G306 — 0755/0644 perms are intentional for user-visible files
-      #   G304 — hawk reads user-supplied file paths by design (CLI agent)
+      #   G304 — graycode reads user-supplied file paths by design (CLI agent)
       includes:
         - G101 # hardcoded credentials
         - G102 # bind to all interfaces

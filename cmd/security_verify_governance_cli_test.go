@@ -8,15 +8,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/securitylog"
+	"github.com/GrayCodeAI/graycode-cli/internal/securitylog"
 )
 
-// withTempState runs a cli test body with HAWK_STATE_DIR pointed at a temp dir
+// withTempState runs a cli test body with GRAYCODE_STATE_DIR pointed at a temp dir
 // so the real user state is never touched.
 func withTempState(t *testing.T, body func(stateDir string)) {
 	t.Helper()
 	dir := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", dir)
+	t.Setenv("GRAYCODE_STATE_DIR", dir)
 	body(dir)
 }
 

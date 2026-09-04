@@ -31,7 +31,7 @@ type swiftCLICorrelationResolver struct{}
 
 type swiftCorrelation struct {
 	SchemaVersion            string                  `json:"schema_version"`
-	HawkSessionID            string                  `json:"hawk_session_id"`
+	GraycodeSessionID        string                  `json:"graycode_session_id"`
 	CheckpointLookupComplete bool                    `json:"checkpoint_lookup_complete"`
 	Matches                  []swiftCorrelationMatch `json:"matches"`
 }
@@ -46,11 +46,11 @@ type swiftCorrelationMatch struct {
 
 func (swiftCLICorrelationResolver) Resolve(
 	ctx context.Context,
-	hawkSessionID string,
+	graycodeSessionID string,
 ) (swiftCorrelation, error) {
-	hawkSessionID = strings.TrimSpace(hawkSessionID)
-	if hawkSessionID == "" {
-		return swiftCorrelation{}, fmt.Errorf("resolve Swift correlation: Hawk session ID is required")
+	graycodeSessionID = strings.TrimSpace(graycodeSessionID)
+	if graycodeSessionID == "" {
+		return swiftCorrelation{}, fmt.Errorf("resolve Swift correlation: Graycode session ID is required")
 	}
 
 	var stdout, stderr cappedBuffer
@@ -59,7 +59,7 @@ func (swiftCLICorrelationResolver) Resolve(
 	root := swiftcli.NewRootCmd()
 	root.SetOut(&stdout)
 	root.SetErr(&stderr)
-	root.SetArgs([]string{"graph", "correlation", "--hawk-session", hawkSessionID})
+	root.SetArgs([]string{"graph", "correlation", "--graycode-session", graycodeSessionID})
 	// Internal composition must not emit telemetry or launch an asynchronous
 	// version check after the read-only lookup completes.
 	root.PersistentPostRun = nil
@@ -68,10 +68,10 @@ func (swiftCLICorrelationResolver) Resolve(
 		return swiftCorrelation{}, fmt.Errorf("resolve Swift correlation through CLI: %w", err)
 	}
 
-	return decodeSwiftCorrelation(stdout.Bytes(), hawkSessionID)
+	return decodeSwiftCorrelation(stdout.Bytes(), graycodeSessionID)
 }
 
-func decodeSwiftCorrelation(payload []byte, hawkSessionID string) (swiftCorrelation, error) {
+func decodeSwiftCorrelation(payload []byte, graycodeSessionID string) (swiftCorrelation, error) {
 	decoder := json.NewDecoder(bytes.NewReader(payload))
 	decoder.DisallowUnknownFields()
 	var correlation swiftCorrelation
@@ -81,13 +81,13 @@ func decodeSwiftCorrelation(payload []byte, hawkSessionID string) (swiftCorrelat
 	if err := requireJSONEOF(decoder); err != nil {
 		return swiftCorrelation{}, err
 	}
-	if err := normalizeSwiftCorrelation(&correlation, hawkSessionID); err != nil {
+	if err := normalizeSwiftCorrelation(&correlation, graycodeSessionID); err != nil {
 		return swiftCorrelation{}, err
 	}
 	return correlation, nil
 }
 
-func normalizeSwiftCorrelation(correlation *swiftCorrelation, hawkSessionID string) error {
+func normalizeSwiftCorrelation(correlation *swiftCorrelation, graycodeSessionID string) error {
 	if correlation == nil {
 		return fmt.Errorf("validate Swift correlation: response is nil")
 	}
@@ -97,8 +97,8 @@ func normalizeSwiftCorrelation(correlation *swiftCorrelation, hawkSessionID stri
 			correlation.SchemaVersion,
 		)
 	}
-	if correlation.HawkSessionID != hawkSessionID {
-		return fmt.Errorf("validate Swift correlation: Hawk session identity mismatch")
+	if correlation.GraycodeSessionID != graycodeSessionID {
+		return fmt.Errorf("validate Swift correlation: Graycode session identity mismatch")
 	}
 
 	seenSessions := make(map[string]struct{}, len(correlation.Matches))

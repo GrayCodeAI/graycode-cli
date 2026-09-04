@@ -12,7 +12,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 //go:embed templates/*.md
@@ -54,7 +54,7 @@ func DefaultContext() PromptContext {
 }
 
 // BuildSystemPrompt assembles the main template sections into a complete system prompt.
-// It checks Hawk user config first for user overrides, then falls back to embedded templates.
+// It checks Graycode user config first for user overrides, then falls back to embedded templates.
 func BuildSystemPrompt(ctx PromptContext) (string, error) {
 	var sections []string
 	for _, name := range mainSections {
@@ -81,7 +81,7 @@ func BuildSubAgentPrompt(ctx PromptContext) (string, error) {
 }
 
 // LoadTemplate loads a single template by name.
-// It checks Hawk user config prompts first, then falls back to embedded.
+// It checks Graycode user config prompts first, then falls back to embedded.
 func LoadTemplate(name string) (string, error) {
 	return loadTemplateSource(name)
 }

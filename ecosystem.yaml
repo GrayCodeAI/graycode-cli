@@ -1,135 +1,61 @@
 schema_version: 1
 
 # Canonical repository inventory for the GrayCodeAI ecosystem. Repository
-# directories and GitHub repository names use the bird codenames; product_name
-# records the user-facing capability. Tooling must consume this file instead of
-# carrying its own repo-name list.
+# directories and GitHub repository names are listed per repository;
+# product_name records the user-facing capability. Tooling must consume this
+# file instead of carrying its own repo-name list. Only repositories that
+# exist are listed: removed siblings stay out until they are restored.
 contracts:
-  eagle_version: v0.0.0-20260902153929-5877bed17503
-  portable_graph_schema: hawk.graph/v1
+  portable_graph_schema: graycode.graph/v1
   cloud_graph_schema: graycode-cloud.graph/v1
   usage_event: usage.recorded.v1
 
 repositories:
-  - directory: hawk
-    github_repo: hawk
-    product_name: Hawk
+  - directory: graycode-cli
+    github_repo: graycode-cli
+    product_name: Graycode
     kind: product
     language: go
-    module: github.com/GrayCodeAI/hawk
+    module: github.com/GrayCodeAI/graycode-cli
     workspace: true
-    tracks_eagle: true
 
-  - directory: eagle
-    github_repo: eagle
-    product_name: Eagle Contracts
-    kind: foundation
-    language: go
-    module: github.com/GrayCodeAI/eagle
-    workspace: true
-    tracks_eagle: false
-
-  - directory: falcon
-    github_repo: falcon
-    product_name: Falcon MCP Kit
-    kind: foundation
-    language: go
-    module: github.com/GrayCodeAI/falcon
-    workspace: true
-    tracks_eagle: false
-
-  - directory: eyrie
-    github_repo: eyrie
+  - directory: graycode-router
+    github_repo: graycode-router
     product_name: Eyrie
     kind: engine
     language: go
     module: github.com/GrayCodeAI/eyrie
     workspace: true
-    tracks_eagle: false
     facade: github.com/GrayCodeAI/eyrie/engine
-
-  - directory: harrier
-    github_repo: harrier
-    product_name: Harrier
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/harrier
-    workspace: true
-    tracks_eagle: false
-    facade: github.com/GrayCodeAI/harrier/engine
-
-  - directory: shrike
-    github_repo: shrike
-    product_name: Shrike
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/shrike
-    workspace: true
-    tracks_eagle: false
-    facade: github.com/GrayCodeAI/shrike
-
-  - directory: swift
-    github_repo: swift
-    product_name: Swift
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/swift
-    workspace: true
-    tracks_eagle: false
-    facade: github.com/GrayCodeAI/swift/cli
-
-  - directory: kestrel
-    github_repo: kestrel
-    product_name: Kestrel
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/kestrel
-    workspace: true
-    tracks_eagle: false
-    facade: github.com/GrayCodeAI/kestrel
-
-  - directory: merlin
-    github_repo: merlin
-    product_name: Merlin
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/merlin
-    workspace: true
-    tracks_eagle: false
-    facade: github.com/GrayCodeAI/merlin
 
   - directory: sparrow
     github_repo: sparrow
-    product_name: Hawk SDK for Go
+    product_name: Graycode SDK for Go
     kind: sdk
     language: go
     module: github.com/GrayCodeAI/sparrow
     workspace: false
-    tracks_eagle: false
 
   - directory: robin
     github_repo: robin
-    product_name: Hawk SDK for Python
+    product_name: Graycode SDK for Python
     kind: sdk
     language: python
     workspace: false
-    tracks_eagle: false
 
   - directory: wren
     github_repo: wren
-    product_name: Hawk SDK for TypeScript
+    product_name: Graycode SDK for TypeScript
     kind: sdk
     language: typescript
     workspace: false
-    tracks_eagle: false
 
   - directory: starling
     github_repo: starling
-    product_name: Hawk Community Skills
+    product_name: Graycode Community Skills
     kind: extension
     language: python
     workspace: false
-    tracks_eagle: false
 
   - directory: owl
     github_repo: owl
@@ -137,7 +63,6 @@ repositories:
     kind: tooling
     language: javascript
     workspace: false
-    tracks_eagle: false
 
   - directory: graycode-platform
     github_repo: graycode-platform
@@ -145,4 +70,3 @@ repositories:
     kind: platform
     language: typescript
     workspace: false
-    tracks_eagle: false

@@ -1,4 +1,4 @@
-// Package mission provides multi-feature parallel execution for hawk.
+// Package mission provides multi-feature parallel execution for graycode.
 // This file adds a watchdog for stall detection in worker goroutines.
 package mission
 
@@ -82,7 +82,7 @@ func (w *Watchdog) check() {
 	now := time.Now()
 	for id, lastActive := range w.lastActive {
 		if now.Sub(lastActive) > w.config.StallTimeout {
-			fmt.Fprintf(os.Stderr, "hawk: warning: feature %s stalled (no output for %v)\n", id, w.config.StallTimeout)
+			fmt.Fprintf(os.Stderr, "graycode: warning: feature %s stalled (no output for %v)\n", id, w.config.StallTimeout)
 			if w.onStall != nil {
 				w.onStall(id)
 			}

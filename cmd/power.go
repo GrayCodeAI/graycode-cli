@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/provider/routing"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/routing"
 )
 
 // PowerConfig maps a power level (1-10) to all relevant settings.

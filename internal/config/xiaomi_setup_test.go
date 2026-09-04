@@ -7,10 +7,10 @@ import (
 	eyriecfg "github.com/GrayCodeAI/eyrie/config"
 )
 
-func TestSetXiaomiTokenPlanRegion_ClearsStaleBaseHost(t *testing.T) {
+func TestSetGatewayRegion_XiaomiClearsStaleBaseHost(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("GRAYCODE_CONFIG_DIR", dir)
 	t.Setenv("EYRIE_CONFIG_DIR", dir)
 	t.Setenv("XIAOMI_MIMO_TOKEN_PLAN_BASE_URL", "https://caller-owned.example.test/v1")
 	cfg := &eyriecfg.ProviderConfig{
@@ -21,7 +21,7 @@ func TestSetXiaomiTokenPlanRegion_ClearsStaleBaseHost(t *testing.T) {
 	if err := eyriecfg.SaveProviderConfig(cfg, ""); err != nil {
 		t.Fatal(err)
 	}
-	if err := SetXiaomiTokenPlanRegion("sgp"); err != nil {
+	if err := SetGatewayRegion(ProviderXiaomiTokenPlan, "sgp"); err != nil {
 		t.Fatal(err)
 	}
 	loaded := eyriecfg.LoadProviderConfig("")
@@ -29,31 +29,27 @@ func TestSetXiaomiTokenPlanRegion_ClearsStaleBaseHost(t *testing.T) {
 		t.Fatalf("region = %q", loaded.XiaomiMimoTokenPlanRegion)
 	}
 	if got := os.Getenv("XIAOMI_MIMO_TOKEN_PLAN_BASE_URL"); got != "https://caller-owned.example.test/v1" {
-		t.Fatalf("SetXiaomiTokenPlanRegion mutated process env: %q", got)
+		t.Fatalf("SetGatewayRegion mutated process env: %q", got)
 	}
-	// want := "https://token-plan-sgp.xiaomimimo.com/v1"
-	// if loaded.XiaomiMimoTokenPlanBaseURL != want {
-	// 	t.Fatalf("base = %q, want %s", loaded.XiaomiMimoTokenPlanBaseURL, want)
-	// }
 }
 
-func TestNeedsXiaomiTokenPlanRegion_InvalidAndMissing(t *testing.T) {
+func TestNeedsGatewayRegion_XiaomiInvalidAndMissing(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", t.TempDir())
-	t.Setenv("HAWK_CONFIG_DIR", dir)
+	t.Setenv("GRAYCODE_CONFIG_DIR", dir)
 	t.Setenv("EYRIE_CONFIG_DIR", dir)
 
-	if !NeedsXiaomiTokenPlanRegion(ProviderXiaomiTokenPlan) {
+	if !NeedsGatewayRegion(ProviderXiaomiTokenPlan) {
 		t.Fatal("expected true when no config file")
 	}
 	if err := eyriecfg.SaveProviderConfig(&eyriecfg.ProviderConfig{Version: "1", XiaomiMimoTokenPlanRegion: "tokyo"}, ""); err != nil {
 		t.Fatal(err)
 	}
-	if !NeedsXiaomiTokenPlanRegion(ProviderXiaomiTokenPlan) {
+	if !NeedsGatewayRegion(ProviderXiaomiTokenPlan) {
 		t.Fatal("expected true for invalid region")
 	}
-	_ = SetXiaomiTokenPlanRegion("cn")
-	if NeedsXiaomiTokenPlanRegion(ProviderXiaomiTokenPlan) {
+	_ = SetGatewayRegion(ProviderXiaomiTokenPlan, "cn")
+	if NeedsGatewayRegion(ProviderXiaomiTokenPlan) {
 		t.Fatal("expected false after valid region set")
 	}
 }

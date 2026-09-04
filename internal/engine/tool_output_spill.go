@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 const (
@@ -16,7 +16,7 @@ const (
 	toolOutputSpillPreview  = 2_000
 )
 
-// maybeSpillToolOutput writes very large tool output to Hawk's user cache and returns a short handle.
+// maybeSpillToolOutput writes very large tool output to Graycode's user cache and returns a short handle.
 func maybeSpillToolOutput(output, toolName, toolID string) string {
 	if len(output) <= toolOutputSpillMinChars {
 		return output

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	lipgloss "charm.land/lipgloss/v2"
-	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 )
 
 func TestRenderStatusBar_SignatureExists(t *testing.T) {
@@ -100,8 +100,8 @@ func TestRenderStatusBarLeft_UsesCachedState(t *testing.T) {
 func TestShortenHomePath(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	got := shortenHomePath(home + "/project/hawk")
-	if got != "~/project/hawk" {
+	got := shortenHomePath(home + "/project/graycode")
+	if got != "~/project/graycode" {
 		t.Fatalf("got %q", got)
 	}
 }

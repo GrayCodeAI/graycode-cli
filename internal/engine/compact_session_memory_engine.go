@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 
-	"github.com/GrayCodeAI/hawk/internal/engine/compact"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine/compact"
 )
 
 type SessionMemoryStrategy struct{}

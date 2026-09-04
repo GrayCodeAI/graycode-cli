@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 var (
@@ -129,7 +129,7 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 	}
 	if len(remaining) > 0 {
 		fmt.Printf("\n%s %d review(s) still open after %d iterations.\n", icons.Alert(), len(remaining), refineMaxIter)
-		fmt.Println("  Run 'hawk review show' to inspect, or increase --max-iterations.")
+		fmt.Println("  Run 'graycode review show' to inspect, or increase --max-iterations.")
 	}
 	return nil
 }
@@ -137,9 +137,9 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 func fixReviewRefine(store *ReviewStore, r *ReviewRecord) error {
 	prompt := buildFixPrompt(r)
 
-	hawkBin, err := os.Executable()
+	graycodeBin, err := os.Executable()
 	if err != nil {
-		hawkBin = "hawk"
+		graycodeBin = "graycode"
 	}
 
 	execArgs := []string{"exec", "--auto", "full"}
@@ -148,7 +148,7 @@ func fixReviewRefine(store *ReviewStore, r *ReviewRecord) error {
 	}
 	execArgs = append(execArgs, prompt)
 
-	cmd := exec.CommandContext(context.Background(), hawkBin, execArgs...) // #nosec G204 -- hawkBin resolved via os.Executable() or literal 'hawk'; args are internal flags
+	cmd := exec.CommandContext(context.Background(), graycodeBin, execArgs...) // #nosec G204 -- graycodeBin resolved via os.Executable() or literal 'graycode'; args are internal flags
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -159,9 +159,9 @@ func fixReviewRefine(store *ReviewStore, r *ReviewRecord) error {
 }
 
 func runReviewOnSHA(store *ReviewStore, sha string) error {
-	hawkBin, err := os.Executable()
+	graycodeBin, err := os.Executable()
 	if err != nil {
-		hawkBin = "hawk"
+		graycodeBin = "graycode"
 	}
 
 	args := []string{"review", "run", sha}
@@ -172,7 +172,7 @@ func runReviewOnSHA(store *ReviewStore, sha string) error {
 		args = append(args, "--model", refineModel)
 	}
 
-	cmd := exec.CommandContext(context.Background(), hawkBin, args...) // #nosec G204 -- hawkBin resolved via os.Executable() or literal 'hawk'; args are internal flags
+	cmd := exec.CommandContext(context.Background(), graycodeBin, args...) // #nosec G204 -- graycodeBin resolved via os.Executable() or literal 'graycode'; args are internal flags
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

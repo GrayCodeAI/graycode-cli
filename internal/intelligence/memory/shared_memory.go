@@ -9,7 +9,7 @@ import (
 )
 
 // SharedMemory enables real-time memory sharing between parallel agents
-// in Hawk's mission mode. When one agent discovers something, all other
+// in Graycode's mission mode. When one agent discovers something, all other
 // agents in the same mission can see it immediately.
 type SharedMemory struct {
 	bridge    *HarrierBridge

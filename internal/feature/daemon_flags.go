@@ -6,12 +6,12 @@ package feature
 //
 // Override at runtime via environment variables:
 //
-//	HAWK_FEATURE_SANDBOX_V2=1         — enable v2 Landlock profile
-//	HAWK_FEATURE_TELEMETRY_OTEL=0     — disable OTel SDK (use in-memory tracer only)
-//	HAWK_FEATURE_METRICS_ENDPOINT=0   — disable the /v1/metrics endpoint
-//	HAWK_FEATURE_SECURITY_HEADERS=1   — enable security headers middleware
-//	HAWK_FEATURE_CORS=0               — enable CORS support on daemon API
-//	HAWK_FEATURE_AUDIT_LOG=1          — enable tamper-evident audit logging
+//	GRAYCODE_FEATURE_SANDBOX_V2=1         — enable v2 Landlock profile
+//	GRAYCODE_FEATURE_TELEMETRY_OTEL=0     — disable OTel SDK (use in-memory tracer only)
+//	GRAYCODE_FEATURE_METRICS_ENDPOINT=0   — disable the /v1/metrics endpoint
+//	GRAYCODE_FEATURE_SECURITY_HEADERS=1   — enable security headers middleware
+//	GRAYCODE_FEATURE_CORS=0               — enable CORS support on daemon API
+//	GRAYCODE_FEATURE_AUDIT_LOG=1          — enable tamper-evident audit logging
 
 var (
 	// SandboxV2 enables the Landlock v2 sandboxing profile. This is
@@ -21,7 +21,7 @@ var (
 
 	// TelemetryOTel controls whether the full OpenTelemetry SDK is
 	// initialized (with OTLP export). Enabled by default since the SDK is
-	// always compiled in; set HAWK_CODE_ENABLE_TELEMETRY=1 to actually
+	// always compiled in; set GRAYCODE_ENABLE_TELEMETRY=1 to actually
 	// activate the OTLP exporter. This flag gates whether the SDK code path
 	// is exercised at all.
 	TelemetryOTel = Register("telemetry-otel", true,

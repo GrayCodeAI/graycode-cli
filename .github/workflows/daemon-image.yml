@@ -8,7 +8,7 @@ on:
     branches: [main]
     paths:
       - "Dockerfile.daemon"
-      - "packaging/systemd/hawk-daemon.service"
+      - "packaging/systemd/graycode-daemon.service"
       - "internal/**"
       - "cmd/**"
       - "go.mod"
@@ -21,7 +21,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: graycodeai/hawk-daemon
+  IMAGE_NAME: graycodeai/graycode-daemon
 
 jobs:
   build:
@@ -51,8 +51,8 @@ jobs:
           push: false
           load: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scan
-          cache-from: type=gha,scope=hawk-daemon
-          cache-to: type=gha,mode=max,scope=hawk-daemon
+          cache-from: type=gha,scope=graycode-daemon
+          cache-to: type=gha,mode=max,scope=graycode-daemon
           build-args: |
             VERSION=${{ github.ref_name }}
             COMMIT=${{ github.sha }}
@@ -106,8 +106,8 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=hawk-daemon
-          cache-to: type=gha,mode=max,scope=hawk-daemon
+          cache-from: type=gha,scope=graycode-daemon
+          cache-to: type=gha,mode=max,scope=graycode-daemon
           build-args: |
             VERSION=${{ github.ref_name }}
             COMMIT=${{ github.sha }}

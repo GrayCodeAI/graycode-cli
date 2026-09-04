@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // Viewport render cache — avoids re-wrapping and re-rendering markdown for the
@@ -30,7 +30,7 @@ const (
 )
 
 func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidth int, expanded map[int]bool) string {
-	hawkC := ansiOrange
+	graycodeC := ansiOrange
 	rst := ansiReset
 	bgDark := "\033[48;2;30;30;40m"
 
@@ -50,7 +50,7 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 		wrappedLines := strings.Split(wrapped, "\n")
 		for li, wl := range wrappedLines {
 			if li == 0 {
-				b.WriteString(bgDark + hawkC + "█" + rst + bgDark + "  " + wl)
+				b.WriteString(bgDark + graycodeC + "█" + rst + bgDark + "  " + wl)
 			} else {
 				b.WriteString(bgDark + "   " + wl)
 			}
@@ -70,7 +70,7 @@ func renderDisplayMessage(msg displayMsg, i int, messages []displayMsg, viewWidt
 			// message entirely rather than leaving an orphan "◈" line.
 			return ""
 		}
-		b.WriteString(hawkC + icons.Robot() + " " + rst + renderMarkdown(content, viewWidth-3))
+		b.WriteString(graycodeC + icons.Robot() + " " + rst + renderMarkdown(content, viewWidth-3))
 	case "tool_use":
 		b.WriteString(toolStyle.Render(icons.CircleFilled() + " " + msg.content))
 	case "tool_result":

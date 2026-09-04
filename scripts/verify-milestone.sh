@@ -14,7 +14,7 @@ while IFS= read -r module; do
   fi
 done < <("$ROOT/scripts/ecosystem-manifest.sh" list engines)
 
-echo "== hawk unit tests =="
+echo "== graycode unit tests =="
 go test ./... -count=1 -short
 
 echo "== milestone verification tests =="

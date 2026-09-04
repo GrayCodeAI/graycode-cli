@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/governance"
+	"github.com/GrayCodeAI/graycode-cli/internal/governance"
 	"github.com/spf13/cobra"
 )
 
@@ -20,10 +20,10 @@ var governanceCmd = &cobra.Command{
 per-session PROFILE (tightest-wins). Tools are permitted only when both
 layers allow them.
 
-  hawk governance                    Show the managed policy status
-  hawk governance show               Print the effective capability rows
-  hawk governance validate <file>    Validate a policy or profile document
-  hawk governance explain <tool>     Evaluate a tool against the policy`,
+  graycode governance                    Show the managed policy status
+  graycode governance show               Print the effective capability rows
+  graycode governance validate <file>    Validate a policy or profile document
+  graycode governance explain <tool>     Evaluate a tool against the policy`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runGovernanceStatus(cmd)
 	},

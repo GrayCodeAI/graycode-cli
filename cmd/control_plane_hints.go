@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 )
 
 // controlPlaneOnboardingHint is a short first-session tip (not a wall of text).

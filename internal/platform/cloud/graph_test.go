@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	"github.com/GrayCodeAI/hawk/internal/executiongraph"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
+	"github.com/GrayCodeAI/graycode-cli/internal/executiongraph"
 )
 
 func TestPrepareGraphSanitizesSensitiveAttributesDeterministically(t *testing.T) {
@@ -18,14 +18,14 @@ func TestPrepareGraphSanitizesSensitiveAttributesDeterministically(t *testing.T)
 		SchemaVersion: executiongraph.SchemaVersion,
 		GeneratedAt:   time.Date(2026, time.July, 25, 12, 0, 0, 0, time.UTC),
 		Nodes: []graphcontracts.Node{{
-			ID:        "hawk/session/session-0123456789",
+			ID:        "graycode/session/session-0123456789",
 			Kind:      graphcontracts.NodeExecution,
 			CreatedAt: time.Date(2026, time.July, 25, 12, 0, 0, 0, time.UTC),
 			Provenance: graphcontracts.Provenance{
-				Producer: "hawk",
+				Producer: "graycode",
 			},
 			Attributes: map[string]string{
-				"entity_type": "hawk_session",
+				"entity_type": "graycode_session",
 				"provider":    "private-provider",
 				"model":       "private-model",
 			},
@@ -69,7 +69,7 @@ func TestPrepareGraphSanitizesSensitiveAttributesDeterministically(t *testing.T)
 
 func TestPrepareGraphRejectsCloudLimits(t *testing.T) {
 	graph := map[string]any{
-		"schema_version": "hawk.graph/v1",
+		"schema_version": "graycode.graph/v1",
 		"generated_at":   "2026-07-25T12:00:00Z",
 		"nodes":          make([]map[string]any, 251),
 		"edges":          []any{},
@@ -94,7 +94,7 @@ func TestSyncGraphUsesDeviceAuthAndDecodesResult(t *testing.T) {
 	result, err := client.SyncGraph(context.Background(), GraphSyncRequest{
 		SyncID:    "graph_0123456789abcdef",
 		ProjectID: "project_0123456789",
-		Graph:     json.RawMessage(`{"schema_version":"hawk.graph/v1","generated_at":"2026-07-25T12:00:00Z","nodes":[],"edges":[],"events":[]}`),
+		Graph:     json.RawMessage(`{"schema_version":"graycode.graph/v1","generated_at":"2026-07-25T12:00:00Z","nodes":[],"edges":[],"events":[]}`),
 	})
 	if err != nil {
 		t.Fatal(err)

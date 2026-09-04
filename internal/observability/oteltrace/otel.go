@@ -26,7 +26,7 @@ type TelemetryConfig struct {
 // DefaultTelemetryConfig returns a config populated from environment variables.
 func DefaultTelemetryConfig() TelemetryConfig {
 	cfg := TelemetryConfig{
-		ServiceName:     "hawk-code",
+		ServiceName:     "graycode",
 		ServiceVersion:  "0.1.0",
 		ExporterProto:   envOr("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf"),
 		Endpoint:        os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
@@ -36,16 +36,16 @@ func DefaultTelemetryConfig() TelemetryConfig {
 		ShutdownTimeout: 2 * time.Second,
 	}
 
-	// Telemetry is opt-in: only the explicit HAWK_CODE_ENABLE_TELEMETRY=1
+	// Telemetry is opt-in: only the explicit GRAYCODE_ENABLE_TELEMETRY=1
 	// flag enables it. Setting the standard OTEL_EXPORTER_OTLP_ENDPOINT must
-	// not implicitly enable hawk telemetry (Phase 3 hardening).
-	cfg.Enabled = os.Getenv("HAWK_CODE_ENABLE_TELEMETRY") == "1"
+	// not implicitly enable graycode telemetry (Phase 3 hardening).
+	cfg.Enabled = os.Getenv("GRAYCODE_ENABLE_TELEMETRY") == "1"
 
 	if hdrs := os.Getenv("OTEL_EXPORTER_OTLP_HEADERS"); hdrs != "" {
 		cfg.Headers = parseHeaders(hdrs)
 	}
 
-	if timeout := os.Getenv("HAWK_CODE_OTEL_SHUTDOWN_TIMEOUT_MS"); timeout != "" {
+	if timeout := os.Getenv("GRAYCODE_OTEL_SHUTDOWN_TIMEOUT_MS"); timeout != "" {
 		if ms, err := strconv.Atoi(timeout); err == nil {
 			cfg.ShutdownTimeout = time.Duration(ms) * time.Millisecond
 		}

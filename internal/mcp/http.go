@@ -42,7 +42,7 @@ func ConnectHTTP(ctx context.Context, name, url string, headers map[string]strin
 	_, err := s.Call(ctx, "initialize", map[string]interface{}{
 		"protocolVersion": "2025-03-26",
 		"capabilities":    map[string]interface{}{},
-		"clientInfo":      map[string]interface{}{"name": "hawk", "version": "1.0.0"},
+		"clientInfo":      map[string]interface{}{"name": "graycode", "version": "1.0.0"},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("mcp http init: %w", err)
@@ -62,7 +62,7 @@ func ConnectSSE(ctx context.Context, name, url string, headers map[string]string
 	_, err := s.Call(ctx, "initialize", map[string]interface{}{
 		"protocolVersion": "2025-03-26",
 		"capabilities":    map[string]interface{}{},
-		"clientInfo":      map[string]interface{}{"name": "hawk", "version": "1.0.0"},
+		"clientInfo":      map[string]interface{}{"name": "graycode", "version": "1.0.0"},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("mcp sse init: %w", err)

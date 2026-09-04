@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/textutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/textutil"
 )
 
 // AdaptivePrompt adjusts system prompt sections based on user corrections.
@@ -32,7 +32,7 @@ type PromptAdjustment struct {
 	LastUsed   time.Time `json:"last_used"`
 }
 
-// NewAdaptivePrompt creates an adaptive prompt backed by Hawk user state.
+// NewAdaptivePrompt creates an adaptive prompt backed by Graycode user state.
 func NewAdaptivePrompt() *AdaptivePrompt {
 	ap := &AdaptivePrompt{
 		path: filepath.Join(storage.StateDir(), "adaptive_prompt.json"),

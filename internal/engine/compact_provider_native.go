@@ -5,11 +5,11 @@ import (
 	"fmt"
 
 	"github.com/GrayCodeAI/eyrie/llm"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // ProviderNativeCompactStrategy delegates provider-specific compaction to
-// Eyrie. Hawk owns when conversation state is compacted and how the resulting
+// Eyrie. Graycode owns when conversation state is compacted and how the resulting
 // summary is inserted; Eyrie owns credentials and provider transport details.
 type ProviderNativeCompactStrategy struct{}
 

@@ -11,13 +11,13 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	analytics "github.com/GrayCodeAI/hawk/internal/observability"
-	"github.com/GrayCodeAI/hawk/internal/plugin"
-	"github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/theme"
-	"github.com/GrayCodeAI/hawk/internal/tool"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	analytics "github.com/GrayCodeAI/graycode-cli/internal/observability"
+	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // init() registers a large batch of simple /slash commands via
@@ -88,7 +88,7 @@ func init() {
 					m.themePicker = NewThemePicker()
 				}
 				// Pre-select the current saved theme.
-				current := hawkconfig.LoadGlobalSettings().Theme
+				current := graycodeconfig.LoadGlobalSettings().Theme
 				m.themePicker.OpenWithCurrent(current)
 				m.viewDirty = true
 				m.updateViewportContent()
@@ -96,7 +96,7 @@ func init() {
 			}
 			// Inline: /theme <name>
 			themeName := args[0]
-			if err := hawkconfig.SetGlobalSetting("theme", themeName); err != nil {
+			if err := graycodeconfig.SetGlobalSetting("theme", themeName); err != nil {
 				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			} else {
 				// Apply immediately — full palette swap, no restart needed.
@@ -117,7 +117,7 @@ func init() {
 				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /color <hex-color>"})
 				return m, nil
 			}
-			if err := hawkconfig.SetGlobalSetting("agentColor", args[0]); err != nil {
+			if err := graycodeconfig.SetGlobalSetting("agentColor", args[0]); err != nil {
 				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			} else {
 				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Agent color set to: %s", args[0])})
@@ -132,12 +132,12 @@ func init() {
 		description: "toggle fast mode (cheapest model for this provider)",
 		usage:       "",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-			savedModel := hawkconfig.ActiveModel(context.Background())
+			savedModel := graycodeconfig.ActiveModel(context.Background())
 			if m.session.Model() == savedModel {
 				providerName := strings.TrimSpace(m.session.Provider())
-				fastModel := hawkconfig.CheapestModelForProvider(providerName, m.session.Model())
+				fastModel := graycodeconfig.CheapestModelForProvider(providerName, m.session.Model())
 				if strings.TrimSpace(fastModel) == "" {
-					fastModel = hawkconfig.DefaultModelForProvider(providerName)
+					fastModel = graycodeconfig.DefaultModelForProvider(providerName)
 				}
 				if strings.TrimSpace(fastModel) == "" {
 					m.messages = append(m.messages, displayMsg{role: "error", content: "Fast mode: no catalog model resolved for this provider"})
@@ -166,7 +166,7 @@ func init() {
 			level := strings.ToLower(args[0])
 			switch level {
 			case "low", "medium", "high":
-				_ = hawkconfig.SetGlobalSetting("reasoningEffort", level)
+				_ = graycodeconfig.SetGlobalSetting("reasoningEffort", level)
 				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Reasoning effort → %s", level)})
 			default:
 				m.messages = append(m.messages, displayMsg{role: "error", content: "Valid levels: low, medium, high"})
@@ -320,14 +320,14 @@ func init() {
 		description: "toggle compact mode (removes outer padding)",
 		usage:       "",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-			settings := hawkconfig.LoadGlobalSettings()
+			settings := graycodeconfig.LoadGlobalSettings()
 			current := settings.CompactMode
 			newVal := !current
 			valStr := "false"
 			if newVal {
 				valStr = "true"
 			}
-			if err := hawkconfig.SetGlobalSetting("compact_mode", valStr); err != nil {
+			if err := graycodeconfig.SetGlobalSetting("compact_mode", valStr); err != nil {
 				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			} else {
 				state := "disabled"
@@ -349,7 +349,7 @@ func init() {
 		usage:       "/scroll-speed <1-100>",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 			if len(args) < 1 {
-				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Usage: /scroll-speed <1-100>\nCurrent: %d", hawkconfig.LoadGlobalSettings().ScrollSpeed)})
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Usage: /scroll-speed <1-100>\nCurrent: %d", graycodeconfig.LoadGlobalSettings().ScrollSpeed)})
 				return m, nil
 			}
 			speed, err := strconv.Atoi(args[0])
@@ -357,7 +357,7 @@ func init() {
 				m.messages = append(m.messages, displayMsg{role: "error", content: "Scroll speed must be 1-100"})
 				return m, nil
 			}
-			if err := hawkconfig.SetGlobalSetting("scroll_speed", args[0]); err != nil {
+			if err := graycodeconfig.SetGlobalSetting("scroll_speed", args[0]); err != nil {
 				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			} else {
 				m.messages = append(m.messages, displayMsg{role: "system", content: "Scroll speed → " + args[0]})
@@ -372,7 +372,7 @@ func init() {
 		description: "toggle natural scrolling (invert direction)",
 		usage:       "",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-			settings := hawkconfig.LoadGlobalSettings()
+			settings := graycodeconfig.LoadGlobalSettings()
 			current := settings.InvertScroll
 			newVal := !current
 			valStr := "false"
@@ -383,7 +383,7 @@ func init() {
 			if newVal {
 				enabled = "enabled"
 			}
-			if err := hawkconfig.SetGlobalSetting("invert_scroll", valStr); err != nil {
+			if err := graycodeconfig.SetGlobalSetting("invert_scroll", valStr); err != nil {
 				m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			} else {
 				m.messages = append(m.messages, displayMsg{role: "system", content: "Natural scrolling " + enabled})
@@ -399,13 +399,13 @@ func init() {
 		usage:       "/scroll-mode <auto|wheel|trackpad>",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 			if len(args) < 1 {
-				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Usage: /scroll-mode <auto|wheel|trackpad>\nCurrent: %s", hawkconfig.LoadGlobalSettings().ScrollMode)})
+				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Usage: /scroll-mode <auto|wheel|trackpad>\nCurrent: %s", graycodeconfig.LoadGlobalSettings().ScrollMode)})
 				return m, nil
 			}
 			mode := strings.ToLower(args[0])
 			switch mode {
 			case "auto", "wheel", "trackpad":
-				if err := hawkconfig.SetGlobalSetting("scrollmode", mode); err != nil {
+				if err := graycodeconfig.SetGlobalSetting("scrollmode", mode); err != nil {
 					m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 				} else {
 					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Scroll mode → %s", mode)})
@@ -444,7 +444,7 @@ func init() {
 				level = "256-color"
 			}
 
-			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Terminal Setup Recommendations:\n\nColor Support: %s\nScroll Mode: %s (use /scroll-mode to change)\nScroll Speed: %d (use /scroll-speed to change)\nCompact Mode: %v (use /compact-mode to toggle)\n\nTips:\n- Set COLORTERM=truecolor for best color experience\n- Use tmux with set -g default-terminal \"tmux-256color\" for 256-color support\n- Enable mouse reporting in your terminal for full TUI interaction", level, hawkconfig.LoadGlobalSettings().ScrollMode, hawkconfig.LoadGlobalSettings().ScrollSpeed, hawkconfig.LoadGlobalSettings().CompactMode)})
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Terminal Setup Recommendations:\n\nColor Support: %s\nScroll Mode: %s (use /scroll-mode to change)\nScroll Speed: %d (use /scroll-speed to change)\nCompact Mode: %v (use /compact-mode to toggle)\n\nTips:\n- Set COLORTERM=truecolor for best color experience\n- Use tmux with set -g default-terminal \"tmux-256color\" for 256-color support\n- Enable mouse reporting in your terminal for full TUI interaction", level, graycodeconfig.LoadGlobalSettings().ScrollMode, graycodeconfig.LoadGlobalSettings().ScrollSpeed, graycodeconfig.LoadGlobalSettings().CompactMode)})
 			return m, nil
 		},
 	})
@@ -456,7 +456,7 @@ func init() {
 		usage:       "/pager-config <lines|linenumbers> <value>",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 			if len(args) < 2 {
-				s := hawkconfig.LoadGlobalSettings()
+				s := graycodeconfig.LoadGlobalSettings()
 				ln := false
 				messages := fmt.Sprintf("Pager Configuration:\n  lines: %d (0 = unlimited)\n  linenumbers: %v\n\nUsage: /pager-config <lines|linenumbers> <value>", s.PaginatorLines, ln)
 				if s.PaginatorShowLineNums != nil {
@@ -474,7 +474,7 @@ func init() {
 					m.messages = append(m.messages, displayMsg{role: "error", content: "Lines must be a positive number (0 = unlimited)"})
 					return m, nil
 				}
-				if err := hawkconfig.SetGlobalSetting("paginatorlines", value); err != nil {
+				if err := graycodeconfig.SetGlobalSetting("paginatorlines", value); err != nil {
 					m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 				} else {
 					m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Pager lines → %d", lines)})
@@ -483,13 +483,13 @@ func init() {
 			case "linenumbers", "linenums", "ln":
 				switch strings.ToLower(value) {
 				case "1", "true", "yes", "on":
-					if err := hawkconfig.SetGlobalSetting("paginatorshowlinenumbers", "true"); err != nil {
+					if err := graycodeconfig.SetGlobalSetting("paginatorshowlinenumbers", "true"); err != nil {
 						m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 					} else {
 						m.messages = append(m.messages, displayMsg{role: "system", content: "Pager line numbers → enabled"})
 					}
 				case "0", "false", "no", "off":
-					if err := hawkconfig.SetGlobalSetting("paginatorshowlinenumbers", "false"); err != nil {
+					if err := graycodeconfig.SetGlobalSetting("paginatorshowlinenumbers", "false"); err != nil {
 						m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 					} else {
 						m.messages = append(m.messages, displayMsg{role: "system", content: "Pager line numbers → disabled"})
@@ -530,10 +530,10 @@ func init() {
 	// /upgrade — check for updates
 	subcommandRegistry.Register(&delegatingCommand{
 		name:        "upgrade",
-		description: "check for hawk updates",
+		description: "check for graycode updates",
 		usage:       "",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-			return m.startPromptCommand("/upgrade", "Check for hawk updates and show the latest available version.")
+			return m.startPromptCommand("/upgrade", "Check for graycode updates and show the latest available version.")
 		},
 	})
 
@@ -783,7 +783,7 @@ func init() {
 			style := strings.ToLower(args[0])
 			switch style {
 			case "concise", "normal", "detailed":
-				_ = hawkconfig.SetGlobalSetting("outputStyle", style)
+				_ = graycodeconfig.SetGlobalSetting("outputStyle", style)
 				m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Output style → %s", style)})
 			default:
 				m.messages = append(m.messages, displayMsg{role: "error", content: "Valid styles: concise, normal, detailed"})
@@ -917,15 +917,15 @@ func init() {
 		},
 	})
 
-	// /feedback <msg> — submit feedback saved to Hawk user state.
+	// /feedback <msg> — submit feedback saved to Graycode user state.
 	subcommandRegistry.Register(&delegatingCommand{
 		name:        "feedback",
-		description: "submit feedback (saved to Hawk user state)",
+		description: "submit feedback (saved to Graycode user state)",
 		usage:       "/feedback <message>",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
 			body := strings.TrimSpace(strings.TrimPrefix(text, "/feedback"))
 			if body == "" {
-				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /feedback <message>\nCaptures session context and saves feedback to Hawk user state."})
+				m.messages = append(m.messages, displayMsg{role: "system", content: "Usage: /feedback <message>\nCaptures session context and saves feedback to Graycode user state."})
 				return m, nil
 			}
 			feedDir := filepath.Join(storage.StateDir(), "feedback")
@@ -1030,7 +1030,7 @@ func init() {
 		description: "show provider deployment status",
 		usage:       "",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-			report, err := hawkconfig.DeploymentStatusReport(context.Background(), m.session.Model())
+			report, err := graycodeconfig.DeploymentStatusReport(context.Background(), m.session.Model())
 			if err != nil {
 				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Provider status failed: %v", err)})
 				return m, nil
@@ -1046,7 +1046,7 @@ func init() {
 		description: "refresh the model catalog",
 		usage:       "",
 		handler: func(m *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-			summary, err := hawkconfig.RefreshModelCatalogV1(context.Background())
+			summary, err := graycodeconfig.RefreshModelCatalogV1(context.Background())
 			if err != nil {
 				m.messages = append(m.messages, displayMsg{role: "error", content: fmt.Sprintf("Model catalog refresh failed: %v", err)})
 				return m, nil

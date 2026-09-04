@@ -1,9 +1,9 @@
 # Spec
 
-Curated spec-driven development resource consolidated for hawk's spec mode.
+Curated spec-driven development resource consolidated for graycode's spec mode.
 
-hawk's spec engine lives in `internal/spec/` (DAG, delta merge, validator, state).
-The OpenSpec artifact-workflow schema below is the source hawk's
+graycode's spec engine lives in `internal/spec/` (DAG, delta merge, validator, state).
+The OpenSpec artifact-workflow schema below is the source graycode's
 `DefaultSchema` derives from — everything else in `spec/` is reference material
 that was trimmed as dead weight.
 
@@ -27,5 +27,5 @@ Removed (2026-08, dead or duplicated elsewhere):
 ## Why OpenSpec schema is kept
 
 `internal/spec/schema.go`'s `DefaultSchema` is derived from
-`spec/openspec/schema.yaml` (the `requires:`/delta-spec vocabulary hawk's DAG
+`spec/openspec/schema.yaml` (the `requires:`/delta-spec vocabulary graycode's DAG
 parser uses). It is load-bearing and must stay.

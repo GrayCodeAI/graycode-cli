@@ -6,7 +6,7 @@
 // merged optimistically with an expected_generation check (fx's
 // applied/stale/full/invalid outcomes).
 //
-// The invariant this preserves over hawk's glob-based remembered rules is
+// The invariant this preserves over graycode's glob-based remembered rules is
 // that a rule is addressable by a stable id for the lifetime of the session —
 // it survives workspace changes — and can be listed and revoked by that id
 // without re-deriving the rule from the current workspace.

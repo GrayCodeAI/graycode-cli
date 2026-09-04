@@ -23,7 +23,7 @@ type preflightCheckShape struct {
 
 func TestPreflightJSON_Structure(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", filepath.Join(dir, "state"))
+	t.Setenv("GRAYCODE_STATE_DIR", filepath.Join(dir, "state"))
 
 	old := preflightJSON
 	oldLive := preflightLiveFlag
@@ -59,7 +59,7 @@ func TestPreflightJSON_Structure(t *testing.T) {
 
 func TestPreflightText_NotJSON(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HAWK_STATE_DIR", filepath.Join(dir, "state"))
+	t.Setenv("GRAYCODE_STATE_DIR", filepath.Join(dir, "state"))
 
 	old := preflightJSON
 	oldLive := preflightLiveFlag

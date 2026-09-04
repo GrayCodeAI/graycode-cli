@@ -4,19 +4,19 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 )
 
-func TestNewHawkSession_UsesResolvedSelectionModel(t *testing.T) {
+func TestNewGraycodeSession_UsesResolvedSelectionModel(t *testing.T) {
 	selection := gateway.Selection{
 		Provider:          "openrouter",
 		Model:             "openrouter/auto",
 		DeploymentRouting: false,
 	}
 
-	sess := NewHawkSession(context.Background(), selection, "openrouter", "", "system", nil)
+	sess := NewGraycodeSession(context.Background(), selection, "openrouter", "", "system", nil)
 	if got := sess.Provider(); got != "openrouter" {
 		t.Fatalf("provider = %q, want openrouter", got)
 	}
@@ -26,7 +26,7 @@ func TestNewHawkSession_UsesResolvedSelectionModel(t *testing.T) {
 }
 
 func TestBuildChatClientForSettingsComposesCustomGateway(t *testing.T) {
-	settings := hawkconfig.Settings{CustomProviders: []hawkconfig.CustomProviderConfig{{
+	settings := graycodeconfig.Settings{CustomProviders: []graycodeconfig.CustomProviderConfig{{
 		Name: "private-gateway", BaseURL: "https://private.example.test/v1",
 		APIKeyEnv: "PRIVATE_GATEWAY_API_KEY", Model: "private/model-v1",
 	}}}
@@ -40,13 +40,13 @@ func TestBuildChatClientForSettingsComposesCustomGateway(t *testing.T) {
 	}
 }
 
-func TestNewHawkSession_FallsBackToCallerModelWhenSelectionEmpty(t *testing.T) {
+func TestNewGraycodeSession_FallsBackToCallerModelWhenSelectionEmpty(t *testing.T) {
 	selection := gateway.Selection{
 		Provider:          "openrouter",
 		DeploymentRouting: false,
 	}
 
-	sess := NewHawkSession(context.Background(), selection, "openrouter", "openrouter/fallback", "system", nil)
+	sess := NewGraycodeSession(context.Background(), selection, "openrouter", "openrouter/fallback", "system", nil)
 	if got := sess.Model(); got != "openrouter/fallback" {
 		t.Fatalf("model = %q, want openrouter/fallback", got)
 	}

@@ -14,7 +14,7 @@ import (
 func initManagerTestRepo(t *testing.T) string {
 	t.Helper()
 
-	dir, err := os.MkdirTemp("", "hawk-wm-test-*")
+	dir, err := os.MkdirTemp("", "graycode-wm-test-*")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,8 +38,8 @@ func initManagerTestRepo(t *testing.T) string {
 	}
 
 	run("git", "init", "-b", "main")
-	run("git", "config", "user.email", "test@hawk.dev")
-	run("git", "config", "user.name", "Hawk Test")
+	run("git", "config", "user.email", "test@graycode.dev")
+	run("git", "config", "user.name", "Graycode Test")
 	run("git", "config", "commit.gpgsign", "false")
 	run("git", "config", "tag.gpgsign", "false")
 
@@ -557,10 +557,10 @@ func runGitIn(t *testing.T, dir string, args ...string) {
 	cmd.Dir = dir
 	cmd.Env = append(
 		os.Environ(),
-		"GIT_AUTHOR_NAME=Hawk Test",
-		"GIT_AUTHOR_EMAIL=test@hawk.dev",
-		"GIT_COMMITTER_NAME=Hawk Test",
-		"GIT_COMMITTER_EMAIL=test@hawk.dev",
+		"GIT_AUTHOR_NAME=Graycode Test",
+		"GIT_AUTHOR_EMAIL=test@graycode.dev",
+		"GIT_COMMITTER_NAME=Graycode Test",
+		"GIT_COMMITTER_EMAIL=test@graycode.dev",
 		"GIT_CONFIG_COUNT=2",
 		"GIT_CONFIG_KEY_0=commit.gpgsign",
 		"GIT_CONFIG_VALUE_0=false",

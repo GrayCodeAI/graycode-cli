@@ -8,7 +8,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 )
 
 // runCopySelectionE2EPass exercises chat + input copy/select/mouse flows in one pass.
@@ -88,7 +88,7 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 	}
 
 	// --- Mouse toggle (OpenCode-style) ---
-	t.Setenv("HAWK_MOUSE", "")
+	t.Setenv("GRAYCODE_MOUSE", "")
 	m.handleMouseCommand([]string{"/mouse", "off"})
 	if m.mouseEnabled() {
 		t.Fatalf("pass %d: expected mouse off after /mouse off", pass)
@@ -109,13 +109,13 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 	}
 
 	// --- Pass B: assistant reply path ---
-	m.messages = append(m.messages, displayMsg{role: "assistant", content: "Hello from hawk"})
+	m.messages = append(m.messages, displayMsg{role: "assistant", content: "Hello from graycode"})
 	m.input.SetValue("")
 
-	if content, _, got := m.copyContent(copyModeAssistant); !got || content != "Hello from hawk" {
+	if content, _, got := m.copyContent(copyModeAssistant); !got || content != "Hello from graycode" {
 		t.Fatalf("pass %d: /copy assistant content = %q got=%v", pass, content, got)
 	}
-	if line, got := m.lastMessageContent(); !got || !strings.Contains(line, "Hello from hawk") {
+	if line, got := m.lastMessageContent(); !got || !strings.Contains(line, "Hello from graycode") {
 		t.Fatalf("pass %d: last message = %q got=%v", pass, line, got)
 	}
 
@@ -128,7 +128,7 @@ func runCopySelectionE2EPass(t *testing.T, pass int) {
 
 	// Settings-backed mouse default
 	disabled := false
-	m2 := chatModel{settings: hawkconfig.Settings{TuiMouse: &disabled}}
+	m2 := chatModel{settings: graycodeconfig.Settings{TuiMouse: &disabled}}
 	if m2.mouseEnabled() {
 		t.Fatalf("pass %d: settings tui_mouse=false should disable capture", pass)
 	}

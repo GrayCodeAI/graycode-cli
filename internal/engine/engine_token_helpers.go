@@ -3,7 +3,7 @@ package engine
 import (
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 func isRecentToolHeavy(messages []types.EyrieMessage) bool {

@@ -15,7 +15,7 @@ func TestFriendlyErrorMessageAppendsProviderHint(t *testing.T) {
 }
 
 func TestFriendlyErrorMessageNoHintForLocalError(t *testing.T) {
-	// A local error must not draw an errhint provider hint (hawk's own
+	// A local error must not draw an errhint provider hint (graycode's own
 	// ExitNotFound enrichment is separate and fine).
 	msg := friendlyErrorMessage(errors.New("file not found: x"))
 	for _, marker := range []string{"API key rejected", "Rate limited", "Can't reach the provider", "Context window full", "Model unavailable"} {

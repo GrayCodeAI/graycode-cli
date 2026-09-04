@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/GrayCodeAI/hawk/internal/engine/compression"
+import "github.com/GrayCodeAI/graycode-cli/internal/engine/compression"
 
 type (
 	Timeline            = compression.Timeline

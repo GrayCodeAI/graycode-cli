@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // NewUnavailableChatClient preserves Session construction while surfacing
 // Eyrie transport setup failures at the first chat call.
 func NewUnavailableChatClient(err error) ChatClient {
 	if err == nil {
-		err = errors.New("hawk: chat transport unavailable")
+		err = errors.New("graycode: chat transport unavailable")
 	}
 	return &unavailableChatClient{err: err}
 }

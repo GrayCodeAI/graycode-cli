@@ -6,7 +6,7 @@ ECO_DIR="$(cd "${ROOT_DIR}/.." && pwd)"
 MANIFEST="${ROOT_DIR}/ecosystem.yaml"
 
 usage() {
-  echo "usage: $0 validate | json | list <all|workspace|engines|eagle-consumers>" >&2
+  echo "usage: $0 validate | json | list <all|workspace|engines>" >&2
   exit 2
 }
 
@@ -45,6 +45,7 @@ json() {
     BEGIN { print "{\n  \"schemaVersion\": 1,\n  \"repositories\": [" }
     {
       split($7, flags, ":")
+      if (flags[2] == "") flags[2] = "false"
       if (NR > 1) print ","
       printf "    {\"directory\":%s,\"githubRepo\":%s,\"productName\":%s,\"kind\":%s,\"language\":%s,\"module\":%s,\"workspace\":%s,\"tracksEagle\":%s,\"facade\":%s}",
         quote($1), quote($2), quote($3), quote($4), quote($5),
@@ -61,7 +62,6 @@ list_records() {
     selector == "all" { print $1; next }
     selector == "workspace" && $7 ~ /^true:/ { print $1; next }
     selector == "engines" && $4 == "engine" { print $1; next }
-    selector == "eagle-consumers" && $7 ~ /:true$/ { print $1; next }
   '
 }
 
@@ -81,6 +81,21 @@ validate() {
       failed=1
     fi
     seen_dirs+="${directory}"$'\n'
+
+    # Absent workspace checkouts skip all filesystem checks below; the checkout
+    # step already warned. Manifest-internal checks (fields, dupes, count) stay
+    # strict so manifest drift still fails.
+    if [[ "${flags%%:*}" == "true" && ! -d "${ECO_DIR}/${directory}/.git" ]]; then
+      echo "WARNING: ${directory}: workspace repository is not checked out; skipping filesystem checks" >&2
+      if [[ "${language}" == "go" && -n "${module}" ]]; then
+        if grep -qxF "${module}" <<<"${seen_modules}"; then
+          echo "duplicate module: ${module}" >&2
+          failed=1
+        fi
+        seen_modules+="${module}"$'\n'
+      fi
+      continue
+    fi
 
     if [[ "${language}" == "go" ]]; then
       if [[ -z "${module}" ]]; then
@@ -120,17 +135,10 @@ validate() {
       fi
     fi
 
-    # Only workspace repositories are required to exist for Go workspace
-    # generation. SDKs, skills, Owl, and the platform remain independent
-    # repositories and need not be checked out in a Hawk-only CI job.
-    if [[ "${flags%%:*}" == "true" && ! -d "${ECO_DIR}/${directory}/.git" ]]; then
-      echo "${directory}: workspace repository is not checked out" >&2
-      failed=1
-    fi
   done < <(records)
 
-  if ((count != 15)); then
-    echo "expected 15 repositories, found ${count}" >&2
+  if ((count != 8)); then
+    echo "expected 8 repositories, found ${count}" >&2
     failed=1
   fi
   ((failed == 0)) || exit 1
@@ -142,7 +150,7 @@ case "${1:-}" in
   json) json ;;
   list)
     [[ $# -eq 2 ]] || usage
-    case "$2" in all|workspace|engines|eagle-consumers) list_records "$2" ;; *) usage ;; esac
+    case "$2" in all|workspace|engines) list_records "$2" ;; *) usage ;; esac
     ;;
   *) usage ;;
 esac

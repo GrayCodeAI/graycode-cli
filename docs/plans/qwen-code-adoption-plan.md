@@ -1,17 +1,17 @@
 # Qwen Code Adoption Plan
 
-Status: Implemented selectively in the current Hawk feature branch.
+Status: Implemented selectively in the current Graycode feature branch.
 
 ## Guardrails
 
-Qwen Code is Apache-2.0 TypeScript software with a Gemini-shaped core. Hawk
+Qwen Code is Apache-2.0 TypeScript software with a Gemini-shaped core. Graycode
 will independently reimplement behavioral contracts in Go, preserve the Eyrie
-provider boundary, and retain Hawk's event-sourced sessions and OS sandbox.
+provider boundary, and retain Graycode's event-sourced sessions and OS sandbox.
 No Qwen source or dependency is vendored.
 
-## Existing Hawk Capabilities
+## Existing Graycode Capabilities
 
-Hawk already has durable sessions, event logging, WAL/recovery, branching,
+Graycode already has durable sessions, event logging, WAL/recovery, branching,
 review contracts, provider routing in Eyrie, MCP integration, skills, memory,
 context compaction, policy snapshots, subagents, daemon security, and
 filesystem/process sandboxing. These systems will not be duplicated.
@@ -24,7 +24,7 @@ filesystem/process sandboxing. These systems will not be duplicated.
 2. Added terminal reasons for permission denial, approval denial, unknown tool,
    pipeline failure, timeout, cancellation, execution failure, and success.
 3. Added regression coverage for the lifecycle contract.
-4. Preserved Hawk's existing cancellation transcript cleanup and compaction.
+4. Preserved Graycode's existing cancellation transcript cleanup and compaction.
 5. Preserved policy-snapshot inheritance and subagent cleanup already present.
 6. Added explicit `StreamEvent` tool lifecycle state and terminal-reason fields,
    with execution-path transitions and regression coverage.
@@ -47,7 +47,7 @@ filesystem/process sandboxing. These systems will not be duplicated.
 
 ### P2: Declarative extensibility
 
-- Map Markdown subagent frontmatter to Hawk's typed SpawnRequest.
+- Map Markdown subagent frontmatter to Graycode's typed SpawnRequest.
 - Add path-conditional skill activation and parse-error diagnostics.
 - Add hot reload with bounded activation listeners.
 - Scope child hooks and MCP resources by session/agent ID.
@@ -61,6 +61,6 @@ filesystem/process sandboxing. These systems will not be duplicated.
 ## Verification
 
 - Focused lifecycle, skills, engine, and command tests.
-- Full Hawk build, vet, and test suite.
+- Full Graycode build, vet, and test suite.
 - Independent second verification pass.
 - Final diff and sibling-repository status inspection.

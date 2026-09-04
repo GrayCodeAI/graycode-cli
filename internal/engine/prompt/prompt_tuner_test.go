@@ -3,7 +3,7 @@ package prompt
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 func TestPromptTuner_RecordAndBest(t *testing.T) {

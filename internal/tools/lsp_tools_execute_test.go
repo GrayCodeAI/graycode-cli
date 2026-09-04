@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/lsp"
+	"github.com/GrayCodeAI/graycode-cli/internal/lsp"
 )
 
 // helper to create a manager with a Go server configured

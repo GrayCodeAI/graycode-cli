@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	hawkModule  = "github.com/GrayCodeAI/hawk"
-	eyrieModule = "github.com/GrayCodeAI/eyrie"
+	graycodeModule = "github.com/GrayCodeAI/graycode-cli"
+	eyrieModule    = "github.com/GrayCodeAI/eyrie"
 )
 
 var supportEngines = []string{"eyrie", "harrier", "shrike", "swift", "kestrel", "merlin"}
@@ -32,13 +32,13 @@ type packageImport struct {
 func TestPackageDependencyGraph(t *testing.T) {
 	root := repoRoot(t)
 
-	checkHawkEyrieFacade(t, root)
-	checkHawkInternalLayers(t, root)
+	checkGraycodeEyrieFacade(t, root)
+	checkGraycodeInternalLayers(t, root)
 	checkSupportRepositoryBoundaries(t, root)
 	checkGoSDKBoundary(t, root)
 }
 
-func checkHawkEyrieFacade(t *testing.T, root string) {
+func checkGraycodeEyrieFacade(t *testing.T, root string) {
 	paths := []string{filepath.Join(root, "internal"), filepath.Join(root, "cmd")}
 	var violations []string
 
@@ -50,13 +50,13 @@ func checkHawkEyrieFacade(t *testing.T, root string) {
 			if imp.path == eyrieModule+"/engine" || strings.HasPrefix(imp.path, eyrieModule+"/engine/") {
 				continue
 			}
-			// Hawk uses the full vendored Eyrie API surface for provider, graph,
+			// Graycode uses the full vendored Eyrie API surface for provider, graph,
 			// and tooling contracts that the engine facade does not re-export.
 			switch imp.path {
 			case eyrieModule + "/llm", eyrieModule + "/graph", eyrieModule + "/tools":
 				continue
 			}
-			// Hawk's gateway declares the credential service name so existing
+			// Graycode's gateway declares the credential service name so existing
 			// keychain entries remain compatible. It is the only non-engine
 			// production exception.
 			relFile, relErr := filepath.Rel(root, imp.file)
@@ -68,10 +68,10 @@ func checkHawkEyrieFacade(t *testing.T, root string) {
 		}
 	}
 
-	assertNoPackageViolations(t, "Hawk Eyrie facade", violations)
+	assertNoPackageViolations(t, "Graycode Eyrie facade", violations)
 }
 
-func checkHawkInternalLayers(t *testing.T, root string) {
+func checkGraycodeInternalLayers(t *testing.T, root string) {
 	rules := map[string][]string{
 		"internal/engine":      {"cmd", "internal/daemon", "internal/platform", "internal/bridge"},
 		"internal/permissions": {"cmd", "internal/daemon", "internal/engine", "internal/platform", "internal/bridge"},
@@ -87,18 +87,18 @@ func checkHawkInternalLayers(t *testing.T, root string) {
 			if err != nil {
 				t.Fatalf("relative path for %s: %v", imp.file, err)
 			}
-			if !strings.HasPrefix(imp.path, hawkModule+"/") {
+			if !strings.HasPrefix(imp.path, graycodeModule+"/") {
 				continue
 			}
 			for _, prefix := range forbidden {
-				if strings.HasPrefix(imp.path, hawkModule+"/"+prefix+"/") || imp.path == hawkModule+"/"+prefix {
+				if strings.HasPrefix(imp.path, graycodeModule+"/"+prefix+"/") || imp.path == graycodeModule+"/"+prefix {
 					violations = append(violations, fmt.Sprintf("%s:%d imports %s (%s); %s must not depend on %s", filepath.ToSlash(rel), imp.line, imp.path, source, source, prefix))
 				}
 			}
 		}
 	}
 
-	assertNoPackageViolations(t, "Hawk internal layers", violations)
+	assertNoPackageViolations(t, "Graycode internal layers", violations)
 }
 
 func checkSupportRepositoryBoundaries(t *testing.T, root string) {
@@ -107,8 +107,8 @@ func checkSupportRepositoryBoundaries(t *testing.T, root string) {
 	for _, owner := range supportEngines {
 		for _, repoRoot := range repositoryRoots(root, owner) {
 			for _, imp := range productionImports(t, root, repoRoot) {
-				if strings.HasPrefix(imp.path, hawkModule+"/internal/") || imp.path == hawkModule+"/shared/types" {
-					violations = append(violations, formatImportViolation(root, imp, "support engines must not import Hawk internals"))
+				if strings.HasPrefix(imp.path, graycodeModule+"/internal/") || imp.path == graycodeModule+"/shared/types" {
+					violations = append(violations, formatImportViolation(root, imp, "support engines must not import Graycode internals"))
 					continue
 				}
 
@@ -137,7 +137,7 @@ func checkGoSDKBoundary(t *testing.T, root string) {
 			for _, engine := range supportEngines {
 				prefix := "github.com/GrayCodeAI/" + engine
 				if imp.path == prefix || strings.HasPrefix(imp.path, prefix+"/") {
-					violations = append(violations, formatImportViolation(root, imp, "SDKs must consume Hawk public surfaces"))
+					violations = append(violations, formatImportViolation(root, imp, "SDKs must consume Graycode public surfaces"))
 				}
 			}
 		}

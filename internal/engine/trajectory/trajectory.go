@@ -8,7 +8,7 @@ package trajectory
 import (
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // bytesPerToken is the rough character-based token estimate.

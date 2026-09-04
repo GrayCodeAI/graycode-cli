@@ -8,15 +8,15 @@ import (
 )
 
 func TestDefaultTelemetryConfig(t *testing.T) {
-	os.Setenv("HAWK_CODE_ENABLE_TELEMETRY", "1")
-	defer os.Unsetenv("HAWK_CODE_ENABLE_TELEMETRY")
+	os.Setenv("GRAYCODE_ENABLE_TELEMETRY", "1")
+	defer os.Unsetenv("GRAYCODE_ENABLE_TELEMETRY")
 
 	cfg := DefaultTelemetryConfig()
 	if !cfg.Enabled {
 		t.Error("expected telemetry enabled when env var set")
 	}
-	if cfg.ServiceName != "hawk-code" {
-		t.Errorf("expected service name hawk-code, got %s", cfg.ServiceName)
+	if cfg.ServiceName != "graycode" {
+		t.Errorf("expected service name graycode, got %s", cfg.ServiceName)
 	}
 	if cfg.ShutdownTimeout != 2*time.Second {
 		t.Errorf("expected 2s shutdown timeout, got %v", cfg.ShutdownTimeout)
@@ -24,7 +24,7 @@ func TestDefaultTelemetryConfig(t *testing.T) {
 }
 
 func TestDefaultTelemetryConfig_Disabled(t *testing.T) {
-	os.Unsetenv("HAWK_CODE_ENABLE_TELEMETRY")
+	os.Unsetenv("GRAYCODE_ENABLE_TELEMETRY")
 	os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 
 	cfg := DefaultTelemetryConfig()
@@ -35,9 +35,9 @@ func TestDefaultTelemetryConfig_Disabled(t *testing.T) {
 
 // TestDefaultTelemetryConfig_OTLPEndpointAloneDoesNotEnable verifies telemetry
 // stays opt-in: setting the standard OTEL_EXPORTER_OTLP_ENDPOINT must NOT
-// implicitly enable hawk telemetry (Phase 3 hardening).
+// implicitly enable graycode telemetry (Phase 3 hardening).
 func TestDefaultTelemetryConfig_OTLPEndpointAloneDoesNotEnable(t *testing.T) {
-	os.Unsetenv("HAWK_CODE_ENABLE_TELEMETRY")
+	os.Unsetenv("GRAYCODE_ENABLE_TELEMETRY")
 	os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
 	defer os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 

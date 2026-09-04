@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an improvement or new capability for hawk.
+description: Suggest an improvement or new capability for graycode.
 title: "feat: <one-line summary>"
 labels: ["enhancement", "triage"]
 
@@ -7,13 +7,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for proposing a feature. hawk is built **for developers first**
+        Thanks for proposing a feature. graycode is built **for developers first**
         (one machine, local config, keychain credentials) — teams and enterprise
         come later. We evaluate every request against: _"would a single
         developer on their own machine benefit from this?"_
 
         Before submitting:
-        - Search [existing issues](https://github.com/GrayCodeAI/hawk/issues) to avoid duplicates.
+        - Search [existing issues](https://github.com/GrayCodeAI/graycode-cli/issues) to avoid duplicates.
         - For large changes, consider opening a discussion first.
 
   - type: textarea
@@ -21,7 +21,7 @@ body:
     attributes:
       label: What problem are you trying to solve?
       description: Describe the user problem first. Solutions can come later.
-      placeholder: When I'm doing X, hawk makes me do Y, which is painful because Z.
+      placeholder: When I'm doing X, graycode makes me do Y, which is painful because Z.
     validations:
       required: true
 
@@ -29,7 +29,7 @@ body:
     id: proposal
     attributes:
       label: Proposed solution
-      description: How would you like hawk to behave? CLI flags, output, config, etc.
+      description: How would you like graycode to behave? CLI flags, output, config, etc.
     validations:
       required: true
 
@@ -55,7 +55,7 @@ body:
     id: principles
     attributes:
       label: Developer fit
-      description: hawk avoids enterprise scope for now. Confirm this feature respects that.
+      description: graycode avoids enterprise scope for now. Confirm this feature respects that.
       options:
         - label: Works with zero configuration (sensible defaults).
         - label: Works offline / does not require a cloud account.

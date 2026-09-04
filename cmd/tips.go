@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
-// Tip represents a single hawk usage tip.
+// Tip represents a single graycode usage tip.
 type Tip struct {
 	ID       string `json:"id"`
 	Text     string `json:"text"`
@@ -30,7 +30,7 @@ func allTips() []Tip {
 		{ID: "tab-complete", Text: "Press Tab to autocomplete slash commands.", Category: "shortcuts"},
 		{ID: "history-nav", Text: "Press Up/Down to navigate command history.", Category: "shortcuts"},
 		{ID: "esc-cancel", Text: "Press Esc to cancel a running query.", Category: "shortcuts"},
-		{ID: "ctrl-c-quit", Text: "Press Ctrl+C twice to quit hawk.", Category: "shortcuts"},
+		{ID: "ctrl-c-quit", Text: "Press Ctrl+C twice to quit graycode.", Category: "shortcuts"},
 		{ID: "copy-chat", Text: "Ctrl+Shift+C or /copy copies chat; /copy input copies your draft; /mouse off enables click-drag select.", Category: "shortcuts"},
 		{ID: "vim-mode", Text: "Use /vim to toggle vim-style keybindings.", Category: "editing"},
 		{ID: "model-switch", Text: "Use /model <name> to switch LLM models on the fly.", Category: "config"},
@@ -52,7 +52,7 @@ func allTips() []Tip {
 		{ID: "slash-mode-plan", Text: "Use /mode plan to research read-only, then /mode act to implement.", Category: "workflow"},
 		{ID: "slash-isolation", Text: "Use /isolation workspace so shell runs under OS sandbox wrap.", Category: "safety"},
 		{ID: "slash-trust", Text: "Use /trust add so project hooks and MCP can load (folder trust).", Category: "safety"},
-		{ID: "slash-branch-agent", Text: "Use /branch-agent before big edits on main — creates hawk/agent-* branch.", Category: "git"},
+		{ID: "slash-branch-agent", Text: "Use /branch-agent before big edits on main — creates graycode/agent-* branch.", Category: "git"},
 		{ID: "tool-search-select", Text: "Use ToolSearch select:Impact (etc.) to unlock optional tools on the lazy surface.", Category: "tools"},
 		{ID: "slash-auto-commit", Text: "Use /auto-commit on so Write/Edit create git commits automatically.", Category: "git"},
 	}

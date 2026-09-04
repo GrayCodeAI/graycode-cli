@@ -5,13 +5,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/graycode-cli/internal/observability/oteltrace"
 )
 
-// hawkSpanProducers wires the real span starters from internal/observability/
+// graycodeSpanProducers wires the real span starters from internal/observability/
 // oteltrace into the conformance harness. Keeping the starters as the producers
 // means the test fails if a starter stops setting a required attribute.
-func hawkSpanProducers() []SpanProducer {
+func graycodeSpanProducers() []SpanProducer {
 	return []SpanProducer{
 		func(ctx context.Context, t *oteltrace.Tracer) *oteltrace.Span {
 			_, span := oteltrace.StartAgentLoopSpan(ctx, t, "anthropic", "claude-sonnet-4", 3)
@@ -41,13 +41,13 @@ func hawkSpanProducers() []SpanProducer {
 	}
 }
 
-func TestHawkSpansConformToSchema(t *testing.T) {
-	report := Run(HawkSchema, hawkSpanProducers())
+func TestGraycodeSpansConformToSchema(t *testing.T) {
+	report := Run(GraycodeSchema, graycodeSpanProducers())
 	if !report.Passed() {
 		for _, f := range report.Findings {
 			t.Errorf("conformance finding: %s: %s", f.SpanName, f.Message)
 		}
-		t.Fatalf("hawk spans must conform; %d violations", report.Violated)
+		t.Fatalf("graycode spans must conform; %d violations", report.Violated)
 	}
 }
 
@@ -55,7 +55,7 @@ func TestHawkSpansConformToSchema(t *testing.T) {
 // required attribute or carrying a sensitive key must fail validation. This
 // guards the conformance suite against becoming a no-op.
 func TestSchemaCatchesDrift(t *testing.T) {
-	schema := HawkSchema
+	schema := GraycodeSchema
 
 	// Missing required attribute must fail.
 	if findings := schema.Validate("agent_loop", map[string]string{"provider": "anthropic"}); len(findings) == 0 {
@@ -87,7 +87,7 @@ func TestRunIsPassive(t *testing.T) {
 			panic("boom")
 		},
 	}
-	report := Run(HawkSchema, producers)
+	report := Run(GraycodeSchema, producers)
 	if !report.Passed() {
 		if !strings.Contains(report.Findings[0].Message, "panicked") {
 			t.Fatalf("expected a panicked finding, got %+v", report.Findings)

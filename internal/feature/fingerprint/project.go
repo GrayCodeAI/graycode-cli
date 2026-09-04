@@ -109,7 +109,7 @@ func Scan(projectDir string) (*ProjectFingerprint, error) {
 	return fp, nil
 }
 
-// generateRecommendations produces hawk configuration suggestions based on the
+// generateRecommendations produces graycode configuration suggestions based on the
 // detected project fingerprint.
 func generateRecommendations(fp *ProjectFingerprint) []string {
 	var recs []string
@@ -124,13 +124,13 @@ func generateRecommendations(fp *ProjectFingerprint) []string {
 			recs = append(recs, "Consider adding .golangci.yml for consistent linting")
 		}
 		if fp.Framework == "chi" {
-			recs = append(recs, "Your project uses chi router — hawk can help with middleware patterns")
+			recs = append(recs, "Your project uses chi router — graycode can help with middleware patterns")
 		}
 		if fp.Framework == "gin" {
-			recs = append(recs, "Your project uses gin — hawk can help with handler patterns")
+			recs = append(recs, "Your project uses gin — graycode can help with handler patterns")
 		}
 		if fp.Framework == "echo" {
-			recs = append(recs, "Your project uses echo — hawk can help with middleware and routing")
+			recs = append(recs, "Your project uses echo — graycode can help with middleware and routing")
 		}
 
 	case "JavaScript", "TypeScript":
@@ -144,7 +144,7 @@ func generateRecommendations(fp *ProjectFingerprint) []string {
 			recs = append(recs, "Consider adding ESLint or Biome for consistent linting")
 		}
 		if fp.Framework == "next.js" {
-			recs = append(recs, "Your project uses Next.js — hawk can help with App Router patterns")
+			recs = append(recs, "Your project uses Next.js — graycode can help with App Router patterns")
 		}
 
 	case "Python":
@@ -176,7 +176,7 @@ func generateRecommendations(fp *ProjectFingerprint) []string {
 
 	// Monorepo recommendations.
 	if fp.Monorepo {
-		recs = append(recs, "Monorepo detected — configure hawk to scope analysis to relevant packages")
+		recs = append(recs, "Monorepo detected — configure graycode to scope analysis to relevant packages")
 	}
 
 	// Convention-based recommendations.

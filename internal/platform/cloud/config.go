@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/GrayCodeAI/hawk/internal/auth"
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/auth"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 const (
@@ -24,7 +24,7 @@ func configPath() string { return filepath.Join(storage.ConfigDir(), "cloud.json
 
 func LoadDeviceConfig() (DeviceConfig, error) {
 	var cfg DeviceConfig
-	b, err := os.ReadFile(configPath()) // #nosec G304 -- fixed Hawk config path
+	b, err := os.ReadFile(configPath()) // #nosec G304 -- fixed Graycode config path
 	if err != nil {
 		return cfg, err
 	}

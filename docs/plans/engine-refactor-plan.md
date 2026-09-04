@@ -1,20 +1,20 @@
-# hawk/engine sub-package split — analysis and migration plan
+# graycode/engine sub-package split — analysis and migration plan
 
 > Status: **analysis only**. No code is moved by this document. The actual
-> split is multi-PR work that should land incrementally to keep hawk's
+> split is multi-PR work that should land incrementally to keep graycode's
 > build green at every step.
 
 ## The problem
 
 ```
-hawk/engine/
+graycode/engine/
 ├── *.go         161 source files,    66,682 lines
 └── *_test.go    141 test files,      65,907 lines
                  ───── total: ~133K lines, 302 files, ONE package
 ```
 
 For comparison: the entire `kubernetes/kubectl` (a non-trivial CLI) is
-~110K lines split across **dozens** of internal packages. hawk's engine
+~110K lines split across **dozens** of internal packages. graycode's engine
 is bigger than that and lives in a single `package engine`.
 
 Concrete pain that creates today:
@@ -40,7 +40,7 @@ splitting into ~15 sub-packages. The line counts are file-name-based
 estimates; the real numbers will shift during the split.
 
 ```
-hawk/engine/
+graycode/engine/
 ├── engine.go                  # top-level Engine type, public API only
 ├── lifecycle.go               # session start/stop, hooks, graceful shutdown
 ├── stream.go                  # the main response stream loop (large; consider further split)
@@ -193,18 +193,18 @@ code from earlier experiments).
 
 ## Migration strategy
 
-The split is high-risk because it touches every other package in hawk
-that imports `engine.Foo`. To keep hawk green at every commit:
+The split is high-risk because it touches every other package in graycode
+that imports `engine.Foo`. To keep graycode green at every commit:
 
 1. **Stage 1 — alias-only.** For each proposed sub-package, create
    `engine/<subpkg>/<file>.go` containing only re-exports:
    ```go
    package compact
-   import "github.com/GrayCodeAI/hawk/engine"
+   import "github.com/GrayCodeAI/graycode-cli/engine"
    type Strategy = engine.CompactStrategy
    var Default = engine.DefaultCompactStrategy
    ```
-   Hawk's external callers can start migrating to the new import paths.
+   Graycode's external callers can start migrating to the new import paths.
    Old code keeps working unchanged. **Land this first.**
 
 2. **Stage 2 — move bodies.** For one sub-package at a time:
@@ -223,7 +223,7 @@ that imports `engine.Foo`. To keep hawk green at every commit:
    coordinator package only.
 
 This approach scales: each PR is small, reviewable, and individually
-revertible. No "big bang" merge that paralyses hawk for a week.
+revertible. No "big bang" merge that paralyses graycode for a week.
 
 ## Estimated effort
 
@@ -266,7 +266,7 @@ The `compact/` sub-package is the cleanest extraction candidate:
 | `git/`     | `engine/git/aliases.go`     | 9 types, 4 funcs |
 | `prompt/`  | `engine/prompt/aliases.go`  | 6 types, 3 funcs |
 
-New code should import `github.com/GrayCodeAI/hawk/engine/<cluster>`
+New code should import `github.com/GrayCodeAI/graycode-cli/engine/<cluster>`
 instead of reaching into `engine` for these names. The remaining 17
 clusters follow the same pattern:
 
@@ -274,7 +274,7 @@ clusters follow the same pattern:
 // engine/<cluster>/aliases.go
 package <cluster>
 
-import "github.com/GrayCodeAI/hawk/engine"
+import "github.com/GrayCodeAI/graycode-cli/engine"
 
 // Re-export the cluster's public symbols from engine as type and var
 // aliases. Implementation stays in engine until Stage 2 of this plan.

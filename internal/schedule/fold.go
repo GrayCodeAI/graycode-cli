@@ -3,7 +3,7 @@ package schedule
 import (
 	"encoding/json"
 
-	"github.com/GrayCodeAI/hawk/internal/eventlog"
+	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
 )
 
 // Fold folds a sequence of eventlog events into a map of active ScheduleItems.

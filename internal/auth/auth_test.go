@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 func TestTokenStore(t *testing.T) {
@@ -82,17 +82,6 @@ func TestTokenStore(t *testing.T) {
 			}
 		}
 	})
-
-	t.Run("load and save are no-ops", func(t *testing.T) {
-		t.Parallel()
-		store := NewTokenStore()
-		if err := store.Load(); err != nil {
-			t.Errorf("Load() error = %v", err)
-		}
-		if err := store.Save(); err != nil {
-			t.Errorf("Save() error = %v", err)
-		}
-	})
 }
 
 func TestGenerateNonce(t *testing.T) {
@@ -130,12 +119,12 @@ func TestGenerateNonce(t *testing.T) {
 func TestSecureStorage(t *testing.T) {
 	t.Run("new secure storage", func(t *testing.T) {
 		t.Parallel()
-		ss := NewSecureStorage("hawk-test")
+		ss := NewSecureStorage("graycode-test")
 		if ss == nil {
 			t.Fatal("NewSecureStorage returned nil")
 		}
-		if ss.service != "hawk-test" {
-			t.Errorf("service = %q, want %q", ss.service, "hawk-test")
+		if ss.service != "graycode-test" {
+			t.Errorf("service = %q, want %q", ss.service, "graycode-test")
 		}
 	})
 
@@ -143,7 +132,7 @@ func TestSecureStorage(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
 
-		ss := NewSecureStorage("hawk-test")
+		ss := NewSecureStorage("graycode-test")
 		_, err := ss.getFile("nonexistent")
 		if err == nil {
 			t.Error("getFile() should return error for missing file")
@@ -154,7 +143,7 @@ func TestSecureStorage(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
 
-		ss := NewSecureStorage("hawk-test")
+		ss := NewSecureStorage("graycode-test")
 		if err := ss.setFile("anthropic", "sk-test-token"); err != nil {
 			t.Fatalf("setFile() error = %v", err)
 		}
@@ -172,7 +161,7 @@ func TestSecureStorage(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
 
-		ss := NewSecureStorage("hawk-test")
+		ss := NewSecureStorage("graycode-test")
 		if err := ss.setFile("provider", "old-token"); err != nil {
 			t.Fatal(err)
 		}
@@ -193,7 +182,7 @@ func TestSecureStorage(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
 
-		ss := NewSecureStorage("hawk-test")
+		ss := NewSecureStorage("graycode-test")
 		if err := ss.setFile("test", "secret"); err != nil {
 			t.Fatal(err)
 		}
@@ -213,7 +202,7 @@ func TestSecureStorage(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
 
-		ss := NewSecureStorage("hawk-test")
+		ss := NewSecureStorage("graycode-test")
 		if err := ss.setFile("provider1", "token1"); err != nil {
 			t.Fatal(err)
 		}

@@ -255,7 +255,7 @@ func (cg *CodeGraph) AnalyzeCoupling(topN int) ([]CouplingMetric, error) {
 }
 
 // CrossRepoQuery queries across multiple codegraph databases.
-// Useful for finding relationships between hawk, eyrie, shrike, harrier, etc.
+// Useful for finding relationships between graycode, eyrie, shrike, harrier, etc.
 func CrossRepoQuery(repos []string, query string, limit int) (map[string][]Node, error) {
 	results := make(map[string][]Node)
 
@@ -278,7 +278,7 @@ func CrossRepoQuery(repos []string, query string, limit int) (map[string][]Node,
 }
 
 // CrossRepoImpact finds the impact of changing a symbol across multiple repos.
-// If a symbol in hawk calls a symbol in eyrie, this traces that cross-repo dependency.
+// If a symbol in graycode calls a symbol in eyrie, this traces that cross-repo dependency.
 func CrossRepoImpact(repos []string, symbol string, maxDepth int) (map[string]*ImpactResult, error) {
 	results := make(map[string]*ImpactResult)
 
@@ -311,7 +311,7 @@ func CrossRepoImpact(repos []string, symbol string, maxDepth int) (map[string]*I
 }
 
 // FindCrossRepoCalls finds function calls that cross repo boundaries.
-// For example, hawk calling eyrie functions.
+// For example, graycode calling eyrie functions.
 func FindCrossRepoCalls(repos []string) ([]CrossRepoCall, error) {
 	type repoSymbol struct {
 		repo string

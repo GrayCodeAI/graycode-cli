@@ -24,7 +24,7 @@ func TestSpecApprovalSummary_ReadsWrittenFiles(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chdir(old) })
 
-	specDir := filepath.Join(dir, ".hawk", "specs", "my-task")
+	specDir := filepath.Join(dir, ".graycode", "specs", "my-task")
 	if err := os.MkdirAll(specDir, 0o700); err != nil {
 		t.Fatal(err)
 	}

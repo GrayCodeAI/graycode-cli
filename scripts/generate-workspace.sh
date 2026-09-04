@@ -9,11 +9,15 @@ ECO_DIR="$(cd "${ROOT_DIR}/.." && pwd)"
 rm -f "${ECO_DIR}/go.work" "${ECO_DIR}/go.work.sum"
 (
   cd "${ECO_DIR}"
-  go work init ./hawk
+  go work init ./graycode-cli
   go_version="$(awk '$1 == "go" { print $2; exit }' "${ROOT_DIR}/go.mod")"
   go work edit -go="${go_version}"
   while IFS= read -r repo; do
-    [[ "${repo}" == "hawk" ]] && continue
+    [[ "${repo}" == "graycode-cli" ]] && continue
+    if [[ ! -f "${repo}/go.mod" ]]; then
+      echo "WARNING: ${repo} is not checked out; skipping workspace entry"
+      continue
+    fi
     go work use "./${repo}"
     module="$(awk '$1 == "module" { print $2; exit }' "${repo}/go.mod")"
     while IFS= read -r version; do
@@ -21,6 +25,7 @@ rm -f "${ECO_DIR}/go.work" "${ECO_DIR}/go.work.sum"
     done < <(
       {
         while IFS= read -r consumer; do
+          [[ -f "${consumer}/go.mod" ]] || continue
           awk -v wanted="${module}" '
             /^(replace|exclude)[[:space:]]*\($/ { skip = 1; next }
             skip && /^\)/                       { skip = 0; next }

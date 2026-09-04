@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // WorktreeStatus represents the lifecycle state of a managed worktree.
@@ -65,7 +65,7 @@ func generateID() string {
 }
 
 // Create creates a new git worktree on a new branch derived from baseBranch.
-// The worktree is stored under Hawk's project state directory.
+// The worktree is stored under Graycode's project state directory.
 func (wm *WorktreeManager) Create(branch, baseBranch, taskDescription string) (*Worktree, error) {
 	wm.mu.Lock()
 	defer wm.mu.Unlock()

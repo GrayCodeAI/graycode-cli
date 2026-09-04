@@ -1,4 +1,4 @@
-# Wave 2 — high-value deepseek-harness RFC ports for hawk
+# Wave 2 — high-value deepseek-harness RFC ports for graycode
 
 Status: **Proposed** (RFC specs only; no code on this branch yet). Each phase below
 is a self-contained feature-branch spec in the style of the Wave 1 docs, ready to
@@ -31,7 +31,7 @@ Reference source: `deepseek-ai/deepseek-harness` at `dsh-v0.1.0-rc.7`
 
 ## Wave 2 gap inventory
 
-| # | DSH source | Hawk gap | Status |
+| # | DSH source | Graycode gap | Status |
 | --- | --- | --- | --- |
 | 2.1 | `guard/timeout-policy` | no per-tool declared timeout enforced at dispatch | **implemented** on `feat/dsh-harness-rfc-2.1-timeout-policy` |
 | 2.2 | `compaction/compaction` tool-pairing helpers | compact strategies can cut across open tool call/result pairs | proposed |
@@ -59,7 +59,7 @@ Port of DSH `guard/timeout-policy` (`dsh-tool-call-timeout-policy`) + the
 the tool's own declaration, not from a policy table.
 
 - `tool.Tool` gains an optional `TimeoutProvider` interface (`Timeout()
-  time.Duration`, 0 = no declaration) — the hawk-native form of DSH's
+  time.Duration`, 0 = no declaration) — the graycode-native form of DSH's
   `ToolDefinition.timeoutMs`, consistent with the existing optional-provider
   pattern (`RiskLevelProvider`, `RetryPolicyProvider`, `SchemaProvider`).
   `tool.TimeoutOf(t Tool) time.Duration` reads it.
@@ -89,7 +89,7 @@ TOOL_TIMEOUT).
 ## Phase 2.2 — Compaction tool-pairing boundaries (`internal/engine/compact` + `internal/eventlog`)
 
 Port of DSH `compaction/compaction` surface contract + the
-`toolPairingBalancedBefore` / `toolPairingBalancedAfter` helpers. Hawk's
+`toolPairingBalancedBefore` / `toolPairingBalancedAfter` helpers. Graycode's
 `internal/engine/compact/` already does LLM summarization
 (`strategy.go`, `micro.go`, `session_memory.go`) and `internal/eventlog` already
 journals `tool.call` / `tool.result` / `session.compacted` (Wave 1 Phase 0). The
@@ -122,7 +122,7 @@ detection and adoption on load; deterministic replay after replace.
 Port of DSH `sandbox/sandbox-policy` semantics
 (`SandboxMode` read-only / workspace-write / danger-full-access,
 `ctx.sandboxPolicy.resolve()`, `setSandboxMode`, the `sandbox:policy` context
-contribution). Hawk already has the vocabulary — `internal/sandbox/mode.go`
+contribution). Graycode already has the vocabulary — `internal/sandbox/mode.go`
 `Mode` strict / workspace / off — so this phase ports the **policy resolution
 and durability** around it.
 
@@ -143,7 +143,7 @@ and durability** around it.
   durable context message on the first request and on each effective policy
   change; unchanged requests add nothing. `workspace` carries only the canonical
   workspace path (no host-dependent temp paths — summarize them). Rendered by
-  the prompt assembler exactly like DSH's three templates, but with hawk's
+  the prompt assembler exactly like DSH's three templates, but with graycode's
   vocabulary:
   - `strict` — read-only; do not refuse a required modification from this policy
     alone; try the tool and follow denial/escalation guidance.
@@ -224,7 +224,7 @@ discovery; runtime provider registration/disposal.
 
 Revives gap `#21` in **query-only** scope (no migration of the JSONL store; the
 JSONL file stays the source of truth). Port of DSH
-`session-query/session-query-sqlite` semantics over hawk's session logs.
+`session-query/session-query-sqlite` semantics over graycode's session logs.
 
 - New `internal/sessionquery` package:
   - FTS5 index (external content or contentless) over the session store,
@@ -272,9 +272,9 @@ resume of overdue work, no external channel, create/list/delete round-trip.
 ## Phase 2.8 — ACP client + external-agent subagent providers (`internal/acp` + `internal/multiagent`)
 
 Port of DSH `acp/` (client side) + `subagent/subagent-acp`, `subagent-claude-code`,
-`subagent-codex`. Hawk has the ACP **server** (Wave 1 `internal/acp/server.go` —
+`subagent-codex`. Graycode has the ACP **server** (Wave 1 `internal/acp/server.go` —
 initialize, session/new, session/prompt, streamed updates,
-session/request_permission); this phase adds the client so hawk's mission mode
+session/request_permission); this phase adds the client so graycode's mission mode
 can **delegate to** other ACP agents, Claude Code, and Codex.
 
 - `internal/acp/client.go`:
@@ -317,7 +317,7 @@ tool calls and supports interactive stdin.
   - Local backend over the sandbox executor: PTY allocation with zero-CGO on
     Linux (`syscall`-based pty or a maintained pure-Go pty; verify
     `github.com/creack/pty`'s CGO status before adoption — zero-CGO is a hard
-    hawk constraint); Windows via `ConPTY` later, outside this phase.
+    graycode constraint); Windows via `ConPTY` later, outside this phase.
   - Sandbox enforcement: the backend applies the resolved Phase 2.3 policy
     (mode + workspace root) before exec, fail-closed.
   - Bounded reads: per-read byte cap; no unbounded buffering in model-facing
@@ -368,7 +368,7 @@ pre-publication failure.
 
 Port of DSH `sandbox/sandbox-windows-acl`. `internal/sandbox/landlock_other.go`
 is currently a stub on non-Linux (`Apply` always errors; `Available` false), so
-on Windows hawk is Docker-only and fails closed without Docker. This phase gives
+on Windows graycode is Docker-only and fails closed without Docker. This phase gives
 Windows a native, unprivileged confinement backend matching the Landlock
 philosophy already stated in `landlock.go` ("works without root, without Docker,
 without external tools").
@@ -398,7 +398,7 @@ Port of DSH `lsp/lsp-stdio` operational semantics. `internal/lsp/` currently has
 `client.go`/`manager.go`/`config.go`; this phase audits and aligns the client
 lifecycle with DSH's:
 - **Transient-open sequence**: per query — resolve and byte-bound the source
-  through hawk's fs, `textDocument/didOpen` (version 1, full text), the
+  through graycode's fs, `textDocument/didOpen` (version 1, full text), the
   requested request, then `textDocument/didClose` in `finally`. No document
   cache, no LRU, no `didChange`; a failed/canceled `didOpen` write terminates
   the server instance before the pool can reuse it.
@@ -428,7 +428,7 @@ scrubbing (KEY/PASSWORD/SECRET/TOKEN absent from child env); processId null.
 ## Gates (each phase)
 
 `gofmt`/`go vet`/`go test -race` on the touched packages, then `make lint` and
-`hawk verify`, run **twice** (second pass re-runs the full touched suite after
+`graycode verify`, run **twice** (second pass re-runs the full touched suite after
 any fixes). `scripts/check-internal-layer-imports.sh` must stay green. No direct
 commits to `main` — each phase is its own feature branch
 (`feat/dsh-harness-rfc-<phase>`), opened from `main`, with a PR and green CI.

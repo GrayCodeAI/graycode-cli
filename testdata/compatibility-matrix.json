@@ -4,7 +4,7 @@
   "version": "1",
   "updated": "2026-06-02",
   "components": [
-    "hawk",
+    "graycode",
     "sparrow",
     "robin",
     "eyrie",
@@ -15,13 +15,13 @@
     "swift"
   ],
   "dependencies": {
-    "hawk":            ["eyrie", "kestrel", "merlin", "shrike"],
-    "sparrow":     ["hawk"],
-    "robin": ["hawk"],
-    "kestrel":           ["hawk", "eyrie"],
-    "merlin":         ["hawk"],
+    "graycode":            ["eyrie", "kestrel", "merlin", "shrike"],
+    "sparrow":     ["graycode"],
+    "robin": ["graycode"],
+    "kestrel":           ["graycode", "eyrie"],
+    "merlin":         ["graycode"],
     "swift":           [],
-    "shrike":             ["hawk"],
+    "shrike":             ["graycode"],
     "harrier":            [],
     "eyrie":           []
   },
@@ -30,7 +30,7 @@
       "name": "stable",
       "description": "Latest tested-together stable combination across the eco. This is what new users get when installing.",
       "components": {
-        "hawk":            "0.1.0",
+        "graycode":            "0.1.0",
         "sparrow":     "0.1.0",
         "robin": "0.1.0",
         "eyrie":           "0.1.0",
@@ -45,7 +45,7 @@
       "name": "next",
       "description": "Combination that the upcoming release will ship — kept up to date by release-please as components advance. Tested in CI on every PR.",
       "components": {
-        "hawk":            "main",
+        "graycode":            "main",
         "sparrow":     "main",
         "robin": "main",
         "eyrie":           "main",

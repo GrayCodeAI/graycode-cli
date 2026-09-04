@@ -70,7 +70,7 @@ func TestThreatLevel_String(t *testing.T) {
 
 func TestModeAllowsNetwork(t *testing.T) {
 	// Set sandbox network to default behavior (empty env var)
-	t.Setenv("HAWK_SANDBOX_NETWORK", "")
+	t.Setenv("GRAYCODE_SANDBOX_NETWORK", "")
 	if !ModeAllowsNetwork(ModeWorkspace) {
 		t.Error("expected workspace mode to allow network")
 	}

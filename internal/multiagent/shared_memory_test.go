@@ -63,9 +63,9 @@ func TestSetVersionIncrement(t *testing.T) {
 func TestGetString(t *testing.T) {
 	sm := NewSharedMemory()
 
-	sm.Set("name", "hawk", "agent-a")
-	if got := sm.GetString("name"); got != "hawk" {
-		t.Fatalf("expected %q, got %q", "hawk", got)
+	sm.Set("name", "graycode", "agent-a")
+	if got := sm.GetString("name"); got != "graycode" {
+		t.Fatalf("expected %q, got %q", "graycode", got)
 	}
 
 	// Non-string value should be stringified.
@@ -99,7 +99,7 @@ func TestGetInt(t *testing.T) {
 	}
 
 	// Non-integer value.
-	sm.Set("name", "hawk", "agent-a")
+	sm.Set("name", "graycode", "agent-a")
 	if got := sm.GetInt("name"); got != 0 {
 		t.Fatalf("expected 0 for non-int value, got %d", got)
 	}
@@ -124,7 +124,7 @@ func TestGetBool(t *testing.T) {
 	}
 
 	// Non-bool value.
-	sm.Set("name", "hawk", "agent-a")
+	sm.Set("name", "graycode", "agent-a")
 	if got := sm.GetBool("name"); got {
 		t.Fatal("expected false for non-bool value")
 	}

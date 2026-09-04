@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 func httpDo(t *testing.T, method, url string) *http.Response {
@@ -24,7 +24,7 @@ func httpDo(t *testing.T, method, url string) *http.Response {
 }
 
 func TestAcquireAndReleaseLease(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
 	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())

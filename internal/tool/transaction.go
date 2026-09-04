@@ -728,7 +728,7 @@ func checkWritable(dir string) error {
 		return fmt.Errorf("%s is not a directory", dir)
 	}
 	// Try to create a temp file to check writability
-	f, err := os.CreateTemp(dir, ".hawk_tx_check_*")
+	f, err := os.CreateTemp(dir, ".graycode_tx_check_*")
 	if err != nil {
 		return fmt.Errorf("not writable: %w", err)
 	}

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/GrayCodeAI/hawk/internal/snapshot"
+	"github.com/GrayCodeAI/graycode-cli/internal/snapshot"
 	"github.com/spf13/cobra"
 )
 
@@ -51,7 +51,7 @@ func (m chatModel) showSnapshotList() (tea.Model, tea.Cmd) {
 
 	history, err := t.History(15)
 	if err != nil || len(history) == 0 {
-		m.messages = append(m.messages, displayMsg{role: "system", content: "No snapshots yet. Snapshots are created automatically when hawk modifies files."})
+		m.messages = append(m.messages, displayMsg{role: "system", content: "No snapshots yet. Snapshots are created automatically when graycode modifies files."})
 		return m, nil
 	}
 
@@ -123,7 +123,7 @@ func (m chatModel) diffSnapshot(hash string) (tea.Model, tea.Cmd) {
 var snapshotCmd = &cobra.Command{
 	Use:   "snapshot",
 	Short: "Manage file snapshots (undo any change)",
-	Long:  "View, restore, and diff file snapshots. Hawk automatically snapshots every file modification.",
+	Long:  "View, restore, and diff file snapshots. Graycode automatically snapshots every file modification.",
 }
 
 var snapshotListCmd = &cobra.Command{

@@ -25,7 +25,7 @@ type ImportGraph struct {
 	edges map[string][]string
 	// reverse maps filepath -> set of files that import it
 	reverse map[string][]string
-	// modulePath is the Go module path (e.g., "github.com/GrayCodeAI/hawk")
+	// modulePath is the Go module path (e.g., "github.com/GrayCodeAI/graycode-cli")
 	modulePath string
 	// root is the repository root directory
 	root string

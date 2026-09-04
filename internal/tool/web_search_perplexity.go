@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/env"
+	"github.com/GrayCodeAI/graycode-cli/internal/env"
 )
 
 // perplexitySearchClient is a Perplexity-backed web search provider (DSH
@@ -87,7 +87,7 @@ func (c *perplexitySearchClient) search(ctx context.Context, query string, count
 	req.Header.Set("authorization", "Bearer "+c.apiKey)
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("accept", "application/json")
-	req.Header.Set("user-agent", "hawk/0.1.0")
+	req.Header.Set("user-agent", "graycode/0.1.0")
 
 	resp, err := c.http.Do(req)
 	if err != nil {

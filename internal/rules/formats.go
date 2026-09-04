@@ -7,15 +7,15 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Hawk: .agents/rules/*.md
+// Graycode: .agents/rules/*.md
 // ---------------------------------------------------------------------------
 
-func readHawk(dir string) ([]Rule, error) {
+func readGraycode(dir string) ([]Rule, error) {
 	rulesDir := filepath.Join(dir, ".agents", "rules")
-	return readMDDir(rulesDir, ".md", FormatHawk)
+	return readMDDir(rulesDir, ".md", FormatGraycode)
 }
 
-func writeHawk(dir string, rules []Rule) error {
+func writeGraycode(dir string, rules []Rule) error {
 	rulesDir := filepath.Join(dir, ".agents", "rules")
 	if err := os.MkdirAll(rulesDir, 0o750); err != nil {
 		return err

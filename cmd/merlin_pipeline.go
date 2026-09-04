@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	contracts "github.com/GrayCodeAI/eagle/types"
-	verifycontracts "github.com/GrayCodeAI/eagle/verify"
-	hawkMerlin "github.com/GrayCodeAI/hawk/internal/bridge/merlin"
+	graycodeMerlin "github.com/GrayCodeAI/graycode-cli/internal/bridge/merlin"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
+	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
+	verifycontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/verify"
 	merlinLib "github.com/GrayCodeAI/merlin"
 )
 
@@ -91,7 +91,7 @@ func RunMerlinPipeline(ctx context.Context, cfg MerlinPipelineConfig) ([]ReviewF
 		opts = append(opts, merlinLib.WithConcurrency(cfg.Concurrency))
 	}
 
-	bridge := hawkMerlin.NewBridge(opts...)
+	bridge := graycodeMerlin.NewBridge(opts...)
 	if !bridge.Ready() {
 		return nil, "", fmt.Errorf("merlin bridge failed to initialize")
 	}
@@ -103,7 +103,7 @@ func RunMerlinPipeline(ctx context.Context, cfg MerlinPipelineConfig) ([]ReviewF
 	if strings.TrimSpace(cfg.GraphSessionID) == "" {
 		report, err = bridge.RunContracts(ctx, cfg.Target)
 	} else {
-		report, err = bridge.RunContractsObserved(ctx, cfg.Target, hawkMerlin.GraphObservation{
+		report, err = bridge.RunContractsObserved(ctx, cfg.Target, graycodeMerlin.GraphObservation{
 			SessionID:  cfg.GraphSessionID,
 			ToolCallID: cfg.GraphToolCallID,
 			Stage:      "merlin-pipeline",

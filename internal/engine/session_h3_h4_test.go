@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // TestSession_SetConversationGraph guards graph ownership by PersistenceService.
@@ -19,7 +19,7 @@ func TestSession_SetConversationGraph_DualWrite(t *testing.T) {
 		t.Fatal("graph should be nil before SetConversationGraph")
 	}
 
-	// Build a real Hawk graph backed by a temporary JSON store and attach it.
+	// Build a real Graycode graph backed by a temporary JSON store and attach it.
 	dir := t.TempDir()
 	graph, err := session.OpenConversationGraph(filepath.Join(dir, "conversation.json"), "test-session")
 	if err != nil {

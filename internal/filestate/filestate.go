@@ -300,14 +300,14 @@ func sanitizeSessionID(id string) string {
 }
 
 // stateRoot mirrors storage.StateDir without importing it (leaf-package rule:
-// filestate stays independent of hawk storage layout choices).
+// filestate stays independent of graycode storage layout choices).
 func stateRoot() string {
-	if v := strings.TrimSpace(os.Getenv("HAWK_STATE_DIR")); v != "" {
+	if v := strings.TrimSpace(os.Getenv("GRAYCODE_STATE_DIR")); v != "" {
 		return v
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return filepath.Join(os.TempDir(), "hawk", "state")
+		return filepath.Join(os.TempDir(), "graycode", "state")
 	}
-	return filepath.Join(home, ".hawk", "state")
+	return filepath.Join(home, ".graycode", "state")
 }

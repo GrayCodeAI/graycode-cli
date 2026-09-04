@@ -12,15 +12,15 @@ import (
 // Detection tests
 // ---------------------------------------------------------------------------
 
-func TestDetect_HawkRules(t *testing.T) {
+func TestDetect_GraycodeRules(t *testing.T) {
 	dir := t.TempDir()
 	rulesDir := filepath.Join(dir, ".agents", "rules")
 	must(t, os.MkdirAll(rulesDir, 0o755))
 	must(t, os.WriteFile(filepath.Join(rulesDir, "style.md"), []byte("Use gofmt."), 0o644))
 
 	found := Detect(dir)
-	if _, ok := found[FormatHawk]; !ok {
-		t.Fatal("expected hawk rules to be detected")
+	if _, ok := found[FormatGraycode]; !ok {
+		t.Fatal("expected graycode rules to be detected")
 	}
 }
 
@@ -91,10 +91,10 @@ func TestDetect_Empty(t *testing.T) {
 func TestDetect_Multiple(t *testing.T) {
 	dir := t.TempDir()
 
-	// Set up hawk
-	hawkDir := filepath.Join(dir, ".agents", "rules")
-	must(t, os.MkdirAll(hawkDir, 0o755))
-	must(t, os.WriteFile(filepath.Join(hawkDir, "a.md"), []byte("rule a"), 0o644))
+	// Set up graycode
+	graycodeDir := filepath.Join(dir, ".agents", "rules")
+	must(t, os.MkdirAll(graycodeDir, 0o755))
+	must(t, os.WriteFile(filepath.Join(graycodeDir, "a.md"), []byte("rule a"), 0o644))
 
 	// Set up CLAUDE.md
 	must(t, os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("## B\nrule b"), 0o644))
@@ -216,7 +216,7 @@ func TestImport_Gemini(t *testing.T) {
 	assertRule(t, rules[0], "Clarity", "Write clear code.", FormatGemini)
 }
 
-func TestImport_Hawk(t *testing.T) {
+func TestImport_Graycode(t *testing.T) {
 	dir := t.TempDir()
 	rulesDir := filepath.Join(dir, ".agents", "rules")
 	must(t, os.MkdirAll(rulesDir, 0o755))
@@ -224,7 +224,7 @@ func TestImport_Hawk(t *testing.T) {
 	must(t, os.WriteFile(filepath.Join(rulesDir, "docs.md"),
 		[]byte("---\npaths: [\"docs/**\"]\n---\nKeep docs updated.\n"), 0o644))
 
-	rules, err := Import(dir, FormatHawk)
+	rules, err := Import(dir, FormatGraycode)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,8 +232,8 @@ func TestImport_Hawk(t *testing.T) {
 		t.Fatalf("expected 2 rules, got %d", len(rules))
 	}
 	sort.Slice(rules, func(i, j int) bool { return rules[i].Name < rules[j].Name })
-	assertRule(t, rules[0], "docs", "Keep docs updated.", FormatHawk)
-	assertRule(t, rules[1], "style", "Use gofmt.", FormatHawk)
+	assertRule(t, rules[0], "docs", "Keep docs updated.", FormatGraycode)
+	assertRule(t, rules[1], "style", "Use gofmt.", FormatGraycode)
 }
 
 func TestImport_UnsupportedFormat(t *testing.T) {
@@ -248,13 +248,13 @@ func TestImport_UnsupportedFormat(t *testing.T) {
 // Export tests
 // ---------------------------------------------------------------------------
 
-func TestExport_Hawk(t *testing.T) {
+func TestExport_Graycode(t *testing.T) {
 	dir := t.TempDir()
 	rules := []Rule{
 		{Name: "style", Content: "Use gofmt."},
 		{Name: "naming", Content: "Use descriptive names."},
 	}
-	if err := Export(dir, FormatHawk, rules); err != nil {
+	if err := Export(dir, FormatGraycode, rules); err != nil {
 		t.Fatal(err)
 	}
 
@@ -358,7 +358,7 @@ func TestExport_UnsupportedFormat(t *testing.T) {
 // Round-trip tests
 // ---------------------------------------------------------------------------
 
-func TestRoundTrip_ClaudeCodeToHawk(t *testing.T) {
+func TestRoundTrip_ClaudeCodeToGraycode(t *testing.T) {
 	dir := t.TempDir()
 
 	// Write a CLAUDE.md source.
@@ -371,13 +371,13 @@ func TestRoundTrip_ClaudeCodeToHawk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Export to hawk.
-	if exportErr := Export(dir, FormatHawk, imported); exportErr != nil {
+	// Export to graycode.
+	if exportErr := Export(dir, FormatGraycode, imported); exportErr != nil {
 		t.Fatal(exportErr)
 	}
 
-	// Re-import from hawk.
-	reimported, err := Import(dir, FormatHawk)
+	// Re-import from graycode.
+	reimported, err := Import(dir, FormatGraycode)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -398,7 +398,7 @@ func TestRoundTrip_ClaudeCodeToHawk(t *testing.T) {
 	}
 }
 
-func TestRoundTrip_CursorToHawkToClaudeCode(t *testing.T) {
+func TestRoundTrip_CursorToGraycodeToClaudeCode(t *testing.T) {
 	dir := t.TempDir()
 
 	// Write a .cursorrules source.
@@ -414,15 +414,15 @@ func TestRoundTrip_CursorToHawkToClaudeCode(t *testing.T) {
 		t.Fatalf("expected 2 rules from cursor, got %d", len(imported))
 	}
 
-	// Export to hawk, then to Claude Code.
-	if exportErr := Export(dir, FormatHawk, imported); exportErr != nil {
+	// Export to graycode, then to Claude Code.
+	if exportErr := Export(dir, FormatGraycode, imported); exportErr != nil {
 		t.Fatal(exportErr)
 	}
-	hawkRules, err := Import(dir, FormatHawk)
+	graycodeRules, err := Import(dir, FormatGraycode)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if exportErr := Export(dir, FormatClaudeCode, hawkRules); exportErr != nil {
+	if exportErr := Export(dir, FormatClaudeCode, graycodeRules); exportErr != nil {
 		t.Fatal(exportErr)
 	}
 
@@ -447,7 +447,7 @@ func TestRoundTrip_CursorToHawkToClaudeCode(t *testing.T) {
 	}
 }
 
-func TestRoundTrip_HawkToCursorToHawk(t *testing.T) {
+func TestRoundTrip_GraycodeToCursorToGraycode(t *testing.T) {
 	dir := t.TempDir()
 
 	original := []Rule{
@@ -455,15 +455,15 @@ func TestRoundTrip_HawkToCursorToHawk(t *testing.T) {
 		{Name: "naming", Content: "Use descriptive names."},
 	}
 
-	// Export to hawk, import, export to cursor, import from cursor, export back to hawk.
-	if exportErr := Export(dir, FormatHawk, original); exportErr != nil {
+	// Export to graycode, import, export to cursor, import from cursor, export back to graycode.
+	if exportErr := Export(dir, FormatGraycode, original); exportErr != nil {
 		t.Fatal(exportErr)
 	}
-	fromHawk, err := Import(dir, FormatHawk)
+	fromGraycode, err := Import(dir, FormatGraycode)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if exportErr := Export(dir, FormatCursor, fromHawk); exportErr != nil {
+	if exportErr := Export(dir, FormatCursor, fromGraycode); exportErr != nil {
 		t.Fatal(exportErr)
 	}
 	fromCursor, err := Import(dir, FormatCursor)
@@ -471,12 +471,12 @@ func TestRoundTrip_HawkToCursorToHawk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Re-export back to hawk in a fresh directory.
+	// Re-export back to graycode in a fresh directory.
 	dir2 := t.TempDir()
-	if exportErr := Export(dir2, FormatHawk, fromCursor); exportErr != nil {
+	if exportErr := Export(dir2, FormatGraycode, fromCursor); exportErr != nil {
 		t.Fatal(exportErr)
 	}
-	final, err := Import(dir2, FormatHawk)
+	final, err := Import(dir2, FormatGraycode)
 	if err != nil {
 		t.Fatal(err)
 	}

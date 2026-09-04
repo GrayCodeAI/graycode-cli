@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // Mode represents the sandbox isolation level — what the sandbox *does* to
@@ -66,14 +66,14 @@ type SandboxConfig struct {
 	Security Security
 }
 
-// DefaultHawkPolicy creates a sensible default SeatbeltPolicy for hawk
+// DefaultGraycodePolicy creates a sensible default SeatbeltPolicy for graycode
 // operations in the given working directory. The security parameter
 // selects the security posture:
 //
 //   - SecurityStrict: deny everything
 //   - SecurityWorkspace (new default): allow workspace writes, no process
 //   - SecurityOff: legacy behavior (allow everything)
-func DefaultHawkPolicy(workDir string, security Security) *SeatbeltPolicy {
+func DefaultGraycodePolicy(workDir string, security Security) *SeatbeltPolicy {
 	home := os.Getenv("HOME")
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
@@ -184,12 +184,12 @@ func ParseSecurity(s string) Security {
 // sandboxed command could still exfiltrate data. This makes network denial
 // actually reachable and gives strict mode its documented "no network"
 // posture, while keeping it on for workspace builds (package managers,
-// module fetches). HAWK_SANDBOX_NETWORK overrides the default either way:
+// module fetches). GRAYCODE_SANDBOX_NETWORK overrides the default either way:
 //
-//	HAWK_SANDBOX_NETWORK=0|off|no|false → deny in all modes
-//	HAWK_SANDBOX_NETWORK=1|on|yes|true  → allow in all modes
+//	GRAYCODE_SANDBOX_NETWORK=0|off|no|false → deny in all modes
+//	GRAYCODE_SANDBOX_NETWORK=1|on|yes|true  → allow in all modes
 func ModeAllowsNetwork(m Mode) bool {
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("HAWK_SANDBOX_NETWORK"))) {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("GRAYCODE_SANDBOX_NETWORK"))) {
 	case "0", "off", "no", "false":
 		return false
 	case "1", "on", "yes", "true":

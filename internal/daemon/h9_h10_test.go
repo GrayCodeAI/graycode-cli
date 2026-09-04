@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
 )
 
 // TestIPLimiter_BurstAndPerIPIsolation verifies the token bucket allows up to
@@ -111,7 +111,7 @@ func TestDaemon_CancelEndpoint(t *testing.T) {
 // TestDaemon_GlobalConcurrencyCap verifies handleChat returns 503 when the
 // global concurrency semaphore is saturated (H9).
 func TestDaemon_GlobalConcurrencyCap(t *testing.T) {
-	t.Setenv("HAWK_DAEMON_MAX_CONCURRENT", "1")
+	t.Setenv("GRAYCODE_DAEMON_MAX_CONCURRENT", "1")
 	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, daemonTestSessionFactory(nil))
 	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())

@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/trust"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/trust"
 	"gopkg.in/yaml.v3"
 )
 
@@ -250,7 +250,7 @@ type CommandHook struct {
 
 // LoadHooksDir loads hooks from a directory. Each .md file may contain
 // YAML frontmatter defining a command hook.
-// Project-scoped directories require folder trust when HAWK_Y0_FOLDER_TRUST is on.
+// Project-scoped directories require folder trust when GRAYCODE_Y0_FOLDER_TRUST is on.
 func LoadHooksDir(dir string) error {
 	if err := allowProjectHookDir(dir); err != nil {
 		return err
@@ -376,7 +376,7 @@ func matchPattern(pattern, path string) bool {
 // LoadConventionPolicies discovers and loads convention policy files.
 // Convention: auto-discovered *policy*.{md,go} files from:
 //   - {cwd}/.agents/policies/ (project scope)
-//   - Hawk user state policies directory
+//   - Graycode user state policies directory
 //
 // Returns the number of policies loaded.
 func LoadConventionPolicies(cwd string) int {

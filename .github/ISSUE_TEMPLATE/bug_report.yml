@@ -11,7 +11,7 @@ body:
         of the form as you can — the more we know, the faster we can fix it.
 
         Before submitting:
-        - Search [existing issues](https://github.com/GrayCodeAI/hawk/issues) to avoid duplicates.
+        - Search [existing issues](https://github.com/GrayCodeAI/graycode-cli/issues) to avoid duplicates.
         - If this is a security issue, please **do not** file a public issue. See `SECURITY.md`.
 
   - type: textarea
@@ -19,7 +19,7 @@ body:
     attributes:
       label: What happened?
       description: A clear, concise description of the bug.
-      placeholder: When I run `hawk ...`, I expected X but got Y.
+      placeholder: When I run `graycode ...`, I expected X but got Y.
     validations:
       required: true
 
@@ -29,7 +29,7 @@ body:
       label: Steps to reproduce
       description: Minimal steps that reliably reproduce the problem.
       placeholder: |
-        1. Run `hawk ...`
+        1. Run `graycode ...`
         2. Type `...`
         3. See error `...`
     validations:
@@ -44,10 +44,10 @@ body:
       required: true
 
   - type: input
-    id: hawk-version
+    id: graycode-version
     attributes:
-      label: hawk version
-      description: Output of `hawk version` (or `hawk --version`).
+      label: graycode version
+      description: Output of `graycode version` (or `graycode --version`).
       placeholder: "0.1.0"
     validations:
       required: true

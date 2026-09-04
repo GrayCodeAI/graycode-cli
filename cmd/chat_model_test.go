@@ -11,14 +11,14 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/viewport"
 	lipgloss "charm.land/lipgloss/v2"
-	"github.com/GrayCodeAI/hawk/internal/bridge/sessioncapture"
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
-	"github.com/GrayCodeAI/hawk/internal/engine"
-	"github.com/GrayCodeAI/hawk/internal/feature/shellmode"
-	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/storage"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/bridge/sessioncapture"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/feature/shellmode"
+	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 func newTestChatModel() *chatModel {
@@ -43,7 +43,7 @@ func newTestChatModel() *chatModel {
 		hintsLoader:       engine.NewHintsLoader(),
 		selfImprover:      engine.NewSelfImprover(),
 		codingSoul:        engine.LoadCodingSoul(),
-		brailleSpinner:    NewBrailleSpinner(SpinnerHawk, "Thinking"),
+		brailleSpinner:    NewBrailleSpinner(SpinnerGraycode, "Thinking"),
 		testStreamStarter: func() {},
 	}
 	return m
@@ -62,12 +62,12 @@ func isolateChatCommandSweepEnv(t *testing.T) {
 	root := t.TempDir()
 	storage.SetTestDirs(t, root)
 	isolateCredentialHome(t)
-	hawkconfig.InvalidateConfigUICache()
+	graycodeconfig.InvalidateConfigUICache()
 	gateway.SetDefaultStore(&gateway.MapStore{})
 	restoreThemeGlobals(t)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		hawkconfig.InvalidateConfigUICache()
+		graycodeconfig.InvalidateConfigUICache()
 	})
 }
 
@@ -77,7 +77,7 @@ func isolateChatCommandSweepEnv(t *testing.T) {
 // (e.g. TestAdaptiveNeutralsPreserveDarkAppearance).
 func restoreThemeGlobals(t *testing.T) {
 	t.Helper()
-	savedHawk, savedSuccess, savedWarn, savedErr, savedInfo := hawkColor, successTeal, warnAmber, errorCoral, infoSky
+	savedGraycode, savedSuccess, savedWarn, savedErr, savedInfo := graycodeColor, successTeal, warnAmber, errorCoral, infoSky
 	savedTool, savedAgent, savedDone, savedContainer := toolGold, agentGold, doneGreen, containerBlue
 	savedInspect, savedEdit, savedRun, savedTrust := tierInspect, tierEdit, tierRun, tierTrust
 	savedHudBorder, savedHudLabel := hudBorderPurple, hudLabelPink
@@ -86,7 +86,7 @@ func restoreThemeGlobals(t *testing.T) {
 	savedBorderDim, savedBgCode := borderDim, bgCode
 	hasDark := lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
 	t.Cleanup(func() {
-		hawkColor, successTeal, warnAmber, errorCoral, infoSky = savedHawk, savedSuccess, savedWarn, savedErr, savedInfo
+		graycodeColor, successTeal, warnAmber, errorCoral, infoSky = savedGraycode, savedSuccess, savedWarn, savedErr, savedInfo
 		toolGold, agentGold, doneGreen, containerBlue = savedTool, savedAgent, savedDone, savedContainer
 		tierInspect, tierEdit, tierRun, tierTrust = savedInspect, savedEdit, savedRun, savedTrust
 		hudBorderPurple, hudLabelPink = savedHudBorder, savedHudLabel
@@ -141,7 +141,7 @@ func TestChatModel_SlashClear(t *testing.T) {
 
 func TestFormatQuitResumeMessage(t *testing.T) {
 	got := formatQuitResumeMessage("44418bdd52745678")
-	want := "Thank you for using Hawk!\n\nTo resume this session, run: hawk --resume 44418bdd52745678\n"
+	want := "Thank you for using Graycode!\n\nTo resume this session, run: graycode --resume 44418bdd52745678\n"
 	if got != want {
 		t.Fatalf("quit message mismatch:\nwant %q\ngot  %q", want, got)
 	}
@@ -149,7 +149,7 @@ func TestFormatQuitResumeMessage(t *testing.T) {
 
 func TestFormatQuitResumeMessage_NoSession(t *testing.T) {
 	got := formatQuitResumeMessage("")
-	want := "Thank you for using Hawk!\n"
+	want := "Thank you for using Graycode!\n"
 	if got != want {
 		t.Fatalf("quit message mismatch:\nwant %q\ngot  %q", want, got)
 	}

@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// ConversationNode is one message in Hawk's product-owned conversation graph.
+// ConversationNode is one message in Graycode's product-owned conversation graph.
 type ConversationNode struct {
 	ID        string            `json:"id"`
 	ParentID  string            `json:"parent_id,omitempty"`
@@ -43,7 +43,7 @@ func OpenConversationGraph(path, sessionID string) (*ConversationGraph, error) {
 		return nil, fmt.Errorf("conversation graph: path and session id are required")
 	}
 	g := &ConversationGraph{path: path, state: conversationGraphState{Version: 1, SessionID: sessionID, Nodes: make(map[string]*ConversationNode)}}
-	data, err := os.ReadFile(path) // #nosec G304 -- path is supplied by Hawk's session storage composition root
+	data, err := os.ReadFile(path) // #nosec G304 -- path is supplied by Graycode's session storage composition root
 	if err == nil {
 		if decodeErr := json.Unmarshal(data, &g.state); decodeErr != nil {
 			return nil, fmt.Errorf("conversation graph: decode: %w", decodeErr)

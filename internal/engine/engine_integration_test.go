@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	contracts "github.com/GrayCodeAI/eagle/policy"
-	"github.com/GrayCodeAI/hawk/internal/types"
+	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/policy"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 
-	"github.com/GrayCodeAI/hawk/internal/session"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────

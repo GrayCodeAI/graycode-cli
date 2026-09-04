@@ -30,10 +30,10 @@ Subcommands:
   describe  Generate or update a PR description
 
 Examples:
-  hawk pr review
-  hawk pr review 42 --post-comments
-  hawk pr create --base develop --draft
-  hawk pr describe 42 --update`,
+  graycode pr review
+  graycode pr review 42 --post-comments
+  graycode pr create --base develop --draft
+  graycode pr describe 42 --update`,
 }
 
 var prReviewCmd = &cobra.Command{

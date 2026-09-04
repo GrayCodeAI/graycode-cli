@@ -13,7 +13,7 @@ import (
 // derived from baseBranch. It returns the absolute path to the worktree directory.
 func createWorktree(repoDir, baseBranch, branchName string) (string, error) {
 	// Create a temp directory for the worktree.
-	dir, err := os.MkdirTemp("", "hawk-wt-*")
+	dir, err := os.MkdirTemp("", "graycode-wt-*")
 	if err != nil {
 		return "", fmt.Errorf("mkdtemp: %w", err)
 	}

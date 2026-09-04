@@ -6,7 +6,7 @@ package mcp
 // "additionalProperties", "examples", etc.); several providers (and some local
 // vLLM/SGLang routes) reject a function's parameter schema outright when it
 // carries keys outside the function-calling subset. Qwen-Agent solves this by
-// keeping only {type, properties, required} per tool — hawk does the same.
+// keeping only {type, properties, required} per tool — graycode does the same.
 //
 // The function is conservative: it never invents structure. If the input does
 // not look like an object schema (no "type":"object" and no "properties"), it is

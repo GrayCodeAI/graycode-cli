@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestFormatHawkTokenCount(t *testing.T) {
+func TestFormatGraycodeTokenCount(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		in   int
@@ -25,9 +25,9 @@ func TestFormatHawkTokenCount(t *testing.T) {
 		tc := tc
 		t.Run("", func(t *testing.T) {
 			t.Parallel()
-			got := formatHawkTokenCount(tc.in)
+			got := formatGraycodeTokenCount(tc.in)
 			if got != tc.want {
-				t.Fatalf("formatHawkTokenCount(%d) = %q, want %q", tc.in, got, tc.want)
+				t.Fatalf("formatGraycodeTokenCount(%d) = %q, want %q", tc.in, got, tc.want)
 			}
 		})
 	}

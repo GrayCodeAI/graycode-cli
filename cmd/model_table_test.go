@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 )
 
 func TestFormatModelTablePrice(t *testing.T) {
@@ -67,7 +67,7 @@ func TestFormatModelCapabilities(t *testing.T) {
 }
 
 func TestFormatModelThinkingCell(t *testing.T) {
-	// Isolate from the developer's real hawk settings (per-model thinking
+	// Isolate from the developer's real graycode settings (per-model thinking
 	// preferences would otherwise change the asserted defaults).
 	t.Setenv("HOME", t.TempDir())
 	row := modelTableRowFromOption(configModelOption{
@@ -109,7 +109,7 @@ func TestModelTableOwnerFallback(t *testing.T) {
 	if option.Provider != "deployment" {
 		t.Fatalf("option provider = %q, want deployment", option.Provider)
 	}
-	entry := modelTableRowFromCatalogEntry(hawkconfig.EngineModel{GatewayID: "gateway"})
+	entry := modelTableRowFromCatalogEntry(graycodeconfig.EngineModel{GatewayID: "gateway"})
 	if entry.Provider != "gateway" {
 		t.Fatalf("entry provider = %q, want gateway", entry.Provider)
 	}

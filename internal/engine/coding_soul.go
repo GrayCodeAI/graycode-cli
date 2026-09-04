@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
 // CodingSoul defines the persistent coding personality and style preferences.
-// Loaded from Hawk user state.
+// Loaded from Graycode user state.
 type CodingSoul struct {
 	Style       string // communication style
 	Preferences string // coding preferences
@@ -61,7 +61,7 @@ func (s *CodingSoul) ForPrompt() string {
 
 // InitSoulPrompt returns a prompt to generate an initial soul.md.
 func InitSoulPrompt() string {
-	return `Generate a coding soul profile for Hawk user state based on my coding patterns. Analyze my recent code and infer:
+	return `Generate a coding soul profile for Graycode user state based on my coding patterns. Analyze my recent code and infer:
 
 ## Style
 - How I communicate (terse vs verbose, formal vs casual)

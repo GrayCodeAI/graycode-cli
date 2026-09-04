@@ -48,9 +48,9 @@ func TestSpecifyWritesSpecFile(t *testing.T) {
 		t.Errorf("expected result to mention spec.md, got %q", result)
 	}
 
-	entries, err := os.ReadDir(filepath.Join(dir, ".hawk", "specs"))
+	entries, err := os.ReadDir(filepath.Join(dir, ".graycode", "specs"))
 	if err != nil {
-		t.Fatalf("expected .hawk/specs directory to exist: %v", err)
+		t.Fatalf("expected .graycode/specs directory to exist: %v", err)
 	}
 	if len(entries) != 1 {
 		t.Fatalf("expected exactly one spec directory, got %d", len(entries))
@@ -59,7 +59,7 @@ func TestSpecifyWritesSpecFile(t *testing.T) {
 		t.Errorf("expected slug prefix, got %q", entries[0].Name())
 	}
 
-	content, err := os.ReadFile(filepath.Join(dir, ".hawk", "specs", entries[0].Name(), "spec.md"))
+	content, err := os.ReadFile(filepath.Join(dir, ".graycode", "specs", entries[0].Name(), "spec.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,11 +97,11 @@ func TestSpecifyPlanTasksSequence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	entries, err := os.ReadDir(filepath.Join(dir, ".hawk", "specs"))
+	entries, err := os.ReadDir(filepath.Join(dir, ".graycode", "specs"))
 	if err != nil || len(entries) != 1 {
 		t.Fatalf("expected one spec dir, got entries=%v err=%v", entries, err)
 	}
-	specPath := filepath.Join(dir, ".hawk", "specs", entries[0].Name())
+	specPath := filepath.Join(dir, ".graycode", "specs", entries[0].Name())
 	for _, f := range []string{"spec.md", "plan.md", "tasks.md"} {
 		if _, err := os.Stat(filepath.Join(specPath, f)); err != nil {
 			t.Errorf("expected %s to exist: %v", f, err)

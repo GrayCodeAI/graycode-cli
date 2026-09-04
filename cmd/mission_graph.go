@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	mission "github.com/GrayCodeAI/hawk/internal/multiagent"
-	"github.com/GrayCodeAI/hawk/internal/tool"
+	mission "github.com/GrayCodeAI/graycode-cli/internal/multiagent"
+	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 )
 
 var missionFromTasks bool
@@ -57,7 +57,7 @@ func missionFeaturesFromTasks(store *tool.TaskStore, missionID string) ([]missio
 				ID:               task.ID,
 				Description:      task.Subject,
 				ExpectedBehavior: expected,
-				Branch:           fmt.Sprintf("hawk-mission/%s/%s", missionID, task.ID),
+				Branch:           fmt.Sprintf("graycode-mission/%s/%s", missionID, task.ID),
 				Status:           status,
 			})
 		}

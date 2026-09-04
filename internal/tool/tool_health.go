@@ -18,7 +18,7 @@ func (ToolHealthTool) Name() string      { return "ToolHealth" }
 func (ToolHealthTool) RiskLevel() string { return "low" }
 func (ToolHealthTool) Aliases() []string { return []string{"tool-health", "tools_health"} }
 func (ToolHealthTool) Description() string {
-	return "Inspect Hawk's registered/model-visible tools and common runtime prerequisites (git, go, node, Python, Docker, gh, and Chrome) without revealing secrets or changing state."
+	return "Inspect Graycode's registered/model-visible tools and common runtime prerequisites (git, go, node, Python, Docker, gh, and Chrome) without revealing secrets or changing state."
 }
 
 func (ToolHealthTool) Parameters() map[string]interface{} {

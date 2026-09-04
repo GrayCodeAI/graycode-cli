@@ -28,7 +28,7 @@ type ShadowWorkspace struct {
 
 // NewShadowWorkspace creates a new temporary directory for shadow validation.
 func NewShadowWorkspace() (*ShadowWorkspace, error) {
-	dir, err := os.MkdirTemp("", "hawk-shadow-*")
+	dir, err := os.MkdirTemp("", "graycode-shadow-*")
 	if err != nil {
 		return nil, fmt.Errorf("shadow workspace: create temp dir: %w", err)
 	}

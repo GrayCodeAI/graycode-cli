@@ -253,7 +253,7 @@ func TestSnapshotStore_Cleanup(t *testing.T) {
 // TestSnapshotStore_ConcurrentAccess runs Take/List/Format concurrently to
 // verify the SnapshotStore mutex (H13) prevents data races.
 func TestSnapshotStore_ConcurrentAccess(t *testing.T) {
-	t.Setenv("HAWK_STATE_DIR", t.TempDir())
+	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	ss := NewSnapshotStore("conc-snap")
 	if ss.err != nil {
 		t.Fatalf("NewSnapshotStore: %v", ss.err)

@@ -1,6 +1,6 @@
 // Lifecycle event payloads and append helpers.
 //
-// These types port the DeepSeek Harness event vocabulary beyond Hawk's original
+// These types port the DeepSeek Harness event vocabulary beyond Graycode's original
 // core spine. Each event is log-only (does not participate in ProjectMessages)
 // unless noted. See docs/plans/dsh-harness-port-plan.md for the upstream parity
 // matrix and mapping table.
@@ -14,7 +14,7 @@ import "time"
 
 // --- Compaction lifecycle ---
 // DeepSeek Harness models compaction as a four-stage lifecycle:
-// start → prune → end → summary. Hawk previously recorded only a single
+// start → prune → end → summary. Graycode previously recorded only a single
 // session.compacted event; the lifecycle types preserve the full durable
 // trail so resume can replay the exact compaction sequence.
 
@@ -34,10 +34,10 @@ type CompactionStartFact struct {
 // price so a pure consumer can subtract it without retaining per-node prices.
 type CompactionPruneFact struct {
 	Strategy string `json:"strategy,omitempty"`
-	// Messages is the count of messages removed from the projection (Hawk's
+	// Messages is the count of messages removed from the projection (Graycode's
 	// simplified invariant; replaces shadowedSeqs for simple pruners).
 	Messages int `json:"messages,omitempty"`
-	// DSH parity fields (all optional; Hawk's simple pruner populates Messages
+	// DSH parity fields (all optional; Graycode's simple pruner populates Messages
 	// instead of shadowedSeqs):
 	ShadowedRangeStart uint64   `json:"shadowed_range_start,omitempty"`
 	ShadowedRangeEnd   uint64   `json:"shadowed_range_end,omitempty"`
@@ -408,7 +408,7 @@ const SubagentDescriptorVersion = 2
 // model-visible surface. It is appended once by the establishing provider
 // inside the child's initial turn, before its first request.
 type SubagentDescriptorFact struct {
-	// Hawk compat fields (legacy, still populated on append):
+	// Graycode compat fields (legacy, still populated on append):
 	Name  string `json:"name,omitempty"`
 	Agent string `json:"agent,omitempty"`
 	Depth int    `json:"depth,omitempty"`

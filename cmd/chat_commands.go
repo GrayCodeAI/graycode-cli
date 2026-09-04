@@ -11,8 +11,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/multiagent/parallel"
-	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/graycode-cli/internal/multiagent/parallel"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
 // slashCmdCache caches the slash commands list to avoid rebuilding.
@@ -202,7 +202,7 @@ var slashDescriptions = map[string]string{
 	"/export":                "Export session",
 	"/follow":                "Toggle stream follow (auto-scroll)",
 	"/home":                  "Jump to top of chat and welcome header",
-	"/feedback":              "Submit feedback about hawk",
+	"/feedback":              "Submit feedback about graycode",
 	"/fast":                  "Toggle fast mode",
 	"/files":                 "Show modified files",
 	"/focus":                 "Narrow agent attention to specific files/dirs",
@@ -245,7 +245,7 @@ var slashDescriptions = map[string]string{
 	"/start":                 "Guided setup: trust, mode, branch, first tasks",
 	"/trust":                 "Folder trust status / add / remove",
 	"/isolation":             "Isolation profile: dev|workspace|strict|container",
-	"/branch-agent":          "Create hawk/agent-* branch if on main/master",
+	"/branch-agent":          "Create graycode/agent-* branch if on main/master",
 	"/auto-commit":           "Toggle git auto-commit after Write/Edit (on|off)",
 	"/summary":               "Summarize the session",
 	"/tasks":                 "Show task list",
@@ -254,7 +254,7 @@ var slashDescriptions = map[string]string{
 	"/tools":                 "List enabled tools",
 	"/undo":                  "Undo the most recent file change",
 	"/usage":                 "Show cost summary",
-	"/version":               "Show hawk version",
+	"/version":               "Show graycode version",
 	"/vim":                   "Toggle vim mode",
 	"/welcome":               "Re-print the welcome header",
 	"/ecosystem":             "Show eyrie, harrier, and shrike integration status",
@@ -303,7 +303,7 @@ var slashDescriptions = map[string]string{
 	"/refresh-model-catalog": "Refresh the model catalog from providers",
 	"/image":                 "Generate or process images",
 	"/recipe":                "Run a saved recipe (command template)",
-	"/soul":                  "Show or update hawk's personality/soul",
+	"/soul":                  "Show or update graycode's personality/soul",
 	"/mode":                  "Switch interaction mode",
 	"/party":                 "Start a multi-agent party session",
 }

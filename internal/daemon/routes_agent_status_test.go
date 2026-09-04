@@ -13,7 +13,7 @@ func TestAgentStatusStates(t *testing.T) {
 	now := time.Now()
 
 	// working: in-flight cancel registered.
-	s.sessions.Store("working-1", &Session{ID: "working-1", Agent: "hawk", Turns: 3, LastUsed: now})
+	s.sessions.Store("working-1", &Session{ID: "working-1", Agent: "graycode", Turns: 3, LastUsed: now})
 	s.cancelMu.Lock()
 	s.cancels["working-1"] = &cancelEntry{cancel: func() {}}
 	s.cancelMu.Unlock()

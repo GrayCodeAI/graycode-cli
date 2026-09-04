@@ -108,9 +108,9 @@ func CLIHint(err error) string {
 	case RateLimit:
 		return "Rate limited — wait a moment, or switch model with --model"
 	case Connectivity:
-		return "Can't reach the provider — run `hawk doctor`"
+		return "Can't reach the provider — run `graycode doctor`"
 	case ModelNotFound:
-		return "Model unavailable — run `hawk doctor` or pick another with --model"
+		return "Model unavailable — run `graycode doctor` or pick another with --model"
 	case ContextOverflow:
 		return "Context window full — shorten the prompt or start a fresh session"
 	default:

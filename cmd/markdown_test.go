@@ -210,10 +210,10 @@ func TestRenderMarkdownOrderedList(t *testing.T) {
 }
 
 func TestRenderMarkdownLinks(t *testing.T) {
-	input := "Visit [Hawk](https://example.com) for info"
+	input := "Visit [Graycode](https://example.com) for info"
 	out := renderMarkdown(input, 80)
 	plain := stripAnsi(out)
-	if !strings.Contains(plain, "Hawk") {
+	if !strings.Contains(plain, "Graycode") {
 		t.Errorf("expected link text in output, got %q", plain)
 	}
 	if !strings.Contains(plain, "https://example.com") {
@@ -831,7 +831,7 @@ func TestMarkdownRendererPlainText(t *testing.T) {
 func TestRenderTableFunction(t *testing.T) {
 	rows := [][]string{
 		{"Name", "Language", "Stars"},
-		{"hawk", "Go", "1200"},
+		{"graycode", "Go", "1200"},
 		{"glow", "Go", "15000"},
 		{"bat", "Rust", "47000"},
 	}

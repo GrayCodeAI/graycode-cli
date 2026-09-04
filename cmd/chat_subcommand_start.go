@@ -6,7 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 )
 
 // startSubcommand is the first-run / guided success path.
@@ -32,7 +32,7 @@ func (c *startSubcommand) Handle(m *chatModel, args []string, text string) (tea.
 	}
 
 	var b strings.Builder
-	b.WriteString("## Hawk quick start\n\n")
+	b.WriteString("## Graycode quick start\n\n")
 
 	// 1. Model / session
 	if m.session != nil {

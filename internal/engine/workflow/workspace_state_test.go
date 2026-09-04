@@ -182,7 +182,7 @@ func TestDetectExternalChanges(t *testing.T) {
 	ws.MarkOpened(file2)
 	ws.MarkOpened(file3)
 
-	// Modify file1 as hawk (should not be external)
+	// Modify file1 as graycode (should not be external)
 	if err := os.WriteFile(file1, []byte("package a\n\nvar X = 1\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
