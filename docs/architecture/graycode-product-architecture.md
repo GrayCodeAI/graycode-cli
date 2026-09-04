@@ -169,13 +169,13 @@ Graycode does not own:
 - review findings
 - risk detection
 - code quality analysis
-- review-engine-local output converted into shared `eagle/review` contracts at product boundaries
+- review-engine-local output converted into shared `contracts/review` contracts at product boundaries
 
 ### `merlin`
 - verification checks
 - test/assertion normalization
 - final pass/fail validation
-- verification-engine-local output converted into shared `eagle/verify` contracts at product boundaries
+- verification-engine-local output converted into shared `contracts/verify` contracts at product boundaries
 
 ## Primary runtime flow
 

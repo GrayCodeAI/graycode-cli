@@ -33,14 +33,7 @@ workspace; they are not nested under Graycode:
 ```bash
 mkdir graycode-eco && cd graycode-eco
 git clone https://github.com/GrayCodeAI/graycode-cli
-git clone https://github.com/GrayCodeAI/eagle
-git clone https://github.com/GrayCodeAI/eyrie
-git clone https://github.com/GrayCodeAI/falcon
-git clone https://github.com/GrayCodeAI/harrier
-git clone https://github.com/GrayCodeAI/shrike
-git clone https://github.com/GrayCodeAI/swift
-git clone https://github.com/GrayCodeAI/kestrel
-git clone https://github.com/GrayCodeAI/merlin
+git clone https://github.com/GrayCodeAI/graycode-router
 cd graycode-cli
 make setup
 go build -o graycode ./cmd/graycode

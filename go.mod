@@ -11,7 +11,6 @@ require (
 	charm.land/bubbles/v2 v2.1.1
 	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.5
-	github.com/GrayCodeAI/eagle v0.0.0-20260902153929-5877bed17503
 	github.com/GrayCodeAI/eyrie v0.2.3-0.20260902140659-6bc3068cd48a
 	github.com/GrayCodeAI/harrier v0.0.0-20260902154449-d52fa214feb7
 	github.com/GrayCodeAI/kestrel v0.0.0-20260902154440-1b4c8cf7ea62
@@ -53,7 +52,6 @@ require (
 // by the current engine module commits. Remove these excludes after the next
 // ordered Eagle -> Falcon -> engine release.
 exclude (
-	github.com/GrayCodeAI/eagle v0.1.13
 	github.com/GrayCodeAI/falcon v0.1.4
 	github.com/GrayCodeAI/falcon v0.1.5
 	github.com/GrayCodeAI/falcon v0.1.6-0.20260825010843-82c1c610efe3

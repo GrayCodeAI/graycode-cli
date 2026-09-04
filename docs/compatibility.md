@@ -70,8 +70,8 @@ It runs on:
 
 ## Pin freshness (advisory)
 
-Separate from the matrix above: `graycode`'s own `go.mod` directly pins a couple
-of shared leaf dependencies (currently `eagle`), and several sibling-repository
+Separate from the matrix above: `graycode`'s own `go.mod` directly pins
+shared leaf dependencies (currently `falcon` is tracked), and several sibling-repository
 consumers (`merlin`/Merlin, `kestrel`/Kestrel, ...) pin the *same*
 dependencies independently in their own `go.mod`. Go's minimal version
 selection means whatever `graycode` pins wins in `graycode`'s own build — but if a

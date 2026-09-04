@@ -1,8 +1,8 @@
 // Package flags provides process-level feature flags for staged Year 0 work.
 //
 // Flags are read from environment variables.
-// Folder trust defaults on (PACK-03). Spawn v2 and marketplace remain opt-in
-// until their cutovers complete.
+// Folder trust and marketplace default on (PACK-03/PACK-05). Spawn v2 remains
+// opt-in until its cutover completes.
 package flags
 
 import (

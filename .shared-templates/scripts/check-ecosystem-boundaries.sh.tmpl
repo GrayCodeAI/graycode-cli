@@ -13,7 +13,7 @@ cd "$ROOT_DIR"
 
 # =============================================================================
 # VARIANT 1 — Support engine (eyrie, harrier, shrike, swift, kestrel, merlin).
-# Engines are peers: they may depend on eagle and falcon,
+# Engines are peers: they may depend on falcon,
 # but never on graycode/internal/* or another engine.
 # =============================================================================
 FORBIDDEN_GRAYCODE='github\.com/GrayCodeAI/graycode-cli/(internal/|shared/types)'
@@ -34,7 +34,7 @@ if [[ -n "${violations}" ]]; then
   echo "forbidden Graycode imports found:"
   echo "${violations}"
   echo
-  echo "support repos must use eagle or local contracts, not graycode/internal or removed graycode/shared/types"
+  echo "support repos must use local contracts, not graycode/internal or removed graycode/shared/types"
   exit_code=1
 fi
 
@@ -53,7 +53,7 @@ fi
 echo "ecosystem boundary guard passed"
 
 # =============================================================================
-# VARIANT 2 — Foundation repo (eagle, falcon).
+# VARIANT 2 — Foundation repo (falcon).
 # Foundation repos sit below everything: zero graycode-eco dependencies at all.
 # =============================================================================
 #

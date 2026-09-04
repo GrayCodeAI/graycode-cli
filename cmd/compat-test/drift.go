@@ -14,7 +14,6 @@ import (
 // in graycode's newer version at build time without the consumer's own CI ever
 // having tested it. See docs/compatibility.md.
 var trackedPins = []string{
-	"github.com/GrayCodeAI/eagle",
 	"github.com/GrayCodeAI/falcon",
 }
 

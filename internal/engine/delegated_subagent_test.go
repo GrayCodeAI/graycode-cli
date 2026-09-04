@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	contracts "github.com/GrayCodeAI/eagle/policy"
+	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/policy"
 	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
 	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
 	"github.com/GrayCodeAI/graycode-cli/internal/tool"

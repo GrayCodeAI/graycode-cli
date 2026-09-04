@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	reviewcontracts "github.com/GrayCodeAI/eagle/review"
 	graycodeKestrel "github.com/GrayCodeAI/graycode-cli/internal/bridge/kestrel"
 	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	reviewcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/review"
 	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 	kestrelLib "github.com/GrayCodeAI/kestrel"

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	agentcontracts "github.com/GrayCodeAI/eagle/agent"
+	agentcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/agent"
 )
 
 func TestAgentTool_PromptTooLarge(t *testing.T) {

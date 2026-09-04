@@ -30,7 +30,7 @@ graycode is an AI-powered coding agent that lives in your terminal. It reads you
 
 **Developer path:** one machine, keychain credentials, local memory. Run `graycode path` to check readiness.
 
-- **Model-agnostic** — supports 28 first-class providers through [eyrie](https://github.com/GrayCodeAI/eyrie), including Anthropic, OpenAI, Gemini, Fireworks AI, Concentrate AI (pay-as-you-go), DeepSeek, and Ollama
+- **Model-agnostic** — supports 28 first-class providers through [eyrie](https://github.com/GrayCodeAI/graycode-router), including Anthropic, OpenAI, Gemini, Fireworks AI, Concentrate AI (pay-as-you-go), DeepSeek, and Ollama
 - **Zero CGO** — single static binary, cross-compiled for linux/darwin/windows on amd64/arm64
 - **Privacy-first** — your code never leaves your machine except to the LLM API you choose
 - **Docker-only execution** — agent commands run in an isolated container and
@@ -352,7 +352,7 @@ make smoke                   # Build + quick verification script
 
 See [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md).
 
-See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, harrier, and shrike connect during a chat session, and [docs/ECOSYSTEM-WIRING.md](docs/ECOSYSTEM-WIRING.md) for the current-to-proposed architecture and all 15 repository boundaries.
+See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, harrier, and shrike connect during a chat session, and [docs/ECOSYSTEM-WIRING.md](docs/ECOSYSTEM-WIRING.md) for the current-to-proposed architecture and repository boundaries.
 
 In the TUI: `/path`, `/ecosystem`, `/harrier`, `/harrier search <query>`, `/memory` (AGENTS.md).
 
@@ -395,7 +395,7 @@ graycode works with any LLM provider. **Developer path:** paste keys in `/config
 | Xiaomi (MiMo) Token Plan | `xiaomi_mimo_token_plan` | `XIAOMI_MIMO_TOKEN_PLAN_API_KEY` (pick region in `/config`) |
 | Ollama (local) | `ollama` | `OLLAMA_BASE_URL` (no API key) |
 
-Provider routing, model resolution, and retries are handled by [eyrie](https://github.com/GrayCodeAI/eyrie).
+Provider routing, model resolution, and retries are handled by [eyrie](https://github.com/GrayCodeAI/graycode-router).
 For deployment-aware routing, set `"deployment_routing": true` in `.graycode/settings.json`
 or export `GRAYCODE_DEPLOYMENT_ROUTING=true`. Graycode will route canonical model IDs through
 Eyrie's deployment catalog, so new models can be exposed by refreshing the catalog
@@ -437,12 +437,6 @@ graycode/
 Ecosystem sibling repos (independent Git repos in the `graycode-eco` parent
 folder):
 ├── eyrie/              # LLM provider runtime
-├── eagle/              # Shared cross-repo contracts
-├── merlin/             # Merlin security audit library
-├── kestrel/            # Kestrel diff-based code review
-├── shrike/             # Shrike tokenizer, compression, secrets scanning
-├── swift/              # Swift session capture and replay
-└── harrier/            # Harrier graph-based persistent memory
 ```
 
 ### Ecosystem
@@ -452,7 +446,7 @@ three runtime layers plus optional tooling/platform services:
 
 - **Primary product:** **graycode** is the only end-user product surface in this ecosystem.
 - **Support engines mounted by Graycode:** **eyrie**, **harrier**, **shrike**, **swift**, **kestrel**, **merlin**. Graycode imports or shells into these engines behind its own command surface.
-- **Shared foundations:** **eagle** holds neutral cross-repo types and **falcon**
+- **Shared foundations:** **falcon**
   provides shared MCP server scaffolding.
 - **API consumers/extensions:** **sparrow**, **robin**, and **wren** consume
   Graycode's daemon API; **starling** provides Graycode skills.
@@ -462,33 +456,33 @@ three runtime layers plus optional tooling/platform services:
 
 Local development uses:
 
-- **`go.mod` modules:** pinned requirements for the support engines and `eagle`
+- **`go.mod` modules:** pinned requirements for the support engines
 - **Workspace + `go.work`:** sibling support repos are cloned in the `graycode-eco` workspace (as `../<repo>`); `go.work` resolves the module paths to those local checkouts
 - **Module-mode builds:** standalone / Docker builds resolve the pinned `go.mod` versions from the module proxy (no workspace)
 
-Cross-repo contracts now live in **`github.com/GrayCodeAI/eagle`** so support repos do not depend on Graycode internals. The old `graycode/shared/types` path has been removed; use `eagle/types` for shared severity and finding contracts.
+Cross-repo contracts now live in `internal/contracts` (vendored from the
+removed `github.com/GrayCodeAI/eagle` module) so support repos do not depend
+on Graycode internals. The old `graycode/shared/types` path has been removed;
+external consumers should vendor the needed DTOs from `internal/contracts`
+until a published contracts module exists.
 
-Current contract packages:
+Current contract packages (`internal/contracts/`):
 
-- `eagle/types` — severity, findings
-- `eagle/review` — normalized review findings, comments, stats, results
-- `eagle/verify` — normalized verification findings, stats, reports
-- `eagle/tools` — tool call/result contracts
-- `eagle/events` — normalized tool/swift events
-- `eagle/policy` — permission and policy verdict contracts
+- `types` — severity, findings
+- `graph` — portable graph vocabulary: nodes, edges, events, provenance
+- `agent` — typed subagent spawn DTOs and hook events
+- `policy` — permission and policy verdict contracts
+- `contracts/review` — normalized review findings, comments, stats, results
+- `contracts/verify` — normalized verification findings, stats, reports
+- `events` — tool, trace, and usage events
+- `harness` — harness evaluation reports and dimension scores
 
 You may keep a **personal** parent **`go.work`** that lists alternate clones on disk for multi-repo development.
 
 | Component | Repository | Purpose |
 |---|---|---|
 | **graycode** | This repo | AI coding agent |
-| **eyrie** | [GrayCodeAI/eyrie](https://github.com/GrayCodeAI/eyrie) | LLM provider runtime |
-| **kestrel** | [GrayCodeAI/kestrel](https://github.com/GrayCodeAI/kestrel) | Diff-based code review (`graycode kestrel`) |
-| **merlin** | [GrayCodeAI/merlin](https://github.com/GrayCodeAI/merlin) | Site audit library |
-| **shrike** | [GrayCodeAI/shrike](https://github.com/GrayCodeAI/shrike) | Compression, redaction, token/cost budgets, and privacy-safe runtime graph facts |
-| **harrier** | [GrayCodeAI/harrier](https://github.com/GrayCodeAI/harrier) | Graph-based memory |
-| **swift** | [GrayCodeAI/swift](https://github.com/GrayCodeAI/swift) | Session capture and replay engine mounted as `graycode swift ...` |
-| **eagle** | [GrayCodeAI/eagle](https://github.com/GrayCodeAI/eagle) | Shared contracts and neutral cross-repo vocabulary |
+| **eyrie** | [GrayCodeAI/graycode-router](https://github.com/GrayCodeAI/graycode-router) | LLM provider runtime |
 
 For the consolidated repo map and the current-vs-proposed architecture diagrams, see [docs/architecture/graycode-current-vs-proposed.md](docs/architecture/graycode-current-vs-proposed.md).
 For execution-graph ownership, automatic capture seams, export/sync commands,

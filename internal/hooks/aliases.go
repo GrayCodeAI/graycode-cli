@@ -3,7 +3,7 @@ package hooks
 import (
 	"strings"
 
-	agentcontracts "github.com/GrayCodeAI/eagle/agent"
+	agentcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/agent"
 )
 
 // Extended EventType values (Year 0 PACK-04). Existing snake_case constants in

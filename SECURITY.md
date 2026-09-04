@@ -79,28 +79,37 @@ Project-level `.graycode/settings.json` can be committed to a git repository.
 An attacker who controls a repository could define MCP servers that execute
 arbitrary commands when a developer clones and runs graycode in that directory.
 
-**Mitigation:** Project-level MCP servers are blocked by default. They are
-only loaded when the user explicitly passes `--allow-project-mcp` on the
-command line. Global MCP servers (from `~/.graycode/settings.json`) are always
-loaded.
+**Mitigation:** Project-level MCP servers are stripped from project config
+(`projectSafeSettings` in `internal/config/settings.go`) and project
+hooks/MCP/plugins/LSP additionally require folder trust: the project root
+must be trusted via `graycode trust add` (`AllowProjectAutomation` in
+`internal/trust/store.go`). There is no `--allow-project-mcp` flag.
+Global MCP servers (from `~/.graycode/settings.json`) are always loaded.
 
 ### Security-sensitive fields
 
-The following settings **cannot** be overridden by project-level config:
-- MCP servers (blocked by default, require explicit `--allow-project-mcp` flag)
+The following settings **cannot** be set by project-level config (stripped by
+`projectSafeSettings`):
+- `model`, `provider` (selection stays in global config)
+- `auto_allow`, `allowed_tools`, `disallowed_tools`, `never_allow` (permissions)
+- MCP servers, custom providers, `deployment_routing`, thinking flags
 - API keys (never stored in settings.json; use OS secret store via `/config`)
 
-The following settings **can** be overridden by project config:
-- `model`, `provider` (convenience, not a security risk)
-- `theme`, `auto_allow`, `allowed_tools`, `disallowed_tools`
-- `max_budget_usd`, `sandbox`, `autonomy`
+The following settings **can** be set by project config (anything not stripped):
+- `theme`, `autonomy`, `sandbox`, `max_budget_usd`, and other
+  repository-local behavior
 
 ### Config merge precedence
 
-1. Global `~/.graycode/settings.json` (lowest priority)
-2. Project `.graycode/settings.json` (overrides global)
-3. CLI `--settings` flag (overrides both)
-4. Environment variables (highest priority for specific keys)
+Highest priority first (`LoadSettings` / `LoadSettingsWithOverride` in
+`internal/config/settings.go`, per-command flag resolution in `cmd/options.go`):
+
+1. CLI `--settings` JSON override
+2. Per-command CLI flags (e.g., `--model`, `--provider`)
+3. Environment variables (only where explicitly read; there is no global env layer)
+4. Project `.graycode/settings.json` (repository-safe subset only — see above)
+5. Global `~/.graycode/settings.json`
+6. Built-in defaults (lowest priority)
 
 Project-level config CANNOT escalate permissions beyond what global config
 allows. The `MergeSettings` function in `internal/config/settings.go`

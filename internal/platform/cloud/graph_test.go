@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
 	"github.com/GrayCodeAI/graycode-cli/internal/executiongraph"
 )
 

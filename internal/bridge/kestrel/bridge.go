@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/eagle/graph"
-	reviewcontracts "github.com/GrayCodeAI/eagle/review"
-	eagletypes "github.com/GrayCodeAI/eagle/types"
+	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
+	reviewcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/review"
+	typescontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
 	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
 	kestrelLib "github.com/GrayCodeAI/kestrel"
@@ -133,7 +133,7 @@ func (b *Bridge) ReviewContracts(ctx context.Context, diff string) (*reviewcontr
 	if err != nil {
 		return nil, err
 	}
-	return toEagleResult(kestrelLib.ToContractResult(result)), nil
+	return toContractResult(kestrelLib.ToContractResult(result)), nil
 }
 
 // ReviewContractsObserved reviews a diff, journals Kestrel's portable quality
@@ -170,9 +170,9 @@ func (b *Bridge) ReviewContractsObserved(
 		observation.ToolCallID,
 		stage,
 		"kestrel",
-		toEagleNodes(export.Nodes),
-		toEagleEdges(export.Edges),
-		toEagleEvents(export.Events),
+		toContractNodes(export.Nodes),
+		toContractEdges(export.Edges),
+		toContractEvents(export.Events),
 		observedAt,
 	); err != nil {
 		return nil, err
@@ -190,7 +190,7 @@ func (b *Bridge) ReviewContractsObserved(
 	); err != nil {
 		return nil, err
 	}
-	return toEagleResult(contractResult), nil
+	return toContractResult(contractResult), nil
 }
 
 // Describe generates a PR description from a unified diff string.
@@ -218,86 +218,86 @@ func (b *Bridge) Improve(ctx context.Context, diff string) (*kestrelLib.ImproveR
 }
 
 // The following helpers convert Kestrel's vendored contract types into
-// Graycode's eagle/* contract types (and the reverse for scope). The definitions
+// Graycode's contracts/* contract types (and the reverse for scope). The definitions
 // are byte-identical, so conversion is a field-by-field copy at the boundary.
 
 func toKestrelScope(s graphcontracts.Scope) kestrelgraph.Scope {
 	return kestrelgraph.Scope{TenantID: s.TenantID, ProjectID: s.ProjectID, RepositoryID: s.RepositoryID}
 }
 
-func toEagleNodes(nodes []kestrelgraph.Node) []graphcontracts.Node {
+func toContractNodes(nodes []kestrelgraph.Node) []graphcontracts.Node {
 	out := make([]graphcontracts.Node, len(nodes))
 	for i, n := range nodes {
-		out[i] = toEagleNode(n)
+		out[i] = toContractNode(n)
 	}
 	return out
 }
 
-func toEagleNode(n kestrelgraph.Node) graphcontracts.Node {
+func toContractNode(n kestrelgraph.Node) graphcontracts.Node {
 	return graphcontracts.Node{
 		ID:          n.ID,
 		Kind:        graphcontracts.NodeKind(n.Kind),
-		Scope:       toEagleScope(n.Scope),
+		Scope:       toContractScope(n.Scope),
 		CreatedAt:   n.CreatedAt,
 		EffectiveAt: n.EffectiveAt,
-		Provenance:  toEagleProvenance(n.Provenance),
+		Provenance:  toContractProvenance(n.Provenance),
 		Attributes:  n.Attributes,
 	}
 }
 
-func toEagleEdges(edges []kestrelgraph.Edge) []graphcontracts.Edge {
+func toContractEdges(edges []kestrelgraph.Edge) []graphcontracts.Edge {
 	out := make([]graphcontracts.Edge, len(edges))
 	for i, e := range edges {
-		out[i] = toEagleEdge(e)
+		out[i] = toContractEdge(e)
 	}
 	return out
 }
 
-func toEagleEdge(e kestrelgraph.Edge) graphcontracts.Edge {
+func toContractEdge(e kestrelgraph.Edge) graphcontracts.Edge {
 	return graphcontracts.Edge{
 		ID:          e.ID,
 		Kind:        graphcontracts.EdgeKind(e.Kind),
-		From:        toEagleRef(e.From),
-		To:          toEagleRef(e.To),
-		Scope:       toEagleScope(e.Scope),
+		From:        toContractRef(e.From),
+		To:          toContractRef(e.To),
+		Scope:       toContractScope(e.Scope),
 		CreatedAt:   e.CreatedAt,
 		EffectiveAt: e.EffectiveAt,
-		Provenance:  toEagleProvenance(e.Provenance),
+		Provenance:  toContractProvenance(e.Provenance),
 		Attributes:  e.Attributes,
 	}
 }
 
-func toEagleEvents(events []kestrelgraph.Event) []graphcontracts.Event {
+func toContractEvents(events []kestrelgraph.Event) []graphcontracts.Event {
 	out := make([]graphcontracts.Event, len(events))
 	for i, ev := range events {
-		out[i] = toEagleEvent(ev)
+		out[i] = toContractEvent(ev)
 	}
 	return out
 }
 
-func toEagleEvent(ev kestrelgraph.Event) graphcontracts.Event {
+func toContractEvent(ev kestrelgraph.Event) graphcontracts.Event {
 	return graphcontracts.Event{
 		ID:             ev.ID,
 		Type:           graphcontracts.EventType(ev.Type),
-		Subject:        toEagleRef(ev.Subject),
-		Scope:          toEagleScope(ev.Scope),
+		Subject:        toContractRef(ev.Subject),
+		Scope:          toContractScope(ev.Scope),
 		OccurredAt:     ev.OccurredAt,
 		CorrelationID:  ev.CorrelationID,
 		CausationID:    ev.CausationID,
 		IdempotencyKey: ev.IdempotencyKey,
-		Provenance:     toEagleProvenance(ev.Provenance),
+		Provenance:     toContractProvenance(ev.Provenance),
 	}
 }
 
-func toEagleRef(r kestrelgraph.Ref) graphcontracts.Ref {
+func toContractRef(r kestrelgraph.Ref) graphcontracts.Ref {
 	return graphcontracts.Ref{Kind: graphcontracts.NodeKind(r.Kind), ID: r.ID}
 }
 
-func toEagleScope(s kestrelgraph.Scope) graphcontracts.Scope {
+func toContractScope(s kestrelgraph.Scope) graphcontracts.Scope {
 	return graphcontracts.Scope{TenantID: s.TenantID, ProjectID: s.ProjectID, RepositoryID: s.RepositoryID}
 }
 
-func toEagleProvenance(p kestrelgraph.Provenance) graphcontracts.Provenance {
+func toContractProvenance(p kestrelgraph.Provenance) graphcontracts.Provenance {
 	evidence := make([]graphcontracts.ArtifactRef, len(p.Evidence))
 	for i, a := range p.Evidence {
 		evidence[i] = graphcontracts.ArtifactRef{URI: a.URI, Digest: a.Digest, MediaType: a.MediaType}
@@ -305,28 +305,28 @@ func toEagleProvenance(p kestrelgraph.Provenance) graphcontracts.Provenance {
 	return graphcontracts.Provenance{Producer: p.Producer, Version: p.Version, SourceID: p.SourceID, Evidence: evidence}
 }
 
-func toEagleResult(r *kestrelreview.Result) *reviewcontracts.Result {
+func toContractResult(r *kestrelreview.Result) *reviewcontracts.Result {
 	if r == nil {
 		return nil
 	}
 	return &reviewcontracts.Result{
-		Findings:            toEagleFindings(r.Findings),
-		Comments:            toEagleComments(r.Comments),
-		Stats:               toEagleStats(r.Stats),
+		Findings:            toContractFindings(r.Findings),
+		Comments:            toContractComments(r.Comments),
+		Stats:               toContractStats(r.Stats),
 		Report:              r.Report,
-		FailOn:              eagletypes.Severity(r.FailOn),
+		FailOn:              typescontracts.Severity(r.FailOn),
 		FailOnSet:           r.FailOnSet,
-		SASTFusion:          toEagleSASTFusion(r.SASTFusion),
-		ConfidenceBreakdown: toEagleConfidenceBreakdown(r.ConfidenceBreakdown),
+		SASTFusion:          toContractSASTFusion(r.SASTFusion),
+		ConfidenceBreakdown: toContractConfidenceBreakdown(r.ConfidenceBreakdown),
 	}
 }
 
-func toEagleFindings(findings []kestrelreview.Finding) []reviewcontracts.Finding {
+func toContractFindings(findings []kestrelreview.Finding) []reviewcontracts.Finding {
 	out := make([]reviewcontracts.Finding, len(findings))
 	for i, f := range findings {
 		out[i] = reviewcontracts.Finding{
 			Concern:    f.Concern,
-			Severity:   eagletypes.Severity(f.Severity),
+			Severity:   typescontracts.Severity(f.Severity),
 			File:       f.File,
 			Line:       f.Line,
 			EndLine:    f.EndLine,
@@ -341,7 +341,7 @@ func toEagleFindings(findings []kestrelreview.Finding) []reviewcontracts.Finding
 	return out
 }
 
-func toEagleComments(comments []kestrelreview.InlineComment) []reviewcontracts.InlineComment {
+func toContractComments(comments []kestrelreview.InlineComment) []reviewcontracts.InlineComment {
 	out := make([]reviewcontracts.InlineComment, len(comments))
 	for i, c := range comments {
 		out[i] = reviewcontracts.InlineComment{
@@ -355,10 +355,10 @@ func toEagleComments(comments []kestrelreview.InlineComment) []reviewcontracts.I
 	return out
 }
 
-func toEagleStats(s kestrelreview.Stats) reviewcontracts.Stats {
-	bySeverity := make(map[eagletypes.Severity]int, len(s.BySeverity))
+func toContractStats(s kestrelreview.Stats) reviewcontracts.Stats {
+	bySeverity := make(map[typescontracts.Severity]int, len(s.BySeverity))
 	for sev, count := range s.BySeverity {
-		bySeverity[eagletypes.Severity(sev)] = count
+		bySeverity[typescontracts.Severity(sev)] = count
 	}
 	return reviewcontracts.Stats{
 		FilesReviewed:       s.FilesReviewed,
@@ -375,24 +375,24 @@ func toEagleStats(s kestrelreview.Stats) reviewcontracts.Stats {
 	}
 }
 
-func toEagleSASTFusion(f *kestrelreview.SASTFusionResult) *reviewcontracts.SASTFusionResult {
+func toContractSASTFusion(f *kestrelreview.SASTFusionResult) *reviewcontracts.SASTFusionResult {
 	if f == nil {
 		return nil
 	}
 	return &reviewcontracts.SASTFusionResult{
-		Confirmed:   toEagleFindings(f.Confirmed),
-		Dismissed:   toEagleFindings(f.Dismissed),
-		Unaddressed: toEagleFindings(f.Unaddressed),
+		Confirmed:   toContractFindings(f.Confirmed),
+		Dismissed:   toContractFindings(f.Dismissed),
+		Unaddressed: toContractFindings(f.Unaddressed),
 	}
 }
 
-func toEagleConfidenceBreakdown(c *kestrelreview.ConfidenceBreakdown) *reviewcontracts.ConfidenceBreakdown {
+func toContractConfidenceBreakdown(c *kestrelreview.ConfidenceBreakdown) *reviewcontracts.ConfidenceBreakdown {
 	if c == nil {
 		return nil
 	}
 	return &reviewcontracts.ConfidenceBreakdown{
-		High:   toEagleFindings(c.High),
-		Medium: toEagleFindings(c.Medium),
-		Low:    toEagleFindings(c.Low),
+		High:   toContractFindings(c.High),
+		Medium: toContractFindings(c.Medium),
+		Low:    toContractFindings(c.Low),
 	}
 }

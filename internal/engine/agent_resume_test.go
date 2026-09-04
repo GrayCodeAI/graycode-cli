@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	agentcontracts "github.com/GrayCodeAI/eagle/agent"
+	agentcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/agent"
 	"github.com/GrayCodeAI/graycode-cli/internal/session"
 	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 	"github.com/GrayCodeAI/graycode-cli/internal/tool"

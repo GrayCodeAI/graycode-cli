@@ -139,7 +139,7 @@ prepare-commit-msg:
         sed '/^[Cc]o-[Aa]uthored-[Bb]y:/d' "{1}" > "{1}.tmp" && mv "{1}.tmp" "{1}"
 
 # ---------------------------------------------------------------------------
-# Notes for foundation repos (eagle, falcon): these have
+# Notes for foundation repos (falcon): these have
 # no graycode-eco dependencies at all, so `pre-push.commands.boundaries` checks
 # for *zero* GrayCodeAI/* imports rather than checking against a peer-engine
 # allowlist. The command line above is identical either way — only

@@ -91,7 +91,7 @@ func (m chatModel) configProviderKeyView() string {
 		hint = "paste key for this gateway only · " + hint
 	}
 	if providerName == graycodeconfig.ProviderXiaomiTokenPlan {
-		reg := graycodeconfig.XiaomiTokenPlanRegionLabel()
+		reg := graycodeconfig.GatewayRegionLabel(graycodeconfig.ProviderXiaomiTokenPlan)
 		if reg == "" {
 			reg = "not set — esc and pick region with g or enter on gateway row"
 		}
@@ -580,7 +580,7 @@ func (m chatModel) finishConfigEntry() (chatModel, tea.Cmd) {
 			m.restoreChatInput()
 			return m, nil
 		}
-		if providerName == graycodeconfig.ProviderXiaomiTokenPlan && graycodeconfig.NeedsXiaomiTokenPlanRegion(providerName) {
+		if providerName == graycodeconfig.ProviderXiaomiTokenPlan && graycodeconfig.NeedsGatewayRegion(providerName) {
 			m.configEntry = configEntryNone
 			m.wipeConfigKeyInput()
 			m.restoreChatInput()

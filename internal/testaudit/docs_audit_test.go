@@ -45,16 +45,16 @@ func TestArchitectureDocsMentionCurrentReviewVerifyContracts(t *testing.T) {
 
 	checks := map[string][]string{
 		"README.md": {
-			"eagle/review",
-			"eagle/verify",
+			"contracts/review",
+			"contracts/verify",
 		},
 		"docs/architecture/graycode-product-architecture.md": {
-			"eagle/review",
-			"eagle/verify",
+			"contracts/review",
+			"contracts/verify",
 		},
 		"docs/architecture/graycode-contract-spec.md": {
-			"eagle/review",
-			"eagle/verify",
+			"contracts/review",
+			"contracts/verify",
 		},
 	}
 

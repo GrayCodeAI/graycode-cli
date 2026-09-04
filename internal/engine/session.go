@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	agentcontracts "github.com/GrayCodeAI/eagle/agent"
+	agentcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/agent"
 	"github.com/GrayCodeAI/graycode-cli/internal/conversationarc"
 	"github.com/GrayCodeAI/graycode-cli/internal/engine/planning"
 	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"

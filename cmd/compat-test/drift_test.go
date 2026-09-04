@@ -75,14 +75,14 @@ func TestCheckDrift_DetectsDrift(t *testing.T) {
 
 go 1.26
 
-require github.com/GrayCodeAI/eagle v1.5.0
+require github.com/GrayCodeAI/falcon v1.5.0
 `)
 	// Consumer sibling pins an older version of the shared contract.
 	writeMod(t, filepath.Join(ws, "merlin", "go.mod"), `module github.com/GrayCodeAI/merlin
 
 go 1.26
 
-require github.com/GrayCodeAI/eagle v1.2.0
+require github.com/GrayCodeAI/falcon v1.2.0
 `)
 
 	var buf bytes.Buffer
@@ -110,13 +110,13 @@ func TestCheckDrift_NoDriftWhenVersionsMatch(t *testing.T) {
 
 go 1.26
 
-require github.com/GrayCodeAI/eagle v1.5.0
+require github.com/GrayCodeAI/falcon v1.5.0
 `)
 	writeMod(t, filepath.Join(ws, "kestrel", "go.mod"), `module github.com/GrayCodeAI/kestrel
 
 go 1.26
 
-require github.com/GrayCodeAI/eagle v1.5.0
+require github.com/GrayCodeAI/falcon v1.5.0
 `)
 
 	var buf bytes.Buffer
@@ -144,7 +144,7 @@ func TestCheckDrift_SkipsMissingSiblings(t *testing.T) {
 
 go 1.26
 
-require github.com/GrayCodeAI/eagle v1.5.0
+require github.com/GrayCodeAI/falcon v1.5.0
 `)
 	// Directory present but no go.mod — must be skipped silently.
 	if err := os.MkdirAll(filepath.Join(ws, "not-checked-out"), 0o755); err != nil {

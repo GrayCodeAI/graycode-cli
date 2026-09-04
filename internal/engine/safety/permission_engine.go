@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	contracts "github.com/GrayCodeAI/eagle/policy"
+	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/policy"
 	"github.com/GrayCodeAI/graycode-cli/internal/governance"
 	"github.com/GrayCodeAI/graycode-cli/internal/hooks"
 	"github.com/GrayCodeAI/graycode-cli/internal/observability/metrics"

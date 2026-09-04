@@ -8,11 +8,13 @@ Graycode reads configuration from settings files, environment variables, and has
 
 Configuration is resolved in this order (highest priority first):
 
-1. **CLI flags** (e.g., `--provider`, `--model`)
-2. **Environment variables**
-3. **User settings** (`~/.graycode/settings.json`)
-4. **Project settings** (`.graycode/settings.json`)
-5. **Built-in defaults**
+1. **CLI `--settings` JSON override** (`LoadSettingsWithOverride`)
+2. **Per-command CLI flags** (e.g., `--provider`, `--model`)
+3. **Environment variables** (only where explicitly read; there is no global env layer)
+4. **Project settings** (`.graycode/settings.json`, repository-safe subset only —
+   `model`, `provider`, permissions, MCP servers and providers are stripped)
+5. **User settings** (`~/.graycode/settings.json`)
+6. **Built-in defaults**
 
 ---
 
@@ -111,14 +113,14 @@ Key environment variables for configuration.
 | Variable | Description |
 |----------|-------------|
 | `GRAYCODE_Y0_FOLDER_TRUST` | Folder trust feature flag (default: `1`) |
-| `GRAYCODE_Y0_MARKETPLACE` | Marketplace feature flag (default: `0`) |
-| `GRAYCODE_DEPLOYMENT_ROUTING` | Enable deployment-aware routing |
+| `GRAYCODE_Y0_MARKETPLACE` | Marketplace feature flag (default: `1`, set `0` to disable remote installs) |
+| `GRAYCODE_DEPLOYMENT_ROUTING` | Not an environment variable: set `deployment_routing` in `settings.json` |
 
 ### Paths
 
 | Variable | Description |
 |----------|-------------|
-| `GRAYCODE_HOME` | Override config directory (default: `~/.graycode`) |
+| `GRAYCODE_HOME` | Harness home override used by identity only (default: `~/.graycode`); most config paths honor `GRAYCODE_CONFIG_DIR` / `GRAYCODE_STATE_DIR` / `GRAYCODE_CACHE_DIR` instead |
 
 ---
 
@@ -161,7 +163,10 @@ network = "deny"
 
 ## MCP Servers
 
-Configure MCP servers in `.graycode/settings.json` or project `.graycode/settings.json`:
+Configure MCP servers in global `~/.graycode/settings.json` only — project
+`.graycode/settings.json` cannot register MCP servers (stripped by
+`projectSafeSettings`; project automation additionally requires folder trust,
+see below):
 
 ```json
 {

@@ -78,7 +78,7 @@ These were documented in the original plan as out-of-scope-for-this-PR. They rem
 ## Context
 
 A deep code review of `eyrie` and `graycode` (companion plan at
-`../eyrie/docs/plans/fix-critical-and-high-review.md`) surfaced 7 critical
+`../graycode-router/docs/plans/fix-critical-and-high-review.md`) surfaced 7 critical
 and 9 high items. This plan covers **all graycode items** (C3, C4, C5, H5,
 H6, H7, H8, H9) broken into a sequence of small, reviewable PRs.
 
