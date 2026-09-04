@@ -11,7 +11,9 @@ RUN apk upgrade --no-cache && \
 
 WORKDIR /build
 
-# Module resolution is proxy-first (see Dockerfile); no GOPRIVATE override.
+ENV GOPRIVATE=github.com/GrayCodeAI/* \
+    GONOSUMDB=github.com/GrayCodeAI/* \
+    GONOSUMCHECK=1
 
 ARG VERSION=dev
 ARG COMMIT=none
