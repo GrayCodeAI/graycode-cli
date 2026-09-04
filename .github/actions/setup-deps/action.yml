@@ -28,7 +28,7 @@ runs:
         ws_parent="$(cd "${GITHUB_WORKSPACE}/.." && pwd)"
         mkdir -p "$ws_parent"
         while IFS= read -r repo; do
-          [ "$repo" = graycode ] && continue
+          [ "$repo" = graycode-cli ] && continue
           clone_with_retry "$repo" "$ws_parent/$repo" main
         done < <(./scripts/ecosystem-manifest.sh list workspace)
 

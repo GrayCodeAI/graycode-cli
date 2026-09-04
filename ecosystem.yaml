@@ -1,9 +1,10 @@
 schema_version: 1
 
 # Canonical repository inventory for the GrayCodeAI ecosystem. Repository
-# directories and GitHub repository names use the bird codenames; product_name
-# records the user-facing capability. Tooling must consume this file instead of
-# carrying its own repo-name list.
+# directories and GitHub repository names are listed per repository;
+# product_name records the user-facing capability. Tooling must consume this
+# file instead of carrying its own repo-name list. Only repositories that
+# exist are listed: removed siblings stay out until they are restored.
 contracts:
   portable_graph_schema: graycode.graph/v1
   cloud_graph_schema: graycode-cloud.graph/v1
@@ -18,14 +19,6 @@ repositories:
     module: github.com/GrayCodeAI/graycode-cli
     workspace: true
 
-  - directory: falcon
-    github_repo: falcon
-    product_name: Falcon MCP Kit
-    kind: foundation
-    language: go
-    module: github.com/GrayCodeAI/falcon
-    workspace: true
-
   - directory: eyrie
     github_repo: eyrie
     product_name: Eyrie
@@ -34,51 +27,6 @@ repositories:
     module: github.com/GrayCodeAI/eyrie
     workspace: true
     facade: github.com/GrayCodeAI/eyrie/engine
-
-  - directory: harrier
-    github_repo: harrier
-    product_name: Harrier
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/harrier
-    workspace: true
-    facade: github.com/GrayCodeAI/harrier/engine
-
-  - directory: shrike
-    github_repo: shrike
-    product_name: Shrike
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/shrike
-    workspace: true
-    facade: github.com/GrayCodeAI/shrike
-
-  - directory: swift
-    github_repo: swift
-    product_name: Swift
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/swift
-    workspace: true
-    facade: github.com/GrayCodeAI/swift/cli
-
-  - directory: kestrel
-    github_repo: kestrel
-    product_name: Kestrel
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/kestrel
-    workspace: true
-    facade: github.com/GrayCodeAI/kestrel
-
-  - directory: merlin
-    github_repo: merlin
-    product_name: Merlin
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/merlin
-    workspace: true
-    facade: github.com/GrayCodeAI/merlin
 
   - directory: sparrow
     github_repo: sparrow

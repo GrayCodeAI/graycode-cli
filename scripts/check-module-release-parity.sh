@@ -9,7 +9,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 repos=()
 while IFS= read -r repo; do
-  [[ "${repo}" != "graycode" && -n "${repo}" ]] && repos+=("${repo}")
+  [[ "${repo}" != "graycode-cli" && -n "${repo}" ]] && repos+=("${repo}")
 done < <("${ROOT_DIR}/scripts/ecosystem-manifest.sh" list workspace)
 failed=0
 

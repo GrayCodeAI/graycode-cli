@@ -352,7 +352,7 @@ make smoke                   # Build + quick verification script
 
 See [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md).
 
-See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, harrier, and shrike connect during a chat session, and [docs/ECOSYSTEM-WIRING.md](docs/ECOSYSTEM-WIRING.md) for the current-to-proposed architecture and all 15 repository boundaries.
+See [docs/ecosystem-message-flow.md](docs/ecosystem-message-flow.md) for how eyrie, harrier, and shrike connect during a chat session, and [docs/ECOSYSTEM-WIRING.md](docs/ECOSYSTEM-WIRING.md) for the current-to-proposed architecture and repository boundaries.
 
 In the TUI: `/path`, `/ecosystem`, `/harrier`, `/harrier search <query>`, `/memory` (AGENTS.md).
 
@@ -437,11 +437,6 @@ graycode/
 Ecosystem sibling repos (independent Git repos in the `graycode-eco` parent
 folder):
 ├── eyrie/              # LLM provider runtime
-├── merlin/             # Merlin security audit library
-├── kestrel/            # Kestrel diff-based code review
-├── shrike/             # Shrike tokenizer, compression, secrets scanning
-├── swift/              # Swift session capture and replay
-└── harrier/            # Harrier graph-based persistent memory
 ```
 
 ### Ecosystem
@@ -488,11 +483,6 @@ You may keep a **personal** parent **`go.work`** that lists alternate clones on 
 |---|---|---|
 | **graycode** | This repo | AI coding agent |
 | **eyrie** | [GrayCodeAI/eyrie](https://github.com/GrayCodeAI/eyrie) | LLM provider runtime |
-| **kestrel** | [GrayCodeAI/kestrel](https://github.com/GrayCodeAI/kestrel) | Diff-based code review (`graycode kestrel`) |
-| **merlin** | [GrayCodeAI/merlin](https://github.com/GrayCodeAI/merlin) | Site audit library |
-| **shrike** | [GrayCodeAI/shrike](https://github.com/GrayCodeAI/shrike) | Compression, redaction, token/cost budgets, and privacy-safe runtime graph facts |
-| **harrier** | [GrayCodeAI/harrier](https://github.com/GrayCodeAI/harrier) | Graph-based memory |
-| **swift** | [GrayCodeAI/swift](https://github.com/GrayCodeAI/swift) | Session capture and replay engine mounted as `graycode swift ...` |
 
 For the consolidated repo map and the current-vs-proposed architecture diagrams, see [docs/architecture/graycode-current-vs-proposed.md](docs/architecture/graycode-current-vs-proposed.md).
 For execution-graph ownership, automatic capture seams, export/sync commands,

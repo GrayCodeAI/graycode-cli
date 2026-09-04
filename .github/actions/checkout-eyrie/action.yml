@@ -21,7 +21,7 @@ runs:
         # The generated workspace references sibling bird-codename repos.
         ws_parent="$(cd "${GITHUB_WORKSPACE}/.." && pwd)"
         while IFS= read -r repo; do
-          [ "$repo" = graycode ] && continue
+          [ "$repo" = graycode-cli ] && continue
           dest="${ws_parent}/${repo}"
           if [ -d "$dest/.git" ]; then
             echo "$repo already present at $dest"

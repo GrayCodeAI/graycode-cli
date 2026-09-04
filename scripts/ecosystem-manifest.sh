@@ -129,8 +129,8 @@ validate() {
     fi
   done < <(records)
 
-  if ((count != 14)); then
-    echo "expected 14 repositories, found ${count}" >&2
+  if ((count != 8)); then
+    echo "expected 8 repositories, found ${count}" >&2
     failed=1
   fi
   ((failed == 0)) || exit 1
