@@ -118,6 +118,9 @@ pre-push:
     boundary-graycode-router-client:
       run: bash scripts/check-graycode-router-client-imports.sh
 
+    boundary-graycode-router-engine:
+      run: bash scripts/check-graycode-router-engine-boundary.sh
+
     boundary-support-repo:
       run: bash scripts/check-support-repo-coupling.sh
 

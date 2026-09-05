@@ -55,14 +55,6 @@ func checkGraycodeGraycodeRouterFacade(t *testing.T, root string) {
 			case graycodeRouterModule + "/llm", graycodeRouterModule + "/graph", graycodeRouterModule + "/tools":
 				continue
 			}
-			// Graycode's gateway declares the credential service name so existing
-			// keychain entries remain compatible. It is the only non-engine
-			// production exception.
-			relFile, relErr := filepath.Rel(root, imp.file)
-			if relErr == nil && filepath.ToSlash(filepath.Dir(relFile)) == "internal/provider/gateway" &&
-				imp.path == graycodeRouterModule+"/credentials" {
-				continue
-			}
 			violations = append(violations, formatImportViolation(root, imp, "use the graycode-router/engine facade"))
 		}
 	}

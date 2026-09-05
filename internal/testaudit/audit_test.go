@@ -216,14 +216,6 @@ func TestNoDirectLowerGraycodeRouterImports(t *testing.T) {
 					"github.com/GrayCodeAI/graycode-router/tools":
 					continue
 				}
-				// The gateway package is Graycode's single GraycodeRouter boundary; it may
-				// import graycode-router/credentials to declare Graycode's OS keychain service
-				// name (the host-neutral default would otherwise orphan existing
-				// secrets). All other production code must use graycode-router/engine only.
-				if strings.HasPrefix(rel, "internal/provider/gateway/") &&
-					path == "github.com/GrayCodeAI/graycode-router/credentials" {
-					continue
-				}
 				pos := pf.FSet.Position(imp.Pos())
 				t.Fatalf("forbidden lower-level GraycodeRouter import %q at %s:%d; use github.com/GrayCodeAI/graycode-router/engine", path, rel, pos.Line)
 			}
