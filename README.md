@@ -128,6 +128,11 @@ graycode cloud graph sync <session-id>
 graycode cloud graph sync --mission-dir /path/to/mission
 ```
 
+Cloud commands require an endpoint. There is no default: pass `--endpoint` or
+set `GRAYCODE_CLOUD_URL` to your Graycode Cloud worker URL before running
+`graycode cloud login`. `https://api.graycodeai.com` is the browser BFF and
+will reject a device token.
+
 The export contains metadata and hashes, not prompts, tool arguments/results,
 policy reasons, verification evidence, or runtime output. Swift remains
 available separately as `graycode swift graph export`. Persisted chat sessions
