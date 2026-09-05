@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -285,4 +286,118 @@ func TestFormatSkillInfo(t *testing.T) {
 	if !strings.Contains(out, "GrayCodeAI/starling") {
 		t.Error("expected source repo")
 	}
+}
+
+func TestDefaultIndexURLIsPublished(t *testing.T) {
+	const want = "https://github.com/GrayCodeAI/graycode-skills/releases/download/registry-latest/registry.json"
+	if defaultIndexURL != want {
+		t.Fatalf("defaultIndexURL = %q, want %q", defaultIndexURL, want)
+	}
+	if strings.Contains(defaultIndexURL, "starling") {
+		t.Errorf("defaultIndexURL still references the renamed starling repo")
+	}
+}
+
+func TestFetchIndexParsesGeneratedShape(t *testing.T) {
+	// Byte-for-byte the shape graycode-skills/tools/update_registry.py emits.
+	const generated = `{
+  "version": 1,
+  "skills": [
+    {
+      "name": "ab-test-setup",
+      "description": "Plan and design an A/B test",
+      "category": "testing",
+      "tags": ["testing"],
+      "path": "categories/testing/ab-test-setup",
+      "repo": "GrayCodeAI/graycode-skills",
+      "file_count": 1,
+      "has_scripts": false
+    }
+  ]
+}
+`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(generated))
+	}))
+	defer srv.Close()
+
+	rc := &RegistryClient{IndexURL: srv.URL, CacheDir: t.TempDir(), client: srv.Client()}
+	idx, err := rc.FetchIndex()
+	if err != nil {
+		t.Fatalf("FetchIndex: %v", err)
+	}
+	if len(idx.Skills) != 1 {
+		t.Fatalf("skills = %d, want 1", len(idx.Skills))
+	}
+	if idx.Skills[0].Repo != "GrayCodeAI/graycode-skills" {
+		t.Errorf("Repo = %q, want the slug the installer clones from", idx.Skills[0].Repo)
+	}
+}
+
+func TestDiscoverSkillDirs(t *testing.T) {
+	tests := []struct {
+		name   string
+		layout []string
+		want   []string
+	}{
+		{name: "flat layout", layout: []string{"go-review/SKILL.md"}, want: []string{"go-review"}},
+		{name: "agentskills.io skills/ layout", layout: []string{"skills/go-review/SKILL.md"}, want: []string{"go-review"}},
+		{
+			name:   "graycode-skills categories layout",
+			layout: []string{"categories/go/go-review/SKILL.md", "categories/python/pandas/SKILL.md"},
+			want:   []string{"go-review", "pandas"},
+		},
+		{
+			name:   "ignores vendored and dot directories",
+			layout: []string{"go-review/SKILL.md", ".git/hooks/SKILL.md", "node_modules/pkg/SKILL.md"},
+			want:   []string{"go-review"},
+		},
+		{
+			name:   "ignores a top-level SKILL.md documenting the repo",
+			layout: []string{"SKILL.md", "categories/go/go-review/SKILL.md"},
+			want:   []string{"go-review"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			for _, rel := range tc.layout {
+				full := filepath.Join(root, rel)
+				if err := os.MkdirAll(filepath.Dir(full), 0o750); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(full, []byte("---\nname: x\n---\n"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			got, err := discoverSkillDirs(root)
+			if err != nil {
+				t.Fatalf("discoverSkillDirs: %v", err)
+			}
+			if len(got) != len(tc.want) {
+				t.Fatalf("found %d skills %v, want %d %v", len(got), keysOf(got), len(tc.want), tc.want)
+			}
+			for _, name := range tc.want {
+				dir, ok := got[name]
+				if !ok {
+					t.Errorf("missing skill %q; got %v", name, keysOf(got))
+					continue
+				}
+				if _, err := os.Stat(filepath.Join(dir, "SKILL.md")); err != nil {
+					t.Errorf("skill %q maps to %q which has no SKILL.md", name, dir)
+				}
+			}
+		})
+	}
+}
+
+func keysOf(m map[string]string) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }
