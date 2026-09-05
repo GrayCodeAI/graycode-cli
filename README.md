@@ -488,6 +488,14 @@ You may keep a **personal** parent **`go.work`** that lists alternate clones on 
 |---|---|---|
 | **graycode** | This repo | AI coding agent |
 | **graycode-router** | [GrayCodeAI/graycode-router](https://github.com/GrayCodeAI/graycode-router) | LLM provider runtime |
+| **graycode-skills** | [GrayCodeAI/graycode-skills](https://github.com/GrayCodeAI/graycode-skills) | Community skill registry |
+| **graycode-platform** | [GrayCodeAI/graycode-platform](https://github.com/GrayCodeAI/graycode-platform) | Web, BFF, and Graycode Cloud |
+
+`ecosystem.yaml` is the canonical inventory of repositories cloned as
+siblings in this local workspace; tooling reads it rather than carrying its
+own repo-name list. `harrier`, `shrike`, `swift`, `kestrel`, `merlin` and
+`falcon` above are consumed as pinned `go.mod` module dependencies rather
+than local workspace clones, so they are not listed there.
 
 For the consolidated repo map and the current-vs-proposed architecture diagrams, see [docs/architecture/graycode-current-vs-proposed.md](docs/architecture/graycode-current-vs-proposed.md).
 For execution-graph ownership, automatic capture seams, export/sync commands,

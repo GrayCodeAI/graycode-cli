@@ -28,7 +28,7 @@ This project is indexed by GitNexus as **graycode** (97743 symbols, 322940 relat
 | `gitnexus://repo/graycode/context` | Codebase overview, check index freshness |
 | `gitnexus://repo/graycode/clusters` | All functional areas |
 | `gitnexus://repo/graycode/processes` | All execution flows |
-| `gitnexus://repo/graycode/process/{name}` | Step-by-step execution swift |
+| `gitnexus://repo/graycode/process/{name}` | Step-by-step execution trace |
 
 ## CLI
 
