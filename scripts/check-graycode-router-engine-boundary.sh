@@ -15,8 +15,9 @@ else
       '"github\.com/GrayCodeAI/graycode-router/[^\"]+"' . || true
   )"
 fi
-# Graycode uses the full vendored GraycodeRouter API surface for provider, graph, and
-# tooling contracts that the engine facade does not re-export.
+# Host contract surface is exactly four packages: engine (facade), llm (DTOs
+# and the Provider port), graph (portable graph vocabulary), tools (tool-call
+# contracts). See graycode-router/README.md "Ecosystem Boundaries".
 violations="$(printf '%s\n' "$graycoderouter_imports" | grep -vE '"github\.com/GrayCodeAI/graycode-router/(engine|llm|graph|tools)(/|\")' || true)"
 
 if [[ -n "$violations" ]]; then
