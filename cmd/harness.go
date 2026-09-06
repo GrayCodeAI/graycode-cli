@@ -37,8 +37,16 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 		// Live progress over the slow evaluation and report-writing stages.
 		// TTY-aware: animates on a terminal, prints clean static lines when
 		// piped. Harness writes reports to files (not stdout), so progress
-		// never corrupts structured output.
-		prog := NewCLIProgress("Harness", []string{"Evaluating workspace", "Writing markdown", "Writing HTML", "Writing JSON"})
+		// never corrupts structured output. --fix inserts a "Repairing
+		// harness" step between evaluation and the report writes.
+		fixing := harnessFix || (len(args) > 0 && args[0] == "fix")
+		steps := []string{"Evaluating workspace", "Writing markdown", "Writing HTML", "Writing JSON"}
+		reportBase := 1
+		if fixing {
+			steps = []string{"Evaluating workspace", "Repairing harness", "Writing markdown", "Writing HTML", "Writing JSON"}
+			reportBase = 2
+		}
+		prog := NewCLIProgress("Harness", steps)
 		defer prog.Abort()
 		step := func(i int) {
 			if prog != nil {
@@ -69,7 +77,8 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 		}
 		done(0)
 
-		if harnessFix || (len(args) > 0 && args[0] == "fix") {
+		if fixing {
+			step(1)
 			fixResult, fixErr := harness.FixWorkspaceHarness(ctx, targetDir, report)
 			if fixErr != nil {
 				return fmt.Errorf("harness auto-fix failed: %w", fixErr)
@@ -80,6 +89,7 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 			}
 			// Re-evaluate workspace after fix
 			report, _ = harness.EvaluateWorkspace(ctx, targetDir, opts)
+			done(1)
 		}
 
 		outDir := harnessOutDir
@@ -92,31 +102,31 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 		}
 
 		// Write Markdown report
-		step(1)
+		step(reportBase)
 		mdPath := filepath.Join(outDir, "report.md")
 		mdContent := harness.RenderMarkdown(report)
 		if writeErr := os.WriteFile(mdPath, []byte(mdContent), 0o640); writeErr != nil { // #nosec G306 -- report is intentionally group-readable
 			return fmt.Errorf("failed to write report.md: %w", writeErr)
 		}
-		done(1)
+		done(reportBase)
 
 		// Write HTML report
-		step(2)
+		step(reportBase + 1)
 		htmlPath := filepath.Join(outDir, "report.html")
 		htmlContent := harness.RenderHTML(report)
 		if writeErr := os.WriteFile(htmlPath, []byte(htmlContent), 0o640); writeErr != nil { // #nosec G306 -- report is intentionally group-readable
 			return fmt.Errorf("failed to write report.html: %w", writeErr)
 		}
-		done(2)
+		done(reportBase + 1)
 
 		// Write JSON report
-		step(3)
+		step(reportBase + 2)
 		jsonPath := filepath.Join(outDir, "findings.json")
 		jsonContent, renderErr := harness.RenderJSON(report)
 		if renderErr != nil {
 			return fmt.Errorf("failed to serialize findings.json: %w", renderErr)
 		}
-		done(3)
+		done(reportBase + 2)
 		if writeErr := os.WriteFile(jsonPath, jsonContent, 0o640); writeErr != nil { // #nosec G306 -- report is intentionally group-readable
 			return fmt.Errorf("failed to write findings.json: %w", writeErr)
 		}
