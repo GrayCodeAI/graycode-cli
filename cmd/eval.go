@@ -232,12 +232,36 @@ func runEval(_ *cobra.Command, _ []string) error {
 		runner.Cache = eval.DefaultCache()
 	}
 	runner.Filters = []eval.Filter{eval.ExtractCodeBlock("go")}
+
+	// Animate one step per benchmark task. The eval runner invokes the
+	// callback before each task, so we close the previous step and open the
+	// next. Quiet mode suppresses the animation entirely.
+	var prog *CLIProgress
+	if !IsQuiet() {
+		names := make([]string, len(tasks))
+		for i := range tasks {
+			names[i] = tasks[i].ID
+		}
+		prog = NewCLIProgress("Eval", names)
+		defer prog.Abort()
+		runner.Progress = func(i, _ int, _ string) {
+			if i > 0 {
+				prog.CompleteStep(i - 1)
+			}
+			prog.StartStep(i)
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
 	result, err := runner.Run(ctx, suite)
 	if err != nil {
 		return err
+	}
+	if prog != nil {
+		prog.CompleteStep(len(tasks) - 1)
+		prog.Done()
 	}
 
 	// Compute reproducibility hash
