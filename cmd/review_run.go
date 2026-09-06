@@ -96,12 +96,38 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// Live progress for the slow review stages. TTY-aware: animates the active
+	// step on a terminal, prints clean static lines when piped, and stays
+	// silent in background/hook mode. The deferred Abort guarantees the
+	// spinner goroutine never leaks past an error return.
+	var prog *CLIProgress
+	if !reviewRunBackground {
+		prog = NewCLIProgress("Review", []string{"Building model", "Reviewing code", "Saving results"})
+		defer prog.Abort()
+	}
+	step := func(i int) {
+		if prog != nil {
+			prog.StartStep(i)
+		}
+	}
+	done := func(i int) {
+		if prog != nil {
+			prog.CompleteStep(i)
+		}
+	}
+	finish := func() {
+		if prog != nil {
+			prog.Done()
+		}
+	}
+
 	// Build the Kestrel bridge through Graycode's GraycodeRouter engine boundary.
 	ctx := context.Background()
 	selection := graycodeconfig.EffectiveSelection(ctx, graycodeconfig.SelectionOptions{
 		ProviderOverride: strings.TrimSpace(provider),
 		ModelOverride:    strings.TrimSpace(reviewRunModel),
 	})
+	step(0)
 	chatProvider, providerID, err := engine.BuildChatProvider(ctx, selection, strings.TrimSpace(provider))
 	if err != nil {
 		if statusErr := store.SetStatus(id, ReviewStatusFailed); statusErr != nil {
@@ -136,6 +162,9 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		defer cancel()
 	}
 
+	done(0)
+	step(1)
+
 	// Run review.
 	result, err := bridge.ReviewContracts(ctx, diff)
 	if err != nil {
@@ -151,9 +180,14 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		status = ReviewStatusOpen
 	}
 
+	done(1)
+	step(2)
+
 	if err := store.Update(id, status, result); err != nil {
 		return silentErr(err, "store result")
 	}
+	done(2)
+	finish()
 
 	if !reviewRunBackground {
 		printReviewSummary(sha, result)

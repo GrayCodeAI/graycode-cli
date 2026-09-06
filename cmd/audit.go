@@ -81,14 +81,33 @@ func runAudit(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// Animated per-session progress only on a TTY and only for text output.
+	// JSON output must stay pure (progress lines would corrupt it) and piped
+	// text should not be spammed with per-session lines.
+	var prog *CLIProgress
+	if auditFormat != "json" && stdoutIsTerminal() {
+		names := make([]string, len(sessions))
+		for i := range sessions {
+			names[i] = fmt.Sprintf("Scanning session %d/%d", i+1, len(sessions))
+		}
+		prog = NewCLIProgress("Audit", names)
+		defer prog.Abort()
+	}
+
 	// Run audit detectors on each session
 	detectors := audit.AllDetectors()
 	counts := make(map[string]*AuditCount)
 	totalHits := 0
 
-	for _, sess := range sessions {
+	for i, sess := range sessions {
+		if prog != nil {
+			prog.StartStep(i)
+		}
 		events, err := loadSessionEvents(sess.Path)
 		if err != nil {
+			if prog != nil {
+				prog.FailStep(i, "load failed")
+			}
 			continue
 		}
 
@@ -125,6 +144,12 @@ func runAudit(cmd *cobra.Command, args []string) error {
 				}
 			}
 		}
+		if prog != nil {
+			prog.CompleteStep(i)
+		}
+	}
+	if prog != nil {
+		prog.Done()
 	}
 
 	// Count unique projects per detector
