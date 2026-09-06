@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -172,13 +173,16 @@ func healthCheckReport(settings graycodeconfig.Settings, provider string) string
 	var b strings.Builder
 	b.WriteString("Health checks:\n")
 	for _, check := range results {
-		status := icons.CheckBold() + " "
+		status := auditTint(icons.CheckBold()+" ", doneGreen)
+		var msgColor color.Color = textMuted
 		if check.Status == health.Unhealthy {
-			status = icons.CloseThick() + " "
+			status = auditTint(icons.CloseThick()+" ", errorCoral)
+			msgColor = errorCoral
 		} else if check.Status == health.Degraded {
-			status = icons.Alert() + " "
+			status = auditTint(icons.Alert()+" ", warnAmber)
+			msgColor = warnAmber
 		}
-		b.WriteString(fmt.Sprintf("  %s %s: %s\n", status, check.Name, check.Message))
+		b.WriteString(fmt.Sprintf("  %s %s: %s\n", status, auditTint(check.Name, textPrimary), auditTint(check.Message, msgColor)))
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
