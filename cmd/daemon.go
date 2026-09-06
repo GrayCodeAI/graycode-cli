@@ -463,7 +463,7 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 		if daemonJSON {
 			fmt.Println(`{"status":"not running"}`)
 		} else {
-			fmt.Println("Status: not running")
+			fmt.Println(auditTint("Status: not running", textMuted))
 		}
 		return nil
 	}
@@ -477,7 +477,7 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 		if daemonJSON {
 			fmt.Println(`{"status":"unknown","error":"invalid PID file"}`)
 		} else {
-			fmt.Println("Status: unknown (invalid PID file)")
+			fmt.Println(auditTint("Status: unknown (invalid PID file)", warnAmber))
 		}
 		return nil
 	}
@@ -497,7 +497,7 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 		if daemonJSON {
 			fmt.Println(`{"status":"not running","error":"stale PID file"}`)
 		} else {
-			fmt.Println("Status: not running (stale PID file)")
+			fmt.Println(auditTint("Status: not running (stale PID file)", warnAmber))
 		}
 		_ = os.Remove(pidFile)
 		return nil
@@ -514,9 +514,9 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	fmt.Printf("Status: running\n")
-	fmt.Printf("  PID:     %d\n", info.PID)
-	fmt.Printf("  Address: http://%s\n", info.Addr)
-	fmt.Printf("  Started: %s\n", info.StartedAt)
+	fmt.Printf("%s\n", auditTint("Status: running", doneGreen))
+	fmt.Printf("  %s %d\n", auditTint("PID:", textMuted), info.PID)
+	fmt.Printf("  %s %s\n", auditTint("Address:", textMuted), auditTint("http://"+info.Addr, textPrimary))
+	fmt.Printf("  %s %s\n", auditTint("Started:", textMuted), auditTint(info.StartedAt, textPrimary))
 	return nil
 }
