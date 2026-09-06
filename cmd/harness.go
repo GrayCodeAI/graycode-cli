@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"os"
 	"path/filepath"
 
@@ -135,12 +136,15 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 		_ = harness.JournalHarnessReport(report, "")
 
 		finish()
-		fmt.Printf("[GRAYCODE] Graycode Harness Evaluation Complete\n")
-		fmt.Printf("   Overall Score : %d/100 (%s)\n", report.OverallScore, report.OverallStatus)
-		fmt.Printf("   Findings      : %d prioritized issues\n", len(report.Findings))
-		fmt.Printf("   HTML Report   : %s\n", htmlPath)
-		fmt.Printf("   Markdown      : %s\n", mdPath)
-		fmt.Printf("   JSON Findings : %s\n", jsonPath)
+		fmt.Printf("%s\n", auditTint("[GRAYCODE] Graycode Harness Evaluation Complete", graycodeColor))
+		fmt.Printf("   %s : %s (%s)\n",
+			auditTint("Overall Score", textPrimary),
+			auditTint(fmt.Sprintf("%d/100", report.OverallScore), textPrimary),
+			auditTint(report.OverallStatus, harnessStatusColor(report.OverallStatus)))
+		fmt.Printf("   %s : %d prioritized issues\n", auditTint("Findings", textPrimary), len(report.Findings))
+		fmt.Printf("   %s : %s\n", auditTint("HTML Report", textPrimary), htmlPath)
+		fmt.Printf("   %s : %s\n", auditTint("Markdown", textPrimary), mdPath)
+		fmt.Printf("   %s : %s\n", auditTint("JSON Findings", textPrimary), jsonPath)
 
 		return nil
 	},
@@ -150,4 +154,18 @@ func init() {
 	harnessCmd.Flags().StringVar(&harnessOutDir, "out-dir", "", "Directory to save harness reports (default: .graycode/harness)")
 	harnessCmd.Flags().StringVar(&harnessFormat, "format", "all", "Report output format (html, markdown, json, all)")
 	harnessCmd.Flags().BoolVar(&harnessFix, "fix", false, "Automatically repair missing harness assets (AGENTS.md, skills, specs)")
+}
+
+// harnessStatusColor maps the harness health status to a semantic theme color.
+func harnessStatusColor(status string) color.Color {
+	switch status {
+	case "EXCELLENT", "GOOD":
+		return doneGreen
+	case "NEEDS_IMPROVEMENT":
+		return warnAmber
+	case "POOR":
+		return errorCoral
+	default:
+		return textPrimary
+	}
 }
