@@ -13,9 +13,9 @@ func versionLine() string {
 	if ver != "" && !strings.HasPrefix(ver, "v") && !strings.HasPrefix(ver, "V") {
 		ver = "v" + ver
 	}
-	line := "graycode " + ver
+	line := auditTint("graycode", textPrimary) + " " + auditTint(ver, graycodeColor)
 	if d := strings.TrimSpace(buildDate); d != "" && d != "unknown" {
-		line += " (built " + d + ")"
+		line += auditTint(" (built "+d+")", textMuted)
 	}
 	return line
 }
