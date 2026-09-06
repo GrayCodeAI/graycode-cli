@@ -49,7 +49,11 @@ func (c *CLIProgress) StartStep(i int) {
 	}
 	c.spinner = NewBrailleSpinner(SpinnerGraycode, c.pt.Steps[i].Name)
 	c.spinner.Start(80*time.Millisecond, func(frame string) {
-		fmt.Fprintf(c.w, "\r%s %s %d/%d\033[K", frame, c.bar(), i+1, len(c.pt.Steps))
+		eta := ""
+		if remaining := c.pt.EstimateRemaining(); remaining > 0 {
+			eta = fmt.Sprintf(" · ETA %s", formatDurationShort(remaining))
+		}
+		fmt.Fprintf(c.w, "\r%s %s %d/%d%s\033[K", frame, c.bar(), i+1, len(c.pt.Steps), eta)
 	})
 }
 
