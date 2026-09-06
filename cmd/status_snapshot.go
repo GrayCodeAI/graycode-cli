@@ -85,11 +85,23 @@ func formatStatusSnapshot(s status.Snapshot) string {
 	if s.Permission.SandboxBackend != "" {
 		backend = " (" + s.Permission.SandboxBackend + ")"
 	}
-	return fmt.Sprintf("Graycode status\nSchema: %s\nWorkspace: %s\nGit branch: %s\nProvider: %s\nModel: %s\nAutonomy tier: %s\nSandbox: %s%s\nPermission rules: %d\nMCP: %d configured (%s)\nSkills: %d (%s)\nSecrets redacted: %t\n",
-		s.SchemaVersion, s.Workspace, s.GitBranch, s.Provider, s.Model,
-		s.Permission.AutonomyTier, s.Permission.SandboxMode, backend,
-		s.Permission.EffectiveRules, s.MCP.Configured, s.MCP.State,
-		s.Skills.Configured, s.Skills.State, s.Permission.SecretRedacted)
+	line := func(label, val string) string {
+		return fmt.Sprintf("%s: %s\n", auditTint(label, textMuted), auditTint(val, textPrimary))
+	}
+	var b strings.Builder
+	b.WriteString(auditTint("Graycode status", graycodeColor) + "\n")
+	b.WriteString(line("Schema", s.SchemaVersion))
+	b.WriteString(line("Workspace", s.Workspace))
+	b.WriteString(line("Git branch", s.GitBranch))
+	b.WriteString(line("Provider", s.Provider))
+	b.WriteString(line("Model", s.Model))
+	b.WriteString(line("Autonomy tier", s.Permission.AutonomyTier))
+	b.WriteString(line("Sandbox", s.Permission.SandboxMode+backend))
+	b.WriteString(line("Permission rules", fmt.Sprintf("%d", s.Permission.EffectiveRules)))
+	b.WriteString(line("MCP", fmt.Sprintf("%d configured (%s)", s.MCP.Configured, s.MCP.State)))
+	b.WriteString(line("Skills", fmt.Sprintf("%d (%s)", s.Skills.Configured, s.Skills.State)))
+	b.WriteString(line("Secrets redacted", fmt.Sprintf("%t", s.Permission.SecretRedacted)))
+	return strings.TrimRight(b.String(), "\n")
 }
 
 func init() {
