@@ -112,7 +112,7 @@ func (SpecTestGenTool) Execute(ctx context.Context, input json.RawMessage) (stri
 func goTestName(reqID string) string {
 	name := strings.ReplaceAll(reqID, "-", "_")
 	name = strings.ReplaceAll(name, ".", "_")
-	return strings.Title(name)
+	return titleCaser.String(name)
 }
 
 func detectLanguageForTests(dir string) string {

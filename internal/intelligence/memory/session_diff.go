@@ -134,12 +134,12 @@ func (sd *SessionDiffAnalyzer) StoreMemoriesFromDiff(diff *DiffResult) {
 		} else if isConfigFile(f) {
 			content = fmt.Sprintf("Config file: %s (%s)", basename, ext)
 		}
-		_ = sd.bridge.Remember(content, "file")
+		_ = sd.bridge.Remember(context.Background(), content, "file")
 	}
 
 	// New dependencies → remember as decisions
 	for _, dep := range diff.NewDeps {
-		_ = sd.bridge.Remember(
+		_ = sd.bridge.Remember(context.Background(),
 			fmt.Sprintf("Dependency added: %s", dep),
 			"decision",
 		)
@@ -154,7 +154,7 @@ func (sd *SessionDiffAnalyzer) StoreMemoriesFromDiff(diff *DiffResult) {
 		// Remove the hash prefix
 		parts := strings.SplitN(commit, " ", 2)
 		if len(parts) > 1 {
-			_ = sd.bridge.Remember(
+			_ = sd.bridge.Remember(context.Background(),
 				fmt.Sprintf("Decision: %s", parts[1]),
 				"decision",
 			)

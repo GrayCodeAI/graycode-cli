@@ -193,9 +193,11 @@ func (b *HarrierBridge) notReadyError(op string) error {
 
 // Remember stores content into harrier's memory graph under the given category.
 // Category maps to harrier's node type (e.g., "convention", "decision", "bug", "preference").
-// Returns a BridgeError if harrier is not initialized.
-func (b *HarrierBridge) Remember(content, category string) error {
-	return b.RememberWithContext(context.Background(), content, category)
+// Returns a BridgeError if harrier is not initialized. Implements
+// engine.MemoryRecaller; the ctx bounds the harrier network call so a hung
+// backend cannot leak a caller's goroutine.
+func (b *HarrierBridge) Remember(ctx context.Context, content, category string) error {
+	return b.RememberWithContext(ctx, content, category)
 }
 
 // RememberWithContext is the context-aware version of Remember.

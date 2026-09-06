@@ -287,7 +287,28 @@ func runEvalList(_ *cobra.Command, _ []string) error {
 	}
 
 	if evalListJSON {
-		out, err := json.MarshalIndent(tasks, "", "  ")
+		// BenchmarkTask carries func fields (SetupFn/ValidateFn) that
+		// encoding/json cannot marshal; project to the display-safe fields.
+		type jsonTask struct {
+			ID          string   `json:"id"`
+			Description string   `json:"description"`
+			Prompt      string   `json:"prompt"`
+			TimeLimit   float64  `json:"time_limit_seconds"`
+			Tags        []string `json:"tags"`
+			MaxAttempts int      `json:"max_attempts"`
+		}
+		view := make([]jsonTask, len(tasks))
+		for i, t := range tasks {
+			view[i] = jsonTask{
+				ID:          t.ID,
+				Description: t.Description,
+				Prompt:      t.Prompt,
+				TimeLimit:   t.TimeLimit.Seconds(),
+				Tags:        t.Tags,
+				MaxAttempts: t.MaxAttempts,
+			}
+		}
+		out, err := json.MarshalIndent(view, "", "  ")
 		if err != nil {
 			return fmt.Errorf("marshaling tasks: %w", err)
 		}

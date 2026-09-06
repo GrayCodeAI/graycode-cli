@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"strings"
@@ -40,7 +41,7 @@ func TestHarrierBridge_Remember(t *testing.T) {
 		// FIXME: harrier dependency must be available to test remember functionality
 		t.Skip("harrier not available")
 	}
-	err := b.Remember("test content to remember", "explicit")
+	err := b.Remember(context.Background(), "test content to remember", "explicit")
 	if err != nil {
 		t.Fatalf("Remember: %v", err)
 	}
@@ -54,7 +55,7 @@ func TestHarrierBridge_Recall(t *testing.T) {
 		// FIXME: harrier dependency must be available to test recall functionality
 		t.Skip("harrier not available")
 	}
-	_ = b.Remember("golang error handling patterns", "convention")
+	_ = b.Remember(context.Background(), "golang error handling patterns", "convention")
 
 	result, err := b.Recall("error handling", 500)
 	if err != nil {
@@ -73,7 +74,7 @@ func TestHarrierBridgeRecallRecordsPortableContextGraph(t *testing.T) {
 	}
 	defer b.Close()
 
-	if err := b.Remember("private graph context about error handling", "decision"); err != nil {
+	if err := b.Remember(context.Background(), "private graph context about error handling", "decision"); err != nil {
 		t.Fatalf("Remember() error = %v", err)
 	}
 	b.ConfigureGraphObservation(

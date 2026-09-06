@@ -32,7 +32,10 @@ import (
 // MemoryRecaller abstracts memory recall/remember so engine avoids importing memory directly.
 type MemoryRecaller interface {
 	Recall(query string, tokenBudget int) (string, error)
-	Remember(content, category string) error
+	// Remember persists a content+category pair. The ctx lets background
+	// callers bound the call so a slow/hung memory backend cannot leak a
+	// goroutine (the HarrierBridge path honors it for network cancellation).
+	Remember(ctx context.Context, content, category string) error
 }
 
 // SnapshotTracker abstracts the snapshot system so engine doesn't import snapshot directly.
@@ -623,11 +626,11 @@ func (s *Session) AddUser(content string) {
 	if memSvc := s.MemorySvc(); memSvc != nil {
 		if mem := memSvc.Memory(); mem != nil && strings.Contains(strings.ToLower(content), "remember") {
 			go func(c string) {
-				// Use timeout context so goroutine doesn't hang if backend is slow.
+				// Bound the call so a slow/hung memory backend cannot leak
+				// this goroutine; the ctx now propagates to the backend.
 				rCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				_ = rCtx // timeout context available if Remember is extended to accept it
-				if err := mem.Remember(c, "user_explicit"); err != nil {
+				if err := mem.Remember(rCtx, c, "user_explicit"); err != nil {
 					slog.Warn("background memory remember failed", "error", err)
 				}
 			}(content)

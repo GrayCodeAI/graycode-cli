@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -41,7 +42,7 @@ func ParseAndApplyMemoryOps(bridge *memory.HarrierBridge, response string) error
 		}
 		switch op.Op {
 		case "add":
-			if err := bridge.Remember(op.Content, op.Type); err != nil {
+			if err := bridge.Remember(context.Background(), op.Content, op.Type); err != nil {
 				errs = append(errs, fmt.Errorf("memory ops: remember: %w", err))
 			}
 		}

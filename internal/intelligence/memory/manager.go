@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"strings"
 )
 
@@ -97,8 +98,8 @@ func (mm *MemoryManager) Recall(query string, tokenBudget int) (string, error) {
 }
 
 // Remember routes content to the appropriate subsystem based on category.
-// Implements engine.MemoryRecaller.
-func (mm *MemoryManager) Remember(content, category string) error {
+// Implements engine.MemoryRecaller. The ctx bounds the harrier network path.
+func (mm *MemoryManager) Remember(ctx context.Context, content, category string) error {
 	switch category {
 	case "guideline", "lesson":
 		mm.Evolving.Learn(content, content, "manager")
@@ -118,7 +119,7 @@ func (mm *MemoryManager) Remember(content, category string) error {
 	default:
 		// Default: store in harrier if ready, otherwise fall back to core Memory.
 		if mm.Harrier.Ready() {
-			return mm.Harrier.Remember(content, category)
+			return mm.Harrier.RememberWithContext(ctx, content, category)
 		}
 		return Save(&Memory{Content: content, Tags: []string{category}})
 	}
