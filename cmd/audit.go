@@ -65,6 +65,13 @@ type AuditResult struct {
 	Detectors []AuditCount `json:"detectors"`
 }
 
+// auditProgressEnabled reports whether per-session progress should be shown.
+// JSON output must stay pure (progress lines would corrupt it) and piped
+// text should not be spammed with per-session lines.
+func auditProgressEnabled(format string, tty bool) bool {
+	return format != "json" && tty
+}
+
 func runAudit(cmd *cobra.Command, args []string) error {
 	if auditJSON {
 		auditFormat = "json"
@@ -85,7 +92,7 @@ func runAudit(cmd *cobra.Command, args []string) error {
 	// JSON output must stay pure (progress lines would corrupt it) and piped
 	// text should not be spammed with per-session lines.
 	var prog *CLIProgress
-	if auditFormat != "json" && stdoutIsTerminal() {
+	if auditProgressEnabled(auditFormat, stdoutIsTerminal()) {
 		names := make([]string, len(sessions))
 		for i := range sessions {
 			names[i] = fmt.Sprintf("Scanning session %d/%d", i+1, len(sessions))
