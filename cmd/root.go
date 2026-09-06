@@ -897,8 +897,7 @@ Examples:
 				return err
 			}
 			cmd.Println(note)
-			cmd.Printf("Resuming session %s (%d messages, %s/%s)\n",
-				s.ID, len(s.Messages), s.Provider, s.Model)
+			cmd.Println(auditTint("Resuming session ", textPrimary) + auditTint(s.ID, toolGold) + auditTint(fmt.Sprintf(" (%d messages, %s/%s)", len(s.Messages), s.Provider, s.Model), textMuted))
 			return resumeRecoveredSession(context.Background(), s.ID)
 		}
 
@@ -907,8 +906,8 @@ Examples:
 		cmd.Println(session.FormatRecoveryCandidates(candidates))
 
 		if len(candidates) > 0 {
-			cmd.Println("Resume with: graycode recover <id>")
-			cmd.Println("Or launch TUI with: graycode --recover")
+			cmd.Println(auditTint("Resume with: graycode recover <id>", textMuted))
+			cmd.Println(auditTint("Or launch TUI with: graycode --recover", textMuted))
 		}
 		return nil
 	},
