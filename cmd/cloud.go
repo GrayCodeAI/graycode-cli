@@ -62,30 +62,41 @@ var cloudLoginCmd = &cobra.Command{
 		if interval < time.Second {
 			interval = 5 * time.Second
 		}
+		prog := NewCLIProgress("Cloud", []string{"Waiting for browser approval"})
+		defer prog.Abort()
+		prog.StartStep(0)
 		for {
 			poll, pollErr := client.PollDeviceLogin(ctx, start.DeviceCode)
 			if pollErr != nil {
+				prog.FailStep(0, pollErr.Error())
 				return pollErr
 			}
 			switch poll.Status {
 			case "pending":
 				select {
 				case <-ctx.Done():
+					prog.FailStep(0, ctx.Err().Error())
 					return fmt.Errorf("waiting for browser approval: %w", ctx.Err())
 				case <-time.After(interval):
 				}
 			case "approved":
 				if poll.Token == "" || poll.DeviceID == "" || poll.ProjectID == "" {
+					prog.FailStep(0, "incomplete device authorization")
 					return fmt.Errorf("graycode cloud returned an incomplete device authorization")
 				}
 				if err := cloud.SaveDeviceConfig(cloud.DeviceConfig{Endpoint: endpoint, DeviceID: poll.DeviceID, ProjectID: poll.ProjectID}, poll.Token); err != nil {
+					prog.FailStep(0, err.Error())
 					return err
 				}
+				prog.CompleteStep(0)
+				prog.Done()
 				cmd.Println(auditTint("Graycode Cloud connected for project ", doneGreen) + auditTint(poll.ProjectID, textPrimary) + auditTint(".", doneGreen))
 				return nil
 			case "expired":
+				prog.FailStep(0, "device authorization expired")
 				return fmt.Errorf("graycode cloud device authorization expired")
 			default:
+				prog.FailStep(0, fmt.Sprintf("unknown status %q", poll.Status))
 				return fmt.Errorf("graycode cloud returned unknown device authorization status %q", poll.Status)
 			}
 		}
