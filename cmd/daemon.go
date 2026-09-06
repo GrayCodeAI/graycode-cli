@@ -451,7 +451,7 @@ func runDaemonStop(_ *cobra.Command, _ []string) error {
 	}
 
 	_ = os.Remove(pidFile)
-	fmt.Printf("Stopped daemon (PID %d)\n", info.PID)
+	fmt.Printf("%s\n", auditTint(fmt.Sprintf("Stopped daemon (PID %d)", info.PID), doneGreen))
 	return nil
 }
 
