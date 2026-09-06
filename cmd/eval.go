@@ -121,10 +121,19 @@ func runEvalLoop(cmd *cobra.Command, _ []string) error {
 
 	cfg := evalloop.DefaultConfig()
 	runtime := evalloop.NewSessionRuntime(gw.ChatClient(), "eval", model, tool.NewRegistry(), cfg)
+
+	// The agent loop is the slow part; show a TTY-only animated indicator.
+	// It clears before the JSON report prints, so piped and structured
+	// output stay pure.
+	prog := NewCLIProgress("Eval", []string{"Running agent loop"})
+	defer prog.Abort()
+	prog.StartStep(0)
 	result, err := runtime.Run(ctx, workDir, evalLoopPrompt)
 	if err != nil {
 		return fmt.Errorf("eval loop: %w", err)
 	}
+	prog.CompleteStep(0)
+	prog.Done()
 
 	transcriptPath := ""
 	if len(result.Transcript) > 0 {
