@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"os"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	lipgloss "charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
+	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
 	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
@@ -71,7 +73,7 @@ func runReviewStatus(_ *cobra.Command, _ []string) error {
 		total += v
 	}
 	if total == 0 {
-		fmt.Println("No reviews yet. Run 'graycode review init' to start.")
+		fmt.Println(auditTint("No reviews yet. Run 'graycode review init' to start.", textMuted))
 		return nil
 	}
 
@@ -80,18 +82,18 @@ func runReviewStatus(_ *cobra.Command, _ []string) error {
 	fixed := summary[ReviewStatusFixed]
 	failed := summary[ReviewStatusFailed]
 
-	fmt.Printf("Reviews: %d total", total)
+	fmt.Printf("%s %s", auditTint("Reviews:", textMuted), auditTint(fmt.Sprintf("%d total", total), textPrimary))
 	if open > 0 {
-		fmt.Printf(" · %d open", open)
+		fmt.Printf(" · %s", auditTint(fmt.Sprintf("%d open", open), infoSky))
 	}
 	if passed > 0 {
-		fmt.Printf(" · %d passed", passed)
+		fmt.Printf(" · %s", auditTint(fmt.Sprintf("%d passed", passed), doneGreen))
 	}
 	if fixed > 0 {
-		fmt.Printf(" · %d fixed", fixed)
+		fmt.Printf(" · %s", auditTint(fmt.Sprintf("%d fixed", fixed), successTeal))
 	}
 	if failed > 0 {
-		fmt.Printf(" · %d failed", failed)
+		fmt.Printf(" · %s", auditTint(fmt.Sprintf("%d failed", failed), errorCoral))
 	}
 	fmt.Println()
 
@@ -100,7 +102,15 @@ func runReviewStatus(_ *cobra.Command, _ []string) error {
 		reviews, _ := store.ListOpen()
 		fmt.Println()
 		for _, r := range reviews {
-			fmt.Printf("  #%d %s [%s] %d findings\n", r.ID, r.SHA[:8], r.MaxSeverity, len(r.Findings))
+			var sev color.Color = textPrimary
+			if parsed, err := contracts.ParseSeverityStrict(r.MaxSeverity); err == nil {
+				sev = reviewSeverityColor(parsed)
+			}
+			fmt.Printf("  %s %s %s %s\n",
+				auditTint(fmt.Sprintf("#%d", r.ID), textPrimary),
+				auditTint(r.SHA[:8], textMuted),
+				auditTint(fmt.Sprintf("[%s]", r.MaxSeverity), sev),
+				auditTint(fmt.Sprintf("%d findings", len(r.Findings)), textMuted))
 		}
 	}
 	return nil
