@@ -466,7 +466,20 @@ var updateCmd = &cobra.Command{
 		if ver == "" {
 			ver = "dev"
 		}
-		cmd.Println(update.Summary(ver))
+		release, err := update.Check(ver)
+		if err != nil {
+			cmd.Println(auditTint("Update check failed: "+err.Error(), errorCoral))
+			return nil
+		}
+		if release == nil {
+			cmd.Println(auditTint("graycode is up to date ("+ver+")", doneGreen))
+			return nil
+		}
+		cmd.Println(auditTint("Update available: ", warnAmber) + auditTint(ver+" -> "+release.TagName, textPrimary))
+		cmd.Println(auditTint(release.URL, textMuted))
+		cmd.Println()
+		cmd.Println(auditTint("Release notes:", textPrimary))
+		cmd.Println(release.Body)
 		return nil
 	},
 }
