@@ -24,26 +24,31 @@ var verifyCmd = &cobra.Command{
 Exits non-zero on the first failed check.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ok := true
+		// Themed markers (padded to a fixed width so colorized output keeps
+		// its column alignment; plain when piped via ShouldColor).
+		okMark := auditTint("[OK]   ", doneGreen)
+		failMark := auditTint("[FAIL] ", errorCoral)
+		skipMark := auditTint("[SKIP] ", textMuted)
 
 		// 1. Security event log chain integrity.
 		dir := securitylog.DefaultDir()
 		count, err := securitylog.Verify(dir)
 		if err != nil {
 			ok = false
-			cmd.Printf("[FAIL] security event log: %v\n", err)
+			cmd.Printf("%ssecurity event log: %v\n", failMark, err)
 		} else {
-			cmd.Printf("[OK]   security event log: %d entries verified (%s)\n", count, dir)
+			cmd.Printf("%ssecurity event log: %d entries verified (%s)\n", okMark, count, dir)
 		}
 
 		// 2. Managed governance policy validity (only when installed).
 		policyPath := governance.ManagedPolicyPath()
 		if _, statErr := os.Stat(policyPath); statErr != nil {
-			cmd.Printf("[SKIP] governance policy: not installed (%s)\n", policyPath)
+			cmd.Printf("%sgovernance policy: not installed (%s)\n", skipMark, policyPath)
 		} else if _, err := governance.LoadLayer("policy", policyPath); err != nil {
 			ok = false
-			cmd.Printf("[FAIL] governance policy: %v\n", err)
+			cmd.Printf("%sgovernance policy: %v\n", failMark, err)
 		} else {
-			cmd.Printf("[OK]   governance policy: valid (%s)\n", policyPath)
+			cmd.Printf("%sgovernance policy: valid (%s)\n", okMark, policyPath)
 		}
 
 		// 3. Project test/verify checks discovered from the workspace.
@@ -65,16 +70,16 @@ Exits non-zero on the first failed check.`,
 		for _, c := range results {
 			if c.Err != nil {
 				ok = false
-				cmd.Printf("[FAIL] %s: %v\n", c.Name, c.Err)
+				cmd.Printf("%s%s: %v\n", failMark, c.Name, c.Err)
 				continue
 			}
-			cmd.Printf("[OK]   %s: %s\n", c.Name, c.Detail)
+			cmd.Printf("%s%s: %s\n", okMark, c.Name, c.Detail)
 		}
 
 		if !ok {
 			return fmt.Errorf("verification failed — see messages above")
 		}
-		cmd.Println("verification passed")
+		cmd.Println(auditTint("verification passed", doneGreen))
 		return nil
 	},
 }
