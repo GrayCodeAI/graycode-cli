@@ -47,7 +47,10 @@ var securitylogVerifyCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("security log verification FAILED: %w", err)
 		}
-		cmd.Printf("security event log OK: %d entries verified (%s)\n", count, dir)
+		cmd.Printf("%s %s (%s)\n",
+			auditTint("security event log OK:", doneGreen),
+			auditTint(fmt.Sprintf("%d entries verified", count), textPrimary),
+			auditTint(dir, textMuted))
 		return nil
 	},
 }
