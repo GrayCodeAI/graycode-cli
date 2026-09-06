@@ -3,12 +3,14 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/graycode-cli/internal/hooks/audit"
 	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 	"github.com/spf13/cobra"
@@ -282,12 +284,33 @@ func loadSessionEvents(path string) ([]audit.ToolEvent, error) {
 	return events, nil
 }
 
+// auditTint applies a theme foreground color on a TTY only; piped output
+// stays plain so scripts never see stray ANSI escapes.
+func auditTint(s string, color color.Color) string {
+	if !stdoutIsTerminal() || s == "" {
+		return s
+	}
+	return lipgloss.NewStyle().Foreground(color).Render(s)
+}
+
+// auditSeverityColor maps a detector severity to a semantic theme color.
+func auditSeverityColor(sev string) color.Color {
+	switch sev {
+	case "high", "critical":
+		return errorCoral
+	case "medium":
+		return warnAmber
+	default: // info, low
+		return infoSky
+	}
+}
+
 func printAuditText(cmd *cobra.Command, result AuditResult) {
 	w := cmd.OutOrStdout()
 
 	_, _ = fmt.Fprintf(w, "\n")
 	_, _ = fmt.Fprintf(w, "═══════════════════════════════════════════════════════════════\n")
-	_, _ = fmt.Fprintf(w, "  Graycode Audit Report\n")
+	_, _ = fmt.Fprintf(w, "  %s\n", auditTint("Graycode Audit Report", graycodeColor))
 	_, _ = fmt.Fprintf(w, "═══════════════════════════════════════════════════════════════\n")
 	_, _ = fmt.Fprintf(w, "\n")
 	_, _ = fmt.Fprintf(w, "  Scanned:     %d sessions (last %d days)\n", result.Sessions, result.Days)
@@ -300,7 +323,7 @@ func printAuditText(cmd *cobra.Command, result AuditResult) {
 	}
 
 	_, _ = fmt.Fprintf(w, "\n")
-	_, _ = fmt.Fprintf(w, "─── Detected Patterns ───\n\n")
+	_, _ = fmt.Fprintf(w, "─── %s ───\n\n", auditTint("Detected Patterns", infoSky))
 	_, _ = fmt.Fprintf(w, "  %-30s %6s %8s  %s\n", "DETECTOR", "HITS", "SEVERITY", "EXAMPLE")
 	_, _ = fmt.Fprintf(w, "  %-30s %6s %8s  %s\n", strings.Repeat("─", 30), strings.Repeat("─", 6), strings.Repeat("─", 8), strings.Repeat("─", 30))
 
@@ -309,11 +332,14 @@ func printAuditText(cmd *cobra.Command, result AuditResult) {
 		if len(d.Examples) > 0 {
 			example = d.Examples[0]
 		}
-		_, _ = fmt.Fprintf(w, "  %-30s %6d %8s  %s\n", d.Name, d.Hits, d.Severity, example)
+		// Pad to the column width first, then colorize, so ANSI escapes
+		// (zero-width) don't break the fixed-width alignment.
+		sev := auditTint(fmt.Sprintf("%8s", d.Severity), auditSeverityColor(d.Severity))
+		_, _ = fmt.Fprintf(w, "  %-30s %6d %s  %s\n", d.Name, d.Hits, sev, example)
 	}
 
 	_, _ = fmt.Fprintf(w, "\n")
-	_, _ = fmt.Fprintf(w, "─── Remediation Tips ───\n\n")
+	_, _ = fmt.Fprintf(w, "─── %s ───\n\n", auditTint("Remediation Tips", infoSky))
 
 	for _, d := range result.Detectors {
 		switch d.Name {
