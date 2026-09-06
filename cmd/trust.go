@@ -46,7 +46,7 @@ var trustAddCmd = &cobra.Command{
 		if err := s.Trust(path, reason); err != nil {
 			return err
 		}
-		cmd.Printf("Trusted %s\n", path)
+		cmd.Printf("%s\n", auditTint("Trusted ", doneGreen)+auditTint(path, textPrimary))
 		return nil
 	},
 }
@@ -73,7 +73,7 @@ var trustRemoveCmd = &cobra.Command{
 		if err := s.Untrust(path); err != nil {
 			return err
 		}
-		cmd.Printf("Removed trust for %s\n", path)
+		cmd.Printf("%s\n", auditTint("Removed trust for ", textPrimary)+auditTint(path, textMuted))
 		return nil
 	},
 }
@@ -93,8 +93,8 @@ var trustListCmd = &cobra.Command{
 			if trustListJSON {
 				fmt.Println("[]")
 			} else {
-				cmd.Println("No trusted directories.")
-				cmd.Printf("Folder trust enforcement: %v (GRAYCODE_Y0_FOLDER_TRUST)\n", flags.FolderTrust())
+				cmd.Println(auditTint("No trusted directories.", textMuted))
+				cmd.Printf("%s\n", auditTint(fmt.Sprintf("Folder trust enforcement: %v (GRAYCODE_Y0_FOLDER_TRUST)", flags.FolderTrust()), textMuted))
 			}
 			return nil
 		}
@@ -143,9 +143,13 @@ var trustCheckCmd = &cobra.Command{
 		}
 		enforced := flags.FolderTrust()
 		trusted := s.IsTrusted(path)
-		cmd.Printf("path: %s\n", path)
-		cmd.Printf("trusted: %v\n", trusted)
-		cmd.Printf("enforcement: %v\n", enforced)
+		cmd.Printf("%s %s\n", auditTint("path:", textMuted), auditTint(path, textPrimary))
+		trustedColor := doneGreen
+		if !trusted {
+			trustedColor = errorCoral
+		}
+		cmd.Printf("%s %s\n", auditTint("trusted:", textMuted), auditTint(fmt.Sprintf("%v", trusted), trustedColor))
+		cmd.Printf("%s %s\n", auditTint("enforcement:", textMuted), auditTint(fmt.Sprintf("%v", enforced), textPrimary))
 		if enforced && !trusted {
 			return fmt.Errorf("not trusted")
 		}
