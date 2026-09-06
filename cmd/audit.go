@@ -94,7 +94,7 @@ func runAudit(cmd *cobra.Command, args []string) error {
 	// JSON output must stay pure (progress lines would corrupt it) and piped
 	// text should not be spammed with per-session lines.
 	var prog *CLIProgress
-	if auditProgressEnabled(auditFormat, stdoutIsTerminal()) {
+	if auditProgressEnabled(auditFormat, stdoutIsTerminal()) && !IsQuiet() {
 		names := make([]string, len(sessions))
 		for i := range sessions {
 			names[i] = fmt.Sprintf("Scanning session %d/%d", i+1, len(sessions))
@@ -284,10 +284,11 @@ func loadSessionEvents(path string) ([]audit.ToolEvent, error) {
 	return events, nil
 }
 
-// auditTint applies a theme foreground color on a TTY only; piped output
-// stays plain so scripts never see stray ANSI escapes.
+// auditTint applies a theme foreground color when color output is appropriate
+// (honors --quiet, NO_COLOR, FORCE_COLOR, and TTY state via ShouldColor).
+// Piped output stays plain so scripts never see stray ANSI escapes.
 func auditTint(s string, color color.Color) string {
-	if !stdoutIsTerminal() || s == "" {
+	if !ShouldColor() || s == "" {
 		return s
 	}
 	return lipgloss.NewStyle().Foreground(color).Render(s)

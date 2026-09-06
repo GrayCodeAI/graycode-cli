@@ -44,7 +44,7 @@ func newCLIProgress(title string, steps []string, w io.Writer, tty bool) *CLIPro
 // its stop channel is closed on Stop() and cannot be restarted.
 func (c *CLIProgress) StartStep(i int) {
 	c.pt.StartStep(i)
-	if !c.tty || i < 0 || i >= len(c.pt.Steps) {
+	if IsQuiet() || !c.tty || i < 0 || i >= len(c.pt.Steps) {
 		return
 	}
 	c.spinner = NewBrailleSpinner(SpinnerGraycode, c.pt.Steps[i].Name)
@@ -61,7 +61,7 @@ func (c *CLIProgress) StartStep(i int) {
 func (c *CLIProgress) CompleteStep(i int) {
 	c.spinner.Stop()
 	c.pt.CompleteStep(i)
-	if i < 0 || i >= len(c.pt.Steps) {
+	if IsQuiet() || i < 0 || i >= len(c.pt.Steps) {
 		return
 	}
 	s := c.pt.Steps[i]
@@ -75,7 +75,7 @@ func (c *CLIProgress) CompleteStep(i int) {
 func (c *CLIProgress) FailStep(i int, reason string) {
 	c.spinner.Stop()
 	c.pt.FailStep(i, reason)
-	if i < 0 || i >= len(c.pt.Steps) {
+	if IsQuiet() || i < 0 || i >= len(c.pt.Steps) {
 		return
 	}
 	s := c.pt.Steps[i]
@@ -86,10 +86,11 @@ func (c *CLIProgress) FailStep(i int, reason string) {
 		c.tint(reason, errorCoral)))
 }
 
-// tint applies a theme foreground color in TTY mode only; piped/CI output
-// stays plain so scripts never see stray ANSI escapes.
+// tint applies a theme foreground color when color output is appropriate
+// (honors --quiet, NO_COLOR, FORCE_COLOR, and TTY state via ShouldColor).
+// Piped/CI output stays plain so scripts never see stray ANSI escapes.
 func (c *CLIProgress) tint(s string, color color.Color) string {
-	if !c.tty || s == "" {
+	if !ShouldColor() || s == "" {
 		return s
 	}
 	return lipgloss.NewStyle().Foreground(color).Render(s)
@@ -107,16 +108,16 @@ func (c *CLIProgress) bar() string {
 	}
 	filledStr := strings.Repeat("█", filled)
 	emptyStr := strings.Repeat("░", width-filled)
-	if c.tty {
-		return c.tint(filledStr, successTeal) + c.tint(emptyStr, borderDim)
-	}
-	return filledStr + emptyStr
+	return c.tint(filledStr, successTeal) + c.tint(emptyStr, borderDim)
 }
 
 // Done stops any animation and prints a themed completion summary with the
 // final progress bar. Uses errorCoral when any step failed.
 func (c *CLIProgress) Done() {
 	c.spinner.Stop()
+	if IsQuiet() {
+		return
+	}
 	elapsed := c.pt.GetElapsed()
 	failures := 0
 	for _, s := range c.pt.Steps {
