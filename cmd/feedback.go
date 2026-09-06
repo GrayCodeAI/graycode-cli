@@ -118,7 +118,7 @@ func saveFeedbackLocal(report FeedbackReport) error {
 		return fmt.Errorf("write feedback: %w", err)
 	}
 
-	fmt.Printf("Feedback saved to %s\n", path)
+	fmt.Println(auditTint("Feedback saved to ", doneGreen) + auditTint(path, textMuted))
 	return nil
 }
 
@@ -153,7 +153,7 @@ func openFeedbackIssue(report FeedbackReport) error {
 		return nil
 	}
 
-	fmt.Println("Opened feedback issue in your browser.")
+	fmt.Println(auditTint("Opened feedback issue in your browser.", doneGreen))
 	return nil
 }
 

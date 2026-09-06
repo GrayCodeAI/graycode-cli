@@ -51,20 +51,20 @@ var costAnalyzeCmd = &cobra.Command{
 			return nil
 		}
 
-		cmd.Println("[Experimental] Cost tracking is not yet fully available.")
+		cmd.Println(auditTint("[Experimental] Cost tracking is not yet fully available.", warnAmber))
 		cmd.Println()
 
 		if report.TotalSpend == 0 {
-			cmd.Println("No cost data collected in this session.")
+			cmd.Println(auditTint("No cost data collected in this session.", textMuted))
 			cmd.Println()
-			cmd.Println("Once session data integration is complete, the analyzer will support:")
-			cmd.Println("  - Spend breakdown by model and task type")
-			cmd.Println("  - Wasted spend detection (expensive models for simple tasks)")
-			cmd.Println("  - Abandoned output tracking")
-			cmd.Println("  - Model routing recommendations")
-			cmd.Println("  - Prompt caching suggestions")
+			cmd.Println(auditTint("Once session data integration is complete, the analyzer will support:", textMuted))
+			cmd.Println(auditTint("  - Spend breakdown by model and task type", textMuted))
+			cmd.Println(auditTint("  - Wasted spend detection (expensive models for simple tasks)", textMuted))
+			cmd.Println(auditTint("  - Abandoned output tracking", textMuted))
+			cmd.Println(auditTint("  - Model routing recommendations", textMuted))
+			cmd.Println(auditTint("  - Prompt caching suggestions", textMuted))
 			cmd.Println()
-			cmd.Println("To track progress: https://github.com/GrayCodeAI/graycode-cli/issues")
+			cmd.Println(auditTint("To track progress: https://github.com/GrayCodeAI/graycode-cli/issues", textMuted))
 			return nil
 		}
 

@@ -27,7 +27,7 @@ var cloudConnectCmd = &cobra.Command{
 		if err := cloud.SaveDeviceConfig(cloud.DeviceConfig{Endpoint: endpoint, DeviceID: deviceID, ProjectID: projectID}, token); err != nil {
 			return err
 		}
-		cmd.Println("Graycode Cloud connected. Usage synchronization is opt-in and fail-open.")
+		cmd.Println(auditTint("Graycode Cloud connected. Usage synchronization is opt-in and fail-open.", doneGreen))
 		return nil
 	},
 }
@@ -81,7 +81,7 @@ var cloudLoginCmd = &cobra.Command{
 				if err := cloud.SaveDeviceConfig(cloud.DeviceConfig{Endpoint: endpoint, DeviceID: poll.DeviceID, ProjectID: poll.ProjectID}, poll.Token); err != nil {
 					return err
 				}
-				cmd.Printf("Graycode Cloud connected for project %s.\n", poll.ProjectID)
+				cmd.Println(auditTint("Graycode Cloud connected for project ", doneGreen) + auditTint(poll.ProjectID, textPrimary) + auditTint(".", doneGreen))
 				return nil
 			case "expired":
 				return fmt.Errorf("graycode cloud device authorization expired")
@@ -97,10 +97,10 @@ var cloudStatusCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		client, cfg, err := cloud.LoadClient()
 		if err != nil || !client.Enabled() {
-			cmd.Println("Graycode Cloud is not connected.")
+			cmd.Println(auditTint("Graycode Cloud is not connected.", textMuted))
 			return nil
 		}
-		cmd.Printf("Graycode Cloud connected: %s (device %s, project %s)\n", cfg.Endpoint, cfg.DeviceID, cfg.ProjectID)
+		cmd.Println(auditTint("Graycode Cloud connected: ", doneGreen) + auditTint(cfg.Endpoint, textPrimary) + auditTint(fmt.Sprintf(" (device %s, project %s)", cfg.DeviceID, cfg.ProjectID), textMuted))
 		return nil
 	},
 }

@@ -52,7 +52,7 @@ var sandboxDiffCmd = &cobra.Command{
 		sb := getSandbox()
 		d := sb.Diff()
 		if d == "" {
-			cmd.Println("No pending changes.")
+			cmd.Println(auditTint("No pending changes.", textMuted))
 			return
 		}
 		fmt.Print(d)
@@ -65,21 +65,21 @@ var sandboxApplyCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sb := getSandbox()
 		if !sb.HasChanges() {
-			cmd.Println("No pending changes to apply.")
+			cmd.Println(auditTint("No pending changes to apply.", textMuted))
 			return nil
 		}
 
 		stats := sb.Stats()
-		cmd.Println(fmt.Sprintf("Applying %d change(s): +%d -%d lines, %d created, %d modified, %d deleted",
+		cmd.Println(auditTint(fmt.Sprintf("Applying %d change(s): +%d -%d lines, %d created, %d modified, %d deleted",
 			stats.FilesCreated+stats.FilesModified+stats.FilesDeleted,
 			stats.LinesAdded, stats.LinesRemoved,
-			stats.FilesCreated, stats.FilesModified, stats.FilesDeleted))
+			stats.FilesCreated, stats.FilesModified, stats.FilesDeleted), textPrimary))
 
 		if err := sb.Apply(); err != nil {
 			return fmt.Errorf("apply failed: %w", err)
 		}
 
-		cmd.Println("All changes applied.")
+		cmd.Println(auditTint("All changes applied.", doneGreen))
 		return nil
 	},
 }
@@ -90,11 +90,11 @@ var sandboxDiscardCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		sb := getSandbox()
 		if !sb.HasChanges() {
-			cmd.Println("No pending changes to discard.")
+			cmd.Println(auditTint("No pending changes to discard.", textMuted))
 			return
 		}
 		sb.Discard()
-		cmd.Println("All pending changes discarded.")
+		cmd.Println(auditTint("All pending changes discarded.", doneGreen))
 	},
 }
 
