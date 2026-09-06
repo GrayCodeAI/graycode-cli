@@ -670,7 +670,7 @@ var configCmd = &cobra.Command{
 				if err := graycodeconfig.SetGlobalSetting(args[1], strings.Join(args[2:], " ")); err != nil {
 					return err
 				}
-				cmd.Println("updated", args[1])
+				cmd.Println(auditTint("updated ", doneGreen) + auditTint(args[1], textPrimary))
 				return nil
 			case "provider":
 				if len(args) < 2 {
@@ -679,7 +679,7 @@ var configCmd = &cobra.Command{
 				if err := graycodeconfig.SetGlobalSetting("provider", strings.Join(args[1:], " ")); err != nil {
 					return err
 				}
-				cmd.Println("updated provider")
+				cmd.Println(auditTint("updated provider", doneGreen))
 				return nil
 			case "model":
 				if len(args) < 2 {
@@ -688,7 +688,7 @@ var configCmd = &cobra.Command{
 				if err := graycodeconfig.SetGlobalSetting("model", strings.Join(args[1:], " ")); err != nil {
 					return err
 				}
-				cmd.Println("updated model")
+				cmd.Println(auditTint("updated model", doneGreen))
 				return nil
 			case "keys":
 				cmd.Println(apiKeyConfigSummary())
