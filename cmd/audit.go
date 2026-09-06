@@ -314,12 +314,19 @@ func printAuditText(cmd *cobra.Command, result AuditResult) {
 	_, _ = fmt.Fprintf(w, "  %s\n", auditTint("Graycode Audit Report", graycodeColor))
 	_, _ = fmt.Fprintf(w, "═══════════════════════════════════════════════════════════════\n")
 	_, _ = fmt.Fprintf(w, "\n")
-	_, _ = fmt.Fprintf(w, "  Scanned:     %d sessions (last %d days)\n", result.Sessions, result.Days)
-	_, _ = fmt.Fprintf(w, "  Total hits:  %d\n", result.TotalHits)
-	_, _ = fmt.Fprintf(w, "  Scanned at:  %s\n", result.ScannedAt)
+	_, _ = fmt.Fprintf(w, "  %s %d sessions (last %d days)\n",
+		auditTint("Scanned:", textMuted), result.Sessions, result.Days)
+	hitsColor := doneGreen
+	if result.TotalHits > 0 {
+		hitsColor = errorCoral
+	}
+	_, _ = fmt.Fprintf(w, "  %s %s\n",
+		auditTint("Total hits:", textMuted), auditTint(fmt.Sprintf("%d", result.TotalHits), hitsColor))
+	_, _ = fmt.Fprintf(w, "  %s %s\n",
+		auditTint("Scanned at:", textMuted), auditTint(result.ScannedAt, textPrimary))
 
 	if len(result.Detectors) == 0 {
-		_, _ = fmt.Fprintf(w, "\n  No wasteful patterns detected. Great job!\n\n")
+		_, _ = fmt.Fprintf(w, "\n  %s\n\n", auditTint("No wasteful patterns detected. Great job!", doneGreen))
 		return
 	}
 
