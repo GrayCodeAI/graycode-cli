@@ -47,7 +47,22 @@ Exits non-zero on the first failed check.`,
 		}
 
 		// 3. Project test/verify checks discovered from the workspace.
-		for _, c := range runWorkspaceChecks() {
+		// Running them can be slow (actual test/verify commands), so show a
+		// TTY-only animated indicator while they execute; the structured
+		// [OK]/[FAIL] results are printed only after the animation clears.
+		checks, detectErr := testrunner.Detect(".")
+		var prog *CLIProgress
+		if detectErr == nil && len(checks) > 0 && stdoutIsTerminal() {
+			prog = NewCLIProgress("Verify", []string{fmt.Sprintf("Running %d project checks", len(checks))})
+			defer prog.Abort()
+			prog.StartStep(0)
+		}
+		results := runWorkspaceChecks()
+		if prog != nil {
+			prog.CompleteStep(0)
+			prog.Done()
+		}
+		for _, c := range results {
 			if c.Err != nil {
 				ok = false
 				cmd.Printf("[FAIL] %s: %v\n", c.Name, c.Err)
