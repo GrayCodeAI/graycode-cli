@@ -109,24 +109,26 @@ var governanceExplainCmd = &cobra.Command{
 			scoped = strings.Join(scopeNames(scopes), ", ")
 		}
 		verdict := "DENY"
+		verdictColor := errorCoral
 		if dec.Allowed {
 			verdict = "ALLOW"
+			verdictColor = doneGreen
 		}
-		cmd.Printf("tool:       %s\n", toolName)
-		cmd.Printf("scopes:     %s\n", scoped)
+		cmd.Printf("%s %s\n", auditTint("tool:", textMuted), auditTint(toolName, textPrimary))
+		cmd.Printf("%s %s\n", auditTint("scopes:", textMuted), auditTint(scoped, textPrimary))
 		if summary != "" {
-			cmd.Printf("summary:    %s\n", summary)
+			cmd.Printf("%s %s\n", auditTint("summary:", textMuted), auditTint(summary, textPrimary))
 		}
-		cmd.Printf("decision:   %s\n", verdict)
-		cmd.Printf("source:     %s\n", dec.Source)
+		cmd.Printf("%s %s\n", auditTint("decision:", textMuted), auditTint(verdict, verdictColor))
+		cmd.Printf("%s %s\n", auditTint("source:", textMuted), auditTint(dec.Source, textPrimary))
 		if dec.Scope != "" {
-			cmd.Printf("scope hit:  %s\n", dec.Scope)
+			cmd.Printf("%s %s\n", auditTint("scope hit:", textMuted), auditTint(string(dec.Scope), textPrimary))
 		}
 		if dec.Rule != "" {
-			cmd.Printf("rule:       %s\n", dec.Rule)
+			cmd.Printf("%s %s\n", auditTint("rule:", textMuted), auditTint(dec.Rule, textPrimary))
 		}
 		if dec.Reason != "" {
-			cmd.Printf("reason:     %s\n", dec.Reason)
+			cmd.Printf("%s %s\n", auditTint("reason:", textMuted), auditTint(dec.Reason, textPrimary))
 		}
 		return nil
 	},
