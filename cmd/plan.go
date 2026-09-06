@@ -37,14 +37,14 @@ var planCreateCmd = &cobra.Command{
 
 		// Generate the plan prompt (would normally be sent to an LLM).
 		prompt := planner.Generate(description, "")
-		cmd.Println("Plan prompt generated. Send this to an LLM to produce a plan:")
-		cmd.Println("--- System ---")
+		cmd.Println(auditTint("Plan prompt generated. Send this to an LLM to produce a plan:", textMuted))
+		cmd.Println(auditTint("--- System ---", graycodeColor))
 		cmd.Println(prompt.System)
 		cmd.Println()
-		cmd.Println("--- User ---")
+		cmd.Println(auditTint("--- User ---", graycodeColor))
 		cmd.Println(prompt.User)
 		cmd.Println()
-		cmd.Println("Once you have the LLM response, save it with an explicit output path or import it into Graycode plans.")
+		cmd.Println(auditTint("Once you have the LLM response, save it with an explicit output path or import it into Graycode plans.", textMuted))
 		return nil
 	},
 }
@@ -60,7 +60,7 @@ var planListCmd = &cobra.Command{
 				if planJSON {
 					fmt.Println("[]")
 				} else {
-					cmd.Println("No plans found. Create one with: graycode plan create <description>")
+					cmd.Println(auditTint("No plans found. Create one with: graycode plan create <description>", textMuted))
 				}
 				return nil
 			}
@@ -90,7 +90,7 @@ var planListCmd = &cobra.Command{
 		}
 
 		if len(plans) == 0 {
-			cmd.Println("No plans found. Create one with: graycode plan create <description>")
+			cmd.Println(auditTint("No plans found. Create one with: graycode plan create <description>", textMuted))
 			return nil
 		}
 
@@ -99,9 +99,9 @@ var planListCmd = &cobra.Command{
 			total := len(plan.Tasks)
 			done := total - pending
 			cmd.Println(fmt.Sprintf(
-				"  %s  [%d/%d done]  %s",
-				plan.Title,
-				done, total,
+				"  %s  %s  %s",
+				auditTint(plan.Title, textPrimary),
+				auditTint(fmt.Sprintf("[%d/%d done]", done, total), doneGreen),
 				plan.Title,
 			))
 		}
@@ -184,7 +184,7 @@ followed by the task ID: graycode plan done <name> <task-id>`,
 			return fmt.Errorf("write plan: %w", err)
 		}
 
-		cmd.Println(fmt.Sprintf("Task %d marked as done.", taskID))
+		cmd.Println(auditTint(fmt.Sprintf("Task %d marked as done.", taskID), doneGreen))
 		return nil
 	},
 }
