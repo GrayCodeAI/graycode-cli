@@ -60,7 +60,7 @@ var skillsSearchCmd = &cobra.Command{
 			return nil
 		}
 		if len(results) == 0 {
-			fmt.Println("No skills found.")
+			fmt.Println(auditTint("No skills found.", textMuted))
 			return nil
 		}
 		for _, e := range results {
@@ -99,7 +99,7 @@ var skillsRemoveCmd = &cobra.Command{
 		if err := plugin.Remove(args[0]); err != nil {
 			return err
 		}
-		fmt.Printf("Removed skill %q.\n", args[0])
+		fmt.Printf("%s\n", auditTint("Removed skill "+args[0]+".", textPrimary))
 		return nil
 	},
 }
