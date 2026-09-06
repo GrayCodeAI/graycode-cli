@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"os"
 	"os/exec"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	graycodeKestrel "github.com/GrayCodeAI/graycode-cli/internal/bridge/kestrel"
 	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 	reviewcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/review"
+	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
 	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 	kestrelLib "github.com/GrayCodeAI/kestrel"
@@ -208,14 +210,37 @@ func getCommitDiff(sha string) (string, error) {
 	return string(out), nil
 }
 
+// reviewSeverityColor maps a review finding's severity to its semantic theme
+// color, mirroring the audit report's severity palette.
+func reviewSeverityColor(sev contracts.Severity) color.Color {
+	switch sev {
+	case contracts.SeverityCritical, contracts.SeverityHigh:
+		return errorCoral
+	case contracts.SeverityMedium:
+		return warnAmber
+	default:
+		return infoSky
+	}
+}
+
 func printReviewSummary(sha string, result *reviewcontracts.Result) {
 	if len(result.Findings) == 0 {
-		fmt.Printf("%s %s — no issues found (%d files reviewed)\n", icons.CheckBold(), sha[:8], result.Stats.FilesReviewed)
+		fmt.Printf("%s %s — no issues found (%d files reviewed)\n",
+			auditTint(icons.CheckBold(), doneGreen),
+			auditTint(sha[:8], textPrimary),
+			result.Stats.FilesReviewed)
 		return
 	}
-	fmt.Printf("%s %s — %d findings (max severity: %s)\n", icons.Alert(), sha[:8], len(result.Findings), result.MaxSeverity())
+	maxSev := result.MaxSeverity()
+	fmt.Printf("%s %s — %d findings (max severity: %s)\n",
+		auditTint(icons.Alert(), errorCoral),
+		auditTint(sha[:8], textPrimary),
+		len(result.Findings),
+		auditTint(maxSev.String(), reviewSeverityColor(maxSev)))
 	for _, f := range result.Findings {
-		fmt.Printf("  [%s] %s:%d — %s\n", f.Severity, f.File, f.Line, f.Message)
+		fmt.Printf("  [%s] %s:%d — %s\n",
+			auditTint(f.Severity.String(), reviewSeverityColor(f.Severity)),
+			f.File, f.Line, f.Message)
 	}
 }
 
