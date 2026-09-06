@@ -832,7 +832,7 @@ var contextCmd = &cobra.Command{
 			if err := ExportContextToFile("", contextFocus, contextOutput); err != nil {
 				return err
 			}
-			cmd.Println("Context exported to", contextOutput)
+			cmd.Println(auditTint("Context exported to", doneGreen) + " " + auditTint(contextOutput, textPrimary))
 			return nil
 		}
 		result, err := ExportContext("", contextFocus)

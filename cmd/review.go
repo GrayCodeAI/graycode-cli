@@ -61,7 +61,7 @@ func runReviewInit(_ *cobra.Command, _ []string) error {
 	if _, err := os.Stat(hookPath); err == nil && !reviewInitForce {
 		existing, _ := os.ReadFile(hookPath) // #nosec G304 -- hookPath built from internal hooksDir constant, not external input
 		if strings.Contains(string(existing), "graycode review") {
-			fmt.Println(icons.CheckBold() + " graycode review hook already installed")
+			fmt.Println(auditTint(icons.CheckBold()+" ", doneGreen) + auditTint("graycode review hook already installed", textPrimary))
 			return nil
 		}
 		return fmt.Errorf("post-commit hook already exists at %s\nUse --force to overwrite, or manually add:\n  %s", hookPath, strings.TrimSpace(hookScript))
@@ -72,10 +72,10 @@ func runReviewInit(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("write hook: %w", err)
 	}
 
-	fmt.Printf("%s Installed post-commit hook at %s\n", icons.CheckBold(), hookPath)
-	fmt.Println("  Every commit will now be reviewed automatically.")
-	fmt.Println("  View reviews: graycode review status")
-	fmt.Println("  Interactive:  graycode review tui")
+	fmt.Println(auditTint(icons.CheckBold()+" ", doneGreen) + auditTint("Installed post-commit hook at ", textPrimary) + auditTint(hookPath, textMuted))
+	fmt.Println(auditTint("  Every commit will now be reviewed automatically.", textMuted))
+	fmt.Println(auditTint("  View reviews: graycode review status", textMuted))
+	fmt.Println(auditTint("  Interactive:  graycode review tui", textMuted))
 	return nil
 }
 
