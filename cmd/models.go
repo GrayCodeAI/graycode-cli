@@ -38,10 +38,16 @@ var modelsRefreshCmd = &cobra.Command{
 		}
 		ctx, cancel := context.WithTimeout(cmd.Context(), 60*time.Second)
 		defer cancel()
+		prog := NewCLIProgress("Models", []string{"Discovering catalog"})
+		defer prog.Abort()
+		prog.StartStep(0)
 		summary, err := graycodeconfig.RefreshModelCatalogV1WithSettings(ctx, settings)
 		if err != nil {
+			prog.FailStep(0, err.Error())
 			return err
 		}
+		prog.CompleteStep(0)
+		prog.Done()
 		cmd.Println(summary)
 		return nil
 	},
@@ -104,6 +110,15 @@ var modelsListCmd = &cobra.Command{
 		}
 		ctx := cmd.Context()
 		var models []graycodeconfig.EngineModel
+		// Only the live provider fetch is slow enough to animate, and only when
+		// the output is a human table (JSON/raw must stay pure).
+		animate := modelsListLive && !modelsListJSON && !modelsListRaw
+		var prog *CLIProgress
+		if animate {
+			prog = NewCLIProgress("Models", []string{"Fetching live models"})
+			defer prog.Abort()
+			prog.StartStep(0)
+		}
 		if modelsListLive {
 			if providerName == "" {
 				return fmt.Errorf("provider required with --live (e.g. graycode models list canopywave --live --json)")
@@ -113,7 +128,14 @@ var modelsListCmd = &cobra.Command{
 			models, err = graycodeconfig.FetchModelsForProviderWithSettings(ctx, settings, providerName)
 		}
 		if err != nil {
+			if prog != nil {
+				prog.FailStep(0, err.Error())
+			}
 			return err
+		}
+		if prog != nil {
+			prog.CompleteStep(0)
+			prog.Done()
 		}
 		if modelsListJSON || modelsListRaw {
 			out, merr := marshalModelListJSON(models, modelsListRaw, modelsListLive)
