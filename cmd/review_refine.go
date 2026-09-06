@@ -62,14 +62,14 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 	}
 
 	if len(reviews) == 0 {
-		fmt.Println("No open reviews to refine.")
+		fmt.Println(auditTint("No open reviews to refine.", textMuted))
 		return nil
 	}
 
-	fmt.Printf("Refining %d review(s), max %d iterations...\n\n", len(reviews), refineMaxIter)
+	fmt.Printf("%s\n\n", auditTint(fmt.Sprintf("Refining %d review(s), max %d iterations...", len(reviews), refineMaxIter), textPrimary))
 
 	for iter := 1; iter <= refineMaxIter; iter++ {
-		fmt.Printf("── Iteration %d/%d ──\n", iter, refineMaxIter)
+		fmt.Printf("%s\n", auditTint(fmt.Sprintf("── Iteration %d/%d ──", iter, refineMaxIter), graycodeColor))
 
 		// Fix all open reviews.
 		for _, r := range reviews {
@@ -77,22 +77,22 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 				continue
 			}
 			if err := fixReviewRefine(store, r); err != nil {
-				fmt.Printf("  %s #%d fix failed: %v\n", icons.CloseThick(), r.ID, err)
+				fmt.Printf("  %s %s\n", auditTint(icons.CloseThick(), errorCoral), auditTint(fmt.Sprintf("#%d fix failed: %v", r.ID, err), errorCoral))
 			} else {
-				fmt.Printf("  %s #%d fix applied\n", icons.CheckBold(), r.ID)
+				fmt.Printf("  %s %s\n", auditTint(icons.CheckBold(), doneGreen), auditTint(fmt.Sprintf("#%d fix applied", r.ID), doneGreen))
 			}
 		}
 
 		// Wait briefly for hook to fire, then re-review the latest commit.
 		latestSHA := getLatestCommitSHA()
 		if latestSHA == "" {
-			fmt.Println("  Could not determine latest commit.")
+			fmt.Println(auditTint("  Could not determine latest commit.", textMuted))
 			break
 		}
 
-		fmt.Printf("  Reviewing %s...\n", latestSHA[:8])
+		fmt.Printf("%s\n", auditTint("  Reviewing "+latestSHA[:8]+"...", textPrimary))
 		if err := runReviewOnSHA(store, latestSHA); err != nil {
-			fmt.Printf("  %s Review failed: %v\n", icons.CloseThick(), err)
+			fmt.Printf("  %s %s\n", auditTint(icons.CloseThick(), errorCoral), auditTint("Review failed: "+err.Error(), errorCoral))
 			break
 		}
 
