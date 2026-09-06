@@ -47,7 +47,7 @@ var pluginActivateCmd = &cobra.Command{
 		if err := dm.Activate(name); err != nil {
 			return fmt.Errorf("activate plugin %q: %w", name, err)
 		}
-		cmd.Printf("Plugin %q activated.\n", name)
+		cmd.Printf("%s\n", auditTint("Plugin "+name+" activated.", doneGreen))
 		return nil
 	},
 }
@@ -62,7 +62,7 @@ var pluginDeactivateCmd = &cobra.Command{
 		if err := dm.Deactivate(name); err != nil {
 			return fmt.Errorf("deactivate plugin %q: %w", name, err)
 		}
-		cmd.Printf("Plugin %q deactivated.\n", name)
+		cmd.Printf("%s\n", auditTint("Plugin "+name+" deactivated.", textPrimary))
 		return nil
 	},
 }
@@ -77,7 +77,7 @@ var pluginReloadCmd = &cobra.Command{
 		if err := dm.Reload(name); err != nil {
 			return fmt.Errorf("reload plugin %q: %w", name, err)
 		}
-		cmd.Printf("Plugin %q reloaded.\n", name)
+		cmd.Printf("%s\n", auditTint("Plugin "+name+" reloaded.", textPrimary))
 		return nil
 	},
 }
@@ -134,7 +134,7 @@ var pluginInstallDynamicCmd = &cobra.Command{
 			if err := plugin.Install(source); err != nil {
 				return err
 			}
-			cmd.Printf("Installed plugin from %s.\n", source)
+			cmd.Printf("%s\n", auditTint("Installed plugin from "+source+".", doneGreen))
 			return nil
 		}
 
@@ -143,7 +143,7 @@ var pluginInstallDynamicCmd = &cobra.Command{
 		if err := dm.InstallFromGitHub(source); err != nil {
 			return err
 		}
-		cmd.Printf("Installed plugin from %s.\n", source)
+		cmd.Printf("%s\n", auditTint("Installed plugin from "+source+".", doneGreen))
 
 		// Re-discover
 		_ = dm.DiscoverAll()
@@ -185,7 +185,7 @@ var pluginUninstallCmd = &cobra.Command{
 		if err := dm.Uninstall(name); err != nil {
 			return err
 		}
-		cmd.Printf("Plugin %q uninstalled.\n", name)
+		cmd.Printf("%s\n", auditTint("Plugin "+name+" uninstalled.", textPrimary))
 		return nil
 	},
 }
@@ -329,19 +329,19 @@ See `+"`plugin.json`"+` for the full manifest configuration.
 		// #nosec G306
 		_ = os.WriteFile(filepath.Join(dir, "mcp.json"), []byte("{\n  \"servers\": []\n}\n"), 0o644)
 
-		cmd.Printf("Created multi-component plugin scaffold at ./%s/\n", name)
-		cmd.Printf("  %s/plugin.json  - Plugin manifest\n", name)
-		cmd.Printf("  %s/main.go      - Plugin entrypoint\n", name)
-		cmd.Printf("  %s/skills/      - Bundled skills\n", name)
-		cmd.Printf("  %s/hooks/       - Hook scripts\n", name)
-		cmd.Printf("  %s/tools/       - Tool binaries\n", name)
-		cmd.Printf("  %s/mcp.json     - MCP server specs\n", name)
-		cmd.Printf("  %s/README.md    - Documentation\n", name)
+		cmd.Printf("%s\n", auditTint("Created multi-component plugin scaffold at ./"+name+"/", doneGreen))
+		cmd.Printf("%s\n", auditTint("  "+name+"/plugin.json  - Plugin manifest", textMuted))
+		cmd.Printf("%s\n", auditTint("  "+name+"/main.go      - Plugin entrypoint", textMuted))
+		cmd.Printf("%s\n", auditTint("  "+name+"/skills/      - Bundled skills", textMuted))
+		cmd.Printf("%s\n", auditTint("  "+name+"/hooks/       - Hook scripts", textMuted))
+		cmd.Printf("%s\n", auditTint("  "+name+"/tools/       - Tool binaries", textMuted))
+		cmd.Printf("%s\n", auditTint("  "+name+"/mcp.json     - MCP server specs", textMuted))
+		cmd.Printf("%s\n", auditTint("  "+name+"/README.md    - Documentation", textMuted))
 		cmd.Println()
-		cmd.Printf("Next steps:\n")
-		cmd.Printf("  cd %s && go mod init %s\n", name, name)
-		cmd.Printf("  graycode plugin install ./%s\n", name)
-		cmd.Printf("  graycode plugin activate %s\n", name)
+		cmd.Printf("%s\n", auditTint("Next steps:", textPrimary))
+		cmd.Printf("%s\n", auditTint("  cd "+name+" && go mod init "+name, textMuted))
+		cmd.Printf("%s\n", auditTint("  graycode plugin install ./"+name, textMuted))
+		cmd.Printf("%s\n", auditTint("  graycode plugin activate "+name, textMuted))
 		return nil
 	},
 }
