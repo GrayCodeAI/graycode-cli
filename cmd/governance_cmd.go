@@ -41,22 +41,22 @@ var governanceShowCmd = &cobra.Command{
 		if path == "" {
 			path = governance.ManagedPolicyPath()
 		}
-		cmd.Printf("Governance layer %q (%s)\n", layer.Name, path)
-		cmd.Printf("Fail-closed: %t\n", layer.FailClosed)
+		cmd.Printf("%s %s\n", auditTint("Governance layer", textMuted), auditTint(fmt.Sprintf("%q (%s)", layer.Name, path), textPrimary))
+		cmd.Printf("%s %t\n", auditTint("Fail-closed:", textMuted), layer.FailClosed)
 		if len(layer.DeniedTools) > 0 {
-			cmd.Printf("Denied tools: %s\n", sortedKeys(layer.DeniedTools))
+			cmd.Printf("%s %s\n", auditTint("Denied tools:", textMuted), auditTint(sortedKeys(layer.DeniedTools), textPrimary))
 		}
 		if len(layer.DeniedBash) > 0 {
-			cmd.Printf("Denied bash patterns: %s\n", strings.Join(layer.DeniedBash, ", "))
+			cmd.Printf("%s %s\n", auditTint("Denied bash patterns:", textMuted), auditTint(strings.Join(layer.DeniedBash, ", "), textPrimary))
 		}
 		if len(layer.SensitivePaths) > 0 {
-			cmd.Printf("Sensitive paths: %s\n", strings.Join(layer.SensitivePaths, ", "))
+			cmd.Printf("%s %s\n", auditTint("Sensitive paths:", textMuted), auditTint(strings.Join(layer.SensitivePaths, ", "), textPrimary))
 		}
 		if len(layer.Capabilities) == 0 {
-			cmd.Println("No capability rows.")
+			cmd.Println(auditTint("No capability rows.", textMuted))
 			return nil
 		}
-		cmd.Println("\nCapabilities:")
+		cmd.Println(auditTint("\nCapabilities:", infoSky))
 		for _, cap := range layer.Capabilities {
 			pattern := cap.Pattern
 			if pattern == "" {
@@ -66,7 +66,15 @@ var governanceShowCmd = &cobra.Command{
 			if cap.Reason != "" {
 				reason = " (" + cap.Reason + ")"
 			}
-			cmd.Printf("  %-8s %-20s %-12s %s\n", cap.Action, cap.Scope, pattern, reason)
+			actionColor := doneGreen
+			if cap.Action == governance.ActionDeny {
+				actionColor = errorCoral
+			}
+			cmd.Printf("  %s %-20s %-12s %s\n",
+				auditTint(fmt.Sprintf("%-8s", cap.Action), actionColor),
+				auditTint(string(cap.Scope), textPrimary),
+				auditTint(pattern, textMuted),
+				auditTint(reason, textMuted))
 		}
 		return nil
 	},
@@ -81,8 +89,9 @@ var governanceValidateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		cmd.Printf("valid: %d capability row(s), fail_closed=%t (%s)\n",
-			len(layer.Capabilities), layer.FailClosed, args[0])
+		cmd.Printf("%s %d capability row(s), fail_closed=%t (%s)\n",
+			auditTint("valid:", doneGreen),
+			len(layer.Capabilities), layer.FailClosed, auditTint(args[0], textMuted))
 		return nil
 	},
 }
