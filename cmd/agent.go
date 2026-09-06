@@ -146,8 +146,8 @@ You are a specialized agent. Complete tasks according to your expertise.
 		return err
 	}
 
-	fmt.Printf("Created agent %q at %s\n", name, path)
-	fmt.Printf("Edit the file to customize the system prompt.\n")
+	fmt.Printf("%s\n", auditTint("Created agent "+name+" at ", doneGreen)+auditTint(path, textPrimary))
+	fmt.Printf("%s\n", auditTint("Edit the file to customize the system prompt.", textMuted))
 	return nil
 }
 
@@ -157,15 +157,15 @@ func runAgentShow(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("Name:        %s\n", a.Name)
-	fmt.Printf("Description: %s\n", a.Description)
+	fmt.Printf("%s %s\n", auditTint("Name:", textMuted), auditTint(a.Name, textPrimary))
+	fmt.Printf("%s %s\n", auditTint("Description:", textMuted), auditTint(a.Description, textPrimary))
 	model := a.Model
 	if model == "" {
 		model = "(inherit from session)"
 	}
-	fmt.Printf("Model:       %s\n", model)
-	fmt.Printf("File:        %s\n", a.FilePath)
-	fmt.Printf("\n--- Prompt ---\n%s\n", a.Prompt)
+	fmt.Printf("%s %s\n", auditTint("Model:", textMuted), auditTint(model, textPrimary))
+	fmt.Printf("%s %s\n", auditTint("File:", textMuted), auditTint(a.FilePath, textPrimary))
+	fmt.Printf("\n%s\n%s\n", auditTint("--- Prompt ---", graycodeColor), a.Prompt)
 	return nil
 }
 
@@ -178,6 +178,6 @@ func runAgentRemove(_ *cobra.Command, args []string) error {
 	if err := os.Remove(a.FilePath); err != nil {
 		return fmt.Errorf("remove %s: %w", a.FilePath, err)
 	}
-	fmt.Printf("Removed agent %q (%s)\n", a.Name, a.FilePath)
+	fmt.Printf("%s\n", auditTint("Removed agent "+a.Name+" ("+a.FilePath+")", textPrimary))
 	return nil
 }

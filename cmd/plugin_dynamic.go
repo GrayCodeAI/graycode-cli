@@ -426,8 +426,8 @@ var pluginMarketplaceListCmd = &cobra.Command{
 			return fmt.Errorf("fetch marketplace: %w (indexes may be unpublished; add a source with graycode plugin marketplace add)", err)
 		}
 		if len(entries) == 0 {
-			cmd.Println("No marketplace plugins found.")
-			cmd.Println("Add a source: graycode plugin marketplace add <name> <index-url>")
+			cmd.Println(auditTint("No marketplace plugins found.", textMuted))
+			cmd.Println(auditTint("Add a source: graycode plugin marketplace add <name> <index-url>", textMuted))
 			return nil
 		}
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
@@ -460,7 +460,7 @@ var pluginMarketplaceInstallCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		cmd.Printf("Installed %s to %s\n", entry.Name, dir)
+		cmd.Printf("%s\n", auditTint("Installed "+entry.Name+" to ", doneGreen)+auditTint(dir, textPrimary))
 		// re-discover
 		_ = getDynamicManager().DiscoverAll()
 		return nil
@@ -475,7 +475,7 @@ var pluginMarketplaceAddCmd = &cobra.Command{
 		if err := plugin.AddSource(args[0], args[1]); err != nil {
 			return err
 		}
-		cmd.Printf("Added marketplace source %q → %s\n", args[0], args[1])
+		cmd.Printf("%s\n", auditTint("Added marketplace source "+args[0]+" → ", doneGreen)+auditTint(args[1], textPrimary))
 		return nil
 	},
 }
