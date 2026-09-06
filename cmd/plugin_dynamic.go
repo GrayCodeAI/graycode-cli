@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"os"
 	"path/filepath"
 	"text/tabwriter"
@@ -13,6 +14,20 @@ import (
 )
 
 var dynamicManager *plugin.DynamicPluginManager
+
+// pluginStateColor maps a plugin lifecycle state to a theme color.
+func pluginStateColor(state plugin.PluginState) color.Color {
+	switch state {
+	case plugin.StateActive:
+		return doneGreen
+	case plugin.StateFailed:
+		return errorCoral
+	case plugin.StateDisabled:
+		return textDisabled
+	default: // discovered, loaded
+		return infoSky
+	}
+}
 
 func getDynamicManager() *plugin.DynamicPluginManager {
 	if dynamicManager == nil {
@@ -75,7 +90,7 @@ var pluginStatusCmd = &cobra.Command{
 		statuses := dm.Status()
 
 		if len(statuses) == 0 {
-			cmd.Println("No plugins discovered. Run 'graycode plugin install' to add plugins.")
+			cmd.Println(auditTint("No plugins discovered. Run 'graycode plugin install' to add plugins.", textMuted))
 			return nil
 		}
 
@@ -90,12 +105,12 @@ var pluginStatusCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		if _, err := fmt.Fprintf(w, "NAME\tVERSION\tSTATE\tTOOLS\tHOOKS\n"); err != nil {
+		if _, err := fmt.Fprintf(w, "%s\n", auditTint("NAME\tVERSION\tSTATE\tTOOLS\tHOOKS", textMuted)); err != nil {
 			return err
 		}
 		for _, s := range statuses {
 			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d\n",
-				s.Name, s.Version, s.State, s.ToolCount, s.HookCount); err != nil {
+				s.Name, s.Version, auditTint(string(s.State), pluginStateColor(s.State)), s.ToolCount, s.HookCount); err != nil {
 				return err
 			}
 		}
