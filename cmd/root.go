@@ -562,7 +562,13 @@ var doctorCmd = &cobra.Command{
 		if doctorJSONFlag {
 			cmd.Println(doctorOutput(settings))
 		} else {
-			cmd.Println(doctorReport(settings))
+			prog := NewCLIProgress("Doctor", []string{"Running diagnostics"})
+			defer prog.Abort()
+			prog.StartStep(0)
+			report := doctorReport(settings)
+			prog.CompleteStep(0)
+			prog.Done()
+			cmd.Println(report)
 		}
 		return nil
 	},
@@ -591,7 +597,20 @@ var preflightCmd = &cobra.Command{
 			ctx, cancel = context.WithTimeout(ctx, limit)
 			defer cancel()
 		}
+		// Only the live provider verification is slow enough to animate, and
+		// only when the output is a human report (JSON must stay pure).
+		animate := preflightLiveFlag && !preflightJSON
+		var prog *CLIProgress
+		if animate {
+			prog = NewCLIProgress("Preflight", []string{"Verifying provider"})
+			defer prog.Abort()
+			prog.StartStep(0)
+		}
 		r := graycodeconfig.EnginePreflightReportWithSettings(ctx, settings, graycodeconfig.EnginePreflightOptions{VerifyLive: preflightLiveFlag})
+		if prog != nil {
+			prog.CompleteStep(0)
+			prog.Done()
+		}
 		if preflightJSON {
 			out, err := json.MarshalIndent(r, "", "  ")
 			if err != nil {
