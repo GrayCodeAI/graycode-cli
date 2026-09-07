@@ -182,7 +182,7 @@ func runReviewList(_ *cobra.Command, _ []string) error {
 		return err
 	}
 	if len(reviews) == 0 {
-		fmt.Println("No reviews yet.")
+		fmt.Println(auditTint("No reviews yet.", textMuted))
 		return nil
 	}
 
@@ -229,7 +229,7 @@ func printReviewDetail(r *ReviewRecord) {
 	for i, f := range r.Findings {
 		sev := severityStyle(f.Severity.String())
 		fmt.Printf("  %d. %s %s:%d\n", i+1, sev, f.File, f.Line)
-		fmt.Printf("     %s\n", f.Message)
+		fmt.Printf("     %s\n", auditTint(f.Message, textMuted))
 		if f.Fix != "" {
 			fmt.Printf("     %s %s\n", auditTint("Fix:", textMuted), f.Fix)
 		}

@@ -118,11 +118,11 @@ var skillsInfoCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Skill: %s (not installed)\n", entry.Name)
+		fmt.Printf("%s %s\n", auditTint("Skill:", textMuted), auditTint(entry.Name, textPrimary)+auditTint(" (not installed)", textMuted))
 		if entry.Description != "" {
-			fmt.Printf("Description: %s\n", entry.Description)
+			fmt.Printf("%s %s\n", auditTint("Description:", textMuted), auditTint(entry.Description, textPrimary))
 		}
-		fmt.Printf("Repo: %s\nInstalls: %d\n", entry.Repo, entry.Installs)
+		fmt.Printf("%s %s\n%s %d\n", auditTint("Repo:", textMuted), auditTint(entry.Repo, textPrimary), auditTint("Installs:", textMuted), entry.Installs)
 		return nil
 	},
 }
