@@ -426,10 +426,15 @@ var pluginMarketplaceListCmd = &cobra.Command{
 	Short: "List plugins available from marketplace sources",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		mc := plugin.NewMarketplaceClient()
+		prog := NewCLIProgress("Marketplace", []string{"Fetching marketplace indexes"})
+		prog.StartStep(0)
 		entries, err := mc.FetchAll()
 		if err != nil {
+			prog.Abort()
 			return fmt.Errorf("fetch marketplace: %w (indexes may be unpublished; add a source with graycode plugin marketplace add)", err)
 		}
+		prog.CompleteStep(0)
+		prog.Done()
 		if len(entries) == 0 {
 			cmd.Println(auditTint("No marketplace plugins found.", textMuted))
 			cmd.Println(auditTint("Add a source: graycode plugin marketplace add <name> <index-url>", textMuted))
