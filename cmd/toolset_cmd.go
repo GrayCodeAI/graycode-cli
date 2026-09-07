@@ -28,7 +28,7 @@ transitively (cycle-safe) and de-duplicates.`,
 			return err
 		}
 		if len(args) == 0 {
-			fmt.Println("Available toolsets: " + strings.Join(reg.Names(), ", "))
+			fmt.Println(auditTint("Available toolsets: ", textPrimary) + auditTint(strings.Join(reg.Names(), ", "), textMuted))
 			return nil
 		}
 		name := args[0]
