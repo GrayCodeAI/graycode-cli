@@ -128,7 +128,7 @@ func runTastePush(_ *cobra.Command, _ []string) error {
 		if err := os.WriteFile(tasteFile, data, 0o600); err != nil {
 			return fmt.Errorf("write file: %w", err)
 		}
-		fmt.Printf("Taste profile exported to %s\n", tasteFile)
+		fmt.Printf("%s\n", auditTint("Taste profile exported to ", doneGreen)+auditTint(tasteFile, textPrimary))
 	} else {
 		fmt.Println(string(data))
 	}
@@ -159,7 +159,7 @@ func runTastePull(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("import profile: %w", err)
 	}
 
-	fmt.Println("Taste profile imported successfully.")
+	fmt.Println(auditTint("Taste profile imported successfully.", doneGreen))
 	return nil
 }
 
@@ -174,7 +174,7 @@ func runTasteReset(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("reset profile: %w", err)
 	}
 
-	fmt.Printf("Taste profile for %q has been reset.\n", projectID)
+	fmt.Printf("%s\n", auditTint(fmt.Sprintf("Taste profile for %q has been reset.", projectID), textPrimary))
 	return nil
 }
 
