@@ -232,7 +232,10 @@ func printReviewDetail(r *ReviewRecord) {
 
 	for i, f := range r.Findings {
 		sev := severityStyle(f.Severity.String())
-		fmt.Printf("  %d. %s %s:%d\n", i+1, sev, f.File, f.Line)
+		fmt.Printf("  %s %s %s:%d\n",
+			auditTint(fmt.Sprintf("%d.", i+1), textMuted),
+			sev,
+			auditTint(f.File, textPrimary), f.Line)
 		fmt.Printf("     %s\n", auditTint(f.Message, textMuted))
 		if f.Fix != "" {
 			fmt.Printf("     %s %s\n", auditTint("Fix:", textMuted), f.Fix)
