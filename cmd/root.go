@@ -668,10 +668,21 @@ var configCmd = &cobra.Command{
 				if len(args) < 3 {
 					return fmt.Errorf("usage: graycode config set <key> <value>")
 				}
-				if err := graycodeconfig.SetGlobalSetting(args[1], strings.Join(args[2:], " ")); err != nil {
+				key := args[1]
+				newVal := strings.Join(args[2:], " ")
+				settings, err := loadEffectiveSettings()
+				if err != nil {
 					return err
 				}
-				cmd.Println(auditTint("updated ", doneGreen) + auditTint(args[1], textPrimary))
+				oldVal, hadOld := graycodeconfig.SettingValue(settings, key)
+				if err := graycodeconfig.SetGlobalSetting(key, newVal); err != nil {
+					return err
+				}
+				if hadOld && oldVal != "" && oldVal != newVal {
+					cmd.Println(auditTint(key, textPrimary) + auditTint(": ", textMuted) + auditTint(oldVal, textMuted) + auditTint(" → ", graycodeColor) + auditTint(newVal, textPrimary) + auditTint(" (updated)", doneGreen))
+				} else {
+					cmd.Println(auditTint("updated ", doneGreen) + auditTint(key, textPrimary))
+				}
 				return nil
 			case "provider":
 				if len(args) < 2 {
