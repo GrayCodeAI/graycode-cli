@@ -124,7 +124,12 @@ func runMission(_ *cobra.Command, args []string) error {
 		workerFn = graphTrackingWorker(tool.GetTaskStore(), workerFn)
 	}
 
-	fmt.Printf("%s\n\n", auditTint(fmt.Sprintf("Executing with %d parallel workers...", cfg.MaxWorkers), textPrimary))
+	var prog *CLIProgress
+	if !IsQuiet() {
+		prog = NewCLIProgress("Mission", []string{fmt.Sprintf("Executing %d features with %d workers", len(m.Features), cfg.MaxWorkers)})
+		defer prog.Abort()
+		prog.StartStep(0)
+	}
 	var runErr error
 	if missionFromTasks {
 		runErr = m.RunStaged(ctx, workerFn, mission.WithExecutionWaves(waves))
@@ -132,7 +137,14 @@ func runMission(_ *cobra.Command, args []string) error {
 		runErr = m.Run(ctx, workerFn)
 	}
 	if runErr != nil {
+		if prog != nil {
+			prog.FailStep(0, runErr.Error())
+		}
 		return runErr
+	}
+	if prog != nil {
+		prog.CompleteStep(0)
+		prog.Done()
 	}
 
 	// Print results
