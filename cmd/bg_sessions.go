@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -160,14 +161,30 @@ func StartBGSession(prompt string, args []string) (*BGSessionInfo, error) {
 	return info, nil
 }
 
+// bgStatusColor maps a background-session status to a theme color.
+func bgStatusColor(status string) color.Color {
+	switch status {
+	case "running":
+		return infoSky
+	case "completed":
+		return doneGreen
+	case "failed":
+		return errorCoral
+	case "killed":
+		return textMuted
+	default:
+		return textPrimary
+	}
+}
+
 // FormatBGSessions formats background sessions for display.
 func FormatBGSessions(sessions []*BGSessionInfo) string {
 	if len(sessions) == 0 {
-		return "No background sessions."
+		return auditTint("No background sessions.", textMuted)
 	}
 
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("Background sessions (%d):\n", len(sessions)))
+	b.WriteString(auditTint(fmt.Sprintf("Background sessions (%d):", len(sessions)), textPrimary) + "\n")
 	b.WriteString(strings.Repeat("─", 60) + "\n")
 
 	for _, s := range sessions {
@@ -180,8 +197,8 @@ func FormatBGSessions(sessions []*BGSessionInfo) string {
 			preview = string(runes[:50]) + "..."
 		}
 		age := time.Since(s.StartedAt).Round(time.Minute)
-		b.WriteString(fmt.Sprintf("  [%s] %s — %s\n", shortID, s.Status, preview))
-		b.WriteString(fmt.Sprintf("    PID: %d · started %s ago · %s\n\n", s.PID, age, s.CWD))
+		b.WriteString(fmt.Sprintf("  %s %s %s\n", auditTint("["+shortID+"]", textPrimary), auditTint(s.Status, bgStatusColor(s.Status)), auditTint(preview, textMuted)))
+		b.WriteString(fmt.Sprintf("    %s %s · %s %s · %s\n\n", auditTint("PID:", textMuted), auditTint(fmt.Sprintf("%d", s.PID), textPrimary), auditTint("started", textMuted), auditTint(age.String()+" ago", textPrimary), auditTint(s.CWD, textMuted)))
 	}
 
 	return b.String()
