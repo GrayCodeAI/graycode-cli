@@ -62,7 +62,7 @@ func init() {
 func runFeedback(_ *cobra.Command, args []string) error {
 	body := strings.Join(args, " ")
 	if body == "" {
-		fmt.Println("Enter your feedback (press Ctrl+D when done):")
+		fmt.Println(auditTint("Enter your feedback (press Ctrl+D when done):", textPrimary))
 		data, err := readFeedbackStdin()
 		if err != nil {
 			return err
@@ -149,7 +149,7 @@ func openFeedbackIssue(report FeedbackReport) error {
 
 	if err := openBrowser(issueURL); err != nil {
 		// Fallback: print the URL.
-		fmt.Printf("Could not open browser. Please visit:\n%s\n", issueURL)
+		fmt.Printf("%s\n%s\n", auditTint("Could not open browser. Please visit:", textMuted), auditTint(issueURL, infoSky))
 		return nil
 	}
 
