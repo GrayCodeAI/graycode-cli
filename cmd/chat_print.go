@@ -354,7 +354,7 @@ func runRepl() error {
 		}
 		if output, handled, builtinErr := replBuiltinResponse(input, sess, settings, sessionID); handled {
 			if builtinErr != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", builtinErr)
+				fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("Error: %v", builtinErr), errorCoral))
 				continue
 			}
 			if output != "" {
@@ -367,7 +367,7 @@ func runRepl() error {
 
 		ch, err := sess.Stream(ctx)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("Error: %v", err), errorCoral))
 			continue
 		}
 
@@ -413,7 +413,7 @@ func runRepl() error {
 				if outputFormat == "stream-json" {
 					writePrintResult(printed.String(), sessionID, sess, true, []string{ev.Content})
 				}
-				fmt.Fprintf(os.Stderr, "Error: %s\n", ev.Content)
+				fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("Error: %s", ev.Content), errorCoral))
 			case "done":
 				switch outputFormat {
 				case "text":
