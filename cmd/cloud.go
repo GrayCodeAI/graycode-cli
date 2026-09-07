@@ -54,9 +54,9 @@ var cloudLoginCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		cmd.Printf("Open %s and enter code %s\n", start.VerificationURI, start.UserCode)
+		cmd.Printf("%s\n", auditTint("Open ", textPrimary)+auditTint(start.VerificationURI, infoSky)+auditTint(" and enter code ", textPrimary)+auditTint(start.UserCode, graycodeColor))
 		if err := openBrowser(start.VerificationURI + "?code=" + start.UserCode); err != nil {
-			cmd.Printf("Could not open the browser automatically: %v\n", err)
+			cmd.Printf("%s\n", auditTint(fmt.Sprintf("Could not open the browser automatically: %v", err), textMuted))
 		}
 		interval := time.Duration(start.Interval) * time.Second
 		if interval < time.Second {
