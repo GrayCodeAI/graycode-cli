@@ -190,9 +190,13 @@ func runReviewList(_ *cobra.Command, _ []string) error {
 		icon := statusIcon(r.Status)
 		findings := ""
 		if len(r.Findings) > 0 {
-			findings = fmt.Sprintf(" %d findings [%s]", len(r.Findings), r.MaxSeverity)
+			findings = auditTint(fmt.Sprintf(" %d findings", len(r.Findings)), textMuted) + " " + severityStyle(r.MaxSeverity)
 		}
-		fmt.Printf("%s #%-3d %s %s%s  %s\n", icon, r.ID, r.SHA[:8], r.Status, findings, r.CreatedAt.Format("Jan 02 15:04"))
+		fmt.Printf("%s #%-3d %s %s%s  %s\n",
+			icon, r.ID, r.SHA[:8],
+			auditTint(string(r.Status), reviewStatusColor(r.Status)),
+			findings,
+			r.CreatedAt.Format("Jan 02 15:04"))
 	}
 	return nil
 }
