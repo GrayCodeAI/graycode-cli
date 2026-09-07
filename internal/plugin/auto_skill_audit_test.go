@@ -212,6 +212,24 @@ func TestFormatAuditResultFindings(t *testing.T) {
 	}
 }
 
+func TestFormatAuditResultColored(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+	t.Setenv("FORCE_COLOR", "1")
+	r := AuditResult{
+		Files: 1,
+		Findings: []AuditFinding{
+			{File: "test.md", Line: 1, Column: 5, Severity: SeverityCritical, Category: "bidi-override", Message: "BiDi override (U+202E)"},
+		},
+	}
+	out := FormatAuditResultColored(r)
+	if !strings.Contains(out, "\x1b[") {
+		t.Error("expected ANSI escape in colored output under FORCE_COLOR")
+	}
+	if plain := FormatAuditResult(r); strings.Contains(plain, "\x1b[") {
+		t.Error("plain FormatAuditResult should not emit ANSI")
+	}
+}
+
 func TestStripDangerousChars(t *testing.T) {
 	input := "Hello\u202E world\u200B end"
 	result := StripDangerousChars(input)
