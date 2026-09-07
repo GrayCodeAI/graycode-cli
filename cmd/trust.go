@@ -71,6 +71,14 @@ var trustRemoveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		ok, err := confirmDestructive(fmt.Sprintf("Remove trust for %q?", path))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			cmd.Printf("%s\n", auditTint("Cancelled.", textMuted))
+			return nil
+		}
 		if err := s.Untrust(path); err != nil {
 			return err
 		}

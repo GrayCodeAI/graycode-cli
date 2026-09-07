@@ -73,6 +73,14 @@ var learnClearCmd = &cobra.Command{
 			cmd.Println(auditTint("no lessons to clear", textMuted))
 			return nil
 		}
+		ok, err := confirmDestructive(fmt.Sprintf("Remove all %d lesson(s)?", n))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			cmd.Println(auditTint("Cancelled.", textMuted))
+			return nil
+		}
 		si.Clear()
 		cmd.Println(auditTint("cleared "+strconv.Itoa(n)+" lesson(s)", textPrimary))
 		return nil

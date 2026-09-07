@@ -171,6 +171,14 @@ func runTasteReset(_ *cobra.Command, _ []string) error {
 	}
 
 	projectID := getProjectID()
+	ok, err := confirmDestructive(fmt.Sprintf("Clear all taste preferences for project %q? This cannot be undone.", projectID))
+	if err != nil {
+		return err
+	}
+	if !ok {
+		fmt.Printf("%s\n", auditTint("Cancelled.", textMuted))
+		return nil
+	}
 	if err := store.Delete(projectID); err != nil {
 		return fmt.Errorf("reset profile: %w", err)
 	}

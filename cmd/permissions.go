@@ -137,6 +137,14 @@ var permissionsResetCmd = &cobra.Command{
 			cmd.Println(auditTint("No persisted permission rules.", textMuted))
 			return nil
 		}
+		ok, err := confirmDestructive("Remove all persisted permission rules?")
+		if err != nil {
+			return err
+		}
+		if !ok {
+			cmd.Println(auditTint("Cancelled.", textMuted))
+			return nil
+		}
 		if err := store.Save(); err != nil {
 			return err
 		}
