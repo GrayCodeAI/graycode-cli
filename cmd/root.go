@@ -842,8 +842,21 @@ var contextCmd = &cobra.Command{
 	Short: "Export project context as a single document for use in any LLM",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if contextOutput != "" {
+			var prog *CLIProgress
+			if !IsQuiet() {
+				prog = NewCLIProgress("Context", []string{"Building project context"})
+				defer prog.Abort()
+				prog.StartStep(0)
+			}
 			if err := ExportContextToFile("", contextFocus, contextOutput); err != nil {
+				if prog != nil {
+					prog.FailStep(0, err.Error())
+				}
 				return err
+			}
+			if prog != nil {
+				prog.CompleteStep(0)
+				prog.Done()
 			}
 			cmd.Println(auditTint("Context exported to", doneGreen) + " " + auditTint(contextOutput, textPrimary))
 			return nil
