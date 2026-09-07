@@ -139,7 +139,8 @@ func (sd *SessionDiffAnalyzer) StoreMemoriesFromDiff(diff *DiffResult) {
 
 	// New dependencies → remember as decisions
 	for _, dep := range diff.NewDeps {
-		_ = sd.bridge.Remember(context.Background(),
+		_ = sd.bridge.Remember(
+			context.Background(),
 			fmt.Sprintf("Dependency added: %s", dep),
 			"decision",
 		)
@@ -154,7 +155,8 @@ func (sd *SessionDiffAnalyzer) StoreMemoriesFromDiff(diff *DiffResult) {
 		// Remove the hash prefix
 		parts := strings.SplitN(commit, " ", 2)
 		if len(parts) > 1 {
-			_ = sd.bridge.Remember(context.Background(),
+			_ = sd.bridge.Remember(
+				context.Background(),
 				fmt.Sprintf("Decision: %s", parts[1]),
 				"decision",
 			)
