@@ -72,7 +72,7 @@ func prepareSession(sess *engine.Session) (string, *session.Session, error) {
 	}
 	if sessionIDFlag != "" && (resumeID != "" || continueFlag) {
 		// --session-id is ignored when --resume or --continue is also given.
-		fmt.Fprintf(os.Stderr, "graycode: --session-id ignored during resume/continue\n")
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint("graycode: --session-id ignored during resume/continue", textMuted))
 	}
 	if resumeID == "" && !continueFlag {
 		return id, nil, nil
@@ -450,7 +450,7 @@ func newChatModelWithRegistry(ref *progRef, systemPrompt string, settings grayco
 		runtime := plugin.NewRuntime()
 		if err := runtime.LoadAll(); err != nil {
 			// Surface plugin load failure so users know plugins are missing.
-			fmt.Fprintf(os.Stderr, "Warning: failed to load plugins: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("Warning: failed to load plugins: %v", err), warnAmber))
 			return
 		}
 		runtime.RegisterHooks()
