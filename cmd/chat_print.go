@@ -262,7 +262,7 @@ func saveGraycodeRouterSession(id string, sess *engine.Session) {
 
 // runRepl starts an interactive REPL mode for multi-turn conversation without TUI.
 func runRepl() error {
-	fmt.Fprintln(os.Stderr, "Graycode REPL — type 'exit' or 'quit' to leave, 'help' for commands")
+	fmt.Fprintln(os.Stderr, auditTint("Graycode REPL", textPrimary)+auditTint(" — type 'exit' or 'quit' to leave, 'help' for commands", textMuted))
 	fmt.Fprintln(os.Stderr)
 
 	systemPrompt, err := buildSystemPrompt()
