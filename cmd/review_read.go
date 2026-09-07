@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	lipgloss "charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
 	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
@@ -215,19 +214,16 @@ func resolveReview(store *ReviewStore, ref string) (*ReviewRecord, error) {
 }
 
 func printReviewDetail(r *ReviewRecord) {
-	header := lipgloss.NewStyle().Bold(true)
-	dim := lipgloss.NewStyle().Faint(true)
-
 	fmt.Printf("%s %s\n", auditTint(statusIcon(r.Status), reviewStatusColor(r.Status)), auditTint(fmt.Sprintf("Review #%d — %s", r.ID, r.SHA[:8]), textPrimary))
-	fmt.Printf("%s\n", dim.Render(fmt.Sprintf("Status: %s · Created: %s · Tokens: %d", r.Status, r.CreatedAt.Format("2006-01-02 15:04"), r.TokensUsed)))
+	fmt.Printf("%s\n", auditTint(fmt.Sprintf("Status: %s · Created: %s · Tokens: %d", r.Status, r.CreatedAt.Format("2006-01-02 15:04"), r.TokensUsed), textMuted))
 	fmt.Println()
 
 	if len(r.Findings) == 0 {
-		fmt.Println(header.Render("No findings — clean commit " + icons.CheckBold()))
+		fmt.Println(auditTint("No findings — clean commit "+icons.CheckBold(), doneGreen))
 		return
 	}
 
-	fmt.Println(header.Render(fmt.Sprintf("%d Findings:", len(r.Findings))))
+	fmt.Println(auditTint(fmt.Sprintf("%d Findings:", len(r.Findings)), textPrimary))
 	fmt.Println()
 
 	for i, f := range r.Findings {
@@ -235,7 +231,7 @@ func printReviewDetail(r *ReviewRecord) {
 		fmt.Printf("  %d. %s %s:%d\n", i+1, sev, f.File, f.Line)
 		fmt.Printf("     %s\n", f.Message)
 		if f.Fix != "" {
-			fmt.Printf("     %s %s\n", dim.Render("Fix:"), f.Fix)
+			fmt.Printf("     %s %s\n", auditTint("Fix:", textMuted), f.Fix)
 		}
 		fmt.Println()
 	}
@@ -276,16 +272,6 @@ func reviewStatusColor(s ReviewStatus) color.Color {
 }
 
 func severityStyle(sev string) string {
-	switch strings.ToLower(sev) {
-	case "critical":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Render("[CRITICAL]")
-	case "high":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Bold(true).Render("[HIGH]")
-	case "medium":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Render("[MEDIUM]")
-	case "low":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Render("[LOW]")
-	default:
-		return lipgloss.NewStyle().Faint(true).Render("[INFO]")
-	}
+	s, _ := contracts.ParseSeverityStrict(sev)
+	return auditTint("["+strings.ToUpper(sev)+"]", reviewSeverityColor(s))
 }
