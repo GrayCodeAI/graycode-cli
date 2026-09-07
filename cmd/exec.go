@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 	"github.com/GrayCodeAI/graycode-cli/internal/engine"
@@ -332,6 +333,9 @@ func runExec(_ *cobra.Command, args []string) error {
 				})
 			}
 		case "tool_use":
+			if execOutputFormat == "text" && !IsQuiet() {
+				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", auditTint("["+ev.ToolName+"]", infoSky))
+			}
 			if execOutputFormat == "stream-json" {
 				_ = jsonEnc.Encode(map[string]interface{}{
 					"type": "tool_use",
@@ -339,6 +343,13 @@ func runExec(_ *cobra.Command, args []string) error {
 				})
 			}
 		case "tool_result":
+			if execOutputFormat == "text" && !IsQuiet() {
+				content := ev.Content
+				if utf8.RuneCountInString(content) > 500 {
+					content = string([]rune(content)[:500]) + "..."
+				}
+				_, _ = fmt.Fprintf(os.Stderr, "%s %s\n", auditTint("["+ev.ToolName+"]", infoSky), content)
+			}
 			if execOutputFormat == "stream-json" {
 				_ = jsonEnc.Encode(map[string]interface{}{
 					"type":   "tool_result",
