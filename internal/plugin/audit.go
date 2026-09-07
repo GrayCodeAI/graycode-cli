@@ -2,12 +2,14 @@ package plugin
 
 import (
 	"fmt"
+	"image/color"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"unicode"
 
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
 	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
@@ -138,8 +140,31 @@ func AuditAllSkills() AuditResult {
 
 // FormatAuditResult formats audit findings for display.
 func FormatAuditResult(r AuditResult) string {
+	return formatAuditResult(r, false)
+}
+
+// FormatAuditResultColored formats audit findings with semantic severity
+// colors for direct terminal display (e.g. `graycode skills audit`). Prefer
+// FormatAuditResult when embedding the result inside another styled surface
+// (e.g. chat system messages) to avoid nested ANSI codes.
+func FormatAuditResultColored(r AuditResult) string {
+	return formatAuditResult(r, true)
+}
+
+func formatAuditResult(r AuditResult, colored bool) string {
+	sev := func(s AuditSeverity) string {
+		label := fmt.Sprintf("[%s]", s)
+		if !colored {
+			return label
+		}
+		return theme.Tint(label, severityColor(s))
+	}
 	if len(r.Findings) == 0 && len(r.Validation) == 0 {
-		return fmt.Sprintf("Scanned %d file(s). No security issues found. "+icons.CheckBold(), r.Files)
+		ok := fmt.Sprintf("Scanned %d file(s). No security issues found. "+icons.CheckBold(), r.Files)
+		if colored {
+			ok = theme.Tint(ok, theme.ReportSuccess)
+		}
+		return ok
 	}
 
 	var b strings.Builder
@@ -155,23 +180,48 @@ func FormatAuditResult(r AuditResult) string {
 		case SeverityInfo:
 			info++
 		}
-		_, _ = fmt.Fprintf(&b, "  [%s] %s:%d:%d — %s\n", f.Severity, f.File, f.Line, f.Column, f.Message)
+		_, _ = fmt.Fprintf(&b, "  %s %s:%d:%d — %s\n", sev(f.Severity), f.File, f.Line, f.Column, f.Message)
 	}
 
 	b.WriteString("\n")
 	for _, f := range r.Validation {
-		_, _ = fmt.Fprintf(&b, "  [%s] %s — %s\n", f.Severity, f.Path, f.Message)
+		_, _ = fmt.Fprintf(&b, "  %s %s — %s\n", sev(f.Severity), f.Path, f.Message)
 	}
 	if critical > 0 {
-		_, _ = fmt.Fprintf(&b, icons.Alert()+" %d CRITICAL finding(s) — these skills may contain hidden malicious content.\n", critical)
+		line := icons.Alert() + fmt.Sprintf(" %d CRITICAL finding(s) — these skills may contain hidden malicious content.\n", critical)
+		if colored {
+			line = theme.Tint(line, theme.ReportError)
+		}
+		b.WriteString(line)
 	}
 	if warning > 0 {
-		_, _ = fmt.Fprintf(&b, "  %d WARNING(s) — invisible characters that may hide content.\n", warning)
+		line := fmt.Sprintf("  %d WARNING(s) — invisible characters that may hide content.\n", warning)
+		if colored {
+			line = theme.Tint(line, theme.ReportWarn)
+		}
+		b.WriteString(line)
 	}
 	if info > 0 {
-		_, _ = fmt.Fprintf(&b, "  %d INFO — potential homoglyphs (may be legitimate non-Latin text).\n", info)
+		line := fmt.Sprintf("  %d INFO — potential homoglyphs (may be legitimate non-Latin text).\n", info)
+		if colored {
+			line = theme.Tint(line, theme.ReportInfo)
+		}
+		b.WriteString(line)
 	}
 	return b.String()
+}
+
+// severityColor maps an audit severity to its semantic report color.
+func severityColor(sev AuditSeverity) color.Color {
+	switch sev {
+	case SeverityCritical:
+		return theme.ReportError
+	case SeverityWarning:
+		return theme.ReportWarn
+	case SeverityInfo:
+		return theme.ReportInfo
+	}
+	return theme.ReportMuted
 }
 
 // StripDangerousChars removes dangerous Unicode characters from content.

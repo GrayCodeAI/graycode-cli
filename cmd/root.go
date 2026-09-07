@@ -467,7 +467,12 @@ var updateCmd = &cobra.Command{
 		if ver == "" {
 			ver = "dev"
 		}
+		prog := NewCLIProgress("Update check", []string{"Checking GitHub for updates"})
+		defer prog.Abort()
+		prog.StartStep(0)
 		release, err := update.Check(ver)
+		prog.CompleteStep(0)
+		prog.Done()
 		if err != nil {
 			cmd.Println(auditTint("Update check failed: "+err.Error(), errorCoral))
 			return nil

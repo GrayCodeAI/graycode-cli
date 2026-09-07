@@ -167,7 +167,7 @@ var skillsAuditCmd = &cobra.Command{
 					fmt.Println(string(data))
 					return nil
 				}
-				fmt.Println(plugin.FormatAuditResult(r))
+				fmt.Println(plugin.FormatAuditResultColored(r))
 				return nil
 			}
 			if _, path, ok := plugin.InstalledSkillInfo(target); ok {
@@ -178,7 +178,7 @@ var skillsAuditCmd = &cobra.Command{
 					fmt.Println(string(data))
 					return nil
 				}
-				fmt.Println(plugin.FormatAuditResult(r))
+				fmt.Println(plugin.FormatAuditResultColored(r))
 				return nil
 			}
 			return fmt.Errorf("skill or file %q not found", target)
@@ -189,7 +189,7 @@ var skillsAuditCmd = &cobra.Command{
 			fmt.Println(string(data))
 			return nil
 		}
-		fmt.Println(plugin.FormatAuditResult(result))
+		fmt.Println(plugin.FormatAuditResultColored(result))
 		return nil
 	},
 }
