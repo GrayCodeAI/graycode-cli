@@ -104,8 +104,9 @@ func runTasteShow(_ *cobra.Command, _ []string) error {
 	// Also show prompt context if anything is learned.
 	ctx := profile.ToPromptContext()
 	if ctx != "" {
-		fmt.Println("\nSystem prompt fragment that would be injected:")
-		fmt.Println(strings.Repeat("-", 50))
+		fmt.Println()
+		fmt.Println(auditTint("System prompt fragment that would be injected:", textPrimary))
+		fmt.Println(auditTint(strings.Repeat("-", 50), textMuted))
 		fmt.Println(ctx)
 	}
 
