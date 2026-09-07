@@ -84,6 +84,7 @@ func runPrint(text string) error {
 	var printed strings.Builder
 	var countdownShown bool
 	var lastUsage *engine.StreamUsage
+	turns := 0
 	started := time.Now()
 	for ev := range ch {
 		switch ev.Type {
@@ -122,6 +123,7 @@ func runPrint(text string) error {
 		case "usage":
 			if ev.Usage != nil {
 				lastUsage = ev.Usage
+				turns++
 			}
 			if outputFormat == "stream-json" && ev.Usage != nil {
 				writePrintUsageEvent(sessionID, ev.Usage)
@@ -135,7 +137,7 @@ func runPrint(text string) error {
 			switch outputFormat {
 			case "text":
 				printTextResponse(printed.String())
-				printTextUsageFooter(lastUsage, started)
+				printTextUsageFooter(lastUsage, started, turns, effectiveModel)
 			case "json":
 				writePrintResult(printed.String(), sessionID, sess, false, nil)
 			case "stream-json":
@@ -150,7 +152,7 @@ func runPrint(text string) error {
 	switch outputFormat {
 	case "text":
 		printTextResponse(printed.String())
-		printTextUsageFooter(lastUsage, started)
+		printTextUsageFooter(lastUsage, started, turns, effectiveModel)
 	case "json":
 		writePrintResult(printed.String(), sessionID, sess, false, nil)
 	case "stream-json":
@@ -186,7 +188,7 @@ func writePrintUsageEvent(sessionID string, usage *engine.StreamUsage) {
 // printTextUsageFooter renders a muted token/elapsed summary to stderr after a
 // one-shot text-mode run. It writes to stderr so stdout stays pure for scripts,
 // and is skipped entirely when no usage event was received or --quiet is set.
-func printTextUsageFooter(usage *engine.StreamUsage, started time.Time) {
+func printTextUsageFooter(usage *engine.StreamUsage, started time.Time, turns int, model string) {
 	if usage == nil || IsQuiet() {
 		return
 	}
@@ -194,7 +196,11 @@ func printTextUsageFooter(usage *engine.StreamUsage, started time.Time) {
 	if usage.CacheReadTokens > 0 || usage.CacheWriteTokens > 0 {
 		parts = append(parts, fmt.Sprintf("cache %d read · %d write", usage.CacheReadTokens, usage.CacheWriteTokens))
 	}
+	parts = append(parts, fmt.Sprintf("%d turn(s)", turns))
 	parts = append(parts, time.Since(started).Round(time.Second).String())
+	if model != "" {
+		parts = append(parts, model)
+	}
 	_, _ = fmt.Fprintf(os.Stderr, "%s\n", auditTint("tokens: "+strings.Join(parts, " · "), textMuted))
 }
 

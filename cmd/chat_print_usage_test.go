@@ -33,18 +33,24 @@ func captureStderr(t *testing.T, fn func()) string {
 func TestPrintTextUsageFooter(t *testing.T) {
 	started := time.Now().Add(-2 * time.Second)
 
-	t.Run("renders token and elapsed summary", func(t *testing.T) {
+	t.Run("renders token, turns, model and elapsed summary", func(t *testing.T) {
 		got := captureStderr(t, func() {
 			printTextUsageFooter(&engine.StreamUsage{
 				PromptTokens:     100,
 				CompletionTokens: 50,
-			}, started)
+			}, started, 3, "graycode-pro")
 		})
 		if !strings.Contains(got, "100 in · 50 out") {
 			t.Errorf("footer missing token counts: %q", got)
 		}
 		if !strings.Contains(got, "tokens:") {
 			t.Errorf("footer missing prefix: %q", got)
+		}
+		if !strings.Contains(got, "3 turn(s)") {
+			t.Errorf("footer missing turn count: %q", got)
+		}
+		if !strings.Contains(got, "graycode-pro") {
+			t.Errorf("footer missing model: %q", got)
 		}
 		if !strings.Contains(got, "2s") {
 			t.Errorf("footer missing elapsed: %q", got)
@@ -58,7 +64,7 @@ func TestPrintTextUsageFooter(t *testing.T) {
 				CompletionTokens: 5,
 				CacheReadTokens:  90,
 				CacheWriteTokens: 7,
-			}, started)
+			}, started, 1, "")
 		})
 		if !strings.Contains(got, "cache 90 read · 7 write") {
 			t.Errorf("footer missing cache summary: %q", got)
@@ -70,16 +76,28 @@ func TestPrintTextUsageFooter(t *testing.T) {
 			printTextUsageFooter(&engine.StreamUsage{
 				PromptTokens:     10,
 				CompletionTokens: 5,
-			}, started)
+			}, started, 1, "")
 		})
 		if strings.Contains(got, "cache") {
 			t.Errorf("footer should omit zero cache: %q", got)
 		}
 	})
 
+	t.Run("omits model when empty", func(t *testing.T) {
+		got := captureStderr(t, func() {
+			printTextUsageFooter(&engine.StreamUsage{
+				PromptTokens:     10,
+				CompletionTokens: 5,
+			}, started, 1, "")
+		})
+		if strings.Contains(got, "graycode-pro") {
+			t.Errorf("footer should omit empty model: %q", got)
+		}
+	})
+
 	t.Run("skips output when usage is nil", func(t *testing.T) {
 		got := captureStderr(t, func() {
-			printTextUsageFooter(nil, started)
+			printTextUsageFooter(nil, started, 1, "m")
 		})
 		if got != "" {
 			t.Errorf("expected no output for nil usage, got: %q", got)
@@ -94,7 +112,7 @@ func TestPrintTextUsageFooter(t *testing.T) {
 			printTextUsageFooter(&engine.StreamUsage{
 				PromptTokens:     100,
 				CompletionTokens: 50,
-			}, started)
+			}, started, 1, "m")
 		})
 		if got != "" {
 			t.Errorf("expected no output under --quiet, got: %q", got)
