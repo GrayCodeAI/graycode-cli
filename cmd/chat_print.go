@@ -83,6 +83,8 @@ func runPrint(text string) error {
 
 	var printed strings.Builder
 	var countdownShown bool
+	var lastUsage *engine.StreamUsage
+	started := time.Now()
 	for ev := range ch {
 		switch ev.Type {
 		case "content":
@@ -118,6 +120,9 @@ func runPrint(text string) error {
 				_, _ = fmt.Fprintf(os.Stderr, "%s %s\n", auditTint("["+ev.ToolName+"]", infoSky), content)
 			}
 		case "usage":
+			if ev.Usage != nil {
+				lastUsage = ev.Usage
+			}
 			if outputFormat == "stream-json" && ev.Usage != nil {
 				writePrintUsageEvent(sessionID, ev.Usage)
 			}
@@ -132,6 +137,7 @@ func runPrint(text string) error {
 				if !strings.HasSuffix(printed.String(), "\n") {
 					fmt.Println()
 				}
+				printTextUsageFooter(lastUsage, started)
 			case "json":
 				writePrintResult(printed.String(), sessionID, sess, false, nil)
 			case "stream-json":
@@ -148,6 +154,7 @@ func runPrint(text string) error {
 		if !strings.HasSuffix(printed.String(), "\n") {
 			fmt.Println()
 		}
+		printTextUsageFooter(lastUsage, started)
 	case "json":
 		writePrintResult(printed.String(), sessionID, sess, false, nil)
 	case "stream-json":
@@ -178,6 +185,21 @@ func writePrintUsageEvent(sessionID string, usage *engine.StreamUsage) {
 	}
 	data, _ := json.Marshal(event)
 	fmt.Println(string(data))
+}
+
+// printTextUsageFooter renders a muted token/elapsed summary to stderr after a
+// one-shot text-mode run. It writes to stderr so stdout stays pure for scripts,
+// and is skipped entirely when no usage event was received.
+func printTextUsageFooter(usage *engine.StreamUsage, started time.Time) {
+	if usage == nil {
+		return
+	}
+	parts := []string{fmt.Sprintf("%d in · %d out", usage.PromptTokens, usage.CompletionTokens)}
+	if usage.CacheReadTokens > 0 || usage.CacheWriteTokens > 0 {
+		parts = append(parts, fmt.Sprintf("cache %d read · %d write", usage.CacheReadTokens, usage.CacheWriteTokens))
+	}
+	parts = append(parts, time.Since(started).Round(time.Second).String())
+	_, _ = fmt.Fprintf(os.Stderr, "%s\n", auditTint("tokens: "+strings.Join(parts, " · "), textMuted))
 }
 
 func writePrintResult(result, sessionID string, sess *engine.Session, isError bool, errors []string) {
