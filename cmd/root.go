@@ -675,7 +675,11 @@ var configCmd = &cobra.Command{
 				if !ok {
 					return fmt.Errorf("unsupported setting key %q", args[1])
 				}
-				cmd.Println(value)
+				if value == "" {
+					cmd.Println(auditTint("(unset)", textMuted))
+				} else {
+					cmd.Println(value)
+				}
 				return nil
 			case "set":
 				if len(args) < 3 {
