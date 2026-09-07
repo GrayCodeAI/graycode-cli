@@ -4,7 +4,6 @@
 package crash
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -41,9 +40,7 @@ func installDumpHandler(sig syscall.Signal) {
 		writeSignalReport(sig)
 		signal.Reset(sig)
 		// Restore default disposition and re-raise.
-		if err := raiseSignal(sig); err != nil {
-			fmt.Fprintf(os.Stderr, "crash: failed to re-raise %s: %v\n", sig, err)
-		}
+		raiseSignal(sig)
 	}()
 }
 
@@ -66,12 +63,15 @@ func writeSignalReport(sig syscall.Signal) {
 	_, _ = WriteReport(nil, []byte(fmt.Sprintf("signal dump %s — see crash-signal-*.txt", sig)))
 }
 
-func raiseSignal(sig syscall.Signal) error {
+// raiseSignal re-raises sig with the default disposition so the OS produces
+// normal termination. It either terminates the process or, if a handler
+// swallows the signal, logs the failure and returns (never returns nil — this
+// is a diagnostic safety net, so the log is unconditional on reaching here).
+func raiseSignal(sig syscall.Signal) {
 	if err := syscall.Kill(os.Getpid(), sig); err != nil {
-		return fmt.Errorf("kill self: %w", err)
+		fmt.Fprintf(os.Stderr, "crash: failed to re-raise %s: %v\n", sig, err)
+		return
 	}
-	// If kill returns, momentarily restore the default and re-raise. We reach
-	// here only if a handler caught it above; the re-raise above should have
-	// terminated. This is a safety net.
-	return errors.New("re-raise returned without terminating")
+	// If kill returns, a handler caught it; log that termination did not occur.
+	fmt.Fprintf(os.Stderr, "crash: re-raise of %s returned without terminating\n", sig)
 }

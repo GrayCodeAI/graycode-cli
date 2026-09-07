@@ -96,7 +96,7 @@ func runPrint(text string) error {
 			// surface the remaining time budget once, on the first content.
 			if countdown && !countdownShown {
 				if rem := lifecycle.RemainingTime(ctx); rem != "" {
-					fmt.Fprintf(os.Stderr, "[time remaining] %s\n", rem)
+					fmt.Fprintf(os.Stderr, "%s\n", auditTint("[time remaining] "+rem, warnAmber))
 					countdownShown = true
 				}
 			}
@@ -104,7 +104,7 @@ func runPrint(text string) error {
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_use", "", ev.ToolName)
 			} else {
-				_, _ = fmt.Fprintf(os.Stderr, "\n[%s]\n", ev.ToolName)
+				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", auditTint("["+ev.ToolName+"]", infoSky))
 			}
 		case "tool_result":
 			content := ev.Content
@@ -115,7 +115,7 @@ func runPrint(text string) error {
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_result", content, ev.ToolName)
 			} else {
-				_, _ = fmt.Fprintf(os.Stderr, "[%s] %s\n", ev.ToolName, content)
+				_, _ = fmt.Fprintf(os.Stderr, "%s %s\n", auditTint("["+ev.ToolName+"]", infoSky), content)
 			}
 		case "usage":
 			if outputFormat == "stream-json" && ev.Usage != nil {
@@ -262,7 +262,7 @@ func saveGraycodeRouterSession(id string, sess *engine.Session) {
 
 // runRepl starts an interactive REPL mode for multi-turn conversation without TUI.
 func runRepl() error {
-	fmt.Fprintln(os.Stderr, "Graycode REPL — type 'exit' or 'quit' to leave, 'help' for commands")
+	fmt.Fprintln(os.Stderr, auditTint("Graycode REPL", textPrimary)+auditTint(" — type 'exit' or 'quit' to leave, 'help' for commands", textMuted))
 	fmt.Fprintln(os.Stderr)
 
 	systemPrompt, err := buildSystemPrompt()
@@ -354,7 +354,7 @@ func runRepl() error {
 		}
 		if output, handled, builtinErr := replBuiltinResponse(input, sess, settings, sessionID); handled {
 			if builtinErr != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", builtinErr)
+				fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("Error: %v", builtinErr), errorCoral))
 				continue
 			}
 			if output != "" {
@@ -367,7 +367,7 @@ func runRepl() error {
 
 		ch, err := sess.Stream(ctx)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("Error: %v", err), errorCoral))
 			continue
 		}
 
@@ -413,7 +413,7 @@ func runRepl() error {
 				if outputFormat == "stream-json" {
 					writePrintResult(printed.String(), sessionID, sess, true, []string{ev.Content})
 				}
-				fmt.Fprintf(os.Stderr, "Error: %s\n", ev.Content)
+				fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("Error: %s", ev.Content), errorCoral))
 			case "done":
 				switch outputFormat {
 				case "text":
@@ -524,16 +524,16 @@ func runWatch(initialPrompt string) error {
 	// Optional initial run to seed context, matching the prior behaviour.
 	if strings.TrimSpace(initialPrompt) != "" {
 		if err := runPrint(initialPrompt); err != nil {
-			fmt.Fprintf(os.Stderr, "Initial run failed: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint("Initial run failed: "+err.Error(), errorCoral))
 		}
 	}
 
 	root := "."
-	fmt.Fprintln(os.Stderr, "\n[Watching for AI!/AI? comment directives — press Ctrl+C to stop]")
+	fmt.Fprintln(os.Stderr, "\n"+auditTint("[Watching for AI!/AI? comment directives — press Ctrl+C to stop]", textPrimary))
 
 	// Process any directives already present before the first change event.
 	if n := processAIDirectives(root, watchIgnoreDirs); n > 0 {
-		fmt.Fprintf(os.Stderr, "[%s] processed %d AI directive(s)\n", time.Now().Format("15:04:05"), n)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("[%s] processed %d AI directive(s)", time.Now().Format("15:04:05"), n), textPrimary))
 	}
 
 	// Prefer the fsnotify event-driven backend. The AI!/AI? directive grammar
@@ -543,14 +543,14 @@ func runWatch(initialPrompt string) error {
 	watcher := aiwatch.NewAIWatcher(root, nil)
 	watcher.OnChange = func() {
 		if n := processAIDirectives(root, watchIgnoreDirs); n > 0 {
-			fmt.Fprintf(os.Stderr, "[%s] processed %d AI directive(s)\n", time.Now().Format("15:04:05"), n)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("[%s] processed %d AI directive(s)", time.Now().Format("15:04:05"), n), textPrimary))
 		}
 	}
 
 	ctx := context.Background()
 	if err := watcher.StartFsnotify(ctx); err != nil {
 		// fsnotify unavailable — fall back to the polling backstop.
-		fmt.Fprintf(os.Stderr, "[watch] fsnotify unavailable (%v), using polling fallback\n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("[watch] fsnotify unavailable (%v), using polling fallback", err), warnAmber))
 		return runWatchPolling(root)
 	}
 	return nil
@@ -569,7 +569,7 @@ func runWatchPolling(root string) error {
 		if currentMod.After(lastMod) {
 			lastMod = currentMod
 			if n := processAIDirectives(root, watchIgnoreDirs); n > 0 {
-				fmt.Fprintf(os.Stderr, "[%s] processed %d AI directive(s)\n", time.Now().Format("15:04:05"), n)
+				fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("[%s] processed %d AI directive(s)", time.Now().Format("15:04:05"), n), textPrimary))
 			}
 		}
 	}

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
 )
 
 // ChangeType identifies the kind of file modification.
@@ -340,24 +342,26 @@ func (s *Sandbox) Summary() string {
 	defer s.mu.RUnlock()
 
 	if len(s.changes) == 0 {
-		return "No pending changes."
+		return theme.Tint("No pending changes.", theme.ReportMuted)
 	}
 
 	var b strings.Builder
 	stats := s.statsLocked()
-	b.WriteString(fmt.Sprintf("Pending changes (%d file(s)):\n", len(s.changes)))
+	b.WriteString(theme.Tint(fmt.Sprintf("Pending changes (%d file(s)):", len(s.changes)), theme.ReportInfo) + "\n")
 
 	for _, path := range s.order {
 		c, ok := s.changes[path]
 		if !ok {
 			continue
 		}
-		b.WriteString(fmt.Sprintf("  [%s] %s\n", c.Type.String(), c.Path))
+		b.WriteString(fmt.Sprintf("  %s %s\n",
+			theme.Tint("["+c.Type.String()+"]", theme.ReportMuted),
+			theme.Tint(c.Path, theme.ReportInfo)))
 	}
 
-	b.WriteString(fmt.Sprintf("Stats: +%d -%d lines | %d created, %d modified, %d deleted\n",
+	b.WriteString(theme.Tint(fmt.Sprintf("Stats: +%d -%d lines | %d created, %d modified, %d deleted",
 		stats.LinesAdded, stats.LinesRemoved,
-		stats.FilesCreated, stats.FilesModified, stats.FilesDeleted))
+		stats.FilesCreated, stats.FilesModified, stats.FilesDeleted), theme.ReportMuted) + "\n")
 
 	return b.String()
 }

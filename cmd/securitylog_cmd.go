@@ -47,7 +47,10 @@ var securitylogVerifyCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("security log verification FAILED: %w", err)
 		}
-		cmd.Printf("security event log OK: %d entries verified (%s)\n", count, dir)
+		cmd.Printf("%s %s (%s)\n",
+			auditTint("security event log OK:", doneGreen),
+			auditTint(fmt.Sprintf("%d entries verified", count), textPrimary),
+			auditTint(dir, textMuted))
 		return nil
 	},
 }
@@ -83,8 +86,8 @@ func runSecuritylogShow(cmd *cobra.Command, limit int, asJSON bool) error {
 	}
 
 	if len(events) == 0 {
-		cmd.Println("No security events recorded yet.")
-		cmd.Printf("Log location: %s\n", dir)
+		cmd.Println(auditTint("No security events recorded yet.", textMuted))
+		cmd.Printf("%s\n", auditTint("Log location: "+dir, textMuted))
 		return nil
 	}
 
@@ -92,17 +95,24 @@ func runSecuritylogShow(cmd *cobra.Command, limit int, asJSON bool) error {
 	if limit > 0 && len(events) > limit {
 		start = len(events) - limit
 	}
-	cmd.Printf("Security event log: %d event(s) at %s\n", len(events), dir)
+	cmd.Printf("%s\n", auditTint(fmt.Sprintf("Security event log: %d event(s) at %s", len(events), dir), textPrimary))
 	if start > 0 {
-		cmd.Printf("Showing the most recent %d:\n", len(events)-start)
+		cmd.Printf("%s\n", auditTint(fmt.Sprintf("Showing the most recent %d:", len(events)-start), textMuted))
 	}
 	for _, ev := range events[start:] {
+		sevColor := infoSky
+		switch ev.Severity {
+		case securitylog.SeverityCritical:
+			sevColor = errorCoral
+		case securitylog.SeverityWarning:
+			sevColor = warnAmber
+		}
 		cmd.Printf(
-			"%s  %-8s  %-20s  %s\n",
-			ev.Timestamp.Format(time.RFC3339),
-			ev.Severity,
-			ev.Type,
-			truncateWithEllipsis(ev.Detail, 60),
+			"%s  %s  %s  %s\n",
+			auditTint(ev.Timestamp.Format(time.RFC3339), textMuted),
+			auditTint(fmt.Sprintf("%-8s", ev.Severity), sevColor),
+			auditTint(fmt.Sprintf("%-20s", ev.Type), textPrimary),
+			auditTint(truncateWithEllipsis(ev.Detail, 60), textMuted),
 		)
 	}
 	return nil

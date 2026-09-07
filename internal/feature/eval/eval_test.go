@@ -544,3 +544,47 @@ func TestBenchmarkSuiteStructure(t *testing.T) {
 		}
 	}
 }
+
+// TestRunProgressCallback asserts the Progress callback fires once per task
+// with the zero-based index, total count, and task ID, in order.
+func TestRunProgressCallback(t *testing.T) {
+	mk := func(id string) BenchmarkTask {
+		return BenchmarkTask{
+			ID:          id,
+			Description: "passes immediately",
+			SetupFn:     func(workDir string) error { return nil },
+			ValidateFn:  func(workDir string) (bool, string) { return true, "ok" },
+			Prompt:      "Do nothing",
+			TimeLimit:   10 * time.Second,
+		}
+	}
+	suite := &BenchmarkSuite{
+		Name:  "progress",
+		Tasks: []BenchmarkTask{mk("a"), mk("b"), mk("c")},
+	}
+
+	var calls []string
+	r := NewRunner("test", "test")
+	r.Progress = func(i, total int, taskID string) {
+		if total != 3 {
+			t.Errorf("total = %d, want 3", total)
+		}
+		calls = append(calls, taskID)
+		if i != len(calls)-1 {
+			t.Errorf("i = %d, want %d", i, len(calls)-1)
+		}
+	}
+
+	if _, err := r.Run(context.Background(), suite); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	want := []string{"a", "b", "c"}
+	if len(calls) != len(want) {
+		t.Fatalf("callback called %d times, want %d (%v)", len(calls), len(want), calls)
+	}
+	for i := range want {
+		if calls[i] != want[i] {
+			t.Errorf("call %d = %q, want %q", i, calls[i], want[i])
+		}
+	}
+}

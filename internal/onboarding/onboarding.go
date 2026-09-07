@@ -15,17 +15,42 @@ import (
 	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
-const (
-	teal  = "\033[38;2;78;205;196m"
-	dim   = "\033[2m"
-	bold  = "\033[1m"
-	red   = "\033[38;2;224;85;85m"
-	reset = "\033[0m"
+var (
+	teal  string
+	dim   string
+	bold  string
+	red   string
+	reset string
+	brand string
 )
+
+func init() {
+	initColorCodes()
+}
+
+// initColorCodes sets the ANSI escape codes, honoring NO_COLOR/FORCE_COLOR/TTY
+// so the onboarding wizard stays plain in scripted or NO_COLOR environments.
+func initColorCodes() {
+	teal = ""
+	dim = ""
+	bold = ""
+	red = ""
+	reset = ""
+	brand = ""
+	if !internaltheme.ColorEnabled() {
+		return
+	}
+	teal = "\033[38;2;78;205;196m"
+	dim = "\033[2m"
+	bold = "\033[1m"
+	red = "\033[38;2;224;85;85m"
+	reset = "\033[0m"
+	brand = internaltheme.BrandANSI
+}
 
 // Welcome prints the graycode welcome banner.
 func Welcome(version string) {
-	graycodeC := internaltheme.BrandANSI
+	graycodeC := brand
 
 	totalW := 80
 	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 40 {

@@ -44,7 +44,7 @@ func runSearch(_ *cobra.Command, args []string) error {
 	}
 
 	if len(results) == 0 {
-		fmt.Printf("No results for %q\n", query)
+		fmt.Printf("%s\n", auditTint(fmt.Sprintf("No results for %q", query), textMuted))
 		return nil
 	}
 

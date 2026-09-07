@@ -18,8 +18,8 @@ const (
 	SeverityCritical = contracts.SeverityCritical
 )
 
-// ParseSeverity converts a string to a Severity.
-var ParseSeverity = contracts.ParseSeverity
+// ParseSeverityStrict is available directly from internal/contracts/types;
+// the deprecated fail-open ParseSeverity alias was removed as a footgun.
 
 // TokenSeverity defines rule severity for compression error patterns.
 type TokenSeverity = contracts.TokenSeverity

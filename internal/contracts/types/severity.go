@@ -27,22 +27,11 @@ func (s Severity) String() string {
 	return "unknown"
 }
 
-// ParseSeverity converts a string to a Severity.
-//
-// Deprecated: ParseSeverity fails open — unknown input (typos such as
-// "critcal", empty strings, arbitrary text) silently maps to SeverityInfo,
-// so a malformed value is indistinguishable from a legitimate "info".
-// Callers handling untrusted input should use ParseSeverityStrict, which
-// reports unknown values as errors instead.
-func ParseSeverity(s string) Severity {
-	sev, _ := ParseSeverityStrict(s)
-	return sev
-}
-
 // ParseSeverityStrict converts a string to a Severity, reporting unknown
 // values as errors instead of failing open to SeverityInfo. Matching is
-// case-insensitive and ignores surrounding whitespace, exactly like
-// ParseSeverity; the two accept the same set of valid names.
+// case-insensitive and ignores surrounding whitespace; it accepts the same
+// set of valid names as the removed fail-open ParseSeverity (which silently
+// mapped unknown input to SeverityInfo and was deleted as a footgun).
 func ParseSeverityStrict(s string) (Severity, error) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "critical":

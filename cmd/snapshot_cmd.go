@@ -143,7 +143,7 @@ var snapshotListCmd = &cobra.Command{
 			if snapshotJSON {
 				fmt.Println("[]")
 			} else {
-				fmt.Println("No snapshots yet.")
+				fmt.Println(auditTint("No snapshots yet.", textMuted))
 			}
 			return nil
 		}
@@ -156,7 +156,7 @@ var snapshotListCmd = &cobra.Command{
 			return nil
 		}
 		for _, p := range history {
-			fmt.Printf("%s  %s  %s\n", p.Hash, p.Timestamp.Format("2006-01-02 15:04:05"), p.Message)
+			fmt.Printf("%s  %s  %s\n", auditTint(p.Hash, textPrimary), auditTint(p.Timestamp.Format("2006-01-02 15:04:05"), textMuted), auditTint(p.Message, textPrimary))
 		}
 		return nil
 	},
@@ -175,7 +175,7 @@ var snapshotRestoreCmd = &cobra.Command{
 		if err := t.Restore(args[0]); err != nil {
 			return err
 		}
-		fmt.Printf("Restored to snapshot %s\n", args[0])
+		fmt.Printf("%s\n", auditTint("Restored to snapshot ", doneGreen)+auditTint(args[0], textPrimary))
 		return nil
 	},
 }
@@ -195,7 +195,7 @@ var snapshotDiffCmd = &cobra.Command{
 			if snapshotJSON {
 				fmt.Println("[]")
 			} else {
-				fmt.Println("No snapshots to diff against.")
+				fmt.Println(auditTint("No snapshots to diff against.", textMuted))
 			}
 			return nil
 		}
@@ -207,7 +207,7 @@ var snapshotDiffCmd = &cobra.Command{
 			if snapshotJSON {
 				fmt.Println("[]")
 			} else {
-				fmt.Println("No changes.")
+				fmt.Println(auditTint("No changes.", textMuted))
 			}
 			return nil
 		}
@@ -220,7 +220,14 @@ var snapshotDiffCmd = &cobra.Command{
 			return nil
 		}
 		for _, d := range diffs {
-			fmt.Printf("%s  +%d -%d  %s\n", d.Status, d.Additions, d.Deletions, d.File)
+			statusColor := warnAmber
+			switch d.Status {
+			case "added":
+				statusColor = doneGreen
+			case "deleted":
+				statusColor = errorCoral
+			}
+			fmt.Printf("%s  %s  %s\n", auditTint(d.Status, statusColor), auditTint(fmt.Sprintf("+%d -%d", d.Additions, d.Deletions), textMuted), auditTint(d.File, textPrimary))
 		}
 		return nil
 	},

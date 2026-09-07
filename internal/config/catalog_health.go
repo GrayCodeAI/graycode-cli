@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
 )
 
 var (
@@ -79,21 +81,21 @@ func catalogHealthReportUncached(ctx context.Context) CatalogHealth {
 // FormatCatalogHealth returns human-readable catalog status for graycode doctor.
 func FormatCatalogHealth(h CatalogHealth) string {
 	var b strings.Builder
-	b.WriteString("Model catalog (graycode-router):\n")
-	b.WriteString(fmt.Sprintf("  path: %s\n", h.CachePath))
+	b.WriteString(theme.Tint("Model catalog (graycode-router):", theme.ReportInfo) + "\n")
+	b.WriteString("  " + theme.Tint("path:", theme.ReportMuted) + " " + theme.Tint(h.CachePath, theme.ReportInfo) + "\n")
 	if h.Error != "" {
-		b.WriteString(fmt.Sprintf("  status: %s\n", h.Error))
+		b.WriteString("  " + theme.Tint("status:", theme.ReportMuted) + " " + theme.Tint(h.Error, theme.ReportError) + "\n")
 		return strings.TrimRight(b.String(), "\n")
 	}
-	b.WriteString(fmt.Sprintf("  modified: %s (%d bytes)\n", h.Modified.UTC().Format(time.RFC3339), h.SizeBytes))
+	b.WriteString("  " + theme.Tint("modified:", theme.ReportMuted) + " " + theme.Tint(h.Modified.UTC().Format(time.RFC3339), theme.ReportInfo) + fmt.Sprintf(" (%d bytes)", h.SizeBytes) + "\n")
 	if h.Source != "" {
-		b.WriteString(fmt.Sprintf("  source: %s\n", h.Source))
+		b.WriteString("  " + theme.Tint("source:", theme.ReportMuted) + " " + theme.Tint(h.Source, theme.ReportInfo) + "\n")
 	}
-	b.WriteString(fmt.Sprintf("  models: %d  deployments: %d  offerings: %d\n", h.Models, h.Deployments, h.Offerings))
+	b.WriteString("  " + theme.Tint("models:", theme.ReportMuted) + " " + theme.Tint(fmt.Sprintf("%d", h.Models), theme.ReportInfo) + "  " + theme.Tint("deployments:", theme.ReportMuted) + " " + theme.Tint(fmt.Sprintf("%d", h.Deployments), theme.ReportInfo) + "  " + theme.Tint("offerings:", theme.ReportMuted) + " " + theme.Tint(fmt.Sprintf("%d", h.Offerings), theme.ReportInfo) + "\n")
 	if h.Stale {
-		b.WriteString(fmt.Sprintf("  stale: yes (after %s) — graycode refreshes automatically on start\n", h.StaleAfter.UTC().Format(time.RFC3339)))
+		b.WriteString("  " + theme.Tint("stale:", theme.ReportMuted) + " " + theme.Tint("yes", theme.ReportWarn) + fmt.Sprintf(" (after %s) — graycode refreshes automatically on start\n", h.StaleAfter.UTC().Format(time.RFC3339)))
 	} else if !h.StaleAfter.IsZero() {
-		b.WriteString(fmt.Sprintf("  stale: no (until %s)\n", h.StaleAfter.UTC().Format(time.RFC3339)))
+		b.WriteString("  " + theme.Tint("stale:", theme.ReportMuted) + " " + theme.Tint("no", theme.ReportSuccess) + fmt.Sprintf(" (until %s)\n", h.StaleAfter.UTC().Format(time.RFC3339)))
 	}
 	return strings.TrimRight(b.String(), "\n")
 }

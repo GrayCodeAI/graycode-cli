@@ -68,3 +68,22 @@ func TestMarketplaceInstallRejectsSCPStyleURL(t *testing.T) {
 		t.Errorf("error should mention scp-style, got: %v", err)
 	}
 }
+
+func TestNoPhantomDefaultMarketplaceSource(t *testing.T) {
+	for _, src := range DefaultMarketplaceSources() {
+		if strings.Contains(src.URL, "plugins-registry.json") {
+			t.Fatalf("default source %q points at plugins-registry.json, which nothing generates", src.Name)
+		}
+	}
+}
+
+func TestFetchAllWithNoSourcesReturnsEmptyNotError(t *testing.T) {
+	mc := &MarketplaceClient{Sources: nil, CacheDir: t.TempDir()}
+	entries, err := mc.FetchAll()
+	if err != nil {
+		t.Fatalf("FetchAll with no sources returned error: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("entries = %d, want 0", len(entries))
+	}
+}

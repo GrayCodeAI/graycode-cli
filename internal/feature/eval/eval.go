@@ -64,6 +64,10 @@ type Runner struct {
 	Cache       *Cache
 	NoCache     bool
 	Filters     []Filter
+	// Progress, when non-nil, is invoked before each task runs with the
+	// zero-based task index, the total task count, and the task ID. It lets
+	// callers surface live per-task progress for long benchmark suites.
+	Progress func(i, total int, taskID string)
 }
 
 // LLMClient is the interface for invoking an LLM during evaluation.
@@ -100,6 +104,10 @@ func (r *Runner) Run(ctx context.Context, suite *BenchmarkSuite) (*SuiteResult, 
 		case <-ctx.Done():
 			return result, ctx.Err()
 		default:
+		}
+
+		if r.Progress != nil {
+			r.Progress(i, len(suite.Tasks), suite.Tasks[i].ID)
 		}
 
 		taskResult, err := r.RunSingle(ctx, &suite.Tasks[i])

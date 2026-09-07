@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"golang.org/x/term"
+
 	"github.com/GrayCodeAI/graycode-cli/cmd"
 	"github.com/GrayCodeAI/graycode-cli/internal/crash"
 	"github.com/GrayCodeAI/graycode-cli/internal/graycodeerr"
@@ -82,7 +84,7 @@ func main() {
 	mcp.SetClientVersion(Version)
 
 	if err := cmd.RunWithPanicRecovery(cmd.Execute); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		printError(err)
 		// An explicit ExitCodeError (e.g. a wrapped Bash exit status) wins —
 		// it already carries the intended code. Otherwise classify the failure
 		// into the stable exit-code taxonomy so callers can branch on the
@@ -93,4 +95,31 @@ func main() {
 		}
 		os.Exit(graycodeerr.ClassifyExitCode(err))
 	}
+}
+
+// errorCoralRGB is the brand error color (#FF6B6B) as an SGR truecolor
+// sequence, applied only when stderr is a color-capable terminal so scripts
+// piping diagnostics never see raw ANSI.
+const errorCoralRGB = "\x1b[38;2;255;107;107m"
+
+// printError writes a top-level failure to stderr, colorized (error coral)
+// when the terminal supports it and NO_COLOR is unset.
+func printError(err error) {
+	msg := err.Error()
+	if shouldColorErr() {
+		msg = errorCoralRGB + msg + "\x1b[m"
+	}
+	fmt.Fprintln(os.Stderr, msg)
+}
+
+// shouldColorErr mirrors cmd.ShouldColor's detection for stderr: NO_COLOR
+// wins, then FORCE_COLOR, else the terminal's color support.
+func shouldColorErr() bool {
+	if os.Getenv("NO_COLOR") != "" {
+		return false
+	}
+	if os.Getenv("FORCE_COLOR") != "" {
+		return true
+	}
+	return term.IsTerminal(int(os.Stderr.Fd()))
 }

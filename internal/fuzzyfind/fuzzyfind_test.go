@@ -67,7 +67,7 @@ func TestSkipDirsExcluded(t *testing.T) {
 	f, _ := New(root)
 	matches := f.Search("lib", 20)
 	for _, m := range matches {
-		if filepath.HasPrefix(m.Path, "vendor") {
+		if strings.HasPrefix(m.Path, "vendor") {
 			t.Fatal("vendor leaked into results")
 		}
 	}

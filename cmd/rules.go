@@ -42,13 +42,13 @@ var rulesDetectCmd = &cobra.Command{
 		}
 
 		if len(found) == 0 {
-			cmd.Println("No AI tool rule files detected.")
+			cmd.Println(auditTint("No AI tool rule files detected.", textMuted))
 			return nil
 		}
 
-		cmd.Println("Detected AI tool rule files:")
+		cmd.Println(auditTint("Detected AI tool rule files:", textPrimary))
 		for format, path := range found {
-			cmd.Println(fmt.Sprintf("  %-12s %s", format, path))
+			cmd.Println(fmt.Sprintf("  %s %s", auditTint(fmt.Sprintf("%-12s", format), textMuted), auditTint(path, textPrimary)))
 		}
 		return nil
 	},
@@ -69,7 +69,7 @@ var rulesImportCmd = &cobra.Command{
 		}
 
 		if len(imported) == 0 {
-			cmd.Println(fmt.Sprintf("No rules found in %s format.", rulesImportFrom))
+			cmd.Println(auditTint(fmt.Sprintf("No rules found in %s format.", rulesImportFrom), textMuted))
 			return nil
 		}
 
@@ -78,9 +78,9 @@ var rulesImportCmd = &cobra.Command{
 			return fmt.Errorf("export to graycode format failed: %w", err)
 		}
 
-		cmd.Println(fmt.Sprintf("Imported %d rule(s) from %s to .agents/rules/.", len(imported), rulesImportFrom))
+		cmd.Println(auditTint(fmt.Sprintf("Imported %d rule(s) from %s to .agents/rules/.", len(imported), rulesImportFrom), doneGreen))
 		for _, r := range imported {
-			cmd.Println(fmt.Sprintf("  - %s", r.Name))
+			cmd.Println(auditTint("  - "+r.Name, textPrimary))
 		}
 		return nil
 	},
@@ -101,7 +101,7 @@ var rulesExportCmd = &cobra.Command{
 		}
 
 		if len(graycodeRules) == 0 {
-			cmd.Println("No graycode rules found in .agents/rules/. Nothing to export.")
+			cmd.Println(auditTint("No graycode rules found in .agents/rules/. Nothing to export.", textMuted))
 			return nil
 		}
 
@@ -110,9 +110,9 @@ var rulesExportCmd = &cobra.Command{
 			return fmt.Errorf("export to %s format failed: %w", rulesExportTo, err)
 		}
 
-		cmd.Println(fmt.Sprintf("Exported %d rule(s) to %s format.", len(graycodeRules), rulesExportTo))
+		cmd.Println(auditTint(fmt.Sprintf("Exported %d rule(s) to %s format.", len(graycodeRules), rulesExportTo), doneGreen))
 		for _, r := range graycodeRules {
-			cmd.Println(fmt.Sprintf("  - %s", r.Name))
+			cmd.Println(auditTint("  - "+r.Name, textPrimary))
 		}
 		return nil
 	},

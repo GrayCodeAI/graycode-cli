@@ -112,13 +112,12 @@ func (s *MemoryService) RecallContext(_ context.Context, lastUserMsg string, bud
 // shouldn't fail a turn just because harrier is unavailable).
 func (s *MemoryService) Remember(ctx context.Context, content, category string) {
 	if s.enhanced != nil {
-		_ = s.enhanced.Remember(content, category)
+		_ = s.enhanced.Remember(ctx, content, category)
 		return
 	}
 	if s.memory != nil {
-		_ = s.memory.Remember(content, category)
+		_ = s.memory.Remember(ctx, content, category)
 	}
-	_ = ctx // reserved for future context-aware memory ops
 }
 
 // OnSessionEnd runs the post-session memory bookkeeping.
@@ -152,7 +151,7 @@ func (s *MemoryService) Finalize(messages []types.GraycodeRouterMessage, success
 		if !success {
 			summary += " (interrupted)"
 		}
-		_ = s.memory.Remember(summary, "session")
+		_ = s.memory.Remember(context.Background(), summary, "session")
 	}
 }
 

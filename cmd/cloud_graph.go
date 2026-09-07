@@ -68,12 +68,10 @@ execution never depends on cloud synchronization.`,
 			if result.Duplicate {
 				status = "already synchronized"
 			}
-			cmd.Printf(
-				"Graph %s: %d facts (digest %s).\n",
-				status,
-				prepared.Facts,
-				result.GraphDigest,
-			)
+			cmd.Printf("%s\n",
+				auditTint("Graph "+status+": ", doneGreen)+
+					auditTint(fmt.Sprintf("%d facts", prepared.Facts), textPrimary)+
+					auditTint(fmt.Sprintf(" (digest %s).", result.GraphDigest), textMuted))
 			return nil
 		},
 	}

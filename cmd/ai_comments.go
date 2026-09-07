@@ -150,7 +150,7 @@ func processAIDirectives(dir string, ignore []string) int {
 	processed := 0
 	for _, d := range directives {
 		if err := aiDispatchFn(d); err != nil {
-			fmt.Fprintf(os.Stderr, "AI directive %s:%d failed: %v\n", d.Path, d.Line, err)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("AI directive %s:%d failed: %v", d.Path, d.Line, err), errorCoral))
 			continue
 		}
 		// Resolve back to an absolute path for removal; scan returns paths
@@ -160,7 +160,7 @@ func processAIDirectives(dir string, ignore []string) int {
 			full = filepath.Join(dir, d.Path)
 		}
 		if err := removeAIComment(full, d.Line); err != nil {
-			fmt.Fprintf(os.Stderr, "AI directive %s:%d: failed to strip token: %v\n", d.Path, d.Line, err)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("AI directive %s:%d: failed to strip token: %v", d.Path, d.Line, err), errorCoral))
 			continue
 		}
 		processed++

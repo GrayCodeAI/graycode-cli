@@ -60,7 +60,7 @@ var skillsSearchCmd = &cobra.Command{
 			return nil
 		}
 		if len(results) == 0 {
-			fmt.Println("No skills found.")
+			fmt.Println(auditTint("No skills found.", textMuted))
 			return nil
 		}
 		for _, e := range results {
@@ -99,7 +99,7 @@ var skillsRemoveCmd = &cobra.Command{
 		if err := plugin.Remove(args[0]); err != nil {
 			return err
 		}
-		fmt.Printf("Removed skill %q.\n", args[0])
+		fmt.Printf("%s\n", auditTint("Removed skill "+args[0]+".", textPrimary))
 		return nil
 	},
 }
@@ -118,11 +118,11 @@ var skillsInfoCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Skill: %s (not installed)\n", entry.Name)
+		fmt.Printf("%s %s\n", auditTint("Skill:", textMuted), auditTint(entry.Name, textPrimary)+auditTint(" (not installed)", textMuted))
 		if entry.Description != "" {
-			fmt.Printf("Description: %s\n", entry.Description)
+			fmt.Printf("%s %s\n", auditTint("Description:", textMuted), auditTint(entry.Description, textPrimary))
 		}
-		fmt.Printf("Repo: %s\nInstalls: %d\n", entry.Repo, entry.Installs)
+		fmt.Printf("%s %s\n%s %d\n", auditTint("Repo:", textMuted), auditTint(entry.Repo, textPrimary), auditTint("Installs:", textMuted), entry.Installs)
 		return nil
 	},
 }
@@ -143,7 +143,7 @@ var skillsTrendingCmd = &cobra.Command{
 			return err
 		}
 		for i, e := range results {
-			fmt.Printf("%d. %s", i+1, strings.TrimLeft(plugin.FormatSkillEntry(e), " "))
+			fmt.Printf("%s. %s", auditTint(fmt.Sprintf("%d", i+1), textMuted), strings.TrimLeft(plugin.FormatSkillEntry(e), " "))
 		}
 		return nil
 	},

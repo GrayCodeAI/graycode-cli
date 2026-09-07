@@ -60,20 +60,24 @@ func runUsage(cmd *cobra.Command, _ []string) error {
 	}
 
 	if sum.Generations == 0 {
-		cmd.Println("No usage recorded in the last " + usagePeriod + ".")
-		cmd.Println("The ledger lives at " + usage.LedgerPath())
+		cmd.Println(auditTint("No usage recorded in the last "+usagePeriod+".", textMuted))
+		cmd.Println(auditTint("The ledger lives at "+usage.LedgerPath(), textMuted))
 		return nil
 	}
 
-	cmd.Println(fmt.Sprintf("Usage (last %s)", usagePeriod))
-	cmd.Println(fmt.Sprintf("%-28s %10s %10s %8s %12s", "model", "in", "out", "gen", "cost"))
+	cmd.Println(auditTint(fmt.Sprintf("Usage (last %s)", usagePeriod), graycodeColor))
+	cmd.Println(auditTint(fmt.Sprintf("%-28s %10s %10s %8s %12s", "model", "in", "out", "gen", "cost"), textMuted))
 	for _, m := range sum.ByModel {
-		cmd.Println(fmt.Sprintf("%-28s %10d %10d %8d %10.4f$",
-			truncateModel(m.Model), m.InputTokens, m.OutputTokens, m.Generations, m.TotalCostUSD))
+		// Pad the cost to its column width first, then colorize, so the
+		// zero-width ANSI escapes don't break the fixed-width alignment.
+		cost := auditTint(fmt.Sprintf("%10.4f$", m.TotalCostUSD), costViolet)
+		cmd.Println(fmt.Sprintf("%-28s %10d %10d %8d %s",
+			truncateModel(m.Model), m.InputTokens, m.OutputTokens, m.Generations, cost))
 	}
-	cmd.Println("------------------------------------------------------------")
-	cmd.Println(fmt.Sprintf("%-28s %10d %10s %8d %10.4f$",
-		"total", sum.TotalTokens, "", sum.Generations, sum.TotalCostUSD))
+	cmd.Println(auditTint("------------------------------------------------------------", textMuted))
+	cmd.Println(fmt.Sprintf("%-28s %10d %10s %8d %s",
+		auditTint("total", textPrimary), sum.TotalTokens, "", sum.Generations,
+		auditTint(fmt.Sprintf("%10.4f$", sum.TotalCostUSD), costViolet)))
 	return nil
 }
 

@@ -120,7 +120,7 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("gather files: %w", err)
 	}
 	if content == "" {
-		fmt.Println("No files matched.")
+		fmt.Println(auditTint("No files matched.", textMuted))
 		return nil
 	}
 
@@ -155,10 +155,22 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 	// Use the analysis prompt as a "diff" — kestrel will review it.
 	analysisInput := fmt.Sprintf("# Analysis Type: %s\n\n%s\n\n---\n\n%s", analysisType, prompt, content)
 
-	fmt.Printf("Analyzing (%s)...\n", analysisType)
+	var prog *CLIProgress
+	if !IsQuiet() {
+		prog = NewCLIProgress("Analyze", []string{fmt.Sprintf("Analyzing %s", analysisType)})
+		defer prog.Abort()
+		prog.StartStep(0)
+	}
 	result, err := bridge.ReviewContracts(ctx, analysisInput)
 	if err != nil {
+		if prog != nil {
+			prog.FailStep(0, err.Error())
+		}
 		return fmt.Errorf("analysis failed: %w", err)
+	}
+	if prog != nil {
+		prog.CompleteStep(0)
+		prog.Done()
 	}
 
 	// Store as a review record.
@@ -177,24 +189,24 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 
 	// Print results.
 	if len(result.Findings) == 0 {
-		fmt.Printf("%s No %s issues found.\n", icons.CheckBold(), analysisType)
+		fmt.Printf("%s %s\n", auditTint(icons.CheckBold(), doneGreen), auditTint("No "+analysisType+" issues found.", doneGreen))
 		return nil
 	}
 
-	fmt.Printf("%s %d %s finding(s):\n\n", icons.Alert(), len(result.Findings), analysisType)
+	fmt.Printf("%s %s\n\n", auditTint(icons.Alert(), warnAmber), auditTint(fmt.Sprintf("%d %s finding(s):", len(result.Findings), analysisType), textPrimary))
 	for i, f := range result.Findings {
 		sev := severityStyle(f.Severity.String())
-		fmt.Printf("  %d. %s %s:%d\n", i+1, sev, f.File, f.Line)
-		fmt.Printf("     %s\n", f.Message)
+		fmt.Printf("  %d. %s %s:%d\n", i+1, sev, auditTint(f.File, textPrimary), f.Line)
+		fmt.Printf("     %s\n", auditTint(f.Message, textMuted))
 		if f.Fix != "" {
-			fmt.Printf("     Fix: %s\n", f.Fix)
+			fmt.Printf("     %s\n", auditTint("Fix: "+f.Fix, textMuted))
 		}
 		fmt.Println()
 	}
 
 	// Auto-fix if requested.
 	if analyzeFix && len(result.Findings) > 0 {
-		fmt.Println("Applying fixes...")
+		fmt.Println(auditTint("Applying fixes...", textPrimary))
 		return autoFixAnalysis(result)
 	}
 

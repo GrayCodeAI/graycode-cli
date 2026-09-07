@@ -3,13 +3,14 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"os"
 	"strconv"
 	"strings"
 
-	lipgloss "charm.land/lipgloss/v2"
 	"github.com/spf13/cobra"
 
+	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
 	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
@@ -71,7 +72,7 @@ func runReviewStatus(_ *cobra.Command, _ []string) error {
 		total += v
 	}
 	if total == 0 {
-		fmt.Println("No reviews yet. Run 'graycode review init' to start.")
+		fmt.Println(auditTint("No reviews yet. Run 'graycode review init' to start.", textMuted))
 		return nil
 	}
 
@@ -80,18 +81,18 @@ func runReviewStatus(_ *cobra.Command, _ []string) error {
 	fixed := summary[ReviewStatusFixed]
 	failed := summary[ReviewStatusFailed]
 
-	fmt.Printf("Reviews: %d total", total)
+	fmt.Printf("%s %s", auditTint("Reviews:", textMuted), auditTint(fmt.Sprintf("%d total", total), textPrimary))
 	if open > 0 {
-		fmt.Printf(" · %d open", open)
+		fmt.Printf(" · %s", auditTint(fmt.Sprintf("%d open", open), infoSky))
 	}
 	if passed > 0 {
-		fmt.Printf(" · %d passed", passed)
+		fmt.Printf(" · %s", auditTint(fmt.Sprintf("%d passed", passed), doneGreen))
 	}
 	if fixed > 0 {
-		fmt.Printf(" · %d fixed", fixed)
+		fmt.Printf(" · %s", auditTint(fmt.Sprintf("%d fixed", fixed), successTeal))
 	}
 	if failed > 0 {
-		fmt.Printf(" · %d failed", failed)
+		fmt.Printf(" · %s", auditTint(fmt.Sprintf("%d failed", failed), errorCoral))
 	}
 	fmt.Println()
 
@@ -100,7 +101,15 @@ func runReviewStatus(_ *cobra.Command, _ []string) error {
 		reviews, _ := store.ListOpen()
 		fmt.Println()
 		for _, r := range reviews {
-			fmt.Printf("  #%d %s [%s] %d findings\n", r.ID, r.SHA[:8], r.MaxSeverity, len(r.Findings))
+			var sev color.Color = textPrimary
+			if parsed, err := contracts.ParseSeverityStrict(r.MaxSeverity); err == nil {
+				sev = reviewSeverityColor(parsed)
+			}
+			fmt.Printf("  %s %s %s %s\n",
+				auditTint(fmt.Sprintf("#%d", r.ID), textPrimary),
+				auditTint(r.SHA[:8], textMuted),
+				auditTint(fmt.Sprintf("[%s]", r.MaxSeverity), sev),
+				auditTint(fmt.Sprintf("%d findings", len(r.Findings)), textMuted))
 		}
 	}
 	return nil
@@ -119,7 +128,7 @@ func runReviewShow(_ *cobra.Command, args []string) error {
 		// Show latest open review.
 		reviews, _ := store.ListOpen()
 		if len(reviews) == 0 {
-			fmt.Println("No open reviews.")
+			fmt.Println(auditTint("No open reviews.", textMuted))
 			return nil
 		}
 		review = reviews[0]
@@ -156,7 +165,7 @@ func runReviewClose(_ *cobra.Command, args []string) error {
 	if err := store.SetStatus(review.ID, ReviewStatusClosed); err != nil {
 		return err
 	}
-	fmt.Printf("%s Closed review #%d (%s)\n", icons.CheckBold(), review.ID, review.SHA[:8])
+	fmt.Printf("%s %s\n", auditTint(icons.CheckBold(), doneGreen), auditTint(fmt.Sprintf("Closed review #%d (%s)", review.ID, review.SHA[:8]), textPrimary))
 	return nil
 }
 
@@ -173,7 +182,7 @@ func runReviewList(_ *cobra.Command, _ []string) error {
 		return err
 	}
 	if len(reviews) == 0 {
-		fmt.Println("No reviews yet.")
+		fmt.Println(auditTint("No reviews yet.", textMuted))
 		return nil
 	}
 
@@ -181,9 +190,13 @@ func runReviewList(_ *cobra.Command, _ []string) error {
 		icon := statusIcon(r.Status)
 		findings := ""
 		if len(r.Findings) > 0 {
-			findings = fmt.Sprintf(" %d findings [%s]", len(r.Findings), r.MaxSeverity)
+			findings = auditTint(fmt.Sprintf(" %d findings", len(r.Findings)), textMuted) + " " + severityStyle(r.MaxSeverity)
 		}
-		fmt.Printf("%s #%-3d %s %s%s  %s\n", icon, r.ID, r.SHA[:8], r.Status, findings, r.CreatedAt.Format("Jan 02 15:04"))
+		fmt.Printf("%s #%-3d %s %s%s  %s\n",
+			icon, r.ID, r.SHA[:8],
+			auditTint(string(r.Status), reviewStatusColor(r.Status)),
+			findings,
+			r.CreatedAt.Format("Jan 02 15:04"))
 	}
 	return nil
 }
@@ -205,27 +218,27 @@ func resolveReview(store *ReviewStore, ref string) (*ReviewRecord, error) {
 }
 
 func printReviewDetail(r *ReviewRecord) {
-	header := lipgloss.NewStyle().Bold(true)
-	dim := lipgloss.NewStyle().Faint(true)
-
-	fmt.Printf("%s Review #%d — %s\n", statusIcon(r.Status), r.ID, r.SHA[:8])
-	fmt.Printf("%s\n", dim.Render(fmt.Sprintf("Status: %s · Created: %s · Tokens: %d", r.Status, r.CreatedAt.Format("2006-01-02 15:04"), r.TokensUsed)))
+	fmt.Printf("%s %s\n", auditTint(statusIcon(r.Status), reviewStatusColor(r.Status)), auditTint(fmt.Sprintf("Review #%d — %s", r.ID, r.SHA[:8]), textPrimary))
+	fmt.Printf("%s\n", auditTint(fmt.Sprintf("Status: %s · Created: %s · Tokens: %d", r.Status, r.CreatedAt.Format("2006-01-02 15:04"), r.TokensUsed), textMuted))
 	fmt.Println()
 
 	if len(r.Findings) == 0 {
-		fmt.Println(header.Render("No findings — clean commit " + icons.CheckBold()))
+		fmt.Println(auditTint("No findings — clean commit "+icons.CheckBold(), doneGreen))
 		return
 	}
 
-	fmt.Println(header.Render(fmt.Sprintf("%d Findings:", len(r.Findings))))
+	fmt.Println(auditTint(fmt.Sprintf("%d Findings:", len(r.Findings)), textPrimary))
 	fmt.Println()
 
 	for i, f := range r.Findings {
 		sev := severityStyle(f.Severity.String())
-		fmt.Printf("  %d. %s %s:%d\n", i+1, sev, f.File, f.Line)
-		fmt.Printf("     %s\n", f.Message)
+		fmt.Printf("  %s %s %s:%d\n",
+			auditTint(fmt.Sprintf("%d.", i+1), textMuted),
+			sev,
+			auditTint(f.File, textPrimary), f.Line)
+		fmt.Printf("     %s\n", auditTint(f.Message, textMuted))
 		if f.Fix != "" {
-			fmt.Printf("     %s %s\n", dim.Render("Fix:"), f.Fix)
+			fmt.Printf("     %s %s\n", auditTint("Fix:", textMuted), f.Fix)
 		}
 		fmt.Println()
 	}
@@ -250,17 +263,22 @@ func statusIcon(s ReviewStatus) string {
 	}
 }
 
-func severityStyle(sev string) string {
-	switch strings.ToLower(sev) {
-	case "critical":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Render("[CRITICAL]")
-	case "high":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Bold(true).Render("[HIGH]")
-	case "medium":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Render("[MEDIUM]")
-	case "low":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Render("[LOW]")
+func reviewStatusColor(s ReviewStatus) color.Color {
+	switch s {
+	case ReviewStatusPassed, ReviewStatusFixed:
+		return doneGreen
+	case ReviewStatusOpen, ReviewStatusRunning:
+		return infoSky
+	case ReviewStatusFailed:
+		return errorCoral
+	case ReviewStatusClosed:
+		return textMuted
 	default:
-		return lipgloss.NewStyle().Faint(true).Render("[INFO]")
+		return textPrimary
 	}
+}
+
+func severityStyle(sev string) string {
+	s, _ := contracts.ParseSeverityStrict(sev)
+	return auditTint("["+strings.ToUpper(sev)+"]", reviewSeverityColor(s))
 }

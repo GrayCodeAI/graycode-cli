@@ -253,9 +253,7 @@ func runExec(_ *cobra.Command, args []string) error {
 	if ghaCtx.Active && !ghaCtx.Trusted {
 		const ceiling = engine.AutonomyBasic
 		if sess.PermSvc().Autonomy() > ceiling {
-			fmt.Fprintf(os.Stderr,
-				"graycode: untrusted GitHub event (author_association=%q); capping autonomy at %s\n",
-				ghaCtx.AuthorAssociation, ceiling)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("graycode: untrusted GitHub event (author_association=%q); capping autonomy at %s", ghaCtx.AuthorAssociation, ceiling), warnAmber))
 			sess.PermSvc().SetAutonomy(ceiling)
 		}
 	}
@@ -322,9 +320,9 @@ func runExec(_ *cobra.Command, args []string) error {
 		case "error":
 			execErr = ev.Content
 			if execOutputFormat == "text" {
-				_, _ = fmt.Fprintf(os.Stderr, "\nerror: %s\n", ev.Content)
+				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", auditTint("error: "+ev.Content, errorCoral))
 				if h := errhint.CLIHint(errors.New(ev.Content)); h != "" {
-					_, _ = fmt.Fprintf(os.Stderr, "  hint: %s\n", h)
+					_, _ = fmt.Fprintf(os.Stderr, "%s\n", auditTint("  hint: "+h, textMuted))
 				}
 			}
 			if execOutputFormat == "stream-json" {
@@ -389,6 +387,13 @@ func runExec(_ *cobra.Command, args []string) error {
 	if execOutputFormat == "text" {
 		if !strings.HasSuffix(response.String(), "\n") {
 			fmt.Println()
+		}
+		if !IsQuiet() {
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(
+				fmt.Sprintf("graycode: %d tokens in / %d out · %d turn(s) · %s · %s",
+					totalIn, totalOut, turns, time.Since(start).Round(time.Millisecond), effectiveModel),
+				textMuted,
+			))
 		}
 		if exitCode != 0 {
 			return fmt.Errorf("exec failed: %s", execErr)
@@ -681,7 +686,7 @@ func persistExecSession(id, model, provider, userMsg, assistantMsg string) {
 		},
 	}
 	if err := session.Save(s); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: failed to persist exec session %s: %v\n", id, err)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("warning: failed to persist exec session %s: %v", id, err), warnAmber))
 	}
 }
 
@@ -753,7 +758,7 @@ func runExecFanout(prompt string, n int) error {
 	attempts := make([]fanoutAttempt, 0, n)
 	anyOK := false
 	for i := 1; i <= n; i++ {
-		fmt.Fprintf(os.Stderr, "\n=== fanout attempt %d/%d ===\n", i, n)
+		fmt.Fprintf(os.Stderr, "\n%s\n", auditTint(fmt.Sprintf("=== fanout attempt %d/%d ===", i, n), infoSky))
 		att := fanoutAttempt{Attempt: i}
 
 		branch := fmt.Sprintf("graycode-exec/%d-fanout%d-%s", start.UnixMilli(), i, randomHex(4))
@@ -860,13 +865,13 @@ func fanoutSummaryLines(attempts []fanoutAttempt) string {
 }
 
 func printFanoutReport(attempts []fanoutAttempt) {
-	fmt.Fprintln(os.Stderr, "\n=== fan-out comparison (worktrees kept for inspection) ===")
+	fmt.Fprintln(os.Stderr, auditTint("\n=== fan-out comparison (worktrees kept for inspection) ===", infoSky))
 	for _, a := range attempts {
-		status := icons.Check() + " ok"
+		status := auditTint(icons.Check()+" ok", doneGreen)
 		if !a.OK {
-			status = icons.Close() + " failed"
+			status = auditTint(icons.Close()+" failed", errorCoral)
 			if a.Error != "" {
-				status += " — " + a.Error
+				status += auditTint(" — "+a.Error, errorCoral)
 			}
 		}
 		fmt.Fprintf(os.Stderr, "\n#%d %s\n  branch:   %s\n  worktree: %s\n  tokens:   in=%d out=%d turns=%d\n  duration: %s\n",

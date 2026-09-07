@@ -61,7 +61,7 @@ var evalCacheCmd = &cobra.Command{
 		if err := cache.Clear(); err != nil {
 			return err
 		}
-		fmt.Println("Cache cleared.")
+		fmt.Println(auditTint("Cache cleared.", doneGreen))
 		return nil
 	},
 }
@@ -121,10 +121,19 @@ func runEvalLoop(cmd *cobra.Command, _ []string) error {
 
 	cfg := evalloop.DefaultConfig()
 	runtime := evalloop.NewSessionRuntime(gw.ChatClient(), "eval", model, tool.NewRegistry(), cfg)
+
+	// The agent loop is the slow part; show a TTY-only animated indicator.
+	// It clears before the JSON report prints, so piped and structured
+	// output stay pure.
+	prog := NewCLIProgress("Eval", []string{"Running agent loop"})
+	defer prog.Abort()
+	prog.StartStep(0)
 	result, err := runtime.Run(ctx, workDir, evalLoopPrompt)
 	if err != nil {
 		return fmt.Errorf("eval loop: %w", err)
 	}
+	prog.CompleteStep(0)
+	prog.Done()
 
 	transcriptPath := ""
 	if len(result.Transcript) > 0 {
@@ -214,7 +223,7 @@ func runEval(_ *cobra.Command, _ []string) error {
 		modelName = "default"
 	}
 
-	fmt.Printf("Running %d tasks with model %s...\n", len(tasks), modelName)
+	fmt.Printf("%s\n", auditTint(fmt.Sprintf("Running %d tasks with model %s...", len(tasks), modelName), textPrimary))
 
 	suite := &eval.BenchmarkSuite{Name: "graycode-eval", Tasks: tasks}
 	runner := eval.NewRunner(modelName, "")
@@ -223,12 +232,36 @@ func runEval(_ *cobra.Command, _ []string) error {
 		runner.Cache = eval.DefaultCache()
 	}
 	runner.Filters = []eval.Filter{eval.ExtractCodeBlock("go")}
+
+	// Animate one step per benchmark task. The eval runner invokes the
+	// callback before each task, so we close the previous step and open the
+	// next. Quiet mode suppresses the animation entirely.
+	var prog *CLIProgress
+	if !IsQuiet() {
+		names := make([]string, len(tasks))
+		for i := range tasks {
+			names[i] = tasks[i].ID
+		}
+		prog = NewCLIProgress("Eval", names)
+		defer prog.Abort()
+		runner.Progress = func(i, _ int, _ string) {
+			if i > 0 {
+				prog.CompleteStep(i - 1)
+			}
+			prog.StartStep(i)
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
 	result, err := runner.Run(ctx, suite)
 	if err != nil {
 		return err
+	}
+	if prog != nil {
+		prog.CompleteStep(len(tasks) - 1)
+		prog.Done()
 	}
 
 	// Compute reproducibility hash
@@ -238,9 +271,9 @@ func runEval(_ *cobra.Command, _ []string) error {
 	store := eval.DefaultResultStore()
 	path, err := store.Save(result, model, "", hash)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to save results: %v\n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("Warning: failed to save results: %v", err), warnAmber))
 	} else {
-		fmt.Printf("Results saved to: %s\n", path)
+		fmt.Printf("%s\n", auditTint("Results saved to: ", doneGreen)+auditTint(path, textPrimary))
 	}
 
 	// Group results
@@ -287,7 +320,28 @@ func runEvalList(_ *cobra.Command, _ []string) error {
 	}
 
 	if evalListJSON {
-		out, err := json.MarshalIndent(tasks, "", "  ")
+		// BenchmarkTask carries func fields (SetupFn/ValidateFn) that
+		// encoding/json cannot marshal; project to the display-safe fields.
+		type jsonTask struct {
+			ID          string   `json:"id"`
+			Description string   `json:"description"`
+			Prompt      string   `json:"prompt"`
+			TimeLimit   float64  `json:"time_limit_seconds"`
+			Tags        []string `json:"tags"`
+			MaxAttempts int      `json:"max_attempts"`
+		}
+		view := make([]jsonTask, len(tasks))
+		for i, t := range tasks {
+			view[i] = jsonTask{
+				ID:          t.ID,
+				Description: t.Description,
+				Prompt:      t.Prompt,
+				TimeLimit:   t.TimeLimit.Seconds(),
+				Tags:        t.Tags,
+				MaxAttempts: t.MaxAttempts,
+			}
+		}
+		out, err := json.MarshalIndent(view, "", "  ")
 		if err != nil {
 			return fmt.Errorf("marshaling tasks: %w", err)
 		}
@@ -295,7 +349,7 @@ func runEvalList(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	fmt.Printf("Available tasks (%d):\n\n", len(tasks))
+	fmt.Printf("%s\n\n", auditTint(fmt.Sprintf("Available tasks (%d):", len(tasks)), textPrimary))
 	fmt.Println("| ID | Description | Tags |")
 	fmt.Println("|----|-------------|------|")
 	for _, t := range tasks {
@@ -313,7 +367,7 @@ func runEvalResults(_ *cobra.Command, _ []string) error {
 		return err
 	}
 	if len(files) == 0 {
-		fmt.Println("No saved results found.")
+		fmt.Println(auditTint("No saved results found.", textMuted))
 		return nil
 	}
 
@@ -334,16 +388,17 @@ func runEvalResults(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	fmt.Printf("Saved results (%d):\n\n", len(files))
+	fmt.Printf("%s\n\n", auditTint(fmt.Sprintf("Saved results (%d):", len(files)), textPrimary))
 	for _, f := range files {
 		r, err := store.Load(f)
 		if err != nil {
 			continue
 		}
-		fmt.Printf("  %s  %s  %s  %.0f%% (%d/%d)\n",
-			r.Timestamp.Format("2006-01-02 15:04"),
-			r.Model, r.Suite,
-			r.Summary.PassRate*100, r.Summary.Passed, r.Summary.TotalTasks)
+		fmt.Printf("  %s  %s  %s  %s\n",
+			auditTint(r.Timestamp.Format("2006-01-02 15:04"), textMuted),
+			auditTint(r.Model, textPrimary),
+			auditTint(r.Suite, textPrimary),
+			auditTint(fmt.Sprintf("%.0f%% (%d/%d)", r.Summary.PassRate*100, r.Summary.Passed, r.Summary.TotalTasks), doneGreen))
 	}
 	return nil
 }
