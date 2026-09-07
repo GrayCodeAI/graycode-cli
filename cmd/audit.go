@@ -86,7 +86,7 @@ func runAudit(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(sessions) == 0 {
-		cmd.Println("No session transcripts found for the specified time period.")
+		cmd.Println(auditTint("No session transcripts found for the specified time period.", textMuted))
 		return nil
 	}
 

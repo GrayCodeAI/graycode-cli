@@ -175,20 +175,19 @@ func openCmdHistoryStore() (*cmdhistory.Store, error) {
 
 func printCmdHistoryEntry(cmd *cobra.Command, e cmdhistory.Entry) {
 	exitLabel := "ok"
+	exitColor := doneGreen
 	if e.ExitCode != 0 {
 		exitLabel = fmt.Sprintf("exit:%d", e.ExitCode)
+		exitColor = errorCoral
 	}
-	cmd.Println(fmt.Sprintf(
-		"[%s] [%s] [%s] %s",
-		e.CreatedAt.Format("2006-01-02 15:04:05"),
-		exitLabel,
-		e.Duration.Round(1),
-		e.Command,
-	))
+	cmd.Println(auditTint("["+e.CreatedAt.Format("2006-01-02 15:04:05")+"] ", textMuted) +
+		auditTint("["+exitLabel+"] ", exitColor) +
+		auditTint("["+e.Duration.Round(1).String()+"] ", textMuted) +
+		auditTint(e.Command, textPrimary))
 	if e.CWD != "" {
-		cmd.Println(fmt.Sprintf("  cwd: %s", e.CWD))
+		cmd.Println(auditTint("  cwd: ", textMuted) + auditTint(e.CWD, textPrimary))
 	}
 	if e.GitBranch != "" {
-		cmd.Println(fmt.Sprintf("  branch: %s", e.GitBranch))
+		cmd.Println(auditTint("  branch: ", textMuted) + auditTint(e.GitBranch, textPrimary))
 	}
 }
