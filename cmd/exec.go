@@ -390,6 +390,12 @@ func runExec(_ *cobra.Command, args []string) error {
 		if !strings.HasSuffix(response.String(), "\n") {
 			fmt.Println()
 		}
+		if !IsQuiet() {
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(
+				fmt.Sprintf("graycode: %d tokens in / %d out · %d turn(s) · %s · %s",
+					totalIn, totalOut, turns, time.Since(start).Round(time.Millisecond), effectiveModel),
+				textMuted))
+		}
 		if exitCode != 0 {
 			return fmt.Errorf("exec failed: %s", execErr)
 		}
