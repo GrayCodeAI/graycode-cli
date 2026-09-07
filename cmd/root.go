@@ -195,7 +195,7 @@ Run graycode and use /config to set up your first provider.`, registeredProvider
 			if len(candidates) > 0 {
 				// Auto-resume the most recent interrupted session
 				c := candidates[0]
-				fmt.Printf("Found interrupted session %s (%s, %d msgs)\n", c.SessionID, c.Interruption, c.MessageCount)
+				fmt.Printf("%s\n", auditTint("Found interrupted session ", warnAmber)+auditTint(c.SessionID, textPrimary)+auditTint(fmt.Sprintf(" (%s, %d msgs)", c.Interruption, c.MessageCount), textMuted))
 				resumeID = c.SessionID
 			}
 		}
