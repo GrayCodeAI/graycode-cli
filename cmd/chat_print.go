@@ -105,7 +105,7 @@ func runPrint(text string) error {
 		case "tool_use":
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_use", "", ev.ToolName)
-			} else {
+			} else if !IsQuiet() {
 				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", auditTint("["+ev.ToolName+"]", infoSky))
 			}
 		case "tool_result":
@@ -116,7 +116,7 @@ func runPrint(text string) error {
 			}
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_result", content, ev.ToolName)
-			} else {
+			} else if !IsQuiet() {
 				_, _ = fmt.Fprintf(os.Stderr, "%s %s\n", auditTint("["+ev.ToolName+"]", infoSky), content)
 			}
 		case "usage":
