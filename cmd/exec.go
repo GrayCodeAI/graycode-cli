@@ -866,13 +866,13 @@ func fanoutSummaryLines(attempts []fanoutAttempt) string {
 }
 
 func printFanoutReport(attempts []fanoutAttempt) {
-	fmt.Fprintln(os.Stderr, "\n=== fan-out comparison (worktrees kept for inspection) ===")
+	fmt.Fprintln(os.Stderr, auditTint("\n=== fan-out comparison (worktrees kept for inspection) ===", infoSky))
 	for _, a := range attempts {
-		status := icons.Check() + " ok"
+		status := auditTint(icons.Check()+" ok", doneGreen)
 		if !a.OK {
-			status = icons.Close() + " failed"
+			status = auditTint(icons.Close()+" failed", errorCoral)
 			if a.Error != "" {
-				status += " — " + a.Error
+				status += auditTint(" — "+a.Error, errorCoral)
 			}
 		}
 		fmt.Fprintf(os.Stderr, "\n#%d %s\n  branch:   %s\n  worktree: %s\n  tokens:   in=%d out=%d turns=%d\n  duration: %s\n",
