@@ -86,7 +86,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	// Initialize OpenTelemetry telemetry (opt-in via GRAYCODE_ENABLE_TELEMETRY=1).
 	telemetryProviders, telemetryErr := oteltrace.InitTelemetry(oteltrace.DefaultTelemetryConfig())
 	if telemetryErr != nil {
-		fmt.Fprintln(os.Stderr, "warning: telemetry initialization failed:", telemetryErr)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("warning: telemetry initialization failed: %v", telemetryErr), warnAmber))
 	}
 	if telemetryProviders != nil && telemetryErr == nil && telemetryProviders.IsEnabled() {
 		defer func() {
@@ -100,7 +100,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	// tracing; failures are non-fatal.
 	logBackend, logBackendErr := otellog.NewBackend(otellog.DefaultConfig())
 	if logBackendErr != nil {
-		fmt.Fprintln(os.Stderr, "warning: telemetry log backend initialization failed:", logBackendErr)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("warning: telemetry log backend initialization failed: %v", logBackendErr), warnAmber))
 	}
 	if logBackend != nil && logBackend.Sharing() != otellog.SharingDisabled {
 		defer func() {
@@ -117,7 +117,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	if logErr != nil {
 		// Fall back to stderr if file logging fails.
 		daemonLogger = logger.New(os.Stderr, logLevelFromString(daemonLogLevel))
-		fmt.Fprintln(os.Stderr, "warning: daemon file logging failed, falling back to stderr:", logErr)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("warning: daemon file logging failed, falling back to stderr: %v", logErr), warnAmber))
 	} else {
 		daemonLogger = logger.New(logFile, logLevelFromString(daemonLogLevel))
 	}

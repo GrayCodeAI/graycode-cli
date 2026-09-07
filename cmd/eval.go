@@ -271,7 +271,7 @@ func runEval(_ *cobra.Command, _ []string) error {
 	store := eval.DefaultResultStore()
 	path, err := store.Save(result, model, "", hash)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to save results: %v\n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("Warning: failed to save results: %v", err), warnAmber))
 	} else {
 		fmt.Printf("%s\n", auditTint("Results saved to: ", doneGreen)+auditTint(path, textPrimary))
 	}
