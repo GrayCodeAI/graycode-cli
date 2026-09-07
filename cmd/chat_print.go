@@ -189,9 +189,9 @@ func writePrintUsageEvent(sessionID string, usage *engine.StreamUsage) {
 
 // printTextUsageFooter renders a muted token/elapsed summary to stderr after a
 // one-shot text-mode run. It writes to stderr so stdout stays pure for scripts,
-// and is skipped entirely when no usage event was received.
+// and is skipped entirely when no usage event was received or --quiet is set.
 func printTextUsageFooter(usage *engine.StreamUsage, started time.Time) {
-	if usage == nil {
+	if usage == nil || IsQuiet() {
 		return
 	}
 	parts := []string{fmt.Sprintf("%d in · %d out", usage.PromptTokens, usage.CompletionTokens)}

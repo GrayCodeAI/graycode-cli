@@ -85,4 +85,19 @@ func TestPrintTextUsageFooter(t *testing.T) {
 			t.Errorf("expected no output for nil usage, got: %q", got)
 		}
 	})
+
+	t.Run("skips output when quiet is set", func(t *testing.T) {
+		old := quietFlag
+		quietFlag = true
+		defer func() { quietFlag = old }()
+		got := captureStderr(t, func() {
+			printTextUsageFooter(&engine.StreamUsage{
+				PromptTokens:     100,
+				CompletionTokens: 50,
+			}, started)
+		})
+		if got != "" {
+			t.Errorf("expected no output under --quiet, got: %q", got)
+		}
+	})
 }
