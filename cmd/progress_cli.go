@@ -54,7 +54,7 @@ func (c *CLIProgress) StartStep(i int) {
 			eta = fmt.Sprintf(" · ETA %s", formatDurationShort(remaining))
 		}
 		name := c.tint(c.pt.Steps[i].Name, textPrimary)
-		fmt.Fprintf(c.w, "\r%s %s %s %d/%d%s\033[K", frame, c.bar(), name, i+1, len(c.pt.Steps), eta)
+		_, _ = fmt.Fprintf(c.w, "\r%s %s %s %d/%d%s\033[K", frame, c.bar(), name, i+1, len(c.pt.Steps), eta)
 	})
 }
 
@@ -153,8 +153,8 @@ func (c *CLIProgress) Abort() {
 
 func (c *CLIProgress) writeLine(line string) {
 	if c.tty {
-		fmt.Fprintf(c.w, "\r%s\033[K\n", line)
+		_, _ = fmt.Fprintf(c.w, "\r%s\033[K\n", line)
 		return
 	}
-	fmt.Fprintln(c.w, line)
+	_, _ = fmt.Fprintln(c.w, line)
 }

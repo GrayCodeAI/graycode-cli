@@ -281,7 +281,7 @@ func FormatDeveloperPathReport(ctx context.Context) string {
 	b.WriteString(theme.Tint("Developer path (graycode · graycode-router · shrike · harrier)", theme.ReportInfo) + "\n\n")
 
 	status := "NEEDS SETUP"
-	var statusColor color.Color = theme.ReportWarn
+	var statusColor = theme.ReportWarn
 	switch {
 	case r.Ready:
 		status = "READY"
