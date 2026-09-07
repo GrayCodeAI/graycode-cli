@@ -253,9 +253,7 @@ func runExec(_ *cobra.Command, args []string) error {
 	if ghaCtx.Active && !ghaCtx.Trusted {
 		const ceiling = engine.AutonomyBasic
 		if sess.PermSvc().Autonomy() > ceiling {
-			fmt.Fprintf(os.Stderr,
-				"graycode: untrusted GitHub event (author_association=%q); capping autonomy at %s\n",
-				ghaCtx.AuthorAssociation, ceiling)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("graycode: untrusted GitHub event (author_association=%q); capping autonomy at %s", ghaCtx.AuthorAssociation, ceiling), warnAmber))
 			sess.PermSvc().SetAutonomy(ceiling)
 		}
 	}
@@ -322,9 +320,9 @@ func runExec(_ *cobra.Command, args []string) error {
 		case "error":
 			execErr = ev.Content
 			if execOutputFormat == "text" {
-				_, _ = fmt.Fprintf(os.Stderr, "\nerror: %s\n", ev.Content)
+				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", auditTint("error: "+ev.Content, errorCoral))
 				if h := errhint.CLIHint(errors.New(ev.Content)); h != "" {
-					_, _ = fmt.Fprintf(os.Stderr, "  hint: %s\n", h)
+					_, _ = fmt.Fprintf(os.Stderr, "%s\n", auditTint("  hint: "+h, textMuted))
 				}
 			}
 			if execOutputFormat == "stream-json" {
@@ -687,7 +685,7 @@ func persistExecSession(id, model, provider, userMsg, assistantMsg string) {
 		},
 	}
 	if err := session.Save(s); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: failed to persist exec session %s: %v\n", id, err)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("warning: failed to persist exec session %s: %v", id, err), warnAmber))
 	}
 }
 
