@@ -35,7 +35,7 @@
 
 ---
 
-# Workstream A — Skills Registry
+## Workstream A — Skills Registry
 
 **Problem.** `graycode skills search` cannot work today, and `graycode skills install GrayCodeAI/graycode-skills <name>` cannot work either. The link is broken at three independent layers, and fixing only the URL restores nothing.
 
@@ -331,18 +331,18 @@ Append to `graycode-cli/internal/plugin/registry_test.go`:
 
 ```go
 func TestDefaultIndexURLIsPublished(t *testing.T) {
-	const want = "https://github.com/GrayCodeAI/graycode-skills/releases/download/registry-latest/registry.json"
-	if defaultIndexURL != want {
-		t.Fatalf("defaultIndexURL = %q, want %q", defaultIndexURL, want)
-	}
-	if strings.Contains(defaultIndexURL, "starling") {
-		t.Errorf("defaultIndexURL still references the renamed starling repo")
-	}
+    const want = "https://github.com/GrayCodeAI/graycode-skills/releases/download/registry-latest/registry.json"
+    if defaultIndexURL != want {
+        t.Fatalf("defaultIndexURL = %q, want %q", defaultIndexURL, want)
+    }
+    if strings.Contains(defaultIndexURL, "starling") {
+        t.Errorf("defaultIndexURL still references the renamed starling repo")
+    }
 }
 
 func TestFetchIndexParsesGeneratedShape(t *testing.T) {
-	// Byte-for-byte the shape graycode-skills/tools/update_registry.py emits.
-	const generated = `{
+    // Byte-for-byte the shape graycode-skills/tools/update_registry.py emits.
+    const generated = `{
   "version": 1,
   "skills": [
     {
@@ -358,22 +358,22 @@ func TestFetchIndexParsesGeneratedShape(t *testing.T) {
   ]
 }
 `
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(generated))
-	}))
-	defer srv.Close()
+    srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+        _, _ = w.Write([]byte(generated))
+    }))
+    defer srv.Close()
 
-	rc := &RegistryClient{IndexURL: srv.URL, CacheDir: t.TempDir(), client: srv.Client()}
-	idx, err := rc.FetchIndex()
-	if err != nil {
-		t.Fatalf("FetchIndex: %v", err)
-	}
-	if len(idx.Skills) != 1 {
-		t.Fatalf("skills = %d, want 1", len(idx.Skills))
-	}
-	if idx.Skills[0].Repo != "GrayCodeAI/graycode-skills" {
-		t.Errorf("Repo = %q, want the slug the installer clones from", idx.Skills[0].Repo)
-	}
+    rc := &RegistryClient{IndexURL: srv.URL, CacheDir: t.TempDir(), client: srv.Client()}
+    idx, err := rc.FetchIndex()
+    if err != nil {
+        t.Fatalf("FetchIndex: %v", err)
+    }
+    if len(idx.Skills) != 1 {
+        t.Fatalf("skills = %d, want 1", len(idx.Skills))
+    }
+    if idx.Skills[0].Repo != "GrayCodeAI/graycode-skills" {
+        t.Errorf("Repo = %q, want the slug the installer clones from", idx.Skills[0].Repo)
+    }
 }
 ```
 
@@ -381,22 +381,22 @@ Append to `graycode-cli/internal/plugin/marketplace_test.go`:
 
 ```go
 func TestNoPhantomDefaultMarketplaceSource(t *testing.T) {
-	for _, src := range DefaultMarketplaceSources() {
-		if strings.Contains(src.URL, "plugins-registry.json") {
-			t.Fatalf("default source %q points at plugins-registry.json, which nothing generates", src.Name)
-		}
-	}
+    for _, src := range DefaultMarketplaceSources() {
+        if strings.Contains(src.URL, "plugins-registry.json") {
+            t.Fatalf("default source %q points at plugins-registry.json, which nothing generates", src.Name)
+        }
+    }
 }
 
 func TestFetchAllWithNoSourcesReturnsEmptyNotError(t *testing.T) {
-	mc := &MarketplaceClient{Sources: nil, CacheDir: t.TempDir()}
-	entries, err := mc.FetchAll()
-	if err != nil {
-		t.Fatalf("FetchAll with no sources returned error: %v", err)
-	}
-	if len(entries) != 0 {
-		t.Fatalf("entries = %d, want 0", len(entries))
-	}
+    mc := &MarketplaceClient{Sources: nil, CacheDir: t.TempDir()}
+    entries, err := mc.FetchAll()
+    if err != nil {
+        t.Fatalf("FetchAll with no sources returned error: %v", err)
+    }
+    if len(entries) != 0 {
+        t.Fatalf("entries = %d, want 0", len(entries))
+    }
 }
 ```
 
@@ -434,7 +434,7 @@ In `graycode-cli/internal/plugin/marketplace.go`, replace the exported `DefaultM
 // on every `graycode plugin marketplace list`. Users register real sources
 // with `graycode plugin marketplace add <name> <url>`.
 func DefaultMarketplaceSources() []MarketplaceSource {
-	return nil
+    return nil
 }
 ```
 
@@ -493,74 +493,74 @@ Append to `graycode-cli/internal/plugin/registry_test.go`:
 
 ```go
 func TestDiscoverSkillDirs(t *testing.T) {
-	tests := []struct {
-		name   string
-		layout []string // SKILL.md paths relative to the repo root
-		want   []string // expected skill names
-	}{
-		{
-			name:   "flat layout",
-			layout: []string{"go-review/SKILL.md"},
-			want:   []string{"go-review"},
-		},
-		{
-			name:   "agentskills.io skills/ layout",
-			layout: []string{"skills/go-review/SKILL.md"},
-			want:   []string{"go-review"},
-		},
-		{
-			name:   "graycode-skills categories layout",
-			layout: []string{"categories/go/go-review/SKILL.md", "categories/python/pandas/SKILL.md"},
-			want:   []string{"go-review", "pandas"},
-		},
-		{
-			name:   "ignores vendored and dot directories",
-			layout: []string{"go-review/SKILL.md", ".git/hooks/SKILL.md", "node_modules/pkg/SKILL.md"},
-			want:   []string{"go-review"},
-		},
-	}
+    tests := []struct {
+        name   string
+        layout []string // SKILL.md paths relative to the repo root
+        want   []string // expected skill names
+    }{
+        {
+            name:   "flat layout",
+            layout: []string{"go-review/SKILL.md"},
+            want:   []string{"go-review"},
+        },
+        {
+            name:   "agentskills.io skills/ layout",
+            layout: []string{"skills/go-review/SKILL.md"},
+            want:   []string{"go-review"},
+        },
+        {
+            name:   "graycode-skills categories layout",
+            layout: []string{"categories/go/go-review/SKILL.md", "categories/python/pandas/SKILL.md"},
+            want:   []string{"go-review", "pandas"},
+        },
+        {
+            name:   "ignores vendored and dot directories",
+            layout: []string{"go-review/SKILL.md", ".git/hooks/SKILL.md", "node_modules/pkg/SKILL.md"},
+            want:   []string{"go-review"},
+        },
+    }
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			root := t.TempDir()
-			for _, rel := range tc.layout {
-				full := filepath.Join(root, rel)
-				if err := os.MkdirAll(filepath.Dir(full), 0o750); err != nil {
-					t.Fatal(err)
-				}
-				if err := os.WriteFile(full, []byte("---\nname: x\n---\n"), 0o600); err != nil {
-					t.Fatal(err)
-				}
-			}
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            root := t.TempDir()
+            for _, rel := range tc.layout {
+                full := filepath.Join(root, rel)
+                if err := os.MkdirAll(filepath.Dir(full), 0o750); err != nil {
+                    t.Fatal(err)
+                }
+                if err := os.WriteFile(full, []byte("---\nname: x\n---\n"), 0o600); err != nil {
+                    t.Fatal(err)
+                }
+            }
 
-			got, err := discoverSkillDirs(root)
-			if err != nil {
-				t.Fatalf("discoverSkillDirs: %v", err)
-			}
-			if len(got) != len(tc.want) {
-				t.Fatalf("found %d skills %v, want %d %v", len(got), keysOf(got), len(tc.want), tc.want)
-			}
-			for _, name := range tc.want {
-				dir, ok := got[name]
-				if !ok {
-					t.Errorf("missing skill %q; got %v", name, keysOf(got))
-					continue
-				}
-				if _, err := os.Stat(filepath.Join(dir, "SKILL.md")); err != nil {
-					t.Errorf("skill %q maps to %q which has no SKILL.md", name, dir)
-				}
-			}
-		})
-	}
+            got, err := discoverSkillDirs(root)
+            if err != nil {
+                t.Fatalf("discoverSkillDirs: %v", err)
+            }
+            if len(got) != len(tc.want) {
+                t.Fatalf("found %d skills %v, want %d %v", len(got), keysOf(got), len(tc.want), tc.want)
+            }
+            for _, name := range tc.want {
+                dir, ok := got[name]
+                if !ok {
+                    t.Errorf("missing skill %q; got %v", name, keysOf(got))
+                    continue
+                }
+                if _, err := os.Stat(filepath.Join(dir, "SKILL.md")); err != nil {
+                    t.Errorf("skill %q maps to %q which has no SKILL.md", name, dir)
+                }
+            }
+        })
+    }
 }
 
 func keysOf(m map[string]string) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	sort.Strings(out)
-	return out
+    out := make([]string, 0, len(m))
+    for k := range m {
+        out = append(out, k)
+    }
+    sort.Strings(out)
+    return out
 }
 ```
 
@@ -593,53 +593,53 @@ const maxSkillSearchDepth = 4
 // On a duplicate skill name the shallowest path wins; ties keep the first
 // lexicographic match so the result is deterministic.
 func discoverSkillDirs(root string) (map[string]string, error) {
-	found := map[string]string{}
-	depthOf := map[string]int{}
+    found := map[string]string{}
+    depthOf := map[string]int{}
 
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, relErr := filepath.Rel(root, path)
-		if relErr != nil {
-			return nil //nolint:nilerr // an unrelatable path is simply skipped
-		}
-		if d.IsDir() {
-			if path == root {
-				return nil
-			}
-			name := d.Name()
-			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
-				return filepath.SkipDir
-			}
-			if len(strings.Split(filepath.ToSlash(rel), "/")) > maxSkillSearchDepth {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if d.Name() != "SKILL.md" {
-			return nil
-		}
-		dir := filepath.Dir(path)
-		if dir == root {
-			return nil // a top-level SKILL.md documents the repo, not a skill
-		}
-		name := filepath.Base(dir)
-		depth := len(strings.Split(filepath.ToSlash(rel), "/"))
-		if prev, ok := found[name]; ok {
-			if depthOf[name] <= depth {
-				return nil
-			}
-			_ = prev
-		}
-		found[name] = dir
-		depthOf[name] = depth
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("scan skills: %w", err)
-	}
-	return found, nil
+    err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+        if err != nil {
+            return err
+        }
+        rel, relErr := filepath.Rel(root, path)
+        if relErr != nil {
+            return nil //nolint:nilerr // an unrelatable path is simply skipped
+        }
+        if d.IsDir() {
+            if path == root {
+                return nil
+            }
+            name := d.Name()
+            if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
+                return filepath.SkipDir
+            }
+            if len(strings.Split(filepath.ToSlash(rel), "/")) > maxSkillSearchDepth {
+                return filepath.SkipDir
+            }
+            return nil
+        }
+        if d.Name() != "SKILL.md" {
+            return nil
+        }
+        dir := filepath.Dir(path)
+        if dir == root {
+            return nil // a top-level SKILL.md documents the repo, not a skill
+        }
+        name := filepath.Base(dir)
+        depth := len(strings.Split(filepath.ToSlash(rel), "/"))
+        if prev, ok := found[name]; ok {
+            if depthOf[name] <= depth {
+                return nil
+            }
+            _ = prev
+        }
+        found[name] = dir
+        depthOf[name] = depth
+        return nil
+    })
+    if err != nil {
+        return nil, fmt.Errorf("scan skills: %w", err)
+    }
+    return found, nil
 }
 ```
 
@@ -658,22 +658,22 @@ Expected: PASS, all four subtests.
 In `graycode-cli/internal/plugin/registry.go`, replace the discovery block at lines 258-270. Delete the `skillsRoot` computation and the `os.ReadDir(skillsRoot)` call, and drive the existing loop from the map instead:
 
 ```go
-	// Discover skills in the cloned repo, whatever layout it uses.
-	discovered, err := discoverSkillDirs(tmpDir)
-	if err != nil {
-		return "", err
-	}
-	names := make([]string, 0, len(discovered))
-	for name := range discovered {
-		names = append(names, name)
-	}
-	sort.Strings(names)
+    // Discover skills in the cloned repo, whatever layout it uses.
+    discovered, err := discoverSkillDirs(tmpDir)
+    if err != nil {
+        return "", err
+    }
+    names := make([]string, 0, len(discovered))
+    for name := range discovered {
+        names = append(names, name)
+    }
+    sort.Strings(names)
 ```
 
 Then change the loop header from `for _, e := range entries {` to `for _, name := range names {`, delete the `if !e.IsDir() { continue }` guard and the `name := e.Name()` line, and change the `srcSkill` assignment to:
 
 ```go
-		srcSkill := filepath.Join(discovered[name], "SKILL.md")
+        srcSkill := filepath.Join(discovered[name], "SKILL.md")
 ```
 
 Leave the rest of the loop body, including the `skillName` filter, the trust checks, and the lockfile writes, exactly as they are. Add `"sort"` to the imports if it is not already present.
@@ -714,7 +714,7 @@ Claude-Session: https://claude.ai/code/session_01MTUKadN91fcmuhxGWYVe2k"
 
 ---
 
-# Workstream B — Cloud Wire Contract
+## Workstream B — Cloud Wire Contract
 
 **Problem.** Two field names drifted between graycode-cli and graycode-platform. Both schemas on the worker are `.strict()` zod objects, so both calls are rejected outright.
 
@@ -1104,7 +1104,7 @@ Expected: migration reports one statement batch applied, then both workers deplo
 
 ---
 
-# Workstream C — Router Boundary Truth
+## Workstream C — Router Boundary Truth
 
 **Problem.** This workstream fixes documentation and two defective guards. **There is no import violation to repair: all nine boundary guards pass today.**
 
@@ -1266,9 +1266,9 @@ Expected: the list includes `boundary-graycode-router-engine`.
 Delete the exception block at `graycode-cli/internal/testaudit/audit_test.go:223-226`:
 
 ```go
-		if strings.HasPrefix(rel, "internal/provider/gateway/") && path == graycodeRouterModule+"/credentials" {
-			continue
-		}
+        if strings.HasPrefix(rel, "internal/provider/gateway/") && path == graycodeRouterModule+"/credentials" {
+            continue
+        }
 ```
 
 And at `graycode-cli/internal/testaudit/package_boundaries_test.go:61-65`, the equivalent block keyed on `filepath.ToSlash(filepath.Dir(relFile)) == "internal/provider/gateway"`.
@@ -1305,7 +1305,7 @@ Claude-Session: https://claude.ai/code/session_01MTUKadN91fcmuhxGWYVe2k"
 
 ---
 
-# Workstream D — Naming Sweep
+## Workstream D — Naming Sweep
 
 **Scope (approved):** documentation, user-visible strings, and code comments. Roughly 230 sites. `graycode-cli` is already clean: it contains **zero** occurrences of `hawk` outside generated GitNexus blocks. Marketing copy under `graycode-platform/apps/web` is out of scope; it is dated content and product-line branding.
 
@@ -1444,34 +1444,34 @@ Create `graycode-router/setup/naming_test.go`:
 package setup
 
 import (
-	"os"
-	"path/filepath"
-	"strings"
-	"testing"
+    "os"
+    "path/filepath"
+    "strings"
+    "testing"
 )
 
 // TestNoLegacyHostNameInUserFacingStrings guards the three call sites that
 // print a command for the user to run. They named the old product.
 func TestNoLegacyHostNameInUserFacingStrings(t *testing.T) {
-	files := []string{
-		filepath.Join("..", "catalog", "v1.go"),
-		filepath.Join("..", "setup", "status.go"),
-		filepath.Join("..", "runtime", "preflight.go"),
-	}
-	for _, f := range files {
-		data, err := os.ReadFile(f) // #nosec G304 -- fixed test fixture paths
-		if err != nil {
-			t.Fatalf("read %s: %v", f, err)
-		}
-		for i, line := range strings.Split(string(data), "\n") {
-			if !strings.Contains(line, `"`) {
-				continue
-			}
-			if strings.Contains(line, "hawk models refresh") || strings.Contains(line, "hawk will discover") || strings.Contains(line, "hawk refreshes") {
-				t.Errorf("%s:%d prints the legacy host name to the user: %s", f, i+1, strings.TrimSpace(line))
-			}
-		}
-	}
+    files := []string{
+        filepath.Join("..", "catalog", "v1.go"),
+        filepath.Join("..", "setup", "status.go"),
+        filepath.Join("..", "runtime", "preflight.go"),
+    }
+    for _, f := range files {
+        data, err := os.ReadFile(f) // #nosec G304 -- fixed test fixture paths
+        if err != nil {
+            t.Fatalf("read %s: %v", f, err)
+        }
+        for i, line := range strings.Split(string(data), "\n") {
+            if !strings.Contains(line, `"`) {
+                continue
+            }
+            if strings.Contains(line, "hawk models refresh") || strings.Contains(line, "hawk will discover") || strings.Contains(line, "hawk refreshes") {
+                t.Errorf("%s:%d prints the legacy host name to the user: %s", f, i+1, strings.TrimSpace(line))
+            }
+        }
+    }
 }
 ```
 
@@ -1749,7 +1749,7 @@ Claude-Session: https://claude.ai/code/session_01MTUKadN91fcmuhxGWYVe2k"
 
 ---
 
-# Execution Order
+## Execution Order
 
 The workstreams are independent, but two ordering constraints are real:
 
@@ -1767,7 +1767,7 @@ Recommended sequence, one PR per repo per workstream:
 
 ---
 
-# Self-Review
+## Self-Review
 
 **Coverage.** Every finding from the scouting pass maps to a task: registry publishing (A2), registry shape (A1), registry consumption (A3), install discovery (A4), device-login field drift (B1-B2), usage capability drift (B1-B2), BFF enum (B3), triplicate OpenAPI plus personal subdomain (B4), missing cloud endpoint documented as a known gap (B5), documented-vs-enforced boundary (C1), vacuous peer guard (C2), missing pre-push hook (C2), dead credentials exception (C2), legacy naming (D1-D4), wrong skill and category counts (D1), rename-corruption typos (D3), hard-coded personal path (D2).
 
