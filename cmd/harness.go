@@ -84,9 +84,9 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 			if fixErr != nil {
 				return fmt.Errorf("harness auto-fix failed: %w", fixErr)
 			}
-			fmt.Printf("[FIX] Graycode Harness Auto-Repair Results:\n")
+			fmt.Printf("%s\n", auditTint("[FIX] Graycode Harness Auto-Repair Results:", warnAmber))
 			for _, repair := range fixResult.RepairsPerformed {
-				fmt.Printf("   + %s\n", repair)
+				fmt.Printf("%s\n", auditTint("   + "+repair, doneGreen))
 			}
 			// Re-evaluate workspace after fix
 			report, _ = harness.EvaluateWorkspace(ctx, targetDir, opts)
