@@ -5,23 +5,17 @@
   "updated": "2026-06-02",
   "components": [
     "graycode",
-    "sparrow",
     "robin",
     "graycode-router",
     "kestrel",
     "merlin",
-    "shrike",
-    "harrier",
-    "swift"
+    "harrier"
   ],
   "dependencies": {
-    "graycode":            ["graycode-router", "kestrel", "merlin", "shrike"],
-    "sparrow":     ["graycode"],
+    "graycode":            ["graycode-router", "kestrel", "merlin"],
     "robin": ["graycode"],
     "kestrel":           ["graycode", "graycode-router"],
     "merlin":         ["graycode"],
-    "swift":           [],
-    "shrike":             ["graycode"],
     "harrier":            [],
     "graycode-router":           []
   },
@@ -30,15 +24,12 @@
       "name": "stable",
       "description": "Latest tested-together stable combination across the eco. This is what new users get when installing.",
       "components": {
-        "graycode":            "0.1.0",
-        "sparrow":     "0.1.0",
+        "graycode":            "0.0.1",
         "robin": "0.1.0",
-        "graycode-router":           "0.1.0",
+        "graycode-router":           "0.0.1",
         "kestrel":           "0.1.0",
         "merlin":         "0.1.0",
-        "shrike":             "0.1.0",
-        "harrier":            "0.1.0",
-        "swift":           "0.1.0"
+        "harrier":            "0.1.0"
       }
     },
     {
@@ -46,14 +37,11 @@
       "description": "Combination that the upcoming release will ship — kept up to date by release-please as components advance. Tested in CI on every PR.",
       "components": {
         "graycode":            "main",
-        "sparrow":     "main",
         "robin": "main",
         "graycode-router":           "main",
         "kestrel":           "main",
         "merlin":         "main",
-        "shrike":             "main",
-        "harrier":            "main",
-        "swift":           "main"
+        "harrier":            "main"
       }
     }
   ]
