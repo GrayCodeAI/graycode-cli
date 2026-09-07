@@ -449,7 +449,8 @@ Fish:
 			return fmt.Errorf("cannot write completion script: %w", err)
 		}
 
-		if _, err := fmt.Fprintf(cmd.OutOrStdout(), "Installed %s completion to %s\n", shell, path); err != nil {
+		if _, err := fmt.Fprintf(cmd.OutOrStdout(), "%s %s completion to %s\n",
+			auditTint("Installed", doneGreen), shell, auditTint(path, textPrimary)); err != nil {
 			return fmt.Errorf("cannot write completion message: %w", err)
 		}
 		return nil
