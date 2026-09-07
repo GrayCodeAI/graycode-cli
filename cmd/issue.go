@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -96,10 +97,15 @@ func runIssue(cmd *cobra.Command, args []string) error {
 		ghArgs = append(ghArgs, "--label", l)
 	}
 
-	cc := exec.CommandContext(context.Background(), "gh", ghArgs...) // #nosec G204 -- fixed command 'gh' with args; title/body are data arguments, not the executable
+	gctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	cc := exec.CommandContext(gctx, "gh", ghArgs...) // #nosec G204 -- fixed command 'gh' with args; title/body are data arguments, not the executable
 	cc.Stderr = os.Stderr
 	out, err := cc.Output()
 	if err != nil {
+		if gctx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("gh issue create timed out after 60s")
+		}
 		return fmt.Errorf("gh issue create failed: %w", err)
 	}
 	cmd.Println(auditTint("Issue created: ", doneGreen) + auditTint(strings.TrimSpace(string(out)), textPrimary))
