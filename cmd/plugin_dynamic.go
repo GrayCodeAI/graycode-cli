@@ -140,9 +140,14 @@ var pluginInstallDynamicCmd = &cobra.Command{
 
 		// Otherwise treat as GitHub repo
 		dm := getDynamicManager()
+		prog := NewCLIProgress("Plugin install", []string{"Installing plugin from GitHub"})
+		prog.StartStep(0)
 		if err := dm.InstallFromGitHub(source); err != nil {
+			prog.Abort()
 			return err
 		}
+		prog.CompleteStep(0)
+		prog.Done()
 		cmd.Printf("%s\n", auditTint("Installed plugin from "+source+".", doneGreen))
 
 		// Re-discover
@@ -452,14 +457,22 @@ var pluginMarketplaceInstallCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		mc := plugin.NewMarketplaceClient()
+		prog := NewCLIProgress("Plugin install", []string{"Fetching plugin", "Installing plugin"})
+		prog.StartStep(0)
 		entry, err := mc.Find(args[0])
 		if err != nil {
+			prog.Abort()
 			return err
 		}
+		prog.CompleteStep(0)
+		prog.StartStep(1)
 		dir, err := mc.Install(*entry)
 		if err != nil {
+			prog.Abort()
 			return err
 		}
+		prog.CompleteStep(1)
+		prog.Done()
 		cmd.Printf("%s\n", auditTint("Installed "+entry.Name+" to ", doneGreen)+auditTint(dir, textPrimary))
 		// re-discover
 		_ = getDynamicManager().DiscoverAll()
