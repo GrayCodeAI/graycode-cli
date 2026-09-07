@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
 	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
@@ -168,22 +169,22 @@ func RunAutoSkill(dir string) (string, error) {
 	}
 
 	var b strings.Builder
-	_, _ = fmt.Fprintf(&b, "Detected: %s\n", strings.Join(sigNames, ", "))
+	_, _ = fmt.Fprintf(&b, "%s %s\n", theme.Tint("Detected:", theme.ReportMuted), strings.Join(sigNames, ", "))
 
 	installed := 0
 	for _, skill := range recommended {
 		msg, err := rc.Install(skill.Repo, skill.Name, "user")
 		if err != nil {
-			_, _ = fmt.Fprintf(&b, "  "+icons.CloseThick()+" %s — %v\n", skill.Name, err)
+			_, _ = fmt.Fprintf(&b, "  "+icons.CloseThick()+" %s — %s\n", skill.Name, theme.Tint(err.Error(), theme.ReportError))
 			continue
 		}
 		_ = msg
-		_, _ = fmt.Fprintf(&b, "  "+icons.CheckBold()+" %s — %s\n", skill.Name, skill.Description)
+		_, _ = fmt.Fprintf(&b, "  %s %s — %s\n", theme.Tint(icons.CheckBold(), theme.ReportSuccess), skill.Name, skill.Description)
 		installed++
 	}
 
 	if installed > 0 {
-		_, _ = fmt.Fprintf(&b, "\nInstalled %d skill(s) to Graycode user state", installed)
+		_, _ = fmt.Fprintf(&b, "\n%s", theme.Tint(fmt.Sprintf("Installed %d skill(s) to Graycode user state", installed), theme.ReportSuccess))
 	}
 	return b.String(), nil
 }
