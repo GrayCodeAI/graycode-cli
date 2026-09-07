@@ -53,7 +53,8 @@ func (c *CLIProgress) StartStep(i int) {
 		if remaining := c.pt.EstimateRemaining(); remaining > 0 {
 			eta = fmt.Sprintf(" · ETA %s", formatDurationShort(remaining))
 		}
-		fmt.Fprintf(c.w, "\r%s %s %d/%d%s\033[K", frame, c.bar(), i+1, len(c.pt.Steps), eta)
+		name := c.tint(c.pt.Steps[i].Name, textPrimary)
+		fmt.Fprintf(c.w, "\r%s %s %s %d/%d%s\033[K", frame, c.bar(), name, i+1, len(c.pt.Steps), eta)
 	})
 }
 
