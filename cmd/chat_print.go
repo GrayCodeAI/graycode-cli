@@ -96,7 +96,7 @@ func runPrint(text string) error {
 			// surface the remaining time budget once, on the first content.
 			if countdown && !countdownShown {
 				if rem := lifecycle.RemainingTime(ctx); rem != "" {
-					fmt.Fprintf(os.Stderr, "[time remaining] %s\n", rem)
+					fmt.Fprintf(os.Stderr, "%s\n", auditTint("[time remaining] "+rem, warnAmber))
 					countdownShown = true
 				}
 			}
@@ -104,7 +104,7 @@ func runPrint(text string) error {
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_use", "", ev.ToolName)
 			} else {
-				_, _ = fmt.Fprintf(os.Stderr, "\n[%s]\n", ev.ToolName)
+				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", auditTint("["+ev.ToolName+"]", infoSky))
 			}
 		case "tool_result":
 			content := ev.Content
@@ -115,7 +115,7 @@ func runPrint(text string) error {
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_result", content, ev.ToolName)
 			} else {
-				_, _ = fmt.Fprintf(os.Stderr, "[%s] %s\n", ev.ToolName, content)
+				_, _ = fmt.Fprintf(os.Stderr, "%s %s\n", auditTint("["+ev.ToolName+"]", infoSky), content)
 			}
 		case "usage":
 			if outputFormat == "stream-json" && ev.Usage != nil {
