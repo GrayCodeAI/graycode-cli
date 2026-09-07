@@ -644,6 +644,19 @@ var preflightCmd = &cobra.Command{
 	},
 }
 
+// printConfigSetResult renders the result of a successful config write,
+// showing a modern old → new transition when the value actually changed.
+// Settable keys are non-secret (API keys error out before reaching here),
+// so displaying the prior value cannot leak a secret.
+func printConfigSetResult(cmd *cobra.Command, key, newVal string, settings graycodeconfig.Settings) {
+	oldVal, hadOld := graycodeconfig.SettingValue(settings, key)
+	if hadOld && oldVal != "" && oldVal != newVal {
+		cmd.Println(auditTint(key, textPrimary) + auditTint(": ", textMuted) + auditTint(oldVal, textMuted) + auditTint(" → ", graycodeColor) + auditTint(newVal, textPrimary) + auditTint(" (updated)", doneGreen))
+		return
+	}
+	cmd.Println(auditTint("updated ", doneGreen) + auditTint(key, textPrimary))
+}
+
 var configCmd = &cobra.Command{
 	Use:   "config [get|set|provider|model|keys|routing-preview|migrate-deployments]",
 	Short: "Show or update settings",
@@ -674,33 +687,38 @@ var configCmd = &cobra.Command{
 				if err != nil {
 					return err
 				}
-				oldVal, hadOld := graycodeconfig.SettingValue(settings, key)
 				if err := graycodeconfig.SetGlobalSetting(key, newVal); err != nil {
 					return err
 				}
-				if hadOld && oldVal != "" && oldVal != newVal {
-					cmd.Println(auditTint(key, textPrimary) + auditTint(": ", textMuted) + auditTint(oldVal, textMuted) + auditTint(" → ", graycodeColor) + auditTint(newVal, textPrimary) + auditTint(" (updated)", doneGreen))
-				} else {
-					cmd.Println(auditTint("updated ", doneGreen) + auditTint(key, textPrimary))
-				}
+				printConfigSetResult(cmd, key, newVal, settings)
 				return nil
 			case "provider":
 				if len(args) < 2 {
 					return fmt.Errorf("usage: graycode config provider <name>")
 				}
-				if err := graycodeconfig.SetGlobalSetting("provider", strings.Join(args[1:], " ")); err != nil {
+				newVal := strings.Join(args[1:], " ")
+				settings, err := loadEffectiveSettings()
+				if err != nil {
 					return err
 				}
-				cmd.Println(auditTint("updated provider", doneGreen))
+				if err := graycodeconfig.SetGlobalSetting("provider", newVal); err != nil {
+					return err
+				}
+				printConfigSetResult(cmd, "provider", newVal, settings)
 				return nil
 			case "model":
 				if len(args) < 2 {
 					return fmt.Errorf("usage: graycode config model <name>")
 				}
-				if err := graycodeconfig.SetGlobalSetting("model", strings.Join(args[1:], " ")); err != nil {
+				newVal := strings.Join(args[1:], " ")
+				settings, err := loadEffectiveSettings()
+				if err != nil {
 					return err
 				}
-				cmd.Println(auditTint("updated model", doneGreen))
+				if err := graycodeconfig.SetGlobalSetting("model", newVal); err != nil {
+					return err
+				}
+				printConfigSetResult(cmd, "model", newVal, settings)
 				return nil
 			case "keys":
 				cmd.Println(apiKeyConfigSummary())
