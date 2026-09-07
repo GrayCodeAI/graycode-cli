@@ -26,6 +26,7 @@ var verifyCmd = &cobra.Command{
 Exits non-zero on the first failed check.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ok := true
+		start := time.Now()
 		// Themed markers (padded to a fixed width so colorized output keeps
 		// its column alignment; plain when piped via ShouldColor).
 		okMark := auditTint("[OK]   ", doneGreen)
@@ -81,7 +82,7 @@ Exits non-zero on the first failed check.`,
 		if !ok {
 			return fmt.Errorf("verification failed — see messages above")
 		}
-		cmd.Println(auditTint("verification passed", doneGreen))
+		cmd.Println(auditTint("verification passed", doneGreen) + auditTint(" in "+time.Since(start).Round(time.Millisecond).String(), textMuted))
 		return nil
 	},
 }
