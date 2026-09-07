@@ -84,8 +84,8 @@ func runStats(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(filtered) == 0 {
-		cmd.Println("No session data found for the specified time period.")
-		cmd.Println("Sessions are recorded automatically when you use graycode.")
+		cmd.Println(auditTint("No session data found for the specified time period.", textMuted))
+		cmd.Println(auditTint("Sessions are recorded automatically when you use graycode.", textMuted))
 		return nil
 	}
 
