@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
 )
 
 // PersistAPIKey saves a provider API key via graycode-router (OS secret store).
@@ -143,17 +144,17 @@ func FormatCredentialCLIStatus(ctx context.Context) string {
 	}
 	report := CredentialStorageStatus(ctx)
 	var b strings.Builder
-	fmt.Fprintf(&b, "Credential storage: %s only\n", report.PlatformStore)
+	fmt.Fprintf(&b, "%s %s only\n", theme.Tint("Credential storage:", theme.ReportMuted), theme.Tint(report.PlatformStore, theme.ReportInfo))
 	if report.Writable {
-		b.WriteString("  Keychain: writable\n")
+		b.WriteString("  " + theme.Tint("Keychain:", theme.ReportMuted) + " " + theme.Tint("writable", theme.ReportSuccess) + "\n")
 	} else {
-		fmt.Fprintf(&b, "  Keychain: %s\n", report.Detail)
+		fmt.Fprintf(&b, "  %s %s\n", theme.Tint("Keychain:", theme.ReportMuted), theme.Tint(report.Detail, theme.ReportWarn))
 	}
 	providers := ConfiguredCredentialProviders()
 	if len(providers) == 0 {
-		b.WriteString("  Configured: (none)\n")
+		b.WriteString("  " + theme.Tint("Configured:", theme.ReportMuted) + " " + theme.Tint("(none)", theme.ReportWarn) + "\n")
 	} else {
-		fmt.Fprintf(&b, "  Configured: %s\n", strings.Join(providers, ", "))
+		fmt.Fprintf(&b, "  %s %s\n", theme.Tint("Configured:", theme.ReportMuted), theme.Tint(strings.Join(providers, ", "), theme.ReportInfo))
 	}
 	return strings.TrimRight(b.String(), "\n")
 }

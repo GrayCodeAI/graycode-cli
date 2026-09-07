@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
 	"github.com/GrayCodeAI/graycode-cli/internal/token"
 )
 
@@ -71,30 +72,30 @@ func BuildEcosystemReport(ctx context.Context, provider, model string) Ecosystem
 // FormatEcosystemPanel summarizes graycode-router, harrier, and shrike integration for doctor and status output.
 func FormatEcosystemPanel(ctx context.Context, provider, model string) string {
 	var b strings.Builder
-	b.WriteString("Ecosystem (graycode-router · harrier · shrike):\n")
+	b.WriteString(theme.Tint("Ecosystem (graycode-router · harrier · shrike):", theme.ReportInfo) + "\n")
 
 	// graycode-router — LLM provider layer
 	cat := CatalogHealthReport(ctx)
-	graycodeRouterLine := "  graycode-router: "
+	graycodeRouterLine := "  " + theme.Tint("graycode-router:", theme.ReportMuted) + " "
 	if cat.Exists {
-		graycodeRouterLine += fmt.Sprintf("catalog %d models", cat.Models)
+		graycodeRouterLine += theme.Tint(fmt.Sprintf("catalog %d models", cat.Models), theme.ReportInfo)
 	} else {
-		graycodeRouterLine += "catalog missing (run graycode models refresh)"
+		graycodeRouterLine += theme.Tint("catalog missing (run graycode models refresh)", theme.ReportWarn)
 	}
 	pre := EnginePreflightReport(ctx)
 	if pre.Ready {
-		graycodeRouterLine += " · locally ready"
+		graycodeRouterLine += " · " + theme.Tint("locally ready", theme.ReportSuccess)
 	} else {
-		graycodeRouterLine += " · setup incomplete"
+		graycodeRouterLine += " · " + theme.Tint("setup incomplete", theme.ReportWarn)
 	}
 	if strings.TrimSpace(provider) != "" && provider != "auto" {
-		graycodeRouterLine += fmt.Sprintf(" · provider %s", provider)
+		graycodeRouterLine += " · " + theme.Tint("provider "+provider, theme.ReportInfo)
 	}
 	if dep, err := EngineDeploymentSummary(ctx, model); err == nil {
 		if dep.RoutingStages > 0 {
-			graycodeRouterLine += fmt.Sprintf(" · routing %s (%d stages)", dep.RoutingSource, dep.RoutingStages)
+			graycodeRouterLine += " · " + theme.Tint(fmt.Sprintf("routing %s (%d stages)", dep.RoutingSource, dep.RoutingStages), theme.ReportInfo)
 		} else {
-			graycodeRouterLine += fmt.Sprintf(" · routing %s", dep.RoutingSource)
+			graycodeRouterLine += " · " + theme.Tint("routing "+dep.RoutingSource, theme.ReportInfo)
 		}
 	}
 	b.WriteString(graycodeRouterLine + "\n")
@@ -103,14 +104,13 @@ func FormatEcosystemPanel(ctx context.Context, provider, model string) string {
 	bridge := memory.NewHarrierBridge()
 	if bridge.Ready() {
 		first := strings.Split(memory.HarrierStatus(), "\n")[0]
-		b.WriteString("  harrier: " + first + " · bridge ready\n")
+		b.WriteString("  " + theme.Tint("harrier:", theme.ReportMuted) + " " + theme.Tint(first, theme.ReportInfo) + " · " + theme.Tint("bridge ready", theme.ReportSuccess) + "\n")
 	} else {
-		b.WriteString("  harrier: not initialized · memory ops skipped (~/.harrier/data/)\n")
+		b.WriteString("  " + theme.Tint("harrier:", theme.ReportMuted) + " " + theme.Tint("not initialized", theme.ReportWarn) + " · memory ops skipped (~/.harrier/data/)\n")
 	}
 
 	// shrike — token counting and context compression (always embedded)
 	sample := token.CountTokensFast("graycode context compression pipeline")
-	b.WriteString(fmt.Sprintf("  shrike: embedded · token/compress pipeline OK (sample=%d tokens)\n", sample))
-
+	b.WriteString("  " + theme.Tint("shrike:", theme.ReportMuted) + " " + theme.Tint("embedded", theme.ReportInfo) + " · " + theme.Tint("token/compress pipeline OK", theme.ReportSuccess) + fmt.Sprintf(" (sample=%d tokens)", sample) + "\n")
 	return strings.TrimRight(b.String(), "\n")
 }
