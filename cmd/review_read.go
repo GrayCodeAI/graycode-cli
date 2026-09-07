@@ -166,7 +166,7 @@ func runReviewClose(_ *cobra.Command, args []string) error {
 	if err := store.SetStatus(review.ID, ReviewStatusClosed); err != nil {
 		return err
 	}
-	fmt.Printf("%s Closed review #%d (%s)\n", icons.CheckBold(), review.ID, review.SHA[:8])
+	fmt.Printf("%s %s\n", auditTint(icons.CheckBold(), doneGreen), auditTint(fmt.Sprintf("Closed review #%d (%s)", review.ID, review.SHA[:8]), textPrimary))
 	return nil
 }
 
