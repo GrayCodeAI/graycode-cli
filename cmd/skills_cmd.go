@@ -50,9 +50,20 @@ var skillsSearchCmd = &cobra.Command{
 		jsonOut, _ := cmd.Flags().GetBool("json")
 
 		rc := plugin.NewRegistryClient()
+		prog := NewCLIProgress("Skills search", []string{"Searching skill registry"})
+		if !jsonOut {
+			prog.StartStep(0)
+		}
 		results, err := rc.Search(query, category)
 		if err != nil {
+			if !jsonOut {
+				prog.Abort()
+			}
 			return err
+		}
+		if !jsonOut {
+			prog.CompleteStep(0)
+			prog.Done()
 		}
 		if jsonOut {
 			data, _ := json.MarshalIndent(results, "", "  ")
@@ -82,10 +93,15 @@ var skillsInstallCmd = &cobra.Command{
 		}
 		scope, _ := cmd.Flags().GetString("scope")
 		rc := plugin.NewRegistryClient()
+		prog := NewCLIProgress("Skill install", []string{"Installing skill"})
+		prog.StartStep(0)
 		msg, err := rc.Install(repo, skillName, scope)
 		if err != nil {
+			prog.Abort()
 			return err
 		}
+		prog.CompleteStep(0)
+		prog.Done()
 		fmt.Println(msg)
 		return nil
 	},
@@ -138,10 +154,15 @@ var skillsTrendingCmd = &cobra.Command{
 			}
 		}
 		rc := plugin.NewRegistryClient()
+		prog := NewCLIProgress("Trending skills", []string{"Fetching trending skills"})
+		prog.StartStep(0)
 		results, err := rc.Trending(limit)
 		if err != nil {
+			prog.Abort()
 			return err
 		}
+		prog.CompleteStep(0)
+		prog.Done()
 		for i, e := range results {
 			fmt.Printf("%s. %s", auditTint(fmt.Sprintf("%d", i+1), textMuted), strings.TrimLeft(plugin.FormatSkillEntry(e), " "))
 		}
