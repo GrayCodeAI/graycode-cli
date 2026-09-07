@@ -87,9 +87,9 @@ func runSwiftReport(cmd *cobra.Command, _ []string) error {
 	// Mirror fx: attempt clipboard copy; on failure print a review-and-redact
 	// notice pointing at the saved path.
 	if !swiftReportNoCopy && swift.TryClipboard(swift.Build(&s)) {
-		cmd.Println("Swift report copied to clipboard. Saved at " + path + " (review and redact before sharing).")
+		cmd.Println(auditTint("Swift report copied to clipboard. ", doneGreen) + auditTint("Saved at "+path, textPrimary) + auditTint(" (review and redact before sharing).", textMuted))
 	} else {
-		cmd.Println("Swift saved at " + path + ". Review and redact it before sharing.")
+		cmd.Println(auditTint("Swift saved at ", doneGreen) + auditTint(path, textPrimary) + auditTint(". Review and redact it before sharing.", textMuted))
 	}
 	return nil
 }
