@@ -137,7 +137,7 @@ func runMission(_ *cobra.Command, args []string) error {
 
 	// Print results
 	fmt.Println()
-	fmt.Println(m.Summary())
+	fmt.Println(auditTint(m.Summary(), textPrimary))
 	fmt.Println()
 	for _, f := range m.Features {
 		status := icons.CheckBold() + " "
