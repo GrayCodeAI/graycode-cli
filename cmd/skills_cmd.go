@@ -143,7 +143,7 @@ var skillsTrendingCmd = &cobra.Command{
 			return err
 		}
 		for i, e := range results {
-			fmt.Printf("%d. %s", i+1, strings.TrimLeft(plugin.FormatSkillEntry(e), " "))
+			fmt.Printf("%s. %s", auditTint(fmt.Sprintf("%d", i+1), textMuted), strings.TrimLeft(plugin.FormatSkillEntry(e), " "))
 		}
 		return nil
 	},
