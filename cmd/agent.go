@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"text/tabwriter"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/multiagent/agents"
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
 	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -86,8 +86,7 @@ func runAgentList(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintf(w, "NAME\tMODEL\tDESCRIPTION\n")
+	rows := make([][]string, 0, len(all))
 	for _, a := range all {
 		model := a.Model
 		if model == "" {
@@ -100,9 +99,9 @@ func runAgentList(cmd *cobra.Command, _ []string) error {
 				desc = string(runes[:50]) + "..."
 			}
 		}
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", a.Name, model, desc)
+		rows = append(rows, []string{a.Name, model, desc})
 	}
-	return w.Flush()
+	return theme.PrintTable(os.Stdout, []string{"NAME", "MODEL", "DESCRIPTION"}, rows)
 }
 
 func runAgentCreate(_ *cobra.Command, args []string) error {
