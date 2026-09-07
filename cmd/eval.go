@@ -61,7 +61,7 @@ var evalCacheCmd = &cobra.Command{
 		if err := cache.Clear(); err != nil {
 			return err
 		}
-		fmt.Println("Cache cleared.")
+		fmt.Println(auditTint("Cache cleared.", doneGreen))
 		return nil
 	},
 }
@@ -223,7 +223,7 @@ func runEval(_ *cobra.Command, _ []string) error {
 		modelName = "default"
 	}
 
-	fmt.Printf("Running %d tasks with model %s...\n", len(tasks), modelName)
+	fmt.Printf("%s\n", auditTint(fmt.Sprintf("Running %d tasks with model %s...", len(tasks), modelName), textPrimary))
 
 	suite := &eval.BenchmarkSuite{Name: "graycode-eval", Tasks: tasks}
 	runner := eval.NewRunner(modelName, "")
@@ -273,7 +273,7 @@ func runEval(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to save results: %v\n", err)
 	} else {
-		fmt.Printf("Results saved to: %s\n", path)
+		fmt.Printf("%s\n", auditTint("Results saved to: ", doneGreen)+auditTint(path, textPrimary))
 	}
 
 	// Group results
@@ -349,7 +349,7 @@ func runEvalList(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	fmt.Printf("Available tasks (%d):\n\n", len(tasks))
+	fmt.Printf("%s\n\n", auditTint(fmt.Sprintf("Available tasks (%d):", len(tasks)), textPrimary))
 	fmt.Println("| ID | Description | Tags |")
 	fmt.Println("|----|-------------|------|")
 	for _, t := range tasks {
@@ -367,7 +367,7 @@ func runEvalResults(_ *cobra.Command, _ []string) error {
 		return err
 	}
 	if len(files) == 0 {
-		fmt.Println("No saved results found.")
+		fmt.Println(auditTint("No saved results found.", textMuted))
 		return nil
 	}
 
@@ -388,16 +388,17 @@ func runEvalResults(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	fmt.Printf("Saved results (%d):\n\n", len(files))
+	fmt.Printf("%s\n\n", auditTint(fmt.Sprintf("Saved results (%d):", len(files)), textPrimary))
 	for _, f := range files {
 		r, err := store.Load(f)
 		if err != nil {
 			continue
 		}
-		fmt.Printf("  %s  %s  %s  %.0f%% (%d/%d)\n",
-			r.Timestamp.Format("2006-01-02 15:04"),
-			r.Model, r.Suite,
-			r.Summary.PassRate*100, r.Summary.Passed, r.Summary.TotalTasks)
+		fmt.Printf("  %s  %s  %s  %s\n",
+			auditTint(r.Timestamp.Format("2006-01-02 15:04"), textMuted),
+			auditTint(r.Model, textPrimary),
+			auditTint(r.Suite, textPrimary),
+			auditTint(fmt.Sprintf("%.0f%% (%d/%d)", r.Summary.PassRate*100, r.Summary.Passed, r.Summary.TotalTasks), doneGreen))
 	}
 	return nil
 }
