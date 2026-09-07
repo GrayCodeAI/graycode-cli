@@ -524,16 +524,16 @@ func runWatch(initialPrompt string) error {
 	// Optional initial run to seed context, matching the prior behaviour.
 	if strings.TrimSpace(initialPrompt) != "" {
 		if err := runPrint(initialPrompt); err != nil {
-			fmt.Fprintf(os.Stderr, "Initial run failed: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint("Initial run failed: "+err.Error(), errorCoral))
 		}
 	}
 
 	root := "."
-	fmt.Fprintln(os.Stderr, "\n[Watching for AI!/AI? comment directives — press Ctrl+C to stop]")
+	fmt.Fprintln(os.Stderr, "\n"+auditTint("[Watching for AI!/AI? comment directives — press Ctrl+C to stop]", textPrimary))
 
 	// Process any directives already present before the first change event.
 	if n := processAIDirectives(root, watchIgnoreDirs); n > 0 {
-		fmt.Fprintf(os.Stderr, "[%s] processed %d AI directive(s)\n", time.Now().Format("15:04:05"), n)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("[%s] processed %d AI directive(s)", time.Now().Format("15:04:05"), n), textPrimary))
 	}
 
 	// Prefer the fsnotify event-driven backend. The AI!/AI? directive grammar
@@ -543,14 +543,14 @@ func runWatch(initialPrompt string) error {
 	watcher := aiwatch.NewAIWatcher(root, nil)
 	watcher.OnChange = func() {
 		if n := processAIDirectives(root, watchIgnoreDirs); n > 0 {
-			fmt.Fprintf(os.Stderr, "[%s] processed %d AI directive(s)\n", time.Now().Format("15:04:05"), n)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("[%s] processed %d AI directive(s)", time.Now().Format("15:04:05"), n), textPrimary))
 		}
 	}
 
 	ctx := context.Background()
 	if err := watcher.StartFsnotify(ctx); err != nil {
 		// fsnotify unavailable — fall back to the polling backstop.
-		fmt.Fprintf(os.Stderr, "[watch] fsnotify unavailable (%v), using polling fallback\n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("[watch] fsnotify unavailable (%v), using polling fallback", err), warnAmber))
 		return runWatchPolling(root)
 	}
 	return nil
@@ -569,7 +569,7 @@ func runWatchPolling(root string) error {
 		if currentMod.After(lastMod) {
 			lastMod = currentMod
 			if n := processAIDirectives(root, watchIgnoreDirs); n > 0 {
-				fmt.Fprintf(os.Stderr, "[%s] processed %d AI directive(s)\n", time.Now().Format("15:04:05"), n)
+				fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("[%s] processed %d AI directive(s)", time.Now().Format("15:04:05"), n), textPrimary))
 			}
 		}
 	}
