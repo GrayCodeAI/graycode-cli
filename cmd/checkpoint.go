@@ -105,6 +105,14 @@ var checkpointDeleteCmd = &cobra.Command{
 	Short: "Delete a named checkpoint",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ok, err := confirmDestructive(fmt.Sprintf("Delete checkpoint %q?", args[0]))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			cmd.Printf("%s\n", auditTint("Cancelled.", textMuted))
+			return nil
+		}
 		if err := session.DeleteNamedCheckpoint(args[0]); err != nil {
 			return err
 		}

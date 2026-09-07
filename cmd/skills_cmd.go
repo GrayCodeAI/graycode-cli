@@ -112,6 +112,14 @@ var skillsRemoveCmd = &cobra.Command{
 	Short: "Remove an installed skill",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ok, err := confirmDestructive(fmt.Sprintf("Remove skill %q?", args[0]))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			fmt.Printf("%s\n", auditTint("Cancelled.", textMuted))
+			return nil
+		}
 		if err := plugin.Remove(args[0]); err != nil {
 			return err
 		}

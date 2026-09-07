@@ -174,6 +174,15 @@ func runAgentRemove(_ *cobra.Command, args []string) error {
 		return err
 	}
 
+	ok, err := confirmDestructive(fmt.Sprintf("Remove agent %q (%s)?", a.Name, a.FilePath))
+	if err != nil {
+		return err
+	}
+	if !ok {
+		fmt.Printf("%s\n", auditTint("Cancelled.", textMuted))
+		return nil
+	}
+
 	if err := os.Remove(a.FilePath); err != nil {
 		return fmt.Errorf("remove %s: %w", a.FilePath, err)
 	}

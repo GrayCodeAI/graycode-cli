@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"strings"
 
 	"golang.org/x/term"
 )
@@ -17,6 +18,31 @@ func IsQuiet() bool {
 // a TTY and --quiet is not set).
 func CanPrompt() bool {
 	return !quietFlag && stdinIsTerminal()
+}
+
+// confirmDestructive prompts the user to confirm a destructive, hard-to-undo
+// operation. It returns true only on an explicit "y"/"yes". When the user is
+// not interactive (--quiet, piped stdin, or no TTY), it returns true so
+// scripts and automation are never blocked. A declined prompt returns false
+// with no error; callers should abort the operation and exit cleanly.
+func confirmDestructive(prompt string) (bool, error) {
+	if !CanPrompt() {
+		return true, nil
+	}
+	input := openPromptInput()
+	defer input.close()
+	answer, err := input.readLine(prompt + " [y/N] ")
+	if err != nil {
+		return false, err
+	}
+	return parseConfirm(answer), nil
+}
+
+// parseConfirm reports whether a user answer is an explicit affirmative
+// ("y" / "yes", case-insensitive, trimmed). Anything else declines.
+func parseConfirm(answer string) bool {
+	answer = strings.ToLower(strings.TrimSpace(answer))
+	return answer == "y" || answer == "yes"
 }
 
 // ShouldColor returns true when colored output is appropriate for stdout.
