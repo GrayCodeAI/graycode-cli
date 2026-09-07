@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
 	"github.com/spf13/cobra"
 )
 
@@ -61,8 +61,7 @@ func runSearch(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintf(w, "SESSION\tROLE\tMATCH\n")
+	rows := make([][]string, 0, len(results))
 	for _, r := range results {
 		preview := r.Preview
 		if len(preview) > 80 {
@@ -72,9 +71,9 @@ func runSearch(_ *cobra.Command, args []string) error {
 			}
 		}
 		preview = strings.ReplaceAll(preview, "\n", " ")
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", r.SessionID[:8], r.Role, preview)
+		rows = append(rows, []string{r.SessionID[:8], r.Role, preview})
 	}
-	return w.Flush()
+	return theme.PrintTable(os.Stdout, []string{"SESSION", "ROLE", "MATCH"}, rows)
 }
 
 func escapeJSON(s string) string {

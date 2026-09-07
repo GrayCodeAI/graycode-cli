@@ -6,10 +6,10 @@ import (
 	"image/color"
 	"os"
 	"path/filepath"
-	"text/tabwriter"
 	"time"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
 	"github.com/spf13/cobra"
 )
 
@@ -104,21 +104,15 @@ var pluginStatusCmd = &cobra.Command{
 			return nil
 		}
 
-		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		if _, err := fmt.Fprintf(w, "%s\n", auditTint("NAME\tVERSION\tSTATE\tTOOLS\tHOOKS", textMuted)); err != nil {
-			return err
-		}
+		rows := make([][]string, 0, len(statuses))
 		for _, s := range statuses {
-			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d\n",
-				s.Name, s.Version, auditTint(string(s.State), pluginStateColor(s.State)), s.ToolCount, s.HookCount); err != nil {
-				return err
-			}
+			rows = append(rows, []string{
+				s.Name, s.Version,
+				auditTint(string(s.State), pluginStateColor(s.State)),
+				fmt.Sprintf("%d", s.ToolCount), fmt.Sprintf("%d", s.HookCount),
+			})
 		}
-		if err := w.Flush(); err != nil {
-			return err
-		}
-
-		return nil
+		return theme.PrintTable(cmd.OutOrStdout(), []string{"NAME", "VERSION", "STATE", "TOOLS", "HOOKS"}, rows)
 	},
 }
 
@@ -396,23 +390,20 @@ var pluginLogsCmd = &cobra.Command{
 			return nil
 		}
 
-		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		_, _ = fmt.Fprintf(w, "TIME\tPLUGIN\tEVENT\tERROR\n")
+		rows := make([][]string, 0, len(collected))
 		for _, ev := range collected {
 			errStr := ""
 			if ev.Error != "" {
 				errStr = truncateWithEllipsis(ev.Error, 50)
 			}
-			_, _ = fmt.Fprintf(
-				w, "%s\t%s\t%s\t%s\n",
+			rows = append(rows, []string{
 				ev.Timestamp.Format("15:04:05"),
 				ev.PluginName,
 				ev.Type,
 				errStr,
-			)
+			})
 		}
-		_ = w.Flush()
-		return nil
+		return theme.PrintTable(cmd.OutOrStdout(), []string{"TIME", "PLUGIN", "EVENT", "ERROR"}, rows)
 	},
 }
 
@@ -440,8 +431,7 @@ var pluginMarketplaceListCmd = &cobra.Command{
 			cmd.Println(auditTint("Add a source: graycode plugin marketplace add <name> <index-url>", textMuted))
 			return nil
 		}
-		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		_, _ = fmt.Fprintf(w, "NAME\tREPO\tVERSION\tDESCRIPTION\n")
+		rows := make([][]string, 0, len(entries))
 		for _, e := range entries {
 			desc := e.Description
 			if len(desc) > 48 {
@@ -450,9 +440,9 @@ var pluginMarketplaceListCmd = &cobra.Command{
 					desc = string(runes[:45]) + "..."
 				}
 			}
-			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", e.Name, e.Repo, e.Version, desc)
+			rows = append(rows, []string{e.Name, e.Repo, e.Version, desc})
 		}
-		return w.Flush()
+		return theme.PrintTable(cmd.OutOrStdout(), []string{"NAME", "REPO", "VERSION", "DESCRIPTION"}, rows)
 	},
 }
 
