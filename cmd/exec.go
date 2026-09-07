@@ -759,7 +759,7 @@ func runExecFanout(prompt string, n int) error {
 	attempts := make([]fanoutAttempt, 0, n)
 	anyOK := false
 	for i := 1; i <= n; i++ {
-		fmt.Fprintf(os.Stderr, "\n=== fanout attempt %d/%d ===\n", i, n)
+		fmt.Fprintf(os.Stderr, "\n%s\n", auditTint(fmt.Sprintf("=== fanout attempt %d/%d ===", i, n), infoSky))
 		att := fanoutAttempt{Attempt: i}
 
 		branch := fmt.Sprintf("graycode-exec/%d-fanout%d-%s", start.UnixMilli(), i, randomHex(4))
