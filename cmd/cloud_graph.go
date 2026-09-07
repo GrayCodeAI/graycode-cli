@@ -30,6 +30,9 @@ facts are immutable after acceptance. This is explicit and opt-in; local
 execution never depends on cloud synchronization.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			prog := NewCLIProgress("Graph sync", []string{"Building execution graph", "Uploading to Graycode Cloud"})
+			defer prog.Abort()
+			prog.StartStep(0)
 			var export executiongraph.Export
 			var err error
 			if strings.TrimSpace(missionDir) != "" {
@@ -56,6 +59,8 @@ execution never depends on cloud synchronization.`,
 			if err != nil {
 				return fmt.Errorf("prepare graph for Graycode Cloud: %w", err)
 			}
+			prog.CompleteStep(0)
+			prog.StartStep(1)
 			result, err := client.SyncGraph(cmd.Context(), cloud.GraphSyncRequest{
 				SyncID:    prepared.SyncID,
 				ProjectID: cfg.ProjectID,
@@ -64,6 +69,8 @@ execution never depends on cloud synchronization.`,
 			if err != nil {
 				return err
 			}
+			prog.CompleteStep(1)
+			prog.Done()
 			status := "accepted"
 			if result.Duplicate {
 				status = "already synchronized"
