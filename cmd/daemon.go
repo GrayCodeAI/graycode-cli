@@ -488,7 +488,7 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 		if daemonJSON {
 			fmt.Println(`{"status":"not running","error":"stale PID file"}`)
 		} else {
-			fmt.Println("Status: not running (stale PID file)")
+			fmt.Println(auditTint("Status: not running (stale PID file)", warnAmber))
 		}
 		_ = os.Remove(pidFile)
 		return nil
