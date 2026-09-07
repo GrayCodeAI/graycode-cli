@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
 	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
 	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
 	"github.com/GrayCodeAI/graycode-cli/internal/token"
 	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 
@@ -258,40 +260,61 @@ func developerPathNextStep(r DeveloperPathReport, setup SetupState) string {
 	return "Run graycode preflight for details, then /config if needed"
 }
 
+// pathStatusColor maps a readiness status to a semantic report color.
+func pathStatusColor(s PathCheckStatus) color.Color {
+	switch s {
+	case PathPass:
+		return theme.ReportSuccess
+	case PathWarn:
+		return theme.ReportWarn
+	case PathFail:
+		return theme.ReportError
+	default:
+		return theme.ReportMuted
+	}
+}
+
 // FormatDeveloperPathReport renders the developer path readiness report for CLI/TUI.
 func FormatDeveloperPathReport(ctx context.Context) string {
 	r := EvaluateDeveloperPath(ctx)
 	var b strings.Builder
-	b.WriteString("Developer path (graycode · graycode-router · shrike · harrier)\n\n")
+	b.WriteString(theme.Tint("Developer path (graycode · graycode-router · shrike · harrier)", theme.ReportInfo) + "\n\n")
 
 	status := "NEEDS SETUP"
+	var statusColor color.Color = theme.ReportWarn
 	switch {
 	case r.Ready:
 		status = "READY"
+		statusColor = theme.ReportSuccess
 	case r.ChatReady && !r.SecureReady:
 		status = "SECURITY FIX NEEDED"
+		statusColor = theme.ReportError
 	case r.SecureReady && !r.ChatReady:
 		status = "ALMOST READY"
+		statusColor = theme.ReportWarn
 	}
-	b.WriteString("Status: " + status + "\n\n")
+	b.WriteString(theme.Tint("Status:", theme.ReportMuted) + " " + theme.Tint(status, statusColor) + "\n\n")
 
 	sections := []string{"Setup", "Security", "Sandbox", "Ecosystem"}
 	for _, sec := range sections {
-		b.WriteString(sec + "\n")
+		b.WriteString(theme.Tint(sec, theme.ReportInfo) + "\n")
 		for _, c := range r.Checks {
 			if c.Section != sec {
 				continue
 			}
-			b.WriteString(fmt.Sprintf("  %s %s — %s\n", pathStatusGlyph(c.Status), c.Name, c.Detail))
+			b.WriteString(fmt.Sprintf("  %s %s — %s\n",
+				theme.Tint(pathStatusGlyph(c.Status), pathStatusColor(c.Status)),
+				theme.Tint(c.Name, theme.ReportMuted),
+				theme.Tint(c.Detail, theme.ReportInfo)))
 			if c.FixHint != "" && c.Status != PathPass {
-				b.WriteString("      → " + c.FixHint + "\n")
+				b.WriteString("      " + theme.Tint("→ "+c.FixHint, theme.ReportWarn) + "\n")
 			}
 		}
 		b.WriteByte('\n')
 	}
 
-	b.WriteString("Next: " + r.NextStep + "\n")
-	b.WriteString("\nDocs: docs/DEVELOPER-PATH.md · docs/SECURITY-DEVELOPER.md · graycode doctor · graycode preflight\n")
+	b.WriteString(theme.Tint("Next:", theme.ReportMuted) + " " + r.NextStep + "\n")
+	b.WriteString("\n" + theme.Tint("Docs: docs/DEVELOPER-PATH.md · docs/SECURITY-DEVELOPER.md · graycode doctor · graycode preflight", theme.ReportMuted) + "\n")
 	return strings.TrimRight(b.String(), "\n")
 }
 
