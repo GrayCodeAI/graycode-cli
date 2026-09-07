@@ -206,13 +206,13 @@ Examples:
 			return err
 		}
 
-		cmd.Printf("Background session started: %s (PID %d)\n", info.ID, info.PID)
-		cmd.Printf("View logs: tail -f %s\n", info.LogFile)
+		cmd.Printf("%s\n", auditTint("Background session started: ", doneGreen)+auditTint(info.ID, textPrimary)+auditTint(fmt.Sprintf(" (PID %d)", info.PID), textMuted))
+		cmd.Printf("%s\n", auditTint("View logs: tail -f "+info.LogFile, textMuted))
 		attachID := info.ID
 		if len(attachID) > 8 {
 			attachID = attachID[:8]
 		}
-		cmd.Printf("Attach: graycode attach %s\n", attachID)
+		cmd.Printf("%s\n", auditTint("Attach: graycode attach "+attachID, textMuted))
 		return nil
 	},
 }
@@ -245,13 +245,13 @@ var attachCmd = &cobra.Command{
 		}
 
 		if target.Status != "running" {
-			cmd.Printf("Session %s is %s\n", target.ID, target.Status)
-			cmd.Println("Recent log output:")
+			cmd.Printf("%s\n", auditTint("Session "+target.ID+" is ", textPrimary)+auditTint(target.Status, warnAmber))
+			cmd.Println(auditTint("Recent log output:", textPrimary))
 			return tailLog(cmd, target.LogFile, 20)
 		}
 
-		cmd.Printf("Attaching to session %s (PID %d)\n", target.ID, target.PID)
-		cmd.Println("Recent output:")
+		cmd.Printf("%s\n", auditTint("Attaching to session "+target.ID+" (PID "+fmt.Sprint(target.PID)+")", textPrimary))
+		cmd.Println(auditTint("Recent output:", textPrimary))
 		return tailLog(cmd, target.LogFile, 30)
 	},
 }
