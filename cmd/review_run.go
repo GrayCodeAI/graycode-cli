@@ -66,7 +66,7 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 	}
 	if existing != nil && existing.Status != ReviewStatusFailed {
 		if !reviewRunBackground {
-			fmt.Printf("Commit %s already reviewed (status: %s)\n", sha[:8], existing.Status)
+			fmt.Printf("%s\n", auditTint("Commit "+sha[:8]+" already reviewed (status: ", textMuted)+auditTint(string(existing.Status), reviewStatusColor(existing.Status))+auditTint(")", textMuted))
 		}
 		return nil
 	}
@@ -93,7 +93,7 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 			return silentErr(statusErr, "mark review passed")
 		}
 		if !reviewRunBackground {
-			fmt.Println("Empty diff — nothing to review.")
+			fmt.Println(auditTint("Empty diff — nothing to review.", textMuted))
 		}
 		return nil
 	}
@@ -238,9 +238,9 @@ func printReviewSummary(sha string, result *reviewcontracts.Result) {
 		len(result.Findings),
 		auditTint(maxSev.String(), reviewSeverityColor(maxSev)))
 	for _, f := range result.Findings {
-		fmt.Printf("  [%s] %s:%d — %s\n",
-			auditTint(f.Severity.String(), reviewSeverityColor(f.Severity)),
-			f.File, f.Line, f.Message)
+		fmt.Printf("  %s %s\n",
+			auditTint(fmt.Sprintf("[%s]", f.Severity.String()), reviewSeverityColor(f.Severity)),
+			auditTint(fmt.Sprintf("%s:%d", f.File, f.Line), textPrimary)+auditTint(" — "+f.Message, textMuted))
 	}
 }
 

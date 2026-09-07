@@ -218,7 +218,7 @@ func printReviewDetail(r *ReviewRecord) {
 	header := lipgloss.NewStyle().Bold(true)
 	dim := lipgloss.NewStyle().Faint(true)
 
-	fmt.Printf("%s Review #%d — %s\n", statusIcon(r.Status), r.ID, r.SHA[:8])
+	fmt.Printf("%s %s\n", auditTint(statusIcon(r.Status), reviewStatusColor(r.Status)), auditTint(fmt.Sprintf("Review #%d — %s", r.ID, r.SHA[:8]), textPrimary))
 	fmt.Printf("%s\n", dim.Render(fmt.Sprintf("Status: %s · Created: %s · Tokens: %d", r.Status, r.CreatedAt.Format("2006-01-02 15:04"), r.TokensUsed)))
 	fmt.Println()
 
@@ -257,6 +257,21 @@ func statusIcon(s ReviewStatus) string {
 		return icons.RotateVariant() + " "
 	default:
 		return "."
+	}
+}
+
+func reviewStatusColor(s ReviewStatus) color.Color {
+	switch s {
+	case ReviewStatusPassed, ReviewStatusFixed:
+		return doneGreen
+	case ReviewStatusOpen, ReviewStatusRunning:
+		return infoSky
+	case ReviewStatusFailed:
+		return errorCoral
+	case ReviewStatusClosed:
+		return textMuted
+	default:
+		return textPrimary
 	}
 }
 

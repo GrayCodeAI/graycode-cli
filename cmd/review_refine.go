@@ -102,7 +102,7 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 			return fmt.Errorf("load review for %s: %w", latestSHA[:8], getErr)
 		}
 		if newReview != nil && newReview.Status == ReviewStatusPassed {
-			fmt.Printf("\n%s All clean after %d iteration(s)!\n", icons.CheckBold(), iter)
+			fmt.Printf("\n%s %s\n", auditTint(icons.CheckBold(), doneGreen), auditTint(fmt.Sprintf("All clean after %d iteration(s)!", iter), textPrimary))
 			return nil
 		}
 
@@ -116,7 +116,7 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 				return fmt.Errorf("list open reviews: %w", listErr)
 			}
 			if len(reviews) == 0 {
-				fmt.Printf("\n%s All reviews resolved after %d iteration(s)!\n", icons.CheckBold(), iter)
+				fmt.Printf("\n%s %s\n", auditTint(icons.CheckBold(), doneGreen), auditTint(fmt.Sprintf("All reviews resolved after %d iteration(s)!", iter), textPrimary))
 				return nil
 			}
 		}
@@ -128,8 +128,8 @@ func runReviewRefine(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("list open reviews: %w", listErr)
 	}
 	if len(remaining) > 0 {
-		fmt.Printf("\n%s %d review(s) still open after %d iterations.\n", icons.Alert(), len(remaining), refineMaxIter)
-		fmt.Println("  Run 'graycode review show' to inspect, or increase --max-iterations.")
+		fmt.Printf("\n%s %s\n", auditTint(icons.Alert(), warnAmber), auditTint(fmt.Sprintf("%d review(s) still open after %d iterations.", len(remaining), refineMaxIter), textPrimary))
+		fmt.Println(auditTint("  Run 'graycode review show' to inspect, or increase --max-iterations.", textMuted))
 	}
 	return nil
 }

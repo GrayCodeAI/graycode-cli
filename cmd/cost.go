@@ -89,25 +89,25 @@ var costSummaryCmd = &cobra.Command{
 			return nil
 		}
 
-		cmd.Println("[Experimental] Cost tracking is not yet fully available.")
+		cmd.Println(auditTint("[Experimental] Cost tracking is not yet fully available.", warnAmber))
 		cmd.Println()
 
 		if report.TotalSpend == 0 {
-			cmd.Println("No cost data collected in this session.")
-			cmd.Println("Cost tracking will be available once session data integration is complete.")
+			cmd.Println(auditTint("No cost data collected in this session.", textMuted))
+			cmd.Println(auditTint("Cost tracking will be available once session data integration is complete.", textMuted))
 			return nil
 		}
 
-		cmd.Println(fmt.Sprintf("Total spend:      $%.4f", report.TotalSpend))
-		cmd.Println(fmt.Sprintf("Productive spend: $%.4f", report.ProductiveSpend))
-		cmd.Println(fmt.Sprintf("Wasted spend:     $%.4f", report.WastedSpend))
-		cmd.Println(fmt.Sprintf("Yield rate:       %.1f%%", report.YieldRate*100))
+		cmd.Println(auditTint("Total spend:      ", textMuted) + auditTint(fmt.Sprintf("$%.4f", report.TotalSpend), textPrimary))
+		cmd.Println(auditTint("Productive spend: ", textMuted) + auditTint(fmt.Sprintf("$%.4f", report.ProductiveSpend), textPrimary))
+		cmd.Println(auditTint("Wasted spend:     ", textMuted) + auditTint(fmt.Sprintf("$%.4f", report.WastedSpend), errorCoral))
+		cmd.Println(auditTint("Yield rate:       ", textMuted) + auditTint(fmt.Sprintf("%.1f%%", report.YieldRate*100), textPrimary))
 
 		if len(report.Recommendations) > 0 {
 			cmd.Println()
-			cmd.Println("Top recommendation:")
+			cmd.Println(auditTint("Top recommendation:", textPrimary))
 			rec := report.Recommendations[0]
-			cmd.Println(fmt.Sprintf("  [%s] %s (est. savings: $%.4f)", rec.Type, rec.Description, rec.Savings))
+			cmd.Println(auditTint(fmt.Sprintf("  [%s] %s (est. savings: $%.4f)", rec.Type, rec.Description, rec.Savings), textPrimary))
 		}
 		return nil
 	},
