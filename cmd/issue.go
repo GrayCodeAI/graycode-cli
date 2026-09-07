@@ -73,13 +73,13 @@ func runIssue(cmd *cobra.Command, args []string) error {
 			_, _ = fmt.Fprintln(cmd.OutOrStdout())
 			return nil
 		}
-		cmd.Println("Issue preview (dry run — not published)")
-		cmd.Println("Title: " + title)
+		cmd.Println(auditTint("Issue preview (dry run — not published)", warnAmber))
+		cmd.Println(auditTint("Title: ", textMuted) + auditTint(title, textPrimary))
 		cmd.Println()
 		cmd.Print(body)
 		if len(issueLabels) > 0 {
 			cmd.Println()
-			cmd.Println("Labels: " + strings.Join(issueLabels, ", "))
+			cmd.Println(auditTint("Labels: ", textMuted) + auditTint(strings.Join(issueLabels, ", "), textPrimary))
 		}
 		return nil
 	}
@@ -102,7 +102,7 @@ func runIssue(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("gh issue create failed: %w", err)
 	}
-	cmd.Println("Issue created: " + strings.TrimSpace(string(out)))
+	cmd.Println(auditTint("Issue created: ", doneGreen) + auditTint(strings.TrimSpace(string(out)), textPrimary))
 	return nil
 }
 

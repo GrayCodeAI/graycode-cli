@@ -374,20 +374,20 @@ var pluginLogsCmd = &cobra.Command{
 				name := args[0]
 				for _, s := range statuses {
 					if s.Name == name {
-						cmd.Printf("Plugin: %s\n", s.Name)
-						cmd.Printf("State:  %s\n", s.State)
+						cmd.Printf("%s\n", auditTint("Plugin: ", textMuted)+auditTint(s.Name, textPrimary))
+						cmd.Printf("%s\n", auditTint("State:  ", textMuted)+auditTint(string(s.State), pluginStateColor(s.State)))
 						if s.Error != "" {
-							cmd.Printf("Error:  %s\n", s.Error)
+							cmd.Printf("%s\n", auditTint("Error:  ", textMuted)+auditTint(s.Error, errorCoral))
 						}
 						if !s.ActivatedAt.IsZero() {
-							cmd.Printf("Activated: %s\n", s.ActivatedAt.Format(time.RFC3339))
+							cmd.Printf("%s\n", auditTint("Activated: ", textMuted)+auditTint(s.ActivatedAt.Format(time.RFC3339), textPrimary))
 						}
 						return nil
 					}
 				}
 				return fmt.Errorf("plugin %q not found", name)
 			}
-			cmd.Println("No recent plugin events.")
+			cmd.Println(auditTint("No recent plugin events.", textMuted))
 			return nil
 		}
 
@@ -510,20 +510,20 @@ var pluginInspectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		cmd.Printf("Root: %s\n", comp.Root)
-		cmd.Printf("Components: %s\n", comp.ComponentSummary())
-		cmd.Printf("Tools: %v\n", comp.HasTools)
-		cmd.Printf("Skills (%d):\n", len(comp.Skills))
+		cmd.Printf("%s\n", auditTint("Root: ", textMuted)+auditTint(comp.Root, textPrimary))
+		cmd.Printf("%s\n", auditTint("Components: ", textMuted)+auditTint(comp.ComponentSummary(), textPrimary))
+		cmd.Printf("%s\n", auditTint("Tools: ", textMuted)+auditTint(fmt.Sprintf("%v", comp.HasTools), textPrimary))
+		cmd.Printf("%s\n", auditTint(fmt.Sprintf("Skills (%d):", len(comp.Skills)), textPrimary))
 		for _, s := range comp.Skills {
-			cmd.Printf("  - %s\n", s)
+			cmd.Printf("%s\n", auditTint("  - "+s, textMuted))
 		}
-		cmd.Printf("Hooks (%d):\n", len(comp.HookFiles))
+		cmd.Printf("%s\n", auditTint(fmt.Sprintf("Hooks (%d):", len(comp.HookFiles)), textPrimary))
 		for _, h := range comp.HookFiles {
-			cmd.Printf("  - %s\n", h)
+			cmd.Printf("%s\n", auditTint("  - "+h, textMuted))
 		}
-		cmd.Printf("MCP servers (%d):\n", len(comp.MCPServers))
+		cmd.Printf("%s\n", auditTint(fmt.Sprintf("MCP servers (%d):", len(comp.MCPServers)), textPrimary))
 		for _, m := range comp.MCPServers {
-			cmd.Printf("  - %s cmd=%s url=%s\n", m.Name, m.Command, m.URL)
+			cmd.Printf("%s\n", auditTint(fmt.Sprintf("  - %s cmd=%s url=%s", m.Name, m.Command, m.URL), textMuted))
 		}
 		return nil
 	},

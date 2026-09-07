@@ -289,7 +289,7 @@ var sessionsKillCmd = &cobra.Command{
 		if err := KillBGSession(args[0]); err != nil {
 			return err
 		}
-		cmd.Println("Session killed:", args[0])
+		cmd.Println(auditTint("Session killed: "+args[0], textPrimary))
 		return nil
 	},
 }

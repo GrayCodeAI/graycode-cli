@@ -81,8 +81,8 @@ func runAgentList(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 	if len(all) == 0 {
-		fmt.Printf("No agents found. Create one with: graycode agent create <name>\n")
-		fmt.Printf("Agent directory: %s\n", agents.DefaultDir())
+		fmt.Printf("%s\n", auditTint("No agents found. Create one with: graycode agent create <name>", textMuted))
+		fmt.Printf("%s\n", auditTint("Agent directory: "+agents.DefaultDir(), textPrimary))
 		return nil
 	}
 

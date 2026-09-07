@@ -60,7 +60,7 @@ var cmdHistorySearchCmd = &cobra.Command{
 		}
 
 		if len(entries) == 0 {
-			cmd.Println("No matching commands found.")
+			cmd.Println(auditTint("No matching commands found.", textMuted))
 			return nil
 		}
 
@@ -97,7 +97,7 @@ var cmdHistoryRecentCmd = &cobra.Command{
 		}
 
 		if len(entries) == 0 {
-			cmd.Println("No command history found.")
+			cmd.Println(auditTint("No command history found.", textMuted))
 			return nil
 		}
 
@@ -123,23 +123,23 @@ var cmdHistoryStatsCmd = &cobra.Command{
 			return fmt.Errorf("stats query failed: %w", err)
 		}
 
-		cmd.Println(fmt.Sprintf("Total commands:  %d", stats.TotalCommands))
-		cmd.Println(fmt.Sprintf("Unique commands: %d", stats.UniqueCommands))
-		cmd.Println(fmt.Sprintf("Success rate:    %.1f%%", stats.SuccessRate*100))
+		cmd.Println(auditTint("Total commands:  ", textMuted) + auditTint(fmt.Sprintf("%d", stats.TotalCommands), textPrimary))
+		cmd.Println(auditTint("Unique commands: ", textMuted) + auditTint(fmt.Sprintf("%d", stats.UniqueCommands), textPrimary))
+		cmd.Println(auditTint("Success rate:    ", textMuted) + auditTint(fmt.Sprintf("%.1f%%", stats.SuccessRate*100), textPrimary))
 		cmd.Println()
 
 		if len(stats.TopCommands) > 0 {
-			cmd.Println("Top commands:")
+			cmd.Println(auditTint("Top commands:", textPrimary))
 			for _, tc := range stats.TopCommands {
-				cmd.Println(fmt.Sprintf("  %4d  %s", tc.Count, tc.Command))
+				cmd.Println(auditTint(fmt.Sprintf("  %4d  %s", tc.Count, tc.Command), textMuted))
 			}
 			cmd.Println()
 		}
 
 		if len(stats.TopDirectories) > 0 {
-			cmd.Println("Top directories:")
+			cmd.Println(auditTint("Top directories:", textPrimary))
 			for _, td := range stats.TopDirectories {
-				cmd.Println(fmt.Sprintf("  %4d  %s", td.Count, td.Dir))
+				cmd.Println(auditTint(fmt.Sprintf("  %4d  %s", td.Count, td.Dir), textMuted))
 			}
 		}
 

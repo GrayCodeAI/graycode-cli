@@ -145,9 +145,9 @@ var modelsListCmd = &cobra.Command{
 			cmd.Println(string(out))
 			return nil
 		}
-		cmd.Printf("%d models", len(models))
+		cmd.Printf("%s", auditTint(fmt.Sprintf("%d models", len(models)), textPrimary))
 		if providerName != "" {
-			cmd.Printf(" for provider %q", providerName)
+			cmd.Printf("%s", auditTint(fmt.Sprintf(" for provider %q", providerName), textMuted))
 		}
 		cmd.Println()
 		rows := make([]modelTableRow, len(models))

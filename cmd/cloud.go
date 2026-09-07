@@ -182,7 +182,7 @@ var cloudContextCmd = &cobra.Command{
 			event.Deployment = &cloud.DeploymentContext{Provider: contextProvider, ExternalID: deploymentID, Environment: deploymentEnvironment, Status: deploymentStatus}
 		}
 		client.RecordDeliveryContext(cmd.Context(), event)
-		cmd.Println("Repository context queued for Graycode Cloud.")
+		cmd.Println(auditTint("Repository context queued for Graycode Cloud.", doneGreen))
 		return nil
 	},
 }

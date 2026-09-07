@@ -106,7 +106,7 @@ func runEvalTools(cmd *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithTimeout(cmd.Context(), 10*time.Minute)
 	defer cancel()
 
-	cmd.Printf("Evaluating tool selection on %d cases with model %s...\n", len(defaultToolUseCases()), model)
+	cmd.Printf("%s\n", auditTint(fmt.Sprintf("Evaluating tool selection on %d cases with model %s...", len(defaultToolUseCases()), model), textPrimary))
 	report := eval.ScoreToolUse(ctx, defaultToolUseCases(), caller)
 
 	switch evalToolsOutput {

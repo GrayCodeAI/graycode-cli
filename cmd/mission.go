@@ -87,7 +87,7 @@ func runMission(_ *cobra.Command, args []string) error {
 
 	var waves [][]string
 	if missionFromTasks {
-		fmt.Printf("Mission %s: loading validated task graph...\n", m.ID)
+		fmt.Printf("%s\n", auditTint(fmt.Sprintf("Mission %s: loading validated task graph...", m.ID), textPrimary))
 		features, taskWaves, err := missionFeaturesFromTasks(tool.GetTaskStore(), m.ID)
 		if err != nil {
 			return fmt.Errorf("task graph: %w", err)
@@ -95,7 +95,7 @@ func runMission(_ *cobra.Command, args []string) error {
 		m.Features = features
 		waves = taskWaves
 	} else {
-		fmt.Printf("Mission %s: planning...\n", m.ID)
+		fmt.Printf("%s\n", auditTint(fmt.Sprintf("Mission %s: planning...", m.ID), textPrimary))
 		planFn := func(ctx context.Context, p string) ([]mission.Feature, error) {
 			return planWithLLM(ctx, p, effectiveProvider, effectiveModel, settings)
 		}
@@ -104,14 +104,14 @@ func runMission(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Printf("Mission %s: %d features planned\n", m.ID, len(m.Features))
+	fmt.Printf("%s\n", auditTint(fmt.Sprintf("Mission %s: %d features planned", m.ID, len(m.Features)), textPrimary))
 	for i, f := range m.Features {
-		fmt.Printf("  %d. %s\n", i+1, f.Description)
+		fmt.Printf("%s\n", auditTint(fmt.Sprintf("  %d. %s", i+1, f.Description), textPrimary))
 	}
 	fmt.Println()
 
 	if missionDryRun {
-		fmt.Println("(dry-run: not executing workers)")
+		fmt.Println(auditTint("(dry-run: not executing workers)", textMuted))
 		return nil
 	}
 
@@ -124,7 +124,7 @@ func runMission(_ *cobra.Command, args []string) error {
 		workerFn = graphTrackingWorker(tool.GetTaskStore(), workerFn)
 	}
 
-	fmt.Printf("Executing with %d parallel workers...\n\n", cfg.MaxWorkers)
+	fmt.Printf("%s\n\n", auditTint(fmt.Sprintf("Executing with %d parallel workers...", cfg.MaxWorkers), textPrimary))
 	var runErr error
 	if missionFromTasks {
 		runErr = m.RunStaged(ctx, workerFn, mission.WithExecutionWaves(waves))
@@ -141,20 +141,22 @@ func runMission(_ *cobra.Command, args []string) error {
 	fmt.Println()
 	for _, f := range m.Features {
 		status := icons.CheckBold() + " "
+		statusColor := doneGreen
 		if f.Status == mission.FeatureFailed {
 			status = icons.CloseThick() + " "
+			statusColor = errorCoral
 		}
 		branch := f.Branch
 		if f.Handoff != nil && f.Handoff.CommitID != "" {
 			branch += " (" + f.Handoff.CommitID[:7] + ")"
 		}
-		fmt.Printf("  %s %s — %s\n", status, f.Description, branch)
+		fmt.Printf("  %s %s\n", auditTint(status, statusColor), auditTint(f.Description, textPrimary)+auditTint(" — "+branch, textMuted))
 	}
 	if missionFromTasks && len(m.WaveJoins) > 0 {
 		fmt.Println()
-		fmt.Println("Wave joins:")
+		fmt.Println(auditTint("Wave joins:", textPrimary))
 		for _, join := range m.WaveJoins {
-			fmt.Printf("  %d. %s\n", join.Wave, join.Summary)
+			fmt.Printf("  %s\n", auditTint(fmt.Sprintf("%d. %s", join.Wave, join.Summary), textMuted))
 		}
 	}
 

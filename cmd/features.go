@@ -34,12 +34,12 @@ Show a specific flag:
 			if !ok {
 				return fmt.Errorf("unknown feature flag: %s", args[1])
 			}
-			fmt.Printf("Name:        %s\n", f.Name())
-			fmt.Printf("Default:     %v\n", f.DefaultValue())
-			fmt.Printf("Current:     %v\n", feature.EnabledByName(args[1]))
-			fmt.Printf("Description: %s\n", f.Description())
+			fmt.Printf("%s\n", auditTint("Name:        ", textMuted)+auditTint(f.Name(), textPrimary))
+			fmt.Printf("%s\n", auditTint("Default:     ", textMuted)+auditTint(fmt.Sprintf("%v", f.DefaultValue()), textPrimary))
+			fmt.Printf("%s\n", auditTint("Current:     ", textMuted)+auditTint(fmt.Sprintf("%v", feature.EnabledByName(args[1])), textPrimary))
+			fmt.Printf("%s\n", auditTint("Description: ", textMuted)+auditTint(f.Description(), textPrimary))
 			envVar := "GRAYCODE_FEATURE_" + strings.ReplaceAll(strings.ToUpper(args[1]), "-", "_")
-			fmt.Printf("Env var:     %s\n", envVar)
+			fmt.Printf("%s\n", auditTint("Env var:     ", textMuted)+auditTint(envVar, textPrimary))
 			return nil
 		}
 

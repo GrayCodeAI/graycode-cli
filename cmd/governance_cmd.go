@@ -154,17 +154,16 @@ func init() {
 
 func runGovernanceStatus(cmd *cobra.Command) error {
 	path := governance.ManagedPolicyPath()
-	cmd.Printf("Managed policy path: %s\n", path)
+	cmd.Printf("%s\n", auditTint("Managed policy path: ", textMuted)+auditTint(path, textPrimary))
 	if _, err := os.Stat(path); err != nil {
-		cmd.Println("Status: not installed (governance is fail-open; no ceiling enforced)")
+		cmd.Println(auditTint("Status: not installed (governance is fail-open; no ceiling enforced)", warnAmber))
 		return nil
 	}
 	layer, err := governance.LoadLayer("policy", path)
 	if err != nil {
 		return fmt.Errorf("managed policy is invalid: %w", err)
 	}
-	cmd.Printf("Status: installed — fail_closed=%t, %d capability row(s), %d denied tool(s)\n",
-		layer.FailClosed, len(layer.Capabilities), len(layer.DeniedTools))
+	cmd.Printf("%s\n", auditTint(fmt.Sprintf("Status: installed — fail_closed=%t, %d capability row(s), %d denied tool(s)", layer.FailClosed, len(layer.Capabilities), len(layer.DeniedTools)), doneGreen))
 	return nil
 }
 

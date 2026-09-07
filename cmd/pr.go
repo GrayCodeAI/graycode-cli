@@ -70,7 +70,7 @@ Otherwise, reviews the diff between the base branch and HEAD.`,
 		}
 
 		if strings.TrimSpace(diff) == "" {
-			cmd.Println("No changes found.")
+			cmd.Println(auditTint("No changes found.", textMuted))
 			return nil
 		}
 
@@ -81,7 +81,7 @@ Otherwise, reviews the diff between the base branch and HEAD.`,
 			if err := ghPRComment(prNumber, review); err != nil {
 				return fmt.Errorf("failed to post comment: %w", err)
 			}
-			cmd.Println("\nReview posted as comment on PR #" + strconv.Itoa(prNumber))
+			cmd.Println(auditTint("\nReview posted as comment on PR #"+strconv.Itoa(prNumber), doneGreen))
 		}
 
 		return nil
@@ -138,7 +138,7 @@ then creates a pull request via the GitHub CLI.`,
 		}
 
 		prURL := strings.TrimSpace(string(out))
-		cmd.Println("Pull request created: " + prURL)
+		cmd.Println(auditTint("Pull request created: ", doneGreen) + auditTint(prURL, textPrimary))
 		return nil
 	},
 }
@@ -164,7 +164,7 @@ Use --update to write the description back to the PR.`,
 			return fmt.Errorf("failed to get PR diff: %w", err)
 		}
 		if strings.TrimSpace(diff) == "" {
-			cmd.Println("No changes found in PR #" + strconv.Itoa(prNumber))
+			cmd.Println(auditTint("No changes found in PR #"+strconv.Itoa(prNumber), textMuted))
 			return nil
 		}
 
@@ -178,7 +178,7 @@ Use --update to write the description back to the PR.`,
 			if err := ghCmd.Run(); err != nil {
 				return fmt.Errorf("failed to update PR description: %w", err)
 			}
-			cmd.Println("\nPR #" + strconv.Itoa(prNumber) + " description updated.")
+			cmd.Println(auditTint("\nPR #"+strconv.Itoa(prNumber)+" description updated.", doneGreen))
 		}
 
 		return nil
