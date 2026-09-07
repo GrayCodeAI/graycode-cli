@@ -68,6 +68,7 @@ var planListCmd = &cobra.Command{
 		}
 
 		var plans []planner.Plan
+		var planNames []string
 		for _, e := range entries {
 			if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
 				continue
@@ -78,6 +79,7 @@ var planListCmd = &cobra.Command{
 				continue
 			}
 			plans = append(plans, *plan)
+			planNames = append(planNames, strings.TrimSuffix(e.Name(), ".json"))
 		}
 
 		if planJSON {
@@ -94,15 +96,19 @@ var planListCmd = &cobra.Command{
 			return nil
 		}
 
-		for _, plan := range plans {
+		for i, plan := range plans {
 			pending := len(planner.PendingTasks(&plan))
 			total := len(plan.Tasks)
 			done := total - pending
+			name := ""
+			if i < len(planNames) {
+				name = planNames[i]
+			}
 			cmd.Println(fmt.Sprintf(
 				"  %s  %s  %s",
 				auditTint(plan.Title, textPrimary),
 				auditTint(fmt.Sprintf("[%d/%d done]", done, total), doneGreen),
-				plan.Title,
+				auditTint(name, textMuted),
 			))
 		}
 
