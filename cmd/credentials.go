@@ -30,11 +30,19 @@ var credentialsRemoveCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
+		ok, err := confirmDestructive(fmt.Sprintf("Remove stored API key(s) for %q from %s?", args[0], graycodeconfig.CredentialStoreName()))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			cmd.Printf("%s\n", auditTint("Cancelled.", textMuted))
+			return nil
+		}
 		removed, err := graycodeconfig.RemoveStoredCredential(ctx, args[0])
 		if err != nil {
 			return err
 		}
-		cmd.Printf("Removed %d key(s) from %s: %s\n", len(removed), graycodeconfig.CredentialStoreName(), strings.Join(removed, ", "))
+		cmd.Printf("%s\n", auditTint(fmt.Sprintf("Removed %d key(s) from %s: %s", len(removed), graycodeconfig.CredentialStoreName(), strings.Join(removed, ", ")), doneGreen))
 		return nil
 	},
 }
@@ -53,9 +61,9 @@ var credentialsMigrateCmd = &cobra.Command{
 			return err
 		}
 		if n == 0 {
-			cmd.Println("No plaintext credential files found (already using secure storage).")
+			cmd.Println(auditTint("No plaintext credential files found (already using secure storage).", textMuted))
 		} else {
-			cmd.Printf("Migrated %d key(s) to %s and removed plaintext credential files.\n", n, graycodeconfig.CredentialStoreName())
+			cmd.Printf("%s\n", auditTint(fmt.Sprintf("Migrated %d key(s) to %s and removed plaintext credential files.", n, graycodeconfig.CredentialStoreName()), doneGreen))
 		}
 		return nil
 	},

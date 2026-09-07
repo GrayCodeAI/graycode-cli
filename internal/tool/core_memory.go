@@ -38,7 +38,7 @@ func (CoreMemoryAppendTool) Execute(ctx context.Context, input json.RawMessage) 
 	if tc == nil || tc.HarrierBridge == nil {
 		return "", fmt.Errorf("memory not available")
 	}
-	if err := tc.HarrierBridge.Remember(p.Content, p.Label); err != nil {
+	if err := tc.HarrierBridge.Remember(ctx, p.Content, p.Label); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Appended to [%s] memory block.", p.Label), nil
@@ -138,7 +138,7 @@ func (CoreMemoryRethinkTool) Execute(ctx context.Context, input json.RawMessage)
 		}
 		return fmt.Sprintf("Rewrote [%s] memory block.", p.Label), nil
 	}
-	if err := tc.HarrierBridge.Remember(p.NewValue, p.Label); err != nil {
+	if err := tc.HarrierBridge.Remember(ctx, p.NewValue, p.Label); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Created new [%s] memory block.", p.Label), nil

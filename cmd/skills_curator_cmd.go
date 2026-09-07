@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"image/color"
 	"path/filepath"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/skillcurator"
@@ -41,7 +42,7 @@ never-used skills, and pinned skills are left alone.`,
 				return err
 			}
 			if len(skills) == 0 {
-				fmt.Println("No curated skills found.")
+				fmt.Println(auditTint("No curated skills found.", textMuted))
 				return nil
 			}
 			for _, s := range skills {
@@ -49,7 +50,15 @@ never-used skills, and pinned skills are left alone.`,
 				if !s.LastUsed.IsZero() {
 					last = s.LastUsed.Format("2006-01-02")
 				}
-				fmt.Printf("%-24s %-9s uses=%-4d last=%s\n", s.Name, s.Status, s.UseCount, last)
+				var statusColor color.Color = textMuted
+				if s.Status == "pinned" {
+					statusColor = doneGreen
+				}
+				fmt.Printf("%s %s %s %s\n",
+					auditTint(fmt.Sprintf("%-24s", s.Name), textPrimary),
+					auditTint(fmt.Sprintf("%-9s", s.Status), statusColor),
+					auditTint(fmt.Sprintf("uses=%-4d", s.UseCount), textMuted),
+					auditTint("last="+last, textMuted))
 			}
 			return nil
 		case "run":
@@ -58,12 +67,12 @@ never-used skills, and pinned skills are left alone.`,
 				return err
 			}
 			if len(archived) == 0 {
-				fmt.Println("Review complete: nothing to archive.")
+				fmt.Println(auditTint("Review complete: nothing to archive.", textMuted))
 				return nil
 			}
-			fmt.Printf("Archived %d cold skill(s):\n", len(archived))
+			fmt.Printf("%s\n", auditTint(fmt.Sprintf("Archived %d cold skill(s):", len(archived)), doneGreen))
 			for _, n := range archived {
-				fmt.Printf("  - %s (recoverable from .archive/)\n", n)
+				fmt.Printf("%s\n", auditTint("  - "+n+" (recoverable from .archive/)", textMuted))
 			}
 			return nil
 		case "pin":

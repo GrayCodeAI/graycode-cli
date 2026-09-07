@@ -144,6 +144,149 @@ func doctorOutput(settings graycodeconfig.Settings) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
+// doctorJSON returns the doctor diagnostics as indented JSON, mirroring the
+// fields of doctorOutput but as machine-parseable structured data.
+func doctorJSON(settings graycodeconfig.Settings) string {
+	type sessionDirInfo struct {
+		Path     string `json:"path"`
+		Status   string `json:"status"`
+		Writable bool   `json:"writable"`
+		Files    int    `json:"files"`
+	}
+	type gitInfo struct {
+		Repository bool   `json:"repository"`
+		Branch     string `json:"branch,omitempty"`
+		Head       string `json:"head,omitempty"`
+		Clean      bool   `json:"clean"`
+		Modified   int    `json:"modified"`
+	}
+
+	effectiveProvider := strings.TrimSpace(settings.Provider)
+	if effectiveProvider == "" {
+		effectiveProvider = "(not configured)"
+	}
+	effectiveModel := strings.TrimSpace(graycodeconfig.ActiveModel(context.Background()))
+	if effectiveModel == "" {
+		effectiveModel = "(not configured)"
+	}
+
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		shell = "(not set)"
+	}
+	termVal := os.Getenv("TERM")
+	if termVal == "" {
+		termVal = "(not set)"
+	}
+	colorTerm := os.Getenv("COLORTERM")
+	if colorTerm == "" {
+		colorTerm = "(not set)"
+	}
+
+	v := version
+	if v == "" {
+		v = "(dev)"
+	}
+
+	var sessDir *sessionDirInfo
+	if dir := storage.SessionsDir(); dir != "" {
+		info := &sessionDirInfo{Path: dir}
+		if st, err := os.Stat(dir); err != nil {
+			info.Status = "missing"
+		} else if !st.IsDir() {
+			info.Status = "not a directory"
+		} else {
+			testFile := filepath.Join(dir, ".dx_write_test")
+			// #nosec G304 -- testFile built from internal sessions directory path
+			writable := true
+			if f, err := os.Create(testFile); err != nil {
+				writable = false
+			} else {
+				_ = f.Close()
+				_ = os.Remove(testFile)
+			}
+			entries, _ := os.ReadDir(dir)
+			info.Status = "exists"
+			info.Writable = writable
+			info.Files = len(entries)
+		}
+		sessDir = info
+	}
+
+	mcpCount := len(settings.MCPServers) + len(mcpServers)
+	plugins := 0
+	if manifests, err := plugin.List(); err == nil {
+		plugins = len(manifests)
+	}
+
+	agentsMD := graycodeconfig.LoadAgentsMD()
+	agentsState := "not found"
+	if agentsMD != "" {
+		agentsState = "found"
+	}
+
+	var git *gitInfo
+	if branch, err := gitOutput("rev-parse", "--abbrev-ref", "HEAD"); err == nil && branch != "" {
+		g := &gitInfo{Repository: true, Branch: branch}
+		if head, err := gitOutput("rev-parse", "--short", "HEAD"); err == nil {
+			g.Head = head
+		}
+		if status, err := gitOutput("status", "--short"); err == nil {
+			if status == "" {
+				g.Clean = true
+			} else {
+				g.Modified = len(strings.Split(status, "\n"))
+			}
+		}
+		git = g
+	}
+
+	buildDate := buildDate
+	if buildDate == "unknown" {
+		buildDate = ""
+	}
+
+	d := struct {
+		GoVersion  string          `json:"go_version"`
+		OS         string          `json:"os"`
+		Arch       string          `json:"arch"`
+		Shell      string          `json:"shell"`
+		Term       string          `json:"term"`
+		ColorTerm  string          `json:"colorterm"`
+		Version    string          `json:"version"`
+		BuildDate  string          `json:"build_date,omitempty"`
+		Provider   string          `json:"provider"`
+		APIKey     string          `json:"api_key"`
+		Model      string          `json:"model"`
+		SessionDir *sessionDirInfo `json:"session_directory,omitempty"`
+		MCPServers int             `json:"mcp_servers"`
+		Plugins    int             `json:"plugins"`
+		AgentsMD   string          `json:"agents_md"`
+		Git        *gitInfo        `json:"git,omitempty"`
+		Disk       string          `json:"disk"`
+	}{
+		GoVersion:  runtime.Version(),
+		OS:         runtime.GOOS,
+		Arch:       runtime.GOARCH,
+		Shell:      shell,
+		Term:       termVal,
+		ColorTerm:  colorTerm,
+		Version:    v,
+		BuildDate:  buildDate,
+		Provider:   effectiveProvider,
+		APIKey:     maskedKeyStatus(graycodeconfig.ActiveProvider(context.Background())),
+		Model:      effectiveModel,
+		SessionDir: sessDir,
+		MCPServers: mcpCount,
+		Plugins:    plugins,
+		AgentsMD:   agentsState,
+		Git:        git,
+		Disk:       diskSpaceInfo(),
+	}
+	out, _ := json.MarshalIndent(d, "", "  ")
+	return string(out)
+}
+
 // maskedKeyStatus returns the API key status for a provider, masking the actual key.
 func maskedKeyStatus(provider string) string {
 	provider = strings.TrimSpace(provider)

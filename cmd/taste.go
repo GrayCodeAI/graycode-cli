@@ -104,8 +104,9 @@ func runTasteShow(_ *cobra.Command, _ []string) error {
 	// Also show prompt context if anything is learned.
 	ctx := profile.ToPromptContext()
 	if ctx != "" {
-		fmt.Println("\nSystem prompt fragment that would be injected:")
-		fmt.Println(strings.Repeat("-", 50))
+		fmt.Println()
+		fmt.Println(auditTint("System prompt fragment that would be injected:", textPrimary))
+		fmt.Println(auditTint(strings.Repeat("-", 50), textMuted))
 		fmt.Println(ctx)
 	}
 
@@ -128,7 +129,7 @@ func runTastePush(_ *cobra.Command, _ []string) error {
 		if err := os.WriteFile(tasteFile, data, 0o600); err != nil {
 			return fmt.Errorf("write file: %w", err)
 		}
-		fmt.Printf("Taste profile exported to %s\n", tasteFile)
+		fmt.Printf("%s\n", auditTint("Taste profile exported to ", doneGreen)+auditTint(tasteFile, textPrimary))
 	} else {
 		fmt.Println(string(data))
 	}
@@ -159,7 +160,7 @@ func runTastePull(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("import profile: %w", err)
 	}
 
-	fmt.Println("Taste profile imported successfully.")
+	fmt.Println(auditTint("Taste profile imported successfully.", doneGreen))
 	return nil
 }
 
@@ -170,11 +171,19 @@ func runTasteReset(_ *cobra.Command, _ []string) error {
 	}
 
 	projectID := getProjectID()
+	ok, err := confirmDestructive(fmt.Sprintf("Clear all taste preferences for project %q? This cannot be undone.", projectID))
+	if err != nil {
+		return err
+	}
+	if !ok {
+		fmt.Printf("%s\n", auditTint("Cancelled.", textMuted))
+		return nil
+	}
 	if err := store.Delete(projectID); err != nil {
 		return fmt.Errorf("reset profile: %w", err)
 	}
 
-	fmt.Printf("Taste profile for %q has been reset.\n", projectID)
+	fmt.Printf("%s\n", auditTint(fmt.Sprintf("Taste profile for %q has been reset.", projectID), textPrimary))
 	return nil
 }
 

@@ -76,15 +76,15 @@ func (s *Server) emitRuntimeMetrics(sb *strings.Builder) {
 		return true
 	})
 
-	sb.WriteString(fmt.Sprintf("# TYPE graycode_daemon_active_sessions gauge\n"))
+	sb.WriteString("# TYPE graycode_daemon_active_sessions gauge\n")
 	sb.WriteString(fmt.Sprintf("graycode_daemon_active_sessions %d\n", activeSessions))
 
 	// Concurrency slots used
-	sb.WriteString(fmt.Sprintf("# TYPE graycode_daemon_chat_concurrency_used gauge\n"))
+	sb.WriteString("# TYPE graycode_daemon_chat_concurrency_used gauge\n")
 	sb.WriteString(fmt.Sprintf("graycode_daemon_chat_concurrency_used %d\n", len(s.concurrencySem)))
 
 	// Uptime
-	sb.WriteString(fmt.Sprintf("# TYPE graycode_daemon_uptime_seconds gauge\n"))
+	sb.WriteString("# TYPE graycode_daemon_uptime_seconds gauge\n")
 	sb.WriteString(fmt.Sprintf("graycode_daemon_uptime_seconds %.0f\n", time.Since(s.startedAt).Seconds()))
 }
 

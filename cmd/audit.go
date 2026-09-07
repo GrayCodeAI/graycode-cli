@@ -3,12 +3,14 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
+	lipgloss "charm.land/lipgloss/v2"
 	"github.com/GrayCodeAI/graycode-cli/internal/hooks/audit"
 	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 	"github.com/spf13/cobra"
@@ -65,6 +67,13 @@ type AuditResult struct {
 	Detectors []AuditCount `json:"detectors"`
 }
 
+// auditProgressEnabled reports whether per-session progress should be shown.
+// JSON output must stay pure (progress lines would corrupt it) and piped
+// text should not be spammed with per-session lines.
+func auditProgressEnabled(format string, tty bool) bool {
+	return format != "json" && tty
+}
+
 func runAudit(cmd *cobra.Command, args []string) error {
 	if auditJSON {
 		auditFormat = "json"
@@ -77,8 +86,21 @@ func runAudit(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(sessions) == 0 {
-		cmd.Println("No session transcripts found for the specified time period.")
+		cmd.Println(auditTint("No session transcripts found for the specified time period.", textMuted))
 		return nil
+	}
+
+	// Animated per-session progress only on a TTY and only for text output.
+	// JSON output must stay pure (progress lines would corrupt it) and piped
+	// text should not be spammed with per-session lines.
+	var prog *CLIProgress
+	if auditProgressEnabled(auditFormat, stdoutIsTerminal()) && !IsQuiet() {
+		names := make([]string, len(sessions))
+		for i := range sessions {
+			names[i] = fmt.Sprintf("Scanning session %d/%d", i+1, len(sessions))
+		}
+		prog = NewCLIProgress("Audit", names)
+		defer prog.Abort()
 	}
 
 	// Run audit detectors on each session
@@ -86,9 +108,15 @@ func runAudit(cmd *cobra.Command, args []string) error {
 	counts := make(map[string]*AuditCount)
 	totalHits := 0
 
-	for _, sess := range sessions {
+	for i, sess := range sessions {
+		if prog != nil {
+			prog.StartStep(i)
+		}
 		events, err := loadSessionEvents(sess.Path)
 		if err != nil {
+			if prog != nil {
+				prog.FailStep(i, "load failed")
+			}
 			continue
 		}
 
@@ -125,6 +153,12 @@ func runAudit(cmd *cobra.Command, args []string) error {
 				}
 			}
 		}
+		if prog != nil {
+			prog.CompleteStep(i)
+		}
+	}
+	if prog != nil {
+		prog.Done()
 	}
 
 	// Count unique projects per detector
@@ -250,25 +284,54 @@ func loadSessionEvents(path string) ([]audit.ToolEvent, error) {
 	return events, nil
 }
 
+// auditTint applies a theme foreground color when color output is appropriate
+// (honors --quiet, NO_COLOR, FORCE_COLOR, and TTY state via ShouldColor).
+// Piped output stays plain so scripts never see stray ANSI escapes.
+func auditTint(s string, color color.Color) string {
+	if !ShouldColor() || s == "" {
+		return s
+	}
+	return lipgloss.NewStyle().Foreground(color).Render(s)
+}
+
+// auditSeverityColor maps a detector severity to a semantic theme color.
+func auditSeverityColor(sev string) color.Color {
+	switch sev {
+	case "high", "critical":
+		return errorCoral
+	case "medium":
+		return warnAmber
+	default: // info, low
+		return infoSky
+	}
+}
+
 func printAuditText(cmd *cobra.Command, result AuditResult) {
 	w := cmd.OutOrStdout()
 
 	_, _ = fmt.Fprintf(w, "\n")
 	_, _ = fmt.Fprintf(w, "═══════════════════════════════════════════════════════════════\n")
-	_, _ = fmt.Fprintf(w, "  Graycode Audit Report\n")
+	_, _ = fmt.Fprintf(w, "  %s\n", auditTint("Graycode Audit Report", graycodeColor))
 	_, _ = fmt.Fprintf(w, "═══════════════════════════════════════════════════════════════\n")
 	_, _ = fmt.Fprintf(w, "\n")
-	_, _ = fmt.Fprintf(w, "  Scanned:     %d sessions (last %d days)\n", result.Sessions, result.Days)
-	_, _ = fmt.Fprintf(w, "  Total hits:  %d\n", result.TotalHits)
-	_, _ = fmt.Fprintf(w, "  Scanned at:  %s\n", result.ScannedAt)
+	_, _ = fmt.Fprintf(w, "  %s %d sessions (last %d days)\n",
+		auditTint("Scanned:", textMuted), result.Sessions, result.Days)
+	hitsColor := doneGreen
+	if result.TotalHits > 0 {
+		hitsColor = errorCoral
+	}
+	_, _ = fmt.Fprintf(w, "  %s %s\n",
+		auditTint("Total hits:", textMuted), auditTint(fmt.Sprintf("%d", result.TotalHits), hitsColor))
+	_, _ = fmt.Fprintf(w, "  %s %s\n",
+		auditTint("Scanned at:", textMuted), auditTint(result.ScannedAt, textPrimary))
 
 	if len(result.Detectors) == 0 {
-		_, _ = fmt.Fprintf(w, "\n  No wasteful patterns detected. Great job!\n\n")
+		_, _ = fmt.Fprintf(w, "\n  %s\n\n", auditTint("No wasteful patterns detected. Great job!", doneGreen))
 		return
 	}
 
 	_, _ = fmt.Fprintf(w, "\n")
-	_, _ = fmt.Fprintf(w, "─── Detected Patterns ───\n\n")
+	_, _ = fmt.Fprintf(w, "─── %s ───\n\n", auditTint("Detected Patterns", infoSky))
 	_, _ = fmt.Fprintf(w, "  %-30s %6s %8s  %s\n", "DETECTOR", "HITS", "SEVERITY", "EXAMPLE")
 	_, _ = fmt.Fprintf(w, "  %-30s %6s %8s  %s\n", strings.Repeat("─", 30), strings.Repeat("─", 6), strings.Repeat("─", 8), strings.Repeat("─", 30))
 
@@ -277,11 +340,14 @@ func printAuditText(cmd *cobra.Command, result AuditResult) {
 		if len(d.Examples) > 0 {
 			example = d.Examples[0]
 		}
-		_, _ = fmt.Fprintf(w, "  %-30s %6d %8s  %s\n", d.Name, d.Hits, d.Severity, example)
+		// Pad to the column width first, then colorize, so ANSI escapes
+		// (zero-width) don't break the fixed-width alignment.
+		sev := auditTint(fmt.Sprintf("%8s", d.Severity), auditSeverityColor(d.Severity))
+		_, _ = fmt.Fprintf(w, "  %-30s %6d %s  %s\n", d.Name, d.Hits, sev, example)
 	}
 
 	_, _ = fmt.Fprintf(w, "\n")
-	_, _ = fmt.Fprintf(w, "─── Remediation Tips ───\n\n")
+	_, _ = fmt.Fprintf(w, "─── %s ───\n\n", auditTint("Remediation Tips", infoSky))
 
 	for _, d := range result.Detectors {
 		switch d.Name {

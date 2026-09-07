@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"text/tabwriter"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/multiagent/agents"
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
 	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -81,13 +81,12 @@ func runAgentList(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 	if len(all) == 0 {
-		fmt.Printf("No agents found. Create one with: graycode agent create <name>\n")
-		fmt.Printf("Agent directory: %s\n", agents.DefaultDir())
+		fmt.Printf("%s\n", auditTint("No agents found. Create one with: graycode agent create <name>", textMuted))
+		fmt.Printf("%s\n", auditTint("Agent directory: "+agents.DefaultDir(), textPrimary))
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintf(w, "NAME\tMODEL\tDESCRIPTION\n")
+	rows := make([][]string, 0, len(all))
 	for _, a := range all {
 		model := a.Model
 		if model == "" {
@@ -100,9 +99,9 @@ func runAgentList(cmd *cobra.Command, _ []string) error {
 				desc = string(runes[:50]) + "..."
 			}
 		}
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", a.Name, model, desc)
+		rows = append(rows, []string{a.Name, model, desc})
 	}
-	return w.Flush()
+	return theme.PrintTable(os.Stdout, []string{"NAME", "MODEL", "DESCRIPTION"}, rows)
 }
 
 func runAgentCreate(_ *cobra.Command, args []string) error {
@@ -146,8 +145,8 @@ You are a specialized agent. Complete tasks according to your expertise.
 		return err
 	}
 
-	fmt.Printf("Created agent %q at %s\n", name, path)
-	fmt.Printf("Edit the file to customize the system prompt.\n")
+	fmt.Printf("%s\n", auditTint("Created agent "+name+" at ", doneGreen)+auditTint(path, textPrimary))
+	fmt.Printf("%s\n", auditTint("Edit the file to customize the system prompt.", textMuted))
 	return nil
 }
 
@@ -157,15 +156,15 @@ func runAgentShow(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("Name:        %s\n", a.Name)
-	fmt.Printf("Description: %s\n", a.Description)
+	fmt.Printf("%s %s\n", auditTint("Name:", textMuted), auditTint(a.Name, textPrimary))
+	fmt.Printf("%s %s\n", auditTint("Description:", textMuted), auditTint(a.Description, textPrimary))
 	model := a.Model
 	if model == "" {
 		model = "(inherit from session)"
 	}
-	fmt.Printf("Model:       %s\n", model)
-	fmt.Printf("File:        %s\n", a.FilePath)
-	fmt.Printf("\n--- Prompt ---\n%s\n", a.Prompt)
+	fmt.Printf("%s %s\n", auditTint("Model:", textMuted), auditTint(model, textPrimary))
+	fmt.Printf("%s %s\n", auditTint("File:", textMuted), auditTint(a.FilePath, textPrimary))
+	fmt.Printf("\n%s\n%s\n", auditTint("--- Prompt ---", graycodeColor), a.Prompt)
 	return nil
 }
 
@@ -175,9 +174,18 @@ func runAgentRemove(_ *cobra.Command, args []string) error {
 		return err
 	}
 
+	ok, err := confirmDestructive(fmt.Sprintf("Remove agent %q (%s)?", a.Name, a.FilePath))
+	if err != nil {
+		return err
+	}
+	if !ok {
+		fmt.Printf("%s\n", auditTint("Cancelled.", textMuted))
+		return nil
+	}
+
 	if err := os.Remove(a.FilePath); err != nil {
 		return fmt.Errorf("remove %s: %w", a.FilePath, err)
 	}
-	fmt.Printf("Removed agent %q (%s)\n", a.Name, a.FilePath)
+	fmt.Printf("%s\n", auditTint("Removed agent "+a.Name+" ("+a.FilePath+")", textPrimary))
 	return nil
 }

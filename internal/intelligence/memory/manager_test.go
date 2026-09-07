@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"testing"
 )
 
@@ -29,7 +30,7 @@ func TestMemoryManager_Remember(t *testing.T) {
 	mm := NewMemoryManager(t.TempDir())
 	categories := []string{"guideline", "core", "procedural", "fact", "session", "other"}
 	for _, cat := range categories {
-		if err := mm.Remember("test content for "+cat, cat); err != nil {
+		if err := mm.Remember(context.Background(), "test content for "+cat, cat); err != nil {
 			t.Fatalf("Remember(%q) error: %v", cat, err)
 		}
 	}

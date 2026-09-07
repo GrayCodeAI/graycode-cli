@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"sort"
 	"strings"
 
@@ -421,22 +422,32 @@ func configCommandSummary(settings graycodeconfig.Settings) string {
 	_ = settings
 	providerName := displayConfigValue(graycodeconfig.ActiveProvider(context.Background()))
 	modelName := displayConfigValue(graycodeconfig.ActiveModel(context.Background()))
-	return fmt.Sprintf(`Setup (graycode-router)
+	keys := configuredKeyList()
+	keysColor := infoSky
+	if keys == "(none)" {
+		keysColor = textMuted
+	}
+	return fmt.Sprintf(`%s
 
   /config  → paste API key (OS keychain) + pick model
   /path    → verify readiness in TUI
   graycode path (CLI)
 
-Current:
-  provider: %s
-  model:    %s
-  keys:     %s
+%s:
+  %s %s
+  %s %s
+  %s %s
 
-Model catalog and routing live in graycode-router — graycode is the UI only.`, providerName, modelName, configuredKeyList())
+Model catalog and routing live in graycode-router — graycode is the UI only.`,
+		auditTint("Setup (graycode-router)", textPrimary),
+		auditTint("Current", textPrimary),
+		auditTint("provider:", textMuted), auditTint(providerName, infoSky),
+		auditTint("model:", textMuted), auditTint(modelName, infoSky),
+		auditTint("keys:", textMuted), auditTint(keys, keysColor))
 }
 
 func apiKeyConfigSummary() string {
-	return "API keys (" + graycodeconfig.CredentialStoreName() + ")\n" + indentedAPIKeyLines()
+	return auditTint("API keys ("+graycodeconfig.CredentialStoreName()+")", textPrimary) + "\n" + indentedAPIKeyLines()
 }
 
 func configuredKeyList() string {
@@ -456,9 +467,29 @@ func configuredKeyList() string {
 func indentedAPIKeyLines() string {
 	lines := apiKeyStatusLines()
 	if len(lines) == 0 {
-		return "  (empty)"
+		return "  " + auditTint("(empty)", textMuted)
 	}
-	return "  " + strings.Join(lines, "\n  ")
+	var b strings.Builder
+	for _, line := range lines {
+		name, status, ok := strings.Cut(line, ": ")
+		if !ok {
+			b.WriteString("  " + line + "\n")
+			continue
+		}
+		b.WriteString("  " + auditTint(name, textPrimary) + ": " + auditTint(status, apiKeyStatusColor(status)) + "\n")
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func apiKeyStatusColor(status string) color.Color {
+	switch status {
+	case "set":
+		return doneGreen
+	case "local":
+		return infoSky
+	default:
+		return textMuted
+	}
 }
 
 func apiKeyStatusLines() []string {

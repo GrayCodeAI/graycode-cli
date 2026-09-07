@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"image/color"
 	"sort"
 	"strings"
 
@@ -33,12 +34,12 @@ Show a specific flag:
 			if !ok {
 				return fmt.Errorf("unknown feature flag: %s", args[1])
 			}
-			fmt.Printf("Name:        %s\n", f.Name())
-			fmt.Printf("Default:     %v\n", f.DefaultValue())
-			fmt.Printf("Current:     %v\n", feature.EnabledByName(args[1]))
-			fmt.Printf("Description: %s\n", f.Description())
+			fmt.Printf("%s\n", auditTint("Name:        ", textMuted)+auditTint(f.Name(), textPrimary))
+			fmt.Printf("%s\n", auditTint("Default:     ", textMuted)+auditTint(fmt.Sprintf("%v", f.DefaultValue()), textPrimary))
+			fmt.Printf("%s\n", auditTint("Current:     ", textMuted)+auditTint(fmt.Sprintf("%v", feature.EnabledByName(args[1])), textPrimary))
+			fmt.Printf("%s\n", auditTint("Description: ", textMuted)+auditTint(f.Description(), textPrimary))
 			envVar := "GRAYCODE_FEATURE_" + strings.ReplaceAll(strings.ToUpper(args[1]), "-", "_")
-			fmt.Printf("Env var:     %s\n", envVar)
+			fmt.Printf("%s\n", auditTint("Env var:     ", textMuted)+auditTint(envVar, textPrimary))
 			return nil
 		}
 
@@ -49,21 +50,23 @@ Show a specific flag:
 		}
 		sort.Strings(names)
 
-		fmt.Println("Feature Flags:")
+		fmt.Println(auditTint("Feature Flags:", graycodeColor))
 		fmt.Println()
 		for _, name := range names {
 			f, _ := feature.Info(name)
 			val := flags[name]
 			status := "DISABLED"
+			var statusColor color.Color = textMuted
 			if val {
 				status = "ENABLED"
+				statusColor = doneGreen
 			}
-			fmt.Printf("  %s = %v  [%s]\n", name, val, status)
+			fmt.Printf("  %s = %v  [%s]\n", auditTint(name, textPrimary), val, auditTint(status, statusColor))
 			if f != nil {
-				fmt.Printf("    default: %v\n", f.DefaultValue())
-				fmt.Printf("    description: %s\n", f.Description())
+				fmt.Printf("%s\n", auditTint(fmt.Sprintf("    default: %v", f.DefaultValue()), textMuted))
+				fmt.Printf("%s\n", auditTint("    description: "+f.Description(), textMuted))
 				envVar := "GRAYCODE_FEATURE_" + strings.ReplaceAll(strings.ToUpper(name), "-", "_")
-				fmt.Printf("    env: %s\n", envVar)
+				fmt.Printf("%s\n", auditTint("    env: "+envVar, textMuted))
 			}
 			fmt.Println()
 		}

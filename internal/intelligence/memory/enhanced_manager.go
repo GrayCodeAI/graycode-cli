@@ -161,9 +161,9 @@ func (em *EnhancedMemoryManager) Recall(query string, tokenBudget int) (string, 
 }
 
 // Remember stores memory and routes through auto-capture pipeline.
-// Implements engine.MemoryRecaller interface.
-func (em *EnhancedMemoryManager) Remember(content, category string) error {
-	err := em.MemoryManager.Remember(content, category)
+// Implements engine.MemoryRecaller interface. The ctx bounds the harrier path.
+func (em *EnhancedMemoryManager) Remember(ctx context.Context, content, category string) error {
+	err := em.MemoryManager.Remember(ctx, content, category)
 	if err != nil {
 		return err
 	}

@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"text/tabwriter"
+
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/flags"
 	"github.com/GrayCodeAI/graycode-cli/internal/trust"
@@ -46,7 +47,7 @@ var trustAddCmd = &cobra.Command{
 		if err := s.Trust(path, reason); err != nil {
 			return err
 		}
-		cmd.Printf("Trusted %s\n", path)
+		cmd.Printf("%s\n", auditTint("Trusted ", doneGreen)+auditTint(path, textPrimary))
 		return nil
 	},
 }
@@ -70,10 +71,18 @@ var trustRemoveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		ok, err := confirmDestructive(fmt.Sprintf("Remove trust for %q?", path))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			cmd.Printf("%s\n", auditTint("Cancelled.", textMuted))
+			return nil
+		}
 		if err := s.Untrust(path); err != nil {
 			return err
 		}
-		cmd.Printf("Removed trust for %s\n", path)
+		cmd.Printf("%s\n", auditTint("Removed trust for ", textPrimary)+auditTint(path, textMuted))
 		return nil
 	},
 }
@@ -93,8 +102,8 @@ var trustListCmd = &cobra.Command{
 			if trustListJSON {
 				fmt.Println("[]")
 			} else {
-				cmd.Println("No trusted directories.")
-				cmd.Printf("Folder trust enforcement: %v (GRAYCODE_Y0_FOLDER_TRUST)\n", flags.FolderTrust())
+				cmd.Println(auditTint("No trusted directories.", textMuted))
+				cmd.Printf("%s\n", auditTint(fmt.Sprintf("Folder trust enforcement: %v (GRAYCODE_Y0_FOLDER_TRUST)", flags.FolderTrust()), textMuted))
 			}
 			return nil
 		}
@@ -106,19 +115,11 @@ var trustListCmd = &cobra.Command{
 			fmt.Println(string(out))
 			return nil
 		}
-		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		if _, err := fmt.Fprintln(w, "PATH\tTRUSTED_AT\tREASON"); err != nil {
-			return err
-		}
+		rows := make([][]string, 0, len(entries))
 		for _, e := range entries {
-			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\n", e.Path, e.TrustedAt.Format("2006-01-02 15:04"), e.Reason); err != nil {
-				return err
-			}
+			rows = append(rows, []string{e.Path, e.TrustedAt.Format("2006-01-02 15:04"), e.Reason})
 		}
-		if err := w.Flush(); err != nil {
-			return err
-		}
-		return nil
+		return theme.PrintTable(cmd.OutOrStdout(), []string{"PATH", "TRUSTED_AT", "REASON"}, rows)
 	},
 }
 
@@ -143,9 +144,13 @@ var trustCheckCmd = &cobra.Command{
 		}
 		enforced := flags.FolderTrust()
 		trusted := s.IsTrusted(path)
-		cmd.Printf("path: %s\n", path)
-		cmd.Printf("trusted: %v\n", trusted)
-		cmd.Printf("enforcement: %v\n", enforced)
+		cmd.Printf("%s %s\n", auditTint("path:", textMuted), auditTint(path, textPrimary))
+		trustedColor := doneGreen
+		if !trusted {
+			trustedColor = errorCoral
+		}
+		cmd.Printf("%s %s\n", auditTint("trusted:", textMuted), auditTint(fmt.Sprintf("%v", trusted), trustedColor))
+		cmd.Printf("%s %s\n", auditTint("enforcement:", textMuted), auditTint(fmt.Sprintf("%v", enforced), textPrimary))
 		if enforced && !trusted {
 			return fmt.Errorf("not trusted")
 		}

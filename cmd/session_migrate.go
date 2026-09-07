@@ -62,9 +62,9 @@ func runSessionMigrate(cmd *cobra.Command, args []string) error {
 	}
 
 	if res.FromVersion >= res.ToVersion {
-		cmd.Println(fmt.Sprintf("Session %s is already at the current format (v%d).", res.ID, res.ToVersion))
+		cmd.Println(auditTint(fmt.Sprintf("Session %s is already at the current format (v%d).", res.ID, res.ToVersion), textMuted))
 	} else {
-		cmd.Println(fmt.Sprintf("Migrated session %s from v%d to v%d (%d bytes).", res.ID, res.FromVersion, res.ToVersion, res.SizeBytes))
+		cmd.Println(auditTint("Migrated session ", doneGreen) + auditTint(res.ID, textPrimary) + auditTint(fmt.Sprintf(" from v%d to v%d (%d bytes).", res.FromVersion, res.ToVersion, res.SizeBytes), textMuted))
 	}
 	return nil
 }

@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 	"github.com/spf13/cobra"
 )
 
@@ -46,7 +48,7 @@ var learnAddCmd = &cobra.Command{
 		}
 		si := engine.NewSelfImprover()
 		si.Learn(strings.TrimSpace(learnWhat), strings.TrimSpace(learnWhy), strings.TrimSpace(learnLesson), strings.TrimSpace(learnCategory))
-		cmd.Printf("lesson added (category: %s)\n", learnCategory)
+		cmd.Println(auditTint(icons.CheckBold()+" ", doneGreen) + auditTint("lesson added (category: "+learnCategory+")", textPrimary))
 		return nil
 	},
 }
@@ -68,11 +70,19 @@ var learnClearCmd = &cobra.Command{
 		si := engine.NewSelfImprover()
 		n := len(si.Lessons(""))
 		if n == 0 {
-			cmd.Println("no lessons to clear")
+			cmd.Println(auditTint("no lessons to clear", textMuted))
+			return nil
+		}
+		ok, err := confirmDestructive(fmt.Sprintf("Remove all %d lesson(s)?", n))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			cmd.Println(auditTint("Cancelled.", textMuted))
 			return nil
 		}
 		si.Clear()
-		cmd.Printf("cleared %d lesson(s)\n", n)
+		cmd.Println(auditTint("cleared "+strconv.Itoa(n)+" lesson(s)", textPrimary))
 		return nil
 	},
 }
@@ -94,7 +104,7 @@ func runLearnList(cmd *cobra.Command) error {
 	si := engine.NewSelfImprover()
 	lessons := si.Lessons("")
 	if len(lessons) == 0 {
-		cmd.Println("No lessons yet. Add one with: graycode learn add --what ... --lesson ...")
+		cmd.Println(auditTint("No lessons yet. Add one with: graycode learn add --what ... --lesson ...", textMuted))
 		return nil
 	}
 
@@ -107,7 +117,7 @@ func runLearnList(cmd *cobra.Command) error {
 	for cat, count := range cats {
 		catSummary = append(catSummary, fmt.Sprintf("%s (%d)", cat, count))
 	}
-	cmd.Printf("Lesson store: %d lesson(s) — %s\n", len(lessons), strings.Join(catSummary, ", "))
+	cmd.Println(auditTint("Lesson store: "+strconv.Itoa(len(lessons))+" lesson(s) — "+strings.Join(catSummary, ", "), textPrimary))
 
 	start := 0
 	if learnLimit > 0 && len(lessons) > learnLimit {
@@ -115,12 +125,12 @@ func runLearnList(cmd *cobra.Command) error {
 	}
 	cmd.Println()
 	for _, e := range lessons[start:] {
-		cmd.Printf("[%s] %s\n", e.Category, e.What)
-		cmd.Printf("    lesson: %s\n", e.Lesson)
+		cmd.Printf("%s %s\n", auditTint("["+e.Category+"]", toolGold), auditTint(e.What, textPrimary))
+		cmd.Printf("%s %s\n", auditTint("    lesson:", textMuted), auditTint(e.Lesson, textPrimary))
 		if learnAll && e.Why != "" {
-			cmd.Printf("    why:    %s\n", e.Why)
+			cmd.Printf("%s %s\n", auditTint("    why:", textMuted), auditTint(e.Why, textPrimary))
 		}
-		cmd.Printf("    learned: %s\n", e.Timestamp.Format(time.RFC3339))
+		cmd.Printf("%s %s\n", auditTint("    learned:", textMuted), auditTint(e.Timestamp.Format(time.RFC3339), textMuted))
 	}
 	return nil
 }

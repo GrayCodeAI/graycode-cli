@@ -10,7 +10,14 @@ import (
 	"strings"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/spec"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
+
+// titleCaser replaces the deprecated strings.Title, which mishandles Unicode
+// word boundaries. Title case here is applied to ASCII phase/stage/identifier
+// names, so language.Und is the correct, dependency-free-of-locale choice.
+var titleCaser = cases.Title(language.Und)
 
 type ClarifyTool struct{}
 
@@ -164,7 +171,7 @@ func (SpecClarifyTool) Execute(ctx context.Context, input json.RawMessage) (stri
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "## Clarify Phase: %s\n\n", strings.Title(p.Phase))
+	fmt.Fprintf(&b, "## Clarify Phase: %s\n\n", titleCaser.String(p.Phase))
 	fmt.Fprintf(&b, "**%d questions found, %d unresolved**\n\n", len(questions), unresolved)
 
 	if unresolved > 0 {

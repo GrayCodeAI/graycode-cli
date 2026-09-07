@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"os"
 	"path/filepath"
 
@@ -34,28 +35,62 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 			return fmt.Errorf("failed to get working directory: %w", err)
 		}
 
+		// Live progress over the slow evaluation and report-writing stages.
+		// TTY-aware: animates on a terminal, prints clean static lines when
+		// piped. Harness writes reports to files (not stdout), so progress
+		// never corrupts structured output. --fix inserts a "Repairing
+		// harness" step between evaluation and the report writes.
+		fixing := harnessFix || (len(args) > 0 && args[0] == "fix")
+		steps := []string{"Evaluating workspace", "Writing markdown", "Writing HTML", "Writing JSON"}
+		reportBase := 1
+		if fixing {
+			steps = []string{"Evaluating workspace", "Repairing harness", "Writing markdown", "Writing HTML", "Writing JSON"}
+			reportBase = 2
+		}
+		prog := NewCLIProgress("Harness", steps)
+		defer prog.Abort()
+		step := func(i int) {
+			if prog != nil {
+				prog.StartStep(i)
+			}
+		}
+		done := func(i int) {
+			if prog != nil {
+				prog.CompleteStep(i)
+			}
+		}
+		finish := func() {
+			if prog != nil {
+				prog.Done()
+			}
+		}
+
 		ctx := context.Background()
 		opts := harness.EvaluateOptions{
 			TargetPath: targetDir,
 			OutputDir:  harnessOutDir,
 		}
 
+		step(0)
 		report, err := harness.EvaluateWorkspace(ctx, targetDir, opts)
 		if err != nil {
 			return fmt.Errorf("harness evaluation failed: %w", err)
 		}
+		done(0)
 
-		if harnessFix || (len(args) > 0 && args[0] == "fix") {
+		if fixing {
+			step(1)
 			fixResult, fixErr := harness.FixWorkspaceHarness(ctx, targetDir, report)
 			if fixErr != nil {
 				return fmt.Errorf("harness auto-fix failed: %w", fixErr)
 			}
-			fmt.Printf("[FIX] Graycode Harness Auto-Repair Results:\n")
+			fmt.Printf("%s\n", auditTint("[FIX] Graycode Harness Auto-Repair Results:", warnAmber))
 			for _, repair := range fixResult.RepairsPerformed {
-				fmt.Printf("   + %s\n", repair)
+				fmt.Printf("%s\n", auditTint("   + "+repair, doneGreen))
 			}
 			// Re-evaluate workspace after fix
 			report, _ = harness.EvaluateWorkspace(ctx, targetDir, opts)
+			done(1)
 		}
 
 		outDir := harnessOutDir
@@ -68,25 +103,31 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 		}
 
 		// Write Markdown report
+		step(reportBase)
 		mdPath := filepath.Join(outDir, "report.md")
 		mdContent := harness.RenderMarkdown(report)
 		if writeErr := os.WriteFile(mdPath, []byte(mdContent), 0o640); writeErr != nil { // #nosec G306 -- report is intentionally group-readable
 			return fmt.Errorf("failed to write report.md: %w", writeErr)
 		}
+		done(reportBase)
 
 		// Write HTML report
+		step(reportBase + 1)
 		htmlPath := filepath.Join(outDir, "report.html")
 		htmlContent := harness.RenderHTML(report)
 		if writeErr := os.WriteFile(htmlPath, []byte(htmlContent), 0o640); writeErr != nil { // #nosec G306 -- report is intentionally group-readable
 			return fmt.Errorf("failed to write report.html: %w", writeErr)
 		}
+		done(reportBase + 1)
 
 		// Write JSON report
+		step(reportBase + 2)
 		jsonPath := filepath.Join(outDir, "findings.json")
 		jsonContent, renderErr := harness.RenderJSON(report)
 		if renderErr != nil {
 			return fmt.Errorf("failed to serialize findings.json: %w", renderErr)
 		}
+		done(reportBase + 2)
 		if writeErr := os.WriteFile(jsonPath, jsonContent, 0o640); writeErr != nil { // #nosec G306 -- report is intentionally group-readable
 			return fmt.Errorf("failed to write findings.json: %w", writeErr)
 		}
@@ -94,12 +135,16 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 		// Journal quality observation to Graycode execution graph
 		_ = harness.JournalHarnessReport(report, "")
 
-		fmt.Printf("[GRAYCODE] Graycode Harness Evaluation Complete\n")
-		fmt.Printf("   Overall Score : %d/100 (%s)\n", report.OverallScore, report.OverallStatus)
-		fmt.Printf("   Findings      : %d prioritized issues\n", len(report.Findings))
-		fmt.Printf("   HTML Report   : %s\n", htmlPath)
-		fmt.Printf("   Markdown      : %s\n", mdPath)
-		fmt.Printf("   JSON Findings : %s\n", jsonPath)
+		finish()
+		fmt.Printf("%s\n", auditTint("[GRAYCODE] Graycode Harness Evaluation Complete", graycodeColor))
+		fmt.Printf("   %s : %s (%s)\n",
+			auditTint("Overall Score", textPrimary),
+			auditTint(fmt.Sprintf("%d/100", report.OverallScore), textPrimary),
+			auditTint(report.OverallStatus, harnessStatusColor(report.OverallStatus)))
+		fmt.Printf("   %s : %d prioritized issues\n", auditTint("Findings", textPrimary), len(report.Findings))
+		fmt.Printf("   %s : %s\n", auditTint("HTML Report", textPrimary), htmlPath)
+		fmt.Printf("   %s : %s\n", auditTint("Markdown", textPrimary), mdPath)
+		fmt.Printf("   %s : %s\n", auditTint("JSON Findings", textPrimary), jsonPath)
 
 		return nil
 	},
@@ -109,4 +154,18 @@ func init() {
 	harnessCmd.Flags().StringVar(&harnessOutDir, "out-dir", "", "Directory to save harness reports (default: .graycode/harness)")
 	harnessCmd.Flags().StringVar(&harnessFormat, "format", "all", "Report output format (html, markdown, json, all)")
 	harnessCmd.Flags().BoolVar(&harnessFix, "fix", false, "Automatically repair missing harness assets (AGENTS.md, skills, specs)")
+}
+
+// harnessStatusColor maps the harness health status to a semantic theme color.
+func harnessStatusColor(status string) color.Color {
+	switch status {
+	case "EXCELLENT", "GOOD":
+		return doneGreen
+	case "NEEDS_IMPROVEMENT":
+		return warnAmber
+	case "POOR":
+		return errorCoral
+	default:
+		return textPrimary
+	}
 }

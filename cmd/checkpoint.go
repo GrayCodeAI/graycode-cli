@@ -48,9 +48,8 @@ var checkpointSaveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		cmd.Printf("Saved checkpoint %q (session %s, %d messages, %s/%s)\n",
-			cp.Name, cp.Session.ID, len(cp.Session.Messages), cp.Session.Provider, cp.Session.Model)
-		cmd.Printf("Resume with: graycode resume %s\n", name)
+		cmd.Printf("%s\n", auditTint("Saved checkpoint ", doneGreen)+auditTint(cp.Name, textPrimary)+auditTint(fmt.Sprintf(" (session %s, %d messages, %s/%s)", cp.Session.ID, len(cp.Session.Messages), cp.Session.Provider, cp.Session.Model), textMuted))
+		cmd.Printf("%s\n", auditTint("Resume with: graycode resume "+name, textMuted))
 		return nil
 	},
 }
@@ -75,10 +74,10 @@ var checkpointListCmd = &cobra.Command{
 			return nil
 		}
 		if len(cps) == 0 {
-			cmd.Println("No named checkpoints.")
+			cmd.Println(auditTint("No named checkpoints.", textMuted))
 			return nil
 		}
-		cmd.Printf("Named checkpoints (%d):\n", len(cps))
+		cmd.Printf("%s\n", auditTint(fmt.Sprintf("Named checkpoints (%d):", len(cps)), textPrimary))
 		now := time.Now()
 		for _, cp := range cps {
 			age := now.Sub(cp.CreatedAt).Round(time.Second)
@@ -86,7 +85,7 @@ var checkpointListCmd = &cobra.Command{
 			if cp.Session != nil {
 				msgs = len(cp.Session.Messages)
 			}
-			cmd.Printf("  %-20s  %d msgs  (%s ago)\n", cp.Name, msgs, age)
+			cmd.Printf("  %s  %s\n", auditTint(fmt.Sprintf("%-20s", cp.Name), textPrimary), auditTint(fmt.Sprintf("%d msgs  (%s ago)", msgs, age), textMuted))
 		}
 		return nil
 	},
@@ -106,10 +105,18 @@ var checkpointDeleteCmd = &cobra.Command{
 	Short: "Delete a named checkpoint",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ok, err := confirmDestructive(fmt.Sprintf("Delete checkpoint %q?", args[0]))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			cmd.Printf("%s\n", auditTint("Cancelled.", textMuted))
+			return nil
+		}
 		if err := session.DeleteNamedCheckpoint(args[0]); err != nil {
 			return err
 		}
-		cmd.Printf("Deleted checkpoint %q\n", args[0])
+		cmd.Printf("%s\n", auditTint("Deleted checkpoint "+args[0], textPrimary))
 		return nil
 	},
 }
@@ -142,9 +149,8 @@ func restoreNamedCheckpoint(cmd *cobra.Command, name string) error {
 	if err := session.Save(cp.Session); err != nil {
 		return fmt.Errorf("restore session: %w", err)
 	}
-	cmd.Printf("Restored checkpoint %q into session %s (%d messages, %s/%s)\n",
-		cp.Name, cp.Session.ID, len(cp.Session.Messages), cp.Session.Provider, cp.Session.Model)
-	cmd.Printf("Continue with: graycode --resume %s\n", cp.Session.ID)
+	cmd.Printf("%s\n", auditTint("Restored checkpoint ", doneGreen)+auditTint(cp.Name, textPrimary)+auditTint(fmt.Sprintf(" into session %s (%d messages, %s/%s)", cp.Session.ID, len(cp.Session.Messages), cp.Session.Provider, cp.Session.Model), textMuted))
+	cmd.Printf("%s\n", auditTint("Continue with: graycode --resume "+cp.Session.ID, textMuted))
 	return nil
 }
 

@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"os"
 	"os/exec"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	graycodeKestrel "github.com/GrayCodeAI/graycode-cli/internal/bridge/kestrel"
 	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 	reviewcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/review"
+	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
 	"github.com/GrayCodeAI/graycode-cli/internal/engine"
 	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 	kestrelLib "github.com/GrayCodeAI/kestrel"
@@ -64,7 +66,7 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 	}
 	if existing != nil && existing.Status != ReviewStatusFailed {
 		if !reviewRunBackground {
-			fmt.Printf("Commit %s already reviewed (status: %s)\n", sha[:8], existing.Status)
+			fmt.Printf("%s\n", auditTint("Commit "+sha[:8]+" already reviewed (status: ", textMuted)+auditTint(string(existing.Status), reviewStatusColor(existing.Status))+auditTint(")", textMuted))
 		}
 		return nil
 	}
@@ -91,9 +93,34 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 			return silentErr(statusErr, "mark review passed")
 		}
 		if !reviewRunBackground {
-			fmt.Println("Empty diff — nothing to review.")
+			fmt.Println(auditTint("Empty diff — nothing to review.", textMuted))
 		}
 		return nil
+	}
+
+	// Live progress for the slow review stages. TTY-aware: animates the active
+	// step on a terminal, prints clean static lines when piped, and stays
+	// silent in background/hook mode. The deferred Abort guarantees the
+	// spinner goroutine never leaks past an error return.
+	var prog *CLIProgress
+	if !reviewRunBackground {
+		prog = NewCLIProgress("Review", []string{"Building model", "Reviewing code", "Saving results"})
+		defer prog.Abort()
+	}
+	step := func(i int) {
+		if prog != nil {
+			prog.StartStep(i)
+		}
+	}
+	done := func(i int) {
+		if prog != nil {
+			prog.CompleteStep(i)
+		}
+	}
+	finish := func() {
+		if prog != nil {
+			prog.Done()
+		}
 	}
 
 	// Build the Kestrel bridge through Graycode's GraycodeRouter engine boundary.
@@ -102,6 +129,7 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		ProviderOverride: strings.TrimSpace(provider),
 		ModelOverride:    strings.TrimSpace(reviewRunModel),
 	})
+	step(0)
 	chatProvider, providerID, err := engine.BuildChatProvider(ctx, selection, strings.TrimSpace(provider))
 	if err != nil {
 		if statusErr := store.SetStatus(id, ReviewStatusFailed); statusErr != nil {
@@ -136,6 +164,9 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		defer cancel()
 	}
 
+	done(0)
+	step(1)
+
 	// Run review.
 	result, err := bridge.ReviewContracts(ctx, diff)
 	if err != nil {
@@ -151,9 +182,14 @@ func runReviewRun(_ *cobra.Command, args []string) error {
 		status = ReviewStatusOpen
 	}
 
+	done(1)
+	step(2)
+
 	if err := store.Update(id, status, result); err != nil {
 		return silentErr(err, "store result")
 	}
+	done(2)
+	finish()
 
 	if !reviewRunBackground {
 		printReviewSummary(sha, result)
@@ -174,14 +210,37 @@ func getCommitDiff(sha string) (string, error) {
 	return string(out), nil
 }
 
+// reviewSeverityColor maps a review finding's severity to its semantic theme
+// color, mirroring the audit report's severity palette.
+func reviewSeverityColor(sev contracts.Severity) color.Color {
+	switch sev {
+	case contracts.SeverityCritical, contracts.SeverityHigh:
+		return errorCoral
+	case contracts.SeverityMedium:
+		return warnAmber
+	default:
+		return infoSky
+	}
+}
+
 func printReviewSummary(sha string, result *reviewcontracts.Result) {
 	if len(result.Findings) == 0 {
-		fmt.Printf("%s %s — no issues found (%d files reviewed)\n", icons.CheckBold(), sha[:8], result.Stats.FilesReviewed)
+		fmt.Printf("%s %s — no issues found (%d files reviewed)\n",
+			auditTint(icons.CheckBold(), doneGreen),
+			auditTint(sha[:8], textPrimary),
+			result.Stats.FilesReviewed)
 		return
 	}
-	fmt.Printf("%s %s — %d findings (max severity: %s)\n", icons.Alert(), sha[:8], len(result.Findings), result.MaxSeverity())
+	maxSev := result.MaxSeverity()
+	fmt.Printf("%s %s — %d findings (max severity: %s)\n",
+		auditTint(icons.Alert(), errorCoral),
+		auditTint(sha[:8], textPrimary),
+		len(result.Findings),
+		auditTint(maxSev.String(), reviewSeverityColor(maxSev)))
 	for _, f := range result.Findings {
-		fmt.Printf("  [%s] %s:%d — %s\n", f.Severity, f.File, f.Line, f.Message)
+		fmt.Printf("  %s %s\n",
+			auditTint(fmt.Sprintf("[%s]", f.Severity.String()), reviewSeverityColor(f.Severity)),
+			auditTint(fmt.Sprintf("%s:%d", f.File, f.Line), textPrimary)+auditTint(" — "+f.Message, textMuted))
 	}
 }
 

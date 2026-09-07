@@ -60,16 +60,17 @@ func runReviewFix(_ *cobra.Command, args []string) error {
 	}
 
 	if len(reviews) == 0 {
-		fmt.Println("No open reviews to fix.")
+		fmt.Println(auditTint("No open reviews to fix.", textMuted))
 		return nil
 	}
 
 	for _, r := range reviews {
+		fmt.Printf("%s %s\n", auditTint(icons.Bolt(), toolGold), auditTint(fmt.Sprintf("Fixing review #%d (%s)...", r.ID, r.SHA[:8]), textPrimary))
 		if err := fixReview(store, r); err != nil {
-			fmt.Printf("%s Review #%d (%s): %v\n", icons.CloseThick(), r.ID, r.SHA[:8], err)
+			fmt.Printf("%s %s\n", auditTint(icons.CloseThick(), errorCoral), auditTint(fmt.Sprintf("Review #%d (%s): %v", r.ID, r.SHA[:8], err), errorCoral))
 			continue
 		}
-		fmt.Printf("%s Review #%d (%s) fixed\n", icons.CheckBold(), r.ID, r.SHA[:8])
+		fmt.Printf("%s %s\n", auditTint(icons.CheckBold(), doneGreen), auditTint(fmt.Sprintf("Review #%d (%s) fixed", r.ID, r.SHA[:8]), doneGreen))
 	}
 	return nil
 }

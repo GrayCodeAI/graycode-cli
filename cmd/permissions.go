@@ -55,7 +55,7 @@ var permissionsListCmd = &cobra.Command{
 			return err
 		}
 		if len(out) == 0 {
-			cmd.Println("No persisted permission rules.")
+			cmd.Println(auditTint("No persisted permission rules.", textMuted))
 			return nil
 		}
 		for _, rule := range out {
@@ -93,7 +93,7 @@ var permissionsAddCmd = &cobra.Command{
 		if err := store.Save(); err != nil {
 			return err
 		}
-		cmd.Printf("Permission rule %d saved.\n", id)
+		cmd.Printf("%s\n", auditTint(fmt.Sprintf("Permission rule %d saved.", id), doneGreen))
 		return nil
 	},
 }
@@ -117,7 +117,7 @@ var permissionsRevokeCmd = &cobra.Command{
 		if err := store.Save(); err != nil {
 			return err
 		}
-		cmd.Printf("Permission rule %d revoked.\n", id)
+		cmd.Printf("%s\n", auditTint(fmt.Sprintf("Permission rule %d revoked.", id), textPrimary))
 		return nil
 	},
 }
@@ -134,13 +134,21 @@ var permissionsResetCmd = &cobra.Command{
 			return err
 		}
 		if !store.Reset() {
-			cmd.Println("No persisted permission rules.")
+			cmd.Println(auditTint("No persisted permission rules.", textMuted))
+			return nil
+		}
+		ok, err := confirmDestructive("Remove all persisted permission rules?")
+		if err != nil {
+			return err
+		}
+		if !ok {
+			cmd.Println(auditTint("Cancelled.", textMuted))
 			return nil
 		}
 		if err := store.Save(); err != nil {
 			return err
 		}
-		cmd.Println("Persisted permission rules reset.")
+		cmd.Println(auditTint("Persisted permission rules reset.", doneGreen))
 		return nil
 	},
 }

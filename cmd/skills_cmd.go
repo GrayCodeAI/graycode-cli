@@ -50,9 +50,20 @@ var skillsSearchCmd = &cobra.Command{
 		jsonOut, _ := cmd.Flags().GetBool("json")
 
 		rc := plugin.NewRegistryClient()
+		prog := NewCLIProgress("Skills search", []string{"Searching skill registry"})
+		if !jsonOut {
+			prog.StartStep(0)
+		}
 		results, err := rc.Search(query, category)
 		if err != nil {
+			if !jsonOut {
+				prog.Abort()
+			}
 			return err
+		}
+		if !jsonOut {
+			prog.CompleteStep(0)
+			prog.Done()
 		}
 		if jsonOut {
 			data, _ := json.MarshalIndent(results, "", "  ")
@@ -60,7 +71,7 @@ var skillsSearchCmd = &cobra.Command{
 			return nil
 		}
 		if len(results) == 0 {
-			fmt.Println("No skills found.")
+			fmt.Println(auditTint("No skills found.", textMuted))
 			return nil
 		}
 		for _, e := range results {
@@ -82,10 +93,15 @@ var skillsInstallCmd = &cobra.Command{
 		}
 		scope, _ := cmd.Flags().GetString("scope")
 		rc := plugin.NewRegistryClient()
+		prog := NewCLIProgress("Skill install", []string{"Installing skill"})
+		prog.StartStep(0)
 		msg, err := rc.Install(repo, skillName, scope)
 		if err != nil {
+			prog.Abort()
 			return err
 		}
+		prog.CompleteStep(0)
+		prog.Done()
 		fmt.Println(msg)
 		return nil
 	},
@@ -96,10 +112,18 @@ var skillsRemoveCmd = &cobra.Command{
 	Short: "Remove an installed skill",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ok, err := confirmDestructive(fmt.Sprintf("Remove skill %q?", args[0]))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			fmt.Printf("%s\n", auditTint("Cancelled.", textMuted))
+			return nil
+		}
 		if err := plugin.Remove(args[0]); err != nil {
 			return err
 		}
-		fmt.Printf("Removed skill %q.\n", args[0])
+		fmt.Printf("%s\n", auditTint("Removed skill "+args[0]+".", textPrimary))
 		return nil
 	},
 }
@@ -118,11 +142,11 @@ var skillsInfoCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Skill: %s (not installed)\n", entry.Name)
+		fmt.Printf("%s %s\n", auditTint("Skill:", textMuted), auditTint(entry.Name, textPrimary)+auditTint(" (not installed)", textMuted))
 		if entry.Description != "" {
-			fmt.Printf("Description: %s\n", entry.Description)
+			fmt.Printf("%s %s\n", auditTint("Description:", textMuted), auditTint(entry.Description, textPrimary))
 		}
-		fmt.Printf("Repo: %s\nInstalls: %d\n", entry.Repo, entry.Installs)
+		fmt.Printf("%s %s\n%s %d\n", auditTint("Repo:", textMuted), auditTint(entry.Repo, textPrimary), auditTint("Installs:", textMuted), entry.Installs)
 		return nil
 	},
 }
@@ -138,12 +162,17 @@ var skillsTrendingCmd = &cobra.Command{
 			}
 		}
 		rc := plugin.NewRegistryClient()
+		prog := NewCLIProgress("Trending skills", []string{"Fetching trending skills"})
+		prog.StartStep(0)
 		results, err := rc.Trending(limit)
 		if err != nil {
+			prog.Abort()
 			return err
 		}
+		prog.CompleteStep(0)
+		prog.Done()
 		for i, e := range results {
-			fmt.Printf("%d. %s", i+1, strings.TrimLeft(plugin.FormatSkillEntry(e), " "))
+			fmt.Printf("%s. %s", auditTint(fmt.Sprintf("%d", i+1), textMuted), strings.TrimLeft(plugin.FormatSkillEntry(e), " "))
 		}
 		return nil
 	},
@@ -167,7 +196,7 @@ var skillsAuditCmd = &cobra.Command{
 					fmt.Println(string(data))
 					return nil
 				}
-				fmt.Println(plugin.FormatAuditResult(r))
+				fmt.Println(plugin.FormatAuditResultColored(r))
 				return nil
 			}
 			if _, path, ok := plugin.InstalledSkillInfo(target); ok {
@@ -178,7 +207,7 @@ var skillsAuditCmd = &cobra.Command{
 					fmt.Println(string(data))
 					return nil
 				}
-				fmt.Println(plugin.FormatAuditResult(r))
+				fmt.Println(plugin.FormatAuditResultColored(r))
 				return nil
 			}
 			return fmt.Errorf("skill or file %q not found", target)
@@ -189,7 +218,7 @@ var skillsAuditCmd = &cobra.Command{
 			fmt.Println(string(data))
 			return nil
 		}
-		fmt.Println(plugin.FormatAuditResult(result))
+		fmt.Println(plugin.FormatAuditResultColored(result))
 		return nil
 	},
 }

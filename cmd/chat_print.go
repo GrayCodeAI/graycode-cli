@@ -83,10 +83,13 @@ func runPrint(text string) error {
 
 	var printed strings.Builder
 	var countdownShown bool
+	var lastUsage *engine.StreamUsage
+	turns := 0
+	started := time.Now()
 	for ev := range ch {
 		switch ev.Type {
 		case "content":
-			if outputFormat == "text" {
+			if outputFormat == "text" && !printMarkdown {
 				fmt.Print(ev.Content)
 			} else if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "content", ev.Content, "")
@@ -96,15 +99,15 @@ func runPrint(text string) error {
 			// surface the remaining time budget once, on the first content.
 			if countdown && !countdownShown {
 				if rem := lifecycle.RemainingTime(ctx); rem != "" {
-					fmt.Fprintf(os.Stderr, "[time remaining] %s\n", rem)
+					fmt.Fprintf(os.Stderr, "%s\n", auditTint("[time remaining] "+rem, warnAmber))
 					countdownShown = true
 				}
 			}
 		case "tool_use":
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_use", "", ev.ToolName)
-			} else {
-				_, _ = fmt.Fprintf(os.Stderr, "\n[%s]\n", ev.ToolName)
+			} else if !IsQuiet() {
+				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", auditTint("["+ev.ToolName+"]", infoSky))
 			}
 		case "tool_result":
 			content := ev.Content
@@ -114,10 +117,14 @@ func runPrint(text string) error {
 			}
 			if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "tool_result", content, ev.ToolName)
-			} else {
-				_, _ = fmt.Fprintf(os.Stderr, "[%s] %s\n", ev.ToolName, content)
+			} else if !IsQuiet() {
+				_, _ = fmt.Fprintf(os.Stderr, "%s %s\n", auditTint("["+ev.ToolName+"]", infoSky), content)
 			}
 		case "usage":
+			if ev.Usage != nil {
+				lastUsage = ev.Usage
+				turns++
+			}
 			if outputFormat == "stream-json" && ev.Usage != nil {
 				writePrintUsageEvent(sessionID, ev.Usage)
 			}
@@ -129,9 +136,8 @@ func runPrint(text string) error {
 		case "done":
 			switch outputFormat {
 			case "text":
-				if !strings.HasSuffix(printed.String(), "\n") {
-					fmt.Println()
-				}
+				printTextResponse(printed.String())
+				printTextUsageFooter(lastUsage, started, turns, effectiveModel)
 			case "json":
 				writePrintResult(printed.String(), sessionID, sess, false, nil)
 			case "stream-json":
@@ -145,9 +151,8 @@ func runPrint(text string) error {
 	}
 	switch outputFormat {
 	case "text":
-		if !strings.HasSuffix(printed.String(), "\n") {
-			fmt.Println()
-		}
+		printTextResponse(printed.String())
+		printTextUsageFooter(lastUsage, started, turns, effectiveModel)
 	case "json":
 		writePrintResult(printed.String(), sessionID, sess, false, nil)
 	case "stream-json":
@@ -178,6 +183,49 @@ func writePrintUsageEvent(sessionID string, usage *engine.StreamUsage) {
 	}
 	data, _ := json.Marshal(event)
 	fmt.Println(string(data))
+}
+
+// printTextUsageFooter renders a muted token/elapsed summary to stderr after a
+// one-shot text-mode run. It writes to stderr so stdout stays pure for scripts,
+// and is skipped entirely when no usage event was received or --quiet is set.
+func printTextUsageFooter(usage *engine.StreamUsage, started time.Time, turns int, model string) {
+	if usage == nil || IsQuiet() {
+		return
+	}
+	parts := []string{fmt.Sprintf("%d in · %d out", usage.PromptTokens, usage.CompletionTokens)}
+	if usage.CacheReadTokens > 0 || usage.CacheWriteTokens > 0 {
+		parts = append(parts, fmt.Sprintf("cache %d read · %d write", usage.CacheReadTokens, usage.CacheWriteTokens))
+	}
+	parts = append(parts, fmt.Sprintf("%d turn(s)", turns))
+	parts = append(parts, time.Since(started).Round(time.Second).String())
+	if model != "" {
+		parts = append(parts, model)
+	}
+	_, _ = fmt.Fprintf(os.Stderr, "%s\n", auditTint("tokens: "+strings.Join(parts, " · "), textMuted))
+}
+
+// printTextResponse emits the final text-mode response, rendering markdown to
+// styled ANSI when --markdown is set and color is enabled. Raw markdown is
+// preserved for piped/NO_COLOR output so scripts stay machine-parseable.
+func printTextResponse(s string) {
+	s = renderPrintResponse(s, printMarkdown, ShouldColor())
+	fmt.Print(s)
+	if !strings.HasSuffix(s, "\n") {
+		fmt.Println()
+	}
+}
+
+// renderPrintResponse applies markdown rendering when both markdown and color
+// are requested; otherwise it returns the raw response unchanged.
+func renderPrintResponse(s string, markdown, color bool) string {
+	if !markdown || !color || s == "" {
+		return s
+	}
+	w, _ := TermSize()
+	if w <= 0 {
+		w = 80
+	}
+	return renderMarkdown(s, w)
 }
 
 func writePrintResult(result, sessionID string, sess *engine.Session, isError bool, errors []string) {
@@ -262,7 +310,7 @@ func saveGraycodeRouterSession(id string, sess *engine.Session) {
 
 // runRepl starts an interactive REPL mode for multi-turn conversation without TUI.
 func runRepl() error {
-	fmt.Fprintln(os.Stderr, "Graycode REPL — type 'exit' or 'quit' to leave, 'help' for commands")
+	fmt.Fprintln(os.Stderr, auditTint("Graycode REPL", textPrimary)+auditTint(" — type 'exit' or 'quit' to leave, 'help' for commands", textMuted))
 	fmt.Fprintln(os.Stderr)
 
 	systemPrompt, err := buildSystemPrompt()
@@ -354,7 +402,7 @@ func runRepl() error {
 		}
 		if output, handled, builtinErr := replBuiltinResponse(input, sess, settings, sessionID); handled {
 			if builtinErr != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", builtinErr)
+				fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("Error: %v", builtinErr), errorCoral))
 				continue
 			}
 			if output != "" {
@@ -367,7 +415,7 @@ func runRepl() error {
 
 		ch, err := sess.Stream(ctx)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("Error: %v", err), errorCoral))
 			continue
 		}
 
@@ -413,7 +461,7 @@ func runRepl() error {
 				if outputFormat == "stream-json" {
 					writePrintResult(printed.String(), sessionID, sess, true, []string{ev.Content})
 				}
-				fmt.Fprintf(os.Stderr, "Error: %s\n", ev.Content)
+				fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("Error: %s", ev.Content), errorCoral))
 			case "done":
 				switch outputFormat {
 				case "text":
@@ -524,16 +572,16 @@ func runWatch(initialPrompt string) error {
 	// Optional initial run to seed context, matching the prior behaviour.
 	if strings.TrimSpace(initialPrompt) != "" {
 		if err := runPrint(initialPrompt); err != nil {
-			fmt.Fprintf(os.Stderr, "Initial run failed: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint("Initial run failed: "+err.Error(), errorCoral))
 		}
 	}
 
 	root := "."
-	fmt.Fprintln(os.Stderr, "\n[Watching for AI!/AI? comment directives — press Ctrl+C to stop]")
+	fmt.Fprintln(os.Stderr, "\n"+auditTint("[Watching for AI!/AI? comment directives — press Ctrl+C to stop]", textPrimary))
 
 	// Process any directives already present before the first change event.
 	if n := processAIDirectives(root, watchIgnoreDirs); n > 0 {
-		fmt.Fprintf(os.Stderr, "[%s] processed %d AI directive(s)\n", time.Now().Format("15:04:05"), n)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("[%s] processed %d AI directive(s)", time.Now().Format("15:04:05"), n), textPrimary))
 	}
 
 	// Prefer the fsnotify event-driven backend. The AI!/AI? directive grammar
@@ -543,14 +591,14 @@ func runWatch(initialPrompt string) error {
 	watcher := aiwatch.NewAIWatcher(root, nil)
 	watcher.OnChange = func() {
 		if n := processAIDirectives(root, watchIgnoreDirs); n > 0 {
-			fmt.Fprintf(os.Stderr, "[%s] processed %d AI directive(s)\n", time.Now().Format("15:04:05"), n)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("[%s] processed %d AI directive(s)", time.Now().Format("15:04:05"), n), textPrimary))
 		}
 	}
 
 	ctx := context.Background()
 	if err := watcher.StartFsnotify(ctx); err != nil {
 		// fsnotify unavailable — fall back to the polling backstop.
-		fmt.Fprintf(os.Stderr, "[watch] fsnotify unavailable (%v), using polling fallback\n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("[watch] fsnotify unavailable (%v), using polling fallback", err), warnAmber))
 		return runWatchPolling(root)
 	}
 	return nil
@@ -569,7 +617,7 @@ func runWatchPolling(root string) error {
 		if currentMod.After(lastMod) {
 			lastMod = currentMod
 			if n := processAIDirectives(root, watchIgnoreDirs); n > 0 {
-				fmt.Fprintf(os.Stderr, "[%s] processed %d AI directive(s)\n", time.Now().Format("15:04:05"), n)
+				fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("[%s] processed %d AI directive(s)", time.Now().Format("15:04:05"), n), textPrimary))
 			}
 		}
 	}

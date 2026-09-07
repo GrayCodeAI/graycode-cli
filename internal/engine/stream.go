@@ -792,13 +792,12 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			if textContent.Len() > 0 {
 				s.Persistence().AppendAssistantJournaled(types.GraycodeRouterMessage{Role: "assistant", Content: textContent.String()})
 				// Auto-remember corrections and learnings. Best-effort
-				// fire-and-forget: the memory backend's Remember does not yet
-				// accept a context, so this goroutine cannot be cancelled mid-call.
-				// MemoryService.Remember(ctx, ...) reserves ctx for exactly this
-				// extension when the backend becomes context-aware.
+				// fire-and-forget, bounded so a hung backend cannot leak.
 				if s.MemorySvc().Memory() != nil && shouldRemember(textContent.String()) {
 					go func(content string) {
-						if err := s.MemorySvc().Memory().Remember(content, "assistant_learning"); err != nil {
+						rCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+						defer cancel()
+						if err := s.MemorySvc().Memory().Remember(rCtx, content, "assistant_learning"); err != nil {
 							slog.Warn("background assistant_learning remember failed", "error", err)
 						}
 					}(textContent.String())
@@ -806,9 +805,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 			// Sleeptime: background memory consolidation
 			if s.MemorySvc().Sleeptime() != nil && s.MemorySvc().Sleeptime().ShouldRun() && s.MemorySvc().Harrier() != nil && s.MemorySvc().Harrier().Ready() {
-				// Snapshot messages to avoid data race with main loop appending
-				msgs := make([]types.GraycodeRouterMessage, len(s.Persistence().RawMessages()))
-				copy(msgs, s.Persistence().RawMessages())
+				// Snapshot messages to avoid data race with main loop appending.
+				// RawMessages already returns a deep clone, so a single call
+				// yields a stable snapshot (the prior len()+copy double-call
+				// raced on reallocation between the two reads).
+				msgs := s.Persistence().RawMessages()
 				go func() {
 					var transcript []string
 					for _, m := range msgs {
@@ -835,9 +836,11 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 			// Skill distillation: extract reusable skill from multi-turn tasks
 			if s.MemorySvc().SkillDistiller() != nil && toolTurns >= 5 && s.MemorySvc().Harrier() != nil && s.MemorySvc().Harrier().Ready() {
-				// Snapshot messages to avoid data race with main loop appending
-				msgs := make([]types.GraycodeRouterMessage, len(s.Persistence().RawMessages()))
-				copy(msgs, s.Persistence().RawMessages())
+				// Snapshot messages to avoid data race with main loop appending.
+				// RawMessages already returns a deep clone, so a single call
+				// yields a stable snapshot (the prior len()+copy double-call
+				// raced on reallocation between the two reads).
+				msgs := s.Persistence().RawMessages()
 				// Snapshot the tool/file sets too, so the goroutine never
 				// reads the live maps while the main loop writes them on a
 				// later tool turn.
@@ -872,7 +875,9 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 						return
 					}
 					content, _ := json.Marshal(skill)
-					if err := s.MemorySvc().Harrier().Remember(string(content), "skill"); err != nil {
+					rCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+					defer cancel()
+					if err := s.MemorySvc().Harrier().Remember(rCtx, string(content), "skill"); err != nil {
 						slog.Warn("background skill remember failed", "error", err)
 					}
 				}()
@@ -1111,13 +1116,13 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			}
 			if userMsg != "" && assistantMsg != "" {
 				condensed := fmt.Sprintf("Q: %s\nA: %s", truncate(userMsg, 200), truncate(assistantMsg, 300))
-				if err := s.MemorySvc().Memory().Remember(condensed, "conversation"); err != nil {
+				if err := s.MemorySvc().Memory().Remember(ctx, condensed, "conversation"); err != nil {
 					slog.Warn("conversation remember failed", "error", err)
 				}
 			}
 			// Also save insights if the response has learning signals
 			if assistantMsg != "" && shouldRemember(assistantMsg) {
-				if err := s.MemorySvc().Memory().Remember(truncate(assistantMsg, 500), "insight"); err != nil {
+				if err := s.MemorySvc().Memory().Remember(ctx, truncate(assistantMsg, 500), "insight"); err != nil {
 					slog.Warn("insight remember failed", "error", err)
 				}
 			}

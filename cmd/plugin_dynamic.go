@@ -3,16 +3,31 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"os"
 	"path/filepath"
-	"text/tabwriter"
 	"time"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
+	"github.com/GrayCodeAI/graycode-cli/internal/theme"
 	"github.com/spf13/cobra"
 )
 
 var dynamicManager *plugin.DynamicPluginManager
+
+// pluginStateColor maps a plugin lifecycle state to a theme color.
+func pluginStateColor(state plugin.PluginState) color.Color {
+	switch state {
+	case plugin.StateActive:
+		return doneGreen
+	case plugin.StateFailed:
+		return errorCoral
+	case plugin.StateDisabled:
+		return textDisabled
+	default: // discovered, loaded
+		return infoSky
+	}
+}
 
 func getDynamicManager() *plugin.DynamicPluginManager {
 	if dynamicManager == nil {
@@ -32,7 +47,7 @@ var pluginActivateCmd = &cobra.Command{
 		if err := dm.Activate(name); err != nil {
 			return fmt.Errorf("activate plugin %q: %w", name, err)
 		}
-		cmd.Printf("Plugin %q activated.\n", name)
+		cmd.Printf("%s\n", auditTint("Plugin "+name+" activated.", doneGreen))
 		return nil
 	},
 }
@@ -47,7 +62,7 @@ var pluginDeactivateCmd = &cobra.Command{
 		if err := dm.Deactivate(name); err != nil {
 			return fmt.Errorf("deactivate plugin %q: %w", name, err)
 		}
-		cmd.Printf("Plugin %q deactivated.\n", name)
+		cmd.Printf("%s\n", auditTint("Plugin "+name+" deactivated.", textPrimary))
 		return nil
 	},
 }
@@ -62,7 +77,7 @@ var pluginReloadCmd = &cobra.Command{
 		if err := dm.Reload(name); err != nil {
 			return fmt.Errorf("reload plugin %q: %w", name, err)
 		}
-		cmd.Printf("Plugin %q reloaded.\n", name)
+		cmd.Printf("%s\n", auditTint("Plugin "+name+" reloaded.", textPrimary))
 		return nil
 	},
 }
@@ -75,7 +90,7 @@ var pluginStatusCmd = &cobra.Command{
 		statuses := dm.Status()
 
 		if len(statuses) == 0 {
-			cmd.Println("No plugins discovered. Run 'graycode plugin install' to add plugins.")
+			cmd.Println(auditTint("No plugins discovered. Run 'graycode plugin install' to add plugins.", textMuted))
 			return nil
 		}
 
@@ -89,21 +104,15 @@ var pluginStatusCmd = &cobra.Command{
 			return nil
 		}
 
-		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		if _, err := fmt.Fprintf(w, "NAME\tVERSION\tSTATE\tTOOLS\tHOOKS\n"); err != nil {
-			return err
-		}
+		rows := make([][]string, 0, len(statuses))
 		for _, s := range statuses {
-			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d\n",
-				s.Name, s.Version, s.State, s.ToolCount, s.HookCount); err != nil {
-				return err
-			}
+			rows = append(rows, []string{
+				s.Name, s.Version,
+				auditTint(string(s.State), pluginStateColor(s.State)),
+				fmt.Sprintf("%d", s.ToolCount), fmt.Sprintf("%d", s.HookCount),
+			})
 		}
-		if err := w.Flush(); err != nil {
-			return err
-		}
-
-		return nil
+		return theme.PrintTable(cmd.OutOrStdout(), []string{"NAME", "VERSION", "STATE", "TOOLS", "HOOKS"}, rows)
 	},
 }
 
@@ -119,16 +128,21 @@ var pluginInstallDynamicCmd = &cobra.Command{
 			if err := plugin.Install(source); err != nil {
 				return err
 			}
-			cmd.Printf("Installed plugin from %s.\n", source)
+			cmd.Printf("%s\n", auditTint("Installed plugin from "+source+".", doneGreen))
 			return nil
 		}
 
 		// Otherwise treat as GitHub repo
 		dm := getDynamicManager()
+		prog := NewCLIProgress("Plugin install", []string{"Installing plugin from GitHub"})
+		prog.StartStep(0)
 		if err := dm.InstallFromGitHub(source); err != nil {
+			prog.Abort()
 			return err
 		}
-		cmd.Printf("Installed plugin from %s.\n", source)
+		prog.CompleteStep(0)
+		prog.Done()
+		cmd.Printf("%s\n", auditTint("Installed plugin from "+source+".", doneGreen))
 
 		// Re-discover
 		_ = dm.DiscoverAll()
@@ -170,7 +184,7 @@ var pluginUninstallCmd = &cobra.Command{
 		if err := dm.Uninstall(name); err != nil {
 			return err
 		}
-		cmd.Printf("Plugin %q uninstalled.\n", name)
+		cmd.Printf("%s\n", auditTint("Plugin "+name+" uninstalled.", textPrimary))
 		return nil
 	},
 }
@@ -314,19 +328,19 @@ See `+"`plugin.json`"+` for the full manifest configuration.
 		// #nosec G306
 		_ = os.WriteFile(filepath.Join(dir, "mcp.json"), []byte("{\n  \"servers\": []\n}\n"), 0o644)
 
-		cmd.Printf("Created multi-component plugin scaffold at ./%s/\n", name)
-		cmd.Printf("  %s/plugin.json  - Plugin manifest\n", name)
-		cmd.Printf("  %s/main.go      - Plugin entrypoint\n", name)
-		cmd.Printf("  %s/skills/      - Bundled skills\n", name)
-		cmd.Printf("  %s/hooks/       - Hook scripts\n", name)
-		cmd.Printf("  %s/tools/       - Tool binaries\n", name)
-		cmd.Printf("  %s/mcp.json     - MCP server specs\n", name)
-		cmd.Printf("  %s/README.md    - Documentation\n", name)
+		cmd.Printf("%s\n", auditTint("Created multi-component plugin scaffold at ./"+name+"/", doneGreen))
+		cmd.Printf("%s\n", auditTint("  "+name+"/plugin.json  - Plugin manifest", textMuted))
+		cmd.Printf("%s\n", auditTint("  "+name+"/main.go      - Plugin entrypoint", textMuted))
+		cmd.Printf("%s\n", auditTint("  "+name+"/skills/      - Bundled skills", textMuted))
+		cmd.Printf("%s\n", auditTint("  "+name+"/hooks/       - Hook scripts", textMuted))
+		cmd.Printf("%s\n", auditTint("  "+name+"/tools/       - Tool binaries", textMuted))
+		cmd.Printf("%s\n", auditTint("  "+name+"/mcp.json     - MCP server specs", textMuted))
+		cmd.Printf("%s\n", auditTint("  "+name+"/README.md    - Documentation", textMuted))
 		cmd.Println()
-		cmd.Printf("Next steps:\n")
-		cmd.Printf("  cd %s && go mod init %s\n", name, name)
-		cmd.Printf("  graycode plugin install ./%s\n", name)
-		cmd.Printf("  graycode plugin activate %s\n", name)
+		cmd.Printf("%s\n", auditTint("Next steps:", textPrimary))
+		cmd.Printf("%s\n", auditTint("  cd "+name+" && go mod init "+name, textMuted))
+		cmd.Printf("%s\n", auditTint("  graycode plugin install ./"+name, textMuted))
+		cmd.Printf("%s\n", auditTint("  graycode plugin activate "+name, textMuted))
 		return nil
 	},
 }
@@ -359,40 +373,37 @@ var pluginLogsCmd = &cobra.Command{
 				name := args[0]
 				for _, s := range statuses {
 					if s.Name == name {
-						cmd.Printf("Plugin: %s\n", s.Name)
-						cmd.Printf("State:  %s\n", s.State)
+						cmd.Printf("%s\n", auditTint("Plugin: ", textMuted)+auditTint(s.Name, textPrimary))
+						cmd.Printf("%s\n", auditTint("State:  ", textMuted)+auditTint(string(s.State), pluginStateColor(s.State)))
 						if s.Error != "" {
-							cmd.Printf("Error:  %s\n", s.Error)
+							cmd.Printf("%s\n", auditTint("Error:  ", textMuted)+auditTint(s.Error, errorCoral))
 						}
 						if !s.ActivatedAt.IsZero() {
-							cmd.Printf("Activated: %s\n", s.ActivatedAt.Format(time.RFC3339))
+							cmd.Printf("%s\n", auditTint("Activated: ", textMuted)+auditTint(s.ActivatedAt.Format(time.RFC3339), textPrimary))
 						}
 						return nil
 					}
 				}
 				return fmt.Errorf("plugin %q not found", name)
 			}
-			cmd.Println("No recent plugin events.")
+			cmd.Println(auditTint("No recent plugin events.", textMuted))
 			return nil
 		}
 
-		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		_, _ = fmt.Fprintf(w, "TIME\tPLUGIN\tEVENT\tERROR\n")
+		rows := make([][]string, 0, len(collected))
 		for _, ev := range collected {
 			errStr := ""
 			if ev.Error != "" {
 				errStr = truncateWithEllipsis(ev.Error, 50)
 			}
-			_, _ = fmt.Fprintf(
-				w, "%s\t%s\t%s\t%s\n",
+			rows = append(rows, []string{
 				ev.Timestamp.Format("15:04:05"),
 				ev.PluginName,
 				ev.Type,
 				errStr,
-			)
+			})
 		}
-		_ = w.Flush()
-		return nil
+		return theme.PrintTable(cmd.OutOrStdout(), []string{"TIME", "PLUGIN", "EVENT", "ERROR"}, rows)
 	},
 }
 
@@ -406,17 +417,21 @@ var pluginMarketplaceListCmd = &cobra.Command{
 	Short: "List plugins available from marketplace sources",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		mc := plugin.NewMarketplaceClient()
+		prog := NewCLIProgress("Marketplace", []string{"Fetching marketplace indexes"})
+		prog.StartStep(0)
 		entries, err := mc.FetchAll()
 		if err != nil {
+			prog.Abort()
 			return fmt.Errorf("fetch marketplace: %w (indexes may be unpublished; add a source with graycode plugin marketplace add)", err)
 		}
+		prog.CompleteStep(0)
+		prog.Done()
 		if len(entries) == 0 {
-			cmd.Println("No marketplace plugins found.")
-			cmd.Println("Add a source: graycode plugin marketplace add <name> <index-url>")
+			cmd.Println(auditTint("No marketplace plugins found.", textMuted))
+			cmd.Println(auditTint("Add a source: graycode plugin marketplace add <name> <index-url>", textMuted))
 			return nil
 		}
-		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-		_, _ = fmt.Fprintf(w, "NAME\tREPO\tVERSION\tDESCRIPTION\n")
+		rows := make([][]string, 0, len(entries))
 		for _, e := range entries {
 			desc := e.Description
 			if len(desc) > 48 {
@@ -425,9 +440,9 @@ var pluginMarketplaceListCmd = &cobra.Command{
 					desc = string(runes[:45]) + "..."
 				}
 			}
-			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", e.Name, e.Repo, e.Version, desc)
+			rows = append(rows, []string{e.Name, e.Repo, e.Version, desc})
 		}
-		return w.Flush()
+		return theme.PrintTable(cmd.OutOrStdout(), []string{"NAME", "REPO", "VERSION", "DESCRIPTION"}, rows)
 	},
 }
 
@@ -437,15 +452,23 @@ var pluginMarketplaceInstallCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		mc := plugin.NewMarketplaceClient()
+		prog := NewCLIProgress("Plugin install", []string{"Fetching plugin", "Installing plugin"})
+		prog.StartStep(0)
 		entry, err := mc.Find(args[0])
 		if err != nil {
+			prog.Abort()
 			return err
 		}
+		prog.CompleteStep(0)
+		prog.StartStep(1)
 		dir, err := mc.Install(*entry)
 		if err != nil {
+			prog.Abort()
 			return err
 		}
-		cmd.Printf("Installed %s to %s\n", entry.Name, dir)
+		prog.CompleteStep(1)
+		prog.Done()
+		cmd.Printf("%s\n", auditTint("Installed "+entry.Name+" to ", doneGreen)+auditTint(dir, textPrimary))
 		// re-discover
 		_ = getDynamicManager().DiscoverAll()
 		return nil
@@ -460,7 +483,7 @@ var pluginMarketplaceAddCmd = &cobra.Command{
 		if err := plugin.AddSource(args[0], args[1]); err != nil {
 			return err
 		}
-		cmd.Printf("Added marketplace source %q → %s\n", args[0], args[1])
+		cmd.Printf("%s\n", auditTint("Added marketplace source "+args[0]+" → ", doneGreen)+auditTint(args[1], textPrimary))
 		return nil
 	},
 }
@@ -495,20 +518,20 @@ var pluginInspectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		cmd.Printf("Root: %s\n", comp.Root)
-		cmd.Printf("Components: %s\n", comp.ComponentSummary())
-		cmd.Printf("Tools: %v\n", comp.HasTools)
-		cmd.Printf("Skills (%d):\n", len(comp.Skills))
+		cmd.Printf("%s\n", auditTint("Root: ", textMuted)+auditTint(comp.Root, textPrimary))
+		cmd.Printf("%s\n", auditTint("Components: ", textMuted)+auditTint(comp.ComponentSummary(), textPrimary))
+		cmd.Printf("%s\n", auditTint("Tools: ", textMuted)+auditTint(fmt.Sprintf("%v", comp.HasTools), textPrimary))
+		cmd.Printf("%s\n", auditTint(fmt.Sprintf("Skills (%d):", len(comp.Skills)), textPrimary))
 		for _, s := range comp.Skills {
-			cmd.Printf("  - %s\n", s)
+			cmd.Printf("%s\n", auditTint("  - "+s, textMuted))
 		}
-		cmd.Printf("Hooks (%d):\n", len(comp.HookFiles))
+		cmd.Printf("%s\n", auditTint(fmt.Sprintf("Hooks (%d):", len(comp.HookFiles)), textPrimary))
 		for _, h := range comp.HookFiles {
-			cmd.Printf("  - %s\n", h)
+			cmd.Printf("%s\n", auditTint("  - "+h, textMuted))
 		}
-		cmd.Printf("MCP servers (%d):\n", len(comp.MCPServers))
+		cmd.Printf("%s\n", auditTint(fmt.Sprintf("MCP servers (%d):", len(comp.MCPServers)), textPrimary))
 		for _, m := range comp.MCPServers {
-			cmd.Printf("  - %s cmd=%s url=%s\n", m.Name, m.Command, m.URL)
+			cmd.Printf("%s\n", auditTint(fmt.Sprintf("  - %s cmd=%s url=%s", m.Name, m.Command, m.URL), textMuted))
 		}
 		return nil
 	},

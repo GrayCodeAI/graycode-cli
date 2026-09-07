@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/exec"
@@ -17,7 +18,72 @@ import (
 	"github.com/GrayCodeAI/graycode-cli/internal/storage"
 )
 
-const defaultIndexURL = "https://raw.githubusercontent.com/GrayCodeAI/starling/main/registry.json"
+// defaultIndexURL is the rolling release asset published by
+// graycode-skills/.github/workflows/publish-registry.yml. The registry is a
+// generated 4.3 MB artifact and is deliberately not committed to that repo,
+// so a raw.githubusercontent.com URL cannot work.
+const defaultIndexURL = "https://github.com/GrayCodeAI/graycode-skills/releases/download/registry-latest/registry.json"
+
+// maxSkillSearchDepth bounds how deep discoverSkillDirs walks below the repo
+// root. graycode-skills nests skills at categories/<category>/<skill>/, which
+// is depth 3; anything deeper is almost certainly test data or a vendored
+// copy.
+const maxSkillSearchDepth = 4
+
+// discoverSkillDirs finds every directory under root containing a SKILL.md,
+// keyed by the directory name. It replaces the previous two hard-coded
+// layouts (<root>/<name>/ and <root>/skills/<name>/) so repositories that
+// group skills under a category directory are installable too.
+//
+// On a duplicate skill name the shallowest path wins, so the result does not
+// depend on walk order.
+func discoverSkillDirs(root string) (map[string]string, error) {
+	found := map[string]string{}
+	depthOf := map[string]int{}
+
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, relErr := filepath.Rel(root, path)
+		if relErr != nil {
+			return nil //nolint:nilerr // an unrelatable path is simply skipped
+		}
+		if d.IsDir() {
+			if path == root {
+				return nil
+			}
+			name := d.Name()
+			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
+				return filepath.SkipDir
+			}
+			if len(strings.Split(filepath.ToSlash(rel), "/")) > maxSkillSearchDepth {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if d.Name() != "SKILL.md" {
+			return nil
+		}
+		dir := filepath.Dir(path)
+		if dir == root {
+			// A top-level SKILL.md documents the repository, not a skill.
+			return nil
+		}
+		name := filepath.Base(dir)
+		depth := len(strings.Split(filepath.ToSlash(rel), "/"))
+		if _, ok := found[name]; ok && depthOf[name] <= depth {
+			return nil
+		}
+		found[name] = dir
+		depthOf[name] = depth
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("scan skills: %w", err)
+	}
+	return found, nil
+}
 
 // SkillInvocationPolicy controls which callers may invoke a skill.
 type SkillInvocationPolicy struct {
@@ -244,6 +310,10 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 	}
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
+	// ponytail: whole-repo shallow clone. Installing one skill from
+	// graycode-skills clones ~127 MB of categories. Switch to git
+	// sparse-checkout of the skill's indexed path if install latency
+	// becomes a complaint.
 	url := "https://github.com/" + repo + ".git"
 	cmd := exec.CommandContext(context.Background(), "git", "clone", "--depth", "1", "--single-branch", url, tmpDir) // #nosec G204 -- url is built from a caller-supplied repo slug prefixed with a fixed GitHub URL, consistent with other install paths in this package
 	if out, cloneErr := cmd.CombinedOutput(); cloneErr != nil {
@@ -257,12 +327,16 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 		commitSha = strings.TrimSpace(string(headOut))
 	}
 
-	// Discover skills in the cloned repo.
-	skillsRoot := tmpDir
-	// Check for skills/ subdirectory (agentskills.io convention).
-	if info, statErr := os.Stat(filepath.Join(tmpDir, "skills")); statErr == nil && info.IsDir() {
-		skillsRoot = filepath.Join(tmpDir, "skills")
+	// Discover skills in the cloned repo, whatever layout it uses.
+	discovered, err := discoverSkillDirs(tmpDir)
+	if err != nil {
+		return "", err
 	}
+	names := make([]string, 0, len(discovered))
+	for name := range discovered {
+		names = append(names, name)
+	}
+	sort.Strings(names)
 
 	installed := []string{}
 	blocked := []string{}
@@ -272,20 +346,11 @@ func (rc *RegistryClient) Install(repo, skillName, scope string) (string, error)
 	if lockErr != nil {
 		return "", fmt.Errorf("load skills lock: %w", lockErr)
 	}
-	entries, err := os.ReadDir(skillsRoot)
-	if err != nil {
-		return "", fmt.Errorf("read skills: %w", err)
-	}
-
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		name := e.Name()
+	for _, name := range names {
 		if skillName != "" && !strings.EqualFold(name, skillName) {
 			continue
 		}
-		srcSkill := filepath.Join(skillsRoot, name, "SKILL.md")
+		srcSkill := filepath.Join(discovered[name], "SKILL.md")
 		if _, err := os.Stat(srcSkill); err != nil {
 			continue
 		}

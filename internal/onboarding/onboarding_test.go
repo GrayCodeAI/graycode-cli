@@ -41,13 +41,27 @@ func TestWelcome(t *testing.T) {
 }
 
 func TestColorConstants(t *testing.T) {
+	// Color codes are gated on the environment: present when color is forced,
+	// empty when NO_COLOR is set (the wizard stays plain in scripted output).
+	t.Setenv("NO_COLOR", "")
+	t.Setenv("FORCE_COLOR", "1")
+	initColorCodes()
 	if teal == "" {
-		t.Error("teal color should not be empty")
+		t.Error("teal color should not be empty when color is enabled")
 	}
 	if reset == "" {
-		t.Error("reset should not be empty")
+		t.Error("reset should not be empty when color is enabled")
 	}
 	if bold == "" {
-		t.Error("bold should not be empty")
+		t.Error("bold should not be empty when color is enabled")
+	}
+
+	t.Setenv("NO_COLOR", "1")
+	initColorCodes()
+	if teal != "" {
+		t.Error("teal should be empty when NO_COLOR is set")
+	}
+	if reset != "" {
+		t.Error("reset should be empty when NO_COLOR is set")
 	}
 }

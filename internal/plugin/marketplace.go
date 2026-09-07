@@ -40,15 +40,14 @@ type MarketplaceSource struct {
 	URL  string `json:"url"`
 }
 
-// DefaultMarketplaceSources returns built-in sources.
-// Official GrayCodeAI plugin index (may 404 until published — callers handle).
+// DefaultMarketplaceSources returns the built-in plugin index sources.
+//
+// There are none. No repository in the GrayCode ecosystem generates a
+// plugins-registry.json, so shipping a built-in source only produced a 404
+// on every `graycode plugin marketplace list`. Users register real sources
+// with `graycode plugin marketplace add <name> <url>`.
 func DefaultMarketplaceSources() []MarketplaceSource {
-	return []MarketplaceSource{
-		{
-			Name: "official",
-			URL:  "https://raw.githubusercontent.com/GrayCodeAI/starling/main/plugins-registry.json",
-		},
-	}
+	return nil
 }
 
 // MarketplaceClient fetches plugin marketplace indexes and installs packages.

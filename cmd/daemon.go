@@ -86,7 +86,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	// Initialize OpenTelemetry telemetry (opt-in via GRAYCODE_ENABLE_TELEMETRY=1).
 	telemetryProviders, telemetryErr := oteltrace.InitTelemetry(oteltrace.DefaultTelemetryConfig())
 	if telemetryErr != nil {
-		fmt.Fprintln(os.Stderr, "warning: telemetry initialization failed:", telemetryErr)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("warning: telemetry initialization failed: %v", telemetryErr), warnAmber))
 	}
 	if telemetryProviders != nil && telemetryErr == nil && telemetryProviders.IsEnabled() {
 		defer func() {
@@ -100,7 +100,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	// tracing; failures are non-fatal.
 	logBackend, logBackendErr := otellog.NewBackend(otellog.DefaultConfig())
 	if logBackendErr != nil {
-		fmt.Fprintln(os.Stderr, "warning: telemetry log backend initialization failed:", logBackendErr)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("warning: telemetry log backend initialization failed: %v", logBackendErr), warnAmber))
 	}
 	if logBackend != nil && logBackend.Sharing() != otellog.SharingDisabled {
 		defer func() {
@@ -117,7 +117,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 	if logErr != nil {
 		// Fall back to stderr if file logging fails.
 		daemonLogger = logger.New(os.Stderr, logLevelFromString(daemonLogLevel))
-		fmt.Fprintln(os.Stderr, "warning: daemon file logging failed, falling back to stderr:", logErr)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("warning: daemon file logging failed, falling back to stderr: %v", logErr), warnAmber))
 	} else {
 		daemonLogger = logger.New(logFile, logLevelFromString(daemonLogLevel))
 	}
@@ -253,7 +253,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		fmt.Printf("  ssh -L %d:127.0.0.1:%d <remote-host>\n", daemonPort, daemonPort)
 		fmt.Printf("  curl http://localhost:%d/v1/health\n", daemonPort)
 	} else {
-		fmt.Println("\nWARNING: Bound to non-localhost. Ensure TLS is configured for production use.")
+		fmt.Println(auditTint("\nWARNING: Bound to non-localhost. Ensure TLS is configured for production use.", warnAmber))
 	}
 
 	fmt.Println("Press Ctrl+C to stop.")
@@ -451,7 +451,7 @@ func runDaemonStop(_ *cobra.Command, _ []string) error {
 	}
 
 	_ = os.Remove(pidFile)
-	fmt.Printf("Stopped daemon (PID %d)\n", info.PID)
+	fmt.Printf("%s\n", auditTint(fmt.Sprintf("Stopped daemon (PID %d)", info.PID), doneGreen))
 	return nil
 }
 
@@ -463,7 +463,7 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 		if daemonJSON {
 			fmt.Println(`{"status":"not running"}`)
 		} else {
-			fmt.Println("Status: not running")
+			fmt.Println(auditTint("Status: not running", textMuted))
 		}
 		return nil
 	}
@@ -477,7 +477,7 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 		if daemonJSON {
 			fmt.Println(`{"status":"unknown","error":"invalid PID file"}`)
 		} else {
-			fmt.Println("Status: unknown (invalid PID file)")
+			fmt.Println(auditTint("Status: unknown (invalid PID file)", warnAmber))
 		}
 		return nil
 	}
@@ -488,7 +488,7 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 		if daemonJSON {
 			fmt.Println(`{"status":"not running","error":"stale PID file"}`)
 		} else {
-			fmt.Println("Status: not running (stale PID file)")
+			fmt.Println(auditTint("Status: not running (stale PID file)", warnAmber))
 		}
 		_ = os.Remove(pidFile)
 		return nil
@@ -497,7 +497,7 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 		if daemonJSON {
 			fmt.Println(`{"status":"not running","error":"stale PID file"}`)
 		} else {
-			fmt.Println("Status: not running (stale PID file)")
+			fmt.Println(auditTint("Status: not running (stale PID file)", warnAmber))
 		}
 		_ = os.Remove(pidFile)
 		return nil
@@ -514,9 +514,9 @@ func runDaemonStatus(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	fmt.Printf("Status: running\n")
-	fmt.Printf("  PID:     %d\n", info.PID)
-	fmt.Printf("  Address: http://%s\n", info.Addr)
-	fmt.Printf("  Started: %s\n", info.StartedAt)
+	fmt.Printf("%s\n", auditTint("Status: running", doneGreen))
+	fmt.Printf("  %s %d\n", auditTint("PID:", textMuted), info.PID)
+	fmt.Printf("  %s %s\n", auditTint("Address:", textMuted), auditTint("http://"+info.Addr, textPrimary))
+	fmt.Printf("  %s %s\n", auditTint("Started:", textMuted), auditTint(info.StartedAt, textPrimary))
 	return nil
 }

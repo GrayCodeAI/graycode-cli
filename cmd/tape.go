@@ -68,17 +68,17 @@ func runTapeStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	w := cmd.OutOrStdout()
-	_, _ = fmt.Fprintf(w, "path:      %s\n", st.Path)
-	_, _ = fmt.Fprintf(w, "size:      %d bytes\n", st.Size)
-	_, _ = fmt.Fprintf(w, "terminal:  %dx%d\n", st.Cols, st.Rows)
-	_, _ = fmt.Fprintf(w, "captured:  %s\n", time.UnixMilli(st.EpochMS).UTC().Format(time.RFC3339))
-	_, _ = fmt.Fprintf(w, "version:   %s\n", st.Version)
-	_, _ = fmt.Fprintf(w, "frames:    %d\n", st.FrameCount)
-	_, _ = fmt.Fprintf(w, "stdout:    %d bytes\n", st.StdoutBytes)
-	_, _ = fmt.Fprintf(w, "duration:  %s\n", tapeDuration(st.DurationMS))
+	_, _ = fmt.Fprintf(w, "%s %s\n", auditTint("path:", textMuted), auditTint(st.Path, textPrimary))
+	_, _ = fmt.Fprintf(w, "%s %d bytes\n", auditTint("size:", textMuted), st.Size)
+	_, _ = fmt.Fprintf(w, "%s %dx%d\n", auditTint("terminal:", textMuted), st.Cols, st.Rows)
+	_, _ = fmt.Fprintf(w, "%s %s\n", auditTint("captured:", textMuted), auditTint(time.UnixMilli(st.EpochMS).UTC().Format(time.RFC3339), textPrimary))
+	_, _ = fmt.Fprintf(w, "%s %s\n", auditTint("version:", textMuted), auditTint(st.Version, textPrimary))
+	_, _ = fmt.Fprintf(w, "%s %d\n", auditTint("frames:", textMuted), st.FrameCount)
+	_, _ = fmt.Fprintf(w, "%s %d bytes\n", auditTint("stdout:", textMuted), st.StdoutBytes)
+	_, _ = fmt.Fprintf(w, "%s %s\n", auditTint("duration:", textMuted), auditTint(tapeDuration(st.DurationMS), textPrimary))
 	for _, k := range []string{"stdout", "stdin", "resize", "sigint", "marker"} {
 		if n := st.Kinds[k]; n > 0 {
-			_, _ = fmt.Fprintf(w, "  %-7s %d\n", k+":", n)
+			_, _ = fmt.Fprintf(w, "  %s %d\n", auditTint(k+":", textMuted), n)
 		}
 	}
 	return nil
@@ -99,10 +99,10 @@ func runTapeCommit(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	w := cmd.OutOrStdout()
-	_, _ = fmt.Fprintf(w, "committed %s\n", c.Name)
-	_, _ = fmt.Fprintf(w, "  id:   %s\n", c.CommitID)
-	_, _ = fmt.Fprintf(w, "  tape: %s\n", c.Path)
-	_, _ = fmt.Fprintf(w, "  meta: %s\n", c.MetaPath)
+	_, _ = fmt.Fprintf(w, "%s\n", auditTint("committed "+c.Name, doneGreen))
+	_, _ = fmt.Fprintf(w, "  %s %s\n", auditTint("id:", textMuted), auditTint(c.CommitID, textPrimary))
+	_, _ = fmt.Fprintf(w, "  %s %s\n", auditTint("tape:", textMuted), auditTint(c.Path, textPrimary))
+	_, _ = fmt.Fprintf(w, "  %s %s\n", auditTint("meta:", textMuted), auditTint(c.MetaPath, textPrimary))
 	return nil
 }
 

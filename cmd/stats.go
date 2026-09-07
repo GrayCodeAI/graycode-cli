@@ -84,8 +84,8 @@ func runStats(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(filtered) == 0 {
-		cmd.Println("No session data found for the specified time period.")
-		cmd.Println("Sessions are recorded automatically when you use graycode.")
+		cmd.Println(auditTint("No session data found for the specified time period.", textMuted))
+		cmd.Println(auditTint("Sessions are recorded automatically when you use graycode.", textMuted))
 		return nil
 	}
 
@@ -180,30 +180,30 @@ func printStatsText(cmd *cobra.Command, out *statsOutput) {
 
 	_, _ = fmt.Fprintf(w, "\n")
 	_, _ = fmt.Fprintf(w, "══════════════════════════════════════════════════\n")
-	_, _ = fmt.Fprintf(w, "  Graycode Usage Statistics (%s)\n", out.Period)
+	_, _ = fmt.Fprintf(w, "  %s\n", auditTint(fmt.Sprintf("Graycode Usage Statistics (%s)", out.Period), graycodeColor))
 	_, _ = fmt.Fprintf(w, "══════════════════════════════════════════════════\n")
 
 	// Overview section
 	_, _ = fmt.Fprintf(w, "\n")
-	_, _ = fmt.Fprintf(w, "─── Overview ───\n")
-	_, _ = fmt.Fprintf(w, "  Sessions:     %d\n", out.TotalSessions)
-	_, _ = fmt.Fprintf(w, "  Messages:     %d\n", out.TotalMessages)
-	_, _ = fmt.Fprintf(w, "  Tool calls:   %d\n", out.TotalToolCalls)
-	_, _ = fmt.Fprintf(w, "  Active days:  %d\n", out.ActiveDays)
+	_, _ = fmt.Fprintf(w, "─── %s ───\n", auditTint("Overview", infoSky))
+	_, _ = fmt.Fprintf(w, "  %s %d\n", auditTint("Sessions:", textMuted), out.TotalSessions)
+	_, _ = fmt.Fprintf(w, "  %s %d\n", auditTint("Messages:", textMuted), out.TotalMessages)
+	_, _ = fmt.Fprintf(w, "  %s %d\n", auditTint("Tool calls:", textMuted), out.TotalToolCalls)
+	_, _ = fmt.Fprintf(w, "  %s %d\n", auditTint("Active days:", textMuted), out.ActiveDays)
 
 	// Cost section
 	_, _ = fmt.Fprintf(w, "\n")
-	_, _ = fmt.Fprintf(w, "─── Cost ───\n")
-	_, _ = fmt.Fprintf(w, "  Total cost:       $%.4f\n", out.TotalCostUSD)
-	_, _ = fmt.Fprintf(w, "  Avg cost/session: $%.4f\n", out.AvgCostPerSession)
-	_, _ = fmt.Fprintf(w, "  Avg cost/day:     $%.4f\n", out.AvgCostPerDay)
+	_, _ = fmt.Fprintf(w, "─── %s ───\n", auditTint("Cost", infoSky))
+	_, _ = fmt.Fprintf(w, "  %s %s\n", auditTint("Total cost:", textMuted), auditTint(fmt.Sprintf("$%.4f", out.TotalCostUSD), costViolet))
+	_, _ = fmt.Fprintf(w, "  %s %s\n", auditTint("Avg cost/session:", textMuted), auditTint(fmt.Sprintf("$%.4f", out.AvgCostPerSession), costViolet))
+	_, _ = fmt.Fprintf(w, "  %s %s\n", auditTint("Avg cost/day:", textMuted), auditTint(fmt.Sprintf("$%.4f", out.AvgCostPerDay), costViolet))
 
 	// Models section
 	if statsModels && len(out.Models) > 0 {
 		_, _ = fmt.Fprintf(w, "\n")
-		_, _ = fmt.Fprintf(w, "─── Models ───\n")
-		_, _ = fmt.Fprintf(w, "  %-30s %8s %10s\n", "MODEL", "REQUESTS", "COST")
-		_, _ = fmt.Fprintf(w, "  %-30s %8s %10s\n", strings.Repeat("─", 30), strings.Repeat("─", 8), strings.Repeat("─", 10))
+		_, _ = fmt.Fprintf(w, "─── %s ───\n", auditTint("Models", infoSky))
+		_, _ = fmt.Fprintf(w, "  %s\n", auditTint(fmt.Sprintf("%-30s %8s %10s", "MODEL", "REQUESTS", "COST"), textMuted))
+		_, _ = fmt.Fprintf(w, "  %s\n", auditTint(fmt.Sprintf("%-30s %8s %10s", strings.Repeat("─", 30), strings.Repeat("─", 8), strings.Repeat("─", 10)), textMuted))
 
 		// Sort models by cost descending
 		type modelEntry struct {
@@ -219,14 +219,14 @@ func printStatsText(cmd *cobra.Command, out *statsOutput) {
 		})
 
 		for _, m := range models {
-			_, _ = fmt.Fprintf(w, "  %-30s %8d %10s\n", m.name, m.stat.Requests, fmt.Sprintf("$%.4f", m.stat.CostUSD))
+			_, _ = fmt.Fprintf(w, "  %-30s %8d %10s\n", m.name, m.stat.Requests, auditTint(fmt.Sprintf("$%.4f", m.stat.CostUSD), costViolet))
 		}
 	}
 
 	// Top Tools section
 	if len(out.TopTools) > 0 {
 		_, _ = fmt.Fprintf(w, "\n")
-		_, _ = fmt.Fprintf(w, "─── Top Tools ───\n")
+		_, _ = fmt.Fprintf(w, "─── %s ───\n", auditTint("Top Tools", infoSky))
 
 		limit := statsTop
 		if limit > len(out.TopTools) {
@@ -249,7 +249,7 @@ func printStatsText(cmd *cobra.Command, out *statsOutput) {
 				barLen = 1
 			}
 			bar := strings.Repeat("█", barLen)
-			_, _ = fmt.Fprintf(w, "  %-20s %s %d\n", t.Name, bar, t.Count)
+			_, _ = fmt.Fprintf(w, "  %-20s %s %d\n", t.Name, auditTint(bar, successTeal), t.Count)
 		}
 	}
 

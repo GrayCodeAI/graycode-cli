@@ -27,6 +27,14 @@ scan_dir() {
     fi
   done
 
+  if [[ ${#peers[@]} -eq 0 ]]; then
+    # No sibling engines to check against. Building a regex from an empty
+    # peer list produced 'github\.com/GrayCodeAI/()(/|")', which matches
+    # nothing meaningful and made this guard silently unfailable.
+    echo "peer guard: ${owner} has no sibling engines to check"
+    return
+  fi
+
   pattern="$(IFS='|'; echo "${peers[*]}")"
   hits="$(
     grep -RInE --include='*.go' "github\\.com/GrayCodeAI/(${pattern})(/|\")" "${dir}" || true

@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
 	"github.com/GrayCodeAI/graycode-cli/internal/engine"
@@ -253,9 +254,7 @@ func runExec(_ *cobra.Command, args []string) error {
 	if ghaCtx.Active && !ghaCtx.Trusted {
 		const ceiling = engine.AutonomyBasic
 		if sess.PermSvc().Autonomy() > ceiling {
-			fmt.Fprintf(os.Stderr,
-				"graycode: untrusted GitHub event (author_association=%q); capping autonomy at %s\n",
-				ghaCtx.AuthorAssociation, ceiling)
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("graycode: untrusted GitHub event (author_association=%q); capping autonomy at %s", ghaCtx.AuthorAssociation, ceiling), warnAmber))
 			sess.PermSvc().SetAutonomy(ceiling)
 		}
 	}
@@ -296,7 +295,7 @@ func runExec(_ *cobra.Command, args []string) error {
 
 	// Collect response
 	var response strings.Builder
-	var totalIn, totalOut, turns int
+	var totalIn, totalOut, turns, cacheRead, cacheWrite int
 	var execErr string
 	jsonEnc := json.NewEncoder(os.Stdout)
 
@@ -317,14 +316,16 @@ func runExec(_ *cobra.Command, args []string) error {
 			if ev.Usage != nil {
 				totalIn += ev.Usage.PromptTokens
 				totalOut += ev.Usage.CompletionTokens
+				cacheRead += ev.Usage.CacheReadTokens
+				cacheWrite += ev.Usage.CacheWriteTokens
 				turns++
 			}
 		case "error":
 			execErr = ev.Content
 			if execOutputFormat == "text" {
-				_, _ = fmt.Fprintf(os.Stderr, "\nerror: %s\n", ev.Content)
+				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", auditTint("error: "+ev.Content, errorCoral))
 				if h := errhint.CLIHint(errors.New(ev.Content)); h != "" {
-					_, _ = fmt.Fprintf(os.Stderr, "  hint: %s\n", h)
+					_, _ = fmt.Fprintf(os.Stderr, "%s\n", auditTint("  hint: "+h, textMuted))
 				}
 			}
 			if execOutputFormat == "stream-json" {
@@ -334,6 +335,9 @@ func runExec(_ *cobra.Command, args []string) error {
 				})
 			}
 		case "tool_use":
+			if execOutputFormat == "text" && !IsQuiet() {
+				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", auditTint("["+ev.ToolName+"]", infoSky))
+			}
 			if execOutputFormat == "stream-json" {
 				_ = jsonEnc.Encode(map[string]interface{}{
 					"type": "tool_use",
@@ -341,6 +345,13 @@ func runExec(_ *cobra.Command, args []string) error {
 				})
 			}
 		case "tool_result":
+			if execOutputFormat == "text" && !IsQuiet() {
+				content := ev.Content
+				if utf8.RuneCountInString(content) > 500 {
+					content = string([]rune(content)[:500]) + "..."
+				}
+				_, _ = fmt.Fprintf(os.Stderr, "%s %s\n", auditTint("["+ev.ToolName+"]", infoSky), content)
+			}
 			if execOutputFormat == "stream-json" {
 				_ = jsonEnc.Encode(map[string]interface{}{
 					"type":   "tool_result",
@@ -389,6 +400,15 @@ func runExec(_ *cobra.Command, args []string) error {
 	if execOutputFormat == "text" {
 		if !strings.HasSuffix(response.String(), "\n") {
 			fmt.Println()
+		}
+		if !IsQuiet() {
+			summary := fmt.Sprintf("graycode: %d tokens in / %d out · %d turn(s) · %s · %s",
+				totalIn, totalOut, turns, time.Since(start).Round(time.Millisecond), effectiveModel)
+			if cacheRead > 0 || cacheWrite > 0 {
+				summary = fmt.Sprintf("graycode: %d tokens in / %d out (cache %d read · %d write) · %d turn(s) · %s · %s",
+					totalIn, totalOut, cacheRead, cacheWrite, turns, time.Since(start).Round(time.Millisecond), effectiveModel)
+			}
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(summary, textMuted))
 		}
 		if exitCode != 0 {
 			return fmt.Errorf("exec failed: %s", execErr)
@@ -681,7 +701,7 @@ func persistExecSession(id, model, provider, userMsg, assistantMsg string) {
 		},
 	}
 	if err := session.Save(s); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: failed to persist exec session %s: %v\n", id, err)
+		fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("warning: failed to persist exec session %s: %v", id, err), warnAmber))
 	}
 }
 
@@ -753,7 +773,7 @@ func runExecFanout(prompt string, n int) error {
 	attempts := make([]fanoutAttempt, 0, n)
 	anyOK := false
 	for i := 1; i <= n; i++ {
-		fmt.Fprintf(os.Stderr, "\n=== fanout attempt %d/%d ===\n", i, n)
+		fmt.Fprintf(os.Stderr, "\n%s\n", auditTint(fmt.Sprintf("=== fanout attempt %d/%d ===", i, n), infoSky))
 		att := fanoutAttempt{Attempt: i}
 
 		branch := fmt.Sprintf("graycode-exec/%d-fanout%d-%s", start.UnixMilli(), i, randomHex(4))
@@ -860,13 +880,13 @@ func fanoutSummaryLines(attempts []fanoutAttempt) string {
 }
 
 func printFanoutReport(attempts []fanoutAttempt) {
-	fmt.Fprintln(os.Stderr, "\n=== fan-out comparison (worktrees kept for inspection) ===")
+	fmt.Fprintln(os.Stderr, auditTint("\n=== fan-out comparison (worktrees kept for inspection) ===", infoSky))
 	for _, a := range attempts {
-		status := icons.Check() + " ok"
+		status := auditTint(icons.Check()+" ok", doneGreen)
 		if !a.OK {
-			status = icons.Close() + " failed"
+			status = auditTint(icons.Close()+" failed", errorCoral)
 			if a.Error != "" {
-				status += " — " + a.Error
+				status += auditTint(" — "+a.Error, errorCoral)
 			}
 		}
 		fmt.Fprintf(os.Stderr, "\n#%d %s\n  branch:   %s\n  worktree: %s\n  tokens:   in=%d out=%d turns=%d\n  duration: %s\n",

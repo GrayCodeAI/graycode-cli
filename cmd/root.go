@@ -30,6 +30,7 @@ var (
 	printMode                  bool
 	versionFlag                bool
 	outputFormat               string
+	printMarkdown              bool
 	outputFields               string
 	inputFormat                string
 	noSessionPersistence       bool
@@ -195,7 +196,7 @@ Run graycode and use /config to set up your first provider.`, registeredProvider
 			if len(candidates) > 0 {
 				// Auto-resume the most recent interrupted session
 				c := candidates[0]
-				fmt.Printf("Found interrupted session %s (%s, %d msgs)\n", c.SessionID, c.Interruption, c.MessageCount)
+				fmt.Printf("%s\n", auditTint("Found interrupted session ", warnAmber)+auditTint(c.SessionID, textPrimary)+auditTint(fmt.Sprintf(" (%s, %d msgs)", c.Interruption, c.MessageCount), textMuted))
 				resumeID = c.SessionID
 			}
 		}
@@ -222,6 +223,7 @@ func init() {
 	rootCmd.Flags().BoolVarP(&printMode, "print", "p", false, "print response and exit")
 	rootCmd.Flags().StringVar(&promptFlag, "prompt", "", "send a single prompt and exit (legacy alias for --print)")
 	rootCmd.Flags().StringVar(&outputFormat, "output-format", "text", `output format for --print: "text", "json", or "stream-json"`)
+	rootCmd.Flags().BoolVar(&printMarkdown, "markdown", false, `render --print text output as styled markdown (needs color; ignored for json/stream-json)`)
 	rootCmd.Flags().StringVar(&outputFields, "output-fields", "", `comma-separated field whitelist for --output-format json (e.g. "result,session_id")`)
 	rootCmd.Flags().StringVar(&inputFormat, "input-format", "text", `input format for --print: "text" or "stream-json"`)
 	rootCmd.Flags().BoolVar(&noSessionPersistence, "no-session-persistence", false, "disable session persistence in print mode")
@@ -263,7 +265,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&skipCatalogRefreshFlag, "no-auto-catalog-refresh", false, "disable automatic catalog refresh when cache is missing, empty, or stale")
 	rootCmd.Flags().BoolVar(&recoverFlag, "recover", false, "scan for interrupted sessions and offer to resume")
 	rootCmd.Flags().BoolVar(&startupProfileFlag, "startup-profile", false, "print startup performance profile")
-	rootCmd.Flags().BoolVarP(&quietFlag, "quiet", "q", false, "suppress non-essential output (spinners, progress, decoration); machine-parseable output only")
+	rootCmd.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "suppress non-essential output (spinners, progress, decoration); machine-parseable output only")
 	preflightCmd.Flags().BoolVar(&preflightLiveFlag, "live", false, "verify selected provider connectivity and authentication")
 	preflightCmd.Flags().BoolVar(&preflightJSON, "json", false, "output preflight report as JSON")
 	doctorCmd.Flags().BoolVar(&doctorJSONFlag, "json", false, "output diagnostics as JSON")
@@ -449,7 +451,8 @@ Fish:
 			return fmt.Errorf("cannot write completion script: %w", err)
 		}
 
-		if _, err := fmt.Fprintf(cmd.OutOrStdout(), "Installed %s completion to %s\n", shell, path); err != nil {
+		if _, err := fmt.Fprintf(cmd.OutOrStdout(), "%s %s completion to %s\n",
+			auditTint("Installed", doneGreen), shell, auditTint(path, textPrimary)); err != nil {
 			return fmt.Errorf("cannot write completion message: %w", err)
 		}
 		return nil
@@ -466,7 +469,25 @@ var updateCmd = &cobra.Command{
 		if ver == "" {
 			ver = "dev"
 		}
-		cmd.Println(update.Summary(ver))
+		prog := NewCLIProgress("Update check", []string{"Checking GitHub for updates"})
+		defer prog.Abort()
+		prog.StartStep(0)
+		release, err := update.Check(ver)
+		prog.CompleteStep(0)
+		prog.Done()
+		if err != nil {
+			cmd.Println(auditTint("Update check failed: "+err.Error(), errorCoral))
+			return nil
+		}
+		if release == nil {
+			cmd.Println(auditTint("graycode is up to date ("+ver+")", doneGreen))
+			return nil
+		}
+		cmd.Println(auditTint("Update available: ", warnAmber) + auditTint(ver+" -> "+release.TagName, textPrimary))
+		cmd.Println(auditTint(release.URL, textMuted))
+		cmd.Println()
+		cmd.Println(auditTint("Release notes:", textPrimary))
+		cmd.Println(release.Body)
 		return nil
 	},
 }
@@ -560,9 +581,15 @@ var doctorCmd = &cobra.Command{
 			return err
 		}
 		if doctorJSONFlag {
-			cmd.Println(doctorOutput(settings))
+			cmd.Println(doctorJSON(settings))
 		} else {
-			cmd.Println(doctorReport(settings))
+			prog := NewCLIProgress("Doctor", []string{"Running diagnostics"})
+			defer prog.Abort()
+			prog.StartStep(0)
+			report := doctorReport(settings)
+			prog.CompleteStep(0)
+			prog.Done()
+			cmd.Println(report)
 		}
 		return nil
 	},
@@ -591,7 +618,20 @@ var preflightCmd = &cobra.Command{
 			ctx, cancel = context.WithTimeout(ctx, limit)
 			defer cancel()
 		}
+		// Only the live provider verification is slow enough to animate, and
+		// only when the output is a human report (JSON must stay pure).
+		animate := preflightLiveFlag && !preflightJSON
+		var prog *CLIProgress
+		if animate {
+			prog = NewCLIProgress("Preflight", []string{"Verifying provider"})
+			defer prog.Abort()
+			prog.StartStep(0)
+		}
 		r := graycodeconfig.EnginePreflightReportWithSettings(ctx, settings, graycodeconfig.EnginePreflightOptions{VerifyLive: preflightLiveFlag})
+		if prog != nil {
+			prog.CompleteStep(0)
+			prog.Done()
+		}
 		if preflightJSON {
 			out, err := json.MarshalIndent(r, "", "  ")
 			if err != nil {
@@ -609,6 +649,19 @@ var preflightCmd = &cobra.Command{
 		}
 		return nil
 	},
+}
+
+// printConfigSetResult renders the result of a successful config write,
+// showing a modern old → new transition when the value actually changed.
+// Settable keys are non-secret (API keys error out before reaching here),
+// so displaying the prior value cannot leak a secret.
+func printConfigSetResult(cmd *cobra.Command, key, newVal string, settings graycodeconfig.Settings) {
+	oldVal, hadOld := graycodeconfig.SettingValue(settings, key)
+	if hadOld && oldVal != "" && oldVal != newVal {
+		cmd.Println(auditTint(key, textPrimary) + auditTint(": ", textMuted) + auditTint(oldVal, textMuted) + auditTint(" → ", graycodeColor) + auditTint(newVal, textPrimary) + auditTint(" (updated)", doneGreen))
+		return
+	}
+	cmd.Println(auditTint("updated ", doneGreen) + auditTint(key, textPrimary))
 }
 
 var configCmd = &cobra.Command{
@@ -629,34 +682,54 @@ var configCmd = &cobra.Command{
 				if !ok {
 					return fmt.Errorf("unsupported setting key %q", args[1])
 				}
-				cmd.Println(value)
+				if value == "" {
+					cmd.Println(auditTint("(unset)", textMuted))
+				} else {
+					cmd.Println(value)
+				}
 				return nil
 			case "set":
 				if len(args) < 3 {
 					return fmt.Errorf("usage: graycode config set <key> <value>")
 				}
-				if err := graycodeconfig.SetGlobalSetting(args[1], strings.Join(args[2:], " ")); err != nil {
+				key := args[1]
+				newVal := strings.Join(args[2:], " ")
+				settings, err := loadEffectiveSettings()
+				if err != nil {
 					return err
 				}
-				cmd.Println("updated", args[1])
+				if err := graycodeconfig.SetGlobalSetting(key, newVal); err != nil {
+					return err
+				}
+				printConfigSetResult(cmd, key, newVal, settings)
 				return nil
 			case "provider":
 				if len(args) < 2 {
 					return fmt.Errorf("usage: graycode config provider <name>")
 				}
-				if err := graycodeconfig.SetGlobalSetting("provider", strings.Join(args[1:], " ")); err != nil {
+				newVal := strings.Join(args[1:], " ")
+				settings, err := loadEffectiveSettings()
+				if err != nil {
 					return err
 				}
-				cmd.Println("updated provider")
+				if err := graycodeconfig.SetGlobalSetting("provider", newVal); err != nil {
+					return err
+				}
+				printConfigSetResult(cmd, "provider", newVal, settings)
 				return nil
 			case "model":
 				if len(args) < 2 {
 					return fmt.Errorf("usage: graycode config model <name>")
 				}
-				if err := graycodeconfig.SetGlobalSetting("model", strings.Join(args[1:], " ")); err != nil {
+				newVal := strings.Join(args[1:], " ")
+				settings, err := loadEffectiveSettings()
+				if err != nil {
 					return err
 				}
-				cmd.Println("updated model")
+				if err := graycodeconfig.SetGlobalSetting("model", newVal); err != nil {
+					return err
+				}
+				printConfigSetResult(cmd, "model", newVal, settings)
 				return nil
 			case "keys":
 				cmd.Println(apiKeyConfigSummary())
@@ -810,10 +883,23 @@ var contextCmd = &cobra.Command{
 	Short: "Export project context as a single document for use in any LLM",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if contextOutput != "" {
+			var prog *CLIProgress
+			if !IsQuiet() {
+				prog = NewCLIProgress("Context", []string{"Building project context"})
+				defer prog.Abort()
+				prog.StartStep(0)
+			}
 			if err := ExportContextToFile("", contextFocus, contextOutput); err != nil {
+				if prog != nil {
+					prog.FailStep(0, err.Error())
+				}
 				return err
 			}
-			cmd.Println("Context exported to", contextOutput)
+			if prog != nil {
+				prog.CompleteStep(0)
+				prog.Done()
+			}
+			cmd.Println(auditTint("Context exported to", doneGreen) + " " + auditTint(contextOutput, textPrimary))
 			return nil
 		}
 		result, err := ExportContext("", contextFocus)
@@ -865,8 +951,7 @@ Examples:
 				return err
 			}
 			cmd.Println(note)
-			cmd.Printf("Resuming session %s (%d messages, %s/%s)\n",
-				s.ID, len(s.Messages), s.Provider, s.Model)
+			cmd.Println(auditTint("Resuming session ", textPrimary) + auditTint(s.ID, toolGold) + auditTint(fmt.Sprintf(" (%d messages, %s/%s)", len(s.Messages), s.Provider, s.Model), textMuted))
 			return resumeRecoveredSession(context.Background(), s.ID)
 		}
 
@@ -875,8 +960,8 @@ Examples:
 		cmd.Println(session.FormatRecoveryCandidates(candidates))
 
 		if len(candidates) > 0 {
-			cmd.Println("Resume with: graycode recover <id>")
-			cmd.Println("Or launch TUI with: graycode --recover")
+			cmd.Println(auditTint("Resume with: graycode recover <id>", textMuted))
+			cmd.Println(auditTint("Or launch TUI with: graycode --recover", textMuted))
 		}
 		return nil
 	},

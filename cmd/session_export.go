@@ -44,7 +44,7 @@ var sessionExportCmd = &cobra.Command{
 		if err := os.WriteFile(exportOutput, data, 0o600); err != nil {
 			return fmt.Errorf("write output file: %w", err)
 		}
-		cmd.Printf("Session exported to %s\n", exportOutput)
+		cmd.Printf("%s\n", auditTint("Session exported to ", doneGreen)+auditTint(exportOutput, textPrimary))
 		return nil
 	},
 }

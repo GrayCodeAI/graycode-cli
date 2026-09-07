@@ -27,7 +27,7 @@ var cloudConnectCmd = &cobra.Command{
 		if err := cloud.SaveDeviceConfig(cloud.DeviceConfig{Endpoint: endpoint, DeviceID: deviceID, ProjectID: projectID}, token); err != nil {
 			return err
 		}
-		cmd.Println("Graycode Cloud connected. Usage synchronization is opt-in and fail-open.")
+		cmd.Println(auditTint("Graycode Cloud connected. Usage synchronization is opt-in and fail-open.", doneGreen))
 		return nil
 	},
 }
@@ -54,38 +54,49 @@ var cloudLoginCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		cmd.Printf("Open %s and enter code %s\n", start.VerificationURI, start.UserCode)
+		cmd.Printf("%s\n", auditTint("Open ", textPrimary)+auditTint(start.VerificationURI, infoSky)+auditTint(" and enter code ", textPrimary)+auditTint(start.UserCode, graycodeColor))
 		if err := openBrowser(start.VerificationURI + "?code=" + start.UserCode); err != nil {
-			cmd.Printf("Could not open the browser automatically: %v\n", err)
+			cmd.Printf("%s\n", auditTint(fmt.Sprintf("Could not open the browser automatically: %v", err), textMuted))
 		}
 		interval := time.Duration(start.Interval) * time.Second
 		if interval < time.Second {
 			interval = 5 * time.Second
 		}
+		prog := NewCLIProgress("Cloud", []string{"Waiting for browser approval"})
+		defer prog.Abort()
+		prog.StartStep(0)
 		for {
 			poll, pollErr := client.PollDeviceLogin(ctx, start.DeviceCode)
 			if pollErr != nil {
+				prog.FailStep(0, pollErr.Error())
 				return pollErr
 			}
 			switch poll.Status {
 			case "pending":
 				select {
 				case <-ctx.Done():
+					prog.FailStep(0, ctx.Err().Error())
 					return fmt.Errorf("waiting for browser approval: %w", ctx.Err())
 				case <-time.After(interval):
 				}
 			case "approved":
 				if poll.Token == "" || poll.DeviceID == "" || poll.ProjectID == "" {
+					prog.FailStep(0, "incomplete device authorization")
 					return fmt.Errorf("graycode cloud returned an incomplete device authorization")
 				}
 				if err := cloud.SaveDeviceConfig(cloud.DeviceConfig{Endpoint: endpoint, DeviceID: poll.DeviceID, ProjectID: poll.ProjectID}, poll.Token); err != nil {
+					prog.FailStep(0, err.Error())
 					return err
 				}
-				cmd.Printf("Graycode Cloud connected for project %s.\n", poll.ProjectID)
+				prog.CompleteStep(0)
+				prog.Done()
+				cmd.Println(auditTint("Graycode Cloud connected for project ", doneGreen) + auditTint(poll.ProjectID, textPrimary) + auditTint(".", doneGreen))
 				return nil
 			case "expired":
+				prog.FailStep(0, "device authorization expired")
 				return fmt.Errorf("graycode cloud device authorization expired")
 			default:
+				prog.FailStep(0, fmt.Sprintf("unknown status %q", poll.Status))
 				return fmt.Errorf("graycode cloud returned unknown device authorization status %q", poll.Status)
 			}
 		}
@@ -97,10 +108,10 @@ var cloudStatusCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		client, cfg, err := cloud.LoadClient()
 		if err != nil || !client.Enabled() {
-			cmd.Println("Graycode Cloud is not connected.")
+			cmd.Println(auditTint("Graycode Cloud is not connected.", textMuted))
 			return nil
 		}
-		cmd.Printf("Graycode Cloud connected: %s (device %s, project %s)\n", cfg.Endpoint, cfg.DeviceID, cfg.ProjectID)
+		cmd.Println(auditTint("Graycode Cloud connected: ", doneGreen) + auditTint(cfg.Endpoint, textPrimary) + auditTint(fmt.Sprintf(" (device %s, project %s)", cfg.DeviceID, cfg.ProjectID), textMuted))
 		return nil
 	},
 }
@@ -171,7 +182,7 @@ var cloudContextCmd = &cobra.Command{
 			event.Deployment = &cloud.DeploymentContext{Provider: contextProvider, ExternalID: deploymentID, Environment: deploymentEnvironment, Status: deploymentStatus}
 		}
 		client.RecordDeliveryContext(cmd.Context(), event)
-		cmd.Println("Repository context queued for Graycode Cloud.")
+		cmd.Println(auditTint("Repository context queued for Graycode Cloud.", doneGreen))
 		return nil
 	},
 }

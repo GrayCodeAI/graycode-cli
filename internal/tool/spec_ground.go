@@ -62,7 +62,7 @@ func (SpecGroundTool) Execute(ctx context.Context, input json.RawMessage) (strin
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "## Context Grounding: %s Stage\n\n", strings.Title(p.Stage))
+	fmt.Fprintf(&b, "## Context Grounding: %s Stage\n\n", titleCaser.String(p.Stage))
 
 	switch p.Stage {
 	case "specify":

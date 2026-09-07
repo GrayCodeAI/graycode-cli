@@ -106,7 +106,7 @@ func VibeLoop(ctx context.Context, sess *engine.Session, prompt string, config V
 
 		// Step 3: Run the test/build command if configured
 		if !config.AutoRun || config.RunCommand == "" {
-			fmt.Printf("[vibe] iteration %d complete (no run command configured)\n", i+1)
+			fmt.Printf("%s\n", auditTint(fmt.Sprintf("[vibe] iteration %d complete (no run command configured)", i+1), textPrimary))
 			return nil
 		}
 
@@ -114,12 +114,12 @@ func VibeLoop(ctx context.Context, sess *engine.Session, prompt string, config V
 
 		// Step 4: If passes, we're done
 		if runErr == nil {
-			fmt.Printf("[vibe] iteration %d: all good\n", i+1)
+			fmt.Printf("%s\n", auditTint(fmt.Sprintf("[vibe] iteration %d: all good", i+1), doneGreen))
 			return nil
 		}
 
 		// Step 5: If fails, send error back to LLM for fixing
-		fmt.Printf("[vibe] iteration %d: command failed, asking LLM to fix...\n", i+1)
+		fmt.Printf("%s\n", auditTint(fmt.Sprintf("[vibe] iteration %d: command failed, asking LLM to fix...", i+1), warnAmber))
 		currentPrompt = fmt.Sprintf(
 			"The command `%s` failed with the following output:\n\n```\n%s\n```\n\nPlease fix the issues and try again.",
 			config.RunCommand, output,
