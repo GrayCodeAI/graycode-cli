@@ -573,7 +573,7 @@ var doctorCmd = &cobra.Command{
 			return err
 		}
 		if doctorJSONFlag {
-			cmd.Println(doctorOutput(settings))
+			cmd.Println(doctorJSON(settings))
 		} else {
 			prog := NewCLIProgress("Doctor", []string{"Running diagnostics"})
 			defer prog.Abort()

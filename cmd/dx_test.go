@@ -64,6 +64,40 @@ func TestDoctorOutputWithMCPServers(t *testing.T) {
 	}
 }
 
+func TestDoctorJSONIsValidStructuredOutput(t *testing.T) {
+	preserveCLICompilerVersionState(t)
+	version = "test-dx-version"
+	settings := graycodeconfig.Settings{
+		Provider: "anthropic",
+		Model:    "claude-sonnet-4-20250514",
+		MCPServers: []graycodeconfig.MCPServerConfig{
+			{Name: "test-mcp", Command: "test-cmd"},
+		},
+	}
+
+	var d struct {
+		Version    string `json:"version"`
+		Provider   string `json:"provider"`
+		MCPServers int    `json:"mcp_servers"`
+		GoVersion  string `json:"go_version"`
+	}
+	if err := json.Unmarshal([]byte(doctorJSON(settings)), &d); err != nil {
+		t.Fatalf("doctorJSON produced invalid JSON: %v", err)
+	}
+	if d.Version != "test-dx-version" {
+		t.Errorf("expected version %q, got %q", "test-dx-version", d.Version)
+	}
+	if d.Provider != "anthropic" {
+		t.Errorf("expected provider %q, got %q", "anthropic", d.Provider)
+	}
+	if d.MCPServers != 1 {
+		t.Errorf("expected mcp_servers 1, got %d", d.MCPServers)
+	}
+	if d.GoVersion == "" {
+		t.Error("expected go_version to be populated")
+	}
+}
+
 func TestDebugOutputHasMemoryStats(t *testing.T) {
 	sess := engine.NewSession("openai", "gpt-4o", "test system", tool.NewRegistry())
 	sess.AddUser("hello")
