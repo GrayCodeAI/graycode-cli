@@ -155,10 +155,22 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 	// Use the analysis prompt as a "diff" — kestrel will review it.
 	analysisInput := fmt.Sprintf("# Analysis Type: %s\n\n%s\n\n---\n\n%s", analysisType, prompt, content)
 
-	fmt.Printf("%s\n", auditTint("Analyzing ("+analysisType+")...", textPrimary))
+	var prog *CLIProgress
+	if !IsQuiet() {
+		prog = NewCLIProgress("Analyze", []string{fmt.Sprintf("Analyzing %s", analysisType)})
+		defer prog.Abort()
+		prog.StartStep(0)
+	}
 	result, err := bridge.ReviewContracts(ctx, analysisInput)
 	if err != nil {
+		if prog != nil {
+			prog.FailStep(0, err.Error())
+		}
 		return fmt.Errorf("analysis failed: %w", err)
+	}
+	if prog != nil {
+		prog.CompleteStep(0)
+		prog.Done()
 	}
 
 	// Store as a review record.
