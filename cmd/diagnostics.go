@@ -232,16 +232,16 @@ func settingsSummary(settings graycodeconfig.Settings) string {
 
 func mcpConfigSummary(settings graycodeconfig.Settings) string {
 	if len(settings.MCPServers) == 0 && len(mcpServers) == 0 {
-		return "No MCP servers configured."
+		return auditTint("No MCP servers configured.", textMuted)
 	}
 	var b strings.Builder
-	b.WriteString("MCP servers:\n")
+	b.WriteString(auditTint("MCP servers:", textPrimary) + "\n")
 	for _, cfg := range settings.MCPServers {
 		name := cfg.Name
 		if name == "" {
 			name = cfg.Command
 		}
-		b.WriteString(fmt.Sprintf("  %s: %s %s\n", name, cfg.Command, strings.Join(cfg.Args, " ")))
+		b.WriteString(fmt.Sprintf("  %s: %s %s\n", auditTint(name, textPrimary), cfg.Command, strings.Join(cfg.Args, " ")))
 	}
 	for _, cmd := range mcpServers {
 		b.WriteString("  cli: " + cmd + "\n")
@@ -252,16 +252,16 @@ func mcpConfigSummary(settings graycodeconfig.Settings) string {
 func sessionsSummary() string {
 	entries, err := session.List()
 	if err != nil || len(entries) == 0 {
-		return "No saved sessions."
+		return auditTint("No saved sessions.", textMuted)
 	}
 	var b strings.Builder
-	b.WriteString("Saved sessions:\n")
+	b.WriteString(auditTint("Saved sessions:", textPrimary) + "\n")
 	for _, e := range entries {
 		cwd := e.CWD
 		if cwd == "" {
 			cwd = "-"
 		}
-		b.WriteString(fmt.Sprintf("  %s  %s  %s  %s\n", e.ID, e.UpdatedAt.Format("2006-01-02 15:04"), cwd, e.Preview))
+		b.WriteString(fmt.Sprintf("  %s  %s  %s  %s\n", auditTint(e.ID, textPrimary), e.UpdatedAt.Format("2006-01-02 15:04"), cwd, e.Preview))
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
@@ -270,16 +270,16 @@ func builtInToolsSummary() string {
 	essential := essentialTools()
 	optional := optionalTools()
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("Built-in tools (%d total: %d essential, %d optional):\n", len(essential)+len(optional), len(essential), len(optional)))
-	b.WriteString("  Essential (loaded at startup):\n")
+	b.WriteString(auditTint(fmt.Sprintf("Built-in tools (%d total: %d essential, %d optional):", len(essential)+len(optional), len(essential), len(optional)), textPrimary) + "\n")
+	b.WriteString("  " + auditTint("Essential (loaded at startup):", textMuted) + "\n")
 	for _, t := range essential {
-		b.WriteString(fmt.Sprintf("    %s - %s\n", t.Name(), t.Description()))
+		b.WriteString(fmt.Sprintf("    %s - %s\n", auditTint(t.Name(), textPrimary), t.Description()))
 	}
-	b.WriteString("  Optional (lazy-loaded):\n")
+	b.WriteString("  " + auditTint("Optional (lazy-loaded):", textMuted) + "\n")
 	for _, t := range optional {
-		b.WriteString(fmt.Sprintf("    %s - %s\n", t.Name(), t.Description()))
+		b.WriteString(fmt.Sprintf("    %s - %s\n", auditTint(t.Name(), textPrimary), t.Description()))
 	}
-	b.WriteString("\nIntent bundles:\n")
+	b.WriteString("\n" + auditTint("Intent bundles:", textMuted) + "\n")
 	for _, summary := range tool.IntentBundleSummary() {
 		b.WriteString("  " + summary + "\n")
 	}

@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"sort"
 	"strings"
 
@@ -436,7 +437,7 @@ Model catalog and routing live in graycode-router — graycode is the UI only.`,
 }
 
 func apiKeyConfigSummary() string {
-	return "API keys (" + graycodeconfig.CredentialStoreName() + ")\n" + indentedAPIKeyLines()
+	return auditTint("API keys ("+graycodeconfig.CredentialStoreName()+")", textPrimary) + "\n" + indentedAPIKeyLines()
 }
 
 func configuredKeyList() string {
@@ -456,9 +457,29 @@ func configuredKeyList() string {
 func indentedAPIKeyLines() string {
 	lines := apiKeyStatusLines()
 	if len(lines) == 0 {
-		return "  (empty)"
+		return "  " + auditTint("(empty)", textMuted)
 	}
-	return "  " + strings.Join(lines, "\n  ")
+	var b strings.Builder
+	for _, line := range lines {
+		name, status, ok := strings.Cut(line, ": ")
+		if !ok {
+			b.WriteString("  " + line + "\n")
+			continue
+		}
+		b.WriteString("  " + auditTint(name, textPrimary) + ": " + auditTint(status, apiKeyStatusColor(status)) + "\n")
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func apiKeyStatusColor(status string) color.Color {
+	switch status {
+	case "set":
+		return doneGreen
+	case "local":
+		return infoSky
+	default:
+		return textMuted
+	}
 }
 
 func apiKeyStatusLines() []string {
