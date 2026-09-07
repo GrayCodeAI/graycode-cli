@@ -295,7 +295,7 @@ func runExec(_ *cobra.Command, args []string) error {
 
 	// Collect response
 	var response strings.Builder
-	var totalIn, totalOut, turns int
+	var totalIn, totalOut, turns, cacheRead, cacheWrite int
 	var execErr string
 	jsonEnc := json.NewEncoder(os.Stdout)
 
@@ -316,6 +316,8 @@ func runExec(_ *cobra.Command, args []string) error {
 			if ev.Usage != nil {
 				totalIn += ev.Usage.PromptTokens
 				totalOut += ev.Usage.CompletionTokens
+				cacheRead += ev.Usage.CacheReadTokens
+				cacheWrite += ev.Usage.CacheWriteTokens
 				turns++
 			}
 		case "error":
@@ -400,11 +402,13 @@ func runExec(_ *cobra.Command, args []string) error {
 			fmt.Println()
 		}
 		if !IsQuiet() {
-			fmt.Fprintf(os.Stderr, "%s\n", auditTint(
-				fmt.Sprintf("graycode: %d tokens in / %d out · %d turn(s) · %s · %s",
-					totalIn, totalOut, turns, time.Since(start).Round(time.Millisecond), effectiveModel),
-				textMuted,
-			))
+			summary := fmt.Sprintf("graycode: %d tokens in / %d out · %d turn(s) · %s · %s",
+				totalIn, totalOut, turns, time.Since(start).Round(time.Millisecond), effectiveModel)
+			if cacheRead > 0 || cacheWrite > 0 {
+				summary = fmt.Sprintf("graycode: %d tokens in / %d out (cache %d read · %d write) · %d turn(s) · %s · %s",
+					totalIn, totalOut, cacheRead, cacheWrite, turns, time.Since(start).Round(time.Millisecond), effectiveModel)
+			}
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(summary, textMuted))
 		}
 		if exitCode != 0 {
 			return fmt.Errorf("exec failed: %s", execErr)
