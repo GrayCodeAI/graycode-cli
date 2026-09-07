@@ -88,7 +88,7 @@ func runPrint(text string) error {
 	for ev := range ch {
 		switch ev.Type {
 		case "content":
-			if outputFormat == "text" {
+			if outputFormat == "text" && !printMarkdown {
 				fmt.Print(ev.Content)
 			} else if outputFormat == "stream-json" {
 				writePrintEvent(sessionID, "content", ev.Content, "")
@@ -134,9 +134,7 @@ func runPrint(text string) error {
 		case "done":
 			switch outputFormat {
 			case "text":
-				if !strings.HasSuffix(printed.String(), "\n") {
-					fmt.Println()
-				}
+				printTextResponse(printed.String())
 				printTextUsageFooter(lastUsage, started)
 			case "json":
 				writePrintResult(printed.String(), sessionID, sess, false, nil)
@@ -151,9 +149,7 @@ func runPrint(text string) error {
 	}
 	switch outputFormat {
 	case "text":
-		if !strings.HasSuffix(printed.String(), "\n") {
-			fmt.Println()
-		}
+		printTextResponse(printed.String())
 		printTextUsageFooter(lastUsage, started)
 	case "json":
 		writePrintResult(printed.String(), sessionID, sess, false, nil)
@@ -200,6 +196,30 @@ func printTextUsageFooter(usage *engine.StreamUsage, started time.Time) {
 	}
 	parts = append(parts, time.Since(started).Round(time.Second).String())
 	_, _ = fmt.Fprintf(os.Stderr, "%s\n", auditTint("tokens: "+strings.Join(parts, " · "), textMuted))
+}
+
+// printTextResponse emits the final text-mode response, rendering markdown to
+// styled ANSI when --markdown is set and color is enabled. Raw markdown is
+// preserved for piped/NO_COLOR output so scripts stay machine-parseable.
+func printTextResponse(s string) {
+	s = renderPrintResponse(s, printMarkdown, ShouldColor())
+	fmt.Print(s)
+	if !strings.HasSuffix(s, "\n") {
+		fmt.Println()
+	}
+}
+
+// renderPrintResponse applies markdown rendering when both markdown and color
+// are requested; otherwise it returns the raw response unchanged.
+func renderPrintResponse(s string, markdown, color bool) string {
+	if !markdown || !color || s == "" {
+		return s
+	}
+	w, _ := TermSize()
+	if w <= 0 {
+		w = 80
+	}
+	return renderMarkdown(s, w)
 }
 
 func writePrintResult(result, sessionID string, sess *engine.Session, isError bool, errors []string) {
