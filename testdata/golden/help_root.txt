@@ -110,6 +110,7 @@ Flags:
   -h, --help                               help for graycode
       --input-format string                input format for --print: "text" or "stream-json" (default "text")
       --map-tokens int                     token budget for the --repo-map overview (default 1024)
+      --markdown                           render --print text output as styled markdown (needs color; ignored for json/stream-json)
       --max-budget-usd float               maximum estimated API spend in USD
       --max-turns int                      maximum number of agentic turns in non-interactive mode
       --mcp stringArray                    MCP server command
