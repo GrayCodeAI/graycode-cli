@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/governance"
 	"github.com/GrayCodeAI/graycode-cli/internal/securitylog"
@@ -101,11 +103,20 @@ func runWorkspaceChecks() []workspaceCheckResult {
 	}
 	var results []workspaceCheckResult
 	for _, c := range checks {
-		run := exec.Command(c.Command[0], c.Command[1:]...) // #nosec G204 -- discovered from project manifests
+		// Guard against a hanging project test/verify command: cap each check
+		// at 10 minutes and report a timed-out check as a failure with a clear
+		// message instead of blocking verify forever.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		run := exec.CommandContext(ctx, c.Command[0], c.Command[1:]...) // #nosec G204 -- discovered from project manifests
 		var stdout, stderr strings.Builder
 		run.Stdout = &stdout
 		run.Stderr = &stderr
 		runErr := run.Run()
+		cancel()
+		if ctx.Err() == context.DeadlineExceeded {
+			results = append(results, workspaceCheckResult{Name: c.Name, Err: fmt.Errorf("timed out after 10m: %s", strings.TrimSpace(stderr.String()))})
+			continue
+		}
 		summary := testrunner.ParseSummary(c, stdout.String(), stderr.String())
 		if runErr != nil && summary == nil {
 			results = append(results, workspaceCheckResult{Name: c.Name, Err: fmt.Errorf("%w: %s", runErr, strings.TrimSpace(stderr.String()))})
