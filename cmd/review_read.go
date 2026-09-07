@@ -128,7 +128,7 @@ func runReviewShow(_ *cobra.Command, args []string) error {
 		// Show latest open review.
 		reviews, _ := store.ListOpen()
 		if len(reviews) == 0 {
-			fmt.Println("No open reviews.")
+			fmt.Println(auditTint("No open reviews.", textMuted))
 			return nil
 		}
 		review = reviews[0]

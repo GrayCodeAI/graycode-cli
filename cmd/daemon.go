@@ -253,7 +253,7 @@ func runDaemonStart(_ *cobra.Command, _ []string) error {
 		fmt.Printf("  ssh -L %d:127.0.0.1:%d <remote-host>\n", daemonPort, daemonPort)
 		fmt.Printf("  curl http://localhost:%d/v1/health\n", daemonPort)
 	} else {
-		fmt.Println("\nWARNING: Bound to non-localhost. Ensure TLS is configured for production use.")
+		fmt.Println(auditTint("\nWARNING: Bound to non-localhost. Ensure TLS is configured for production use.", warnAmber))
 	}
 
 	fmt.Println("Press Ctrl+C to stop.")
