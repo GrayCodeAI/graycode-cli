@@ -28,51 +28,6 @@ repositories:
     workspace: true
     facade: github.com/GrayCodeAI/graycode-router/engine
 
-  - directory: shrike
-    github_repo: shrike
-    product_name: Shrike (token/compress engine)
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/shrike
-    workspace: true
-    facade: github.com/GrayCodeAI/shrike
-
-  - directory: harrier
-    github_repo: harrier
-    product_name: Harrier (memory-graph engine)
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/harrier
-    workspace: true
-    facade: github.com/GrayCodeAI/harrier/engine
-
-  - directory: kestrel
-    github_repo: kestrel
-    product_name: Kestrel (code-review engine)
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/kestrel
-    workspace: true
-    facade: github.com/GrayCodeAI/kestrel
-
-  - directory: merlin
-    github_repo: merlin
-    product_name: Merlin (site-audit engine)
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/merlin
-    workspace: true
-    facade: github.com/GrayCodeAI/merlin
-
-  - directory: swift
-    github_repo: swift
-    product_name: Swift (session-correlation engine)
-    kind: engine
-    language: go
-    module: github.com/GrayCodeAI/swift
-    workspace: true
-    facade: github.com/GrayCodeAI/swift/cli
-
   - directory: graycode-vscode
     github_repo: graycode-vscode
     product_name: Graycode VS Code extension
