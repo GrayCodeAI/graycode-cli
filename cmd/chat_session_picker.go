@@ -166,9 +166,37 @@ func (m *chatModel) renderSessionPickerOverlay(viewWidth int) string {
 		if len(m.sessionPickerFiltered) > maxVisible {
 			b.WriteString(sessPickDimStyle.Render("  " + strconv.Itoa(m.sessionPickerSel+1) + "/" + strconv.Itoa(len(m.sessionPickerFiltered)) + " sessions"))
 		}
+
+		// Share detail for the selected session (Gap-02 P1): deeplink + export
+		// path, cached per selection to avoid reloading on every frame.
+		if sel := m.sessionPickerFiltered[m.sessionPickerSel]; sel.ID != "" {
+			b.WriteString("\n")
+			b.WriteString(m.sessionPickerDetailFor(sel))
+		}
 	}
 
 	return sessPickBoxStyle.Width(boxWidth).Render(b.String())
+}
+
+// sessionPickerDetailFor returns the cached share detail (deeplink + export
+// path + model) for a selected session entry. The deeplink is computed once per
+// selection and cached on the model.
+func (m *chatModel) sessionPickerDetailFor(e session.Entry) string {
+	if m.sessionPickerDetailID == e.ID && m.sessionPickerDetailCached != "" {
+		return m.sessionPickerDetailCached
+	}
+	var b strings.Builder
+	if e.Model != "" {
+		b.WriteString(sessPickDimStyle.Render("  model: "+e.Model) + "\n")
+	}
+	b.WriteString(sessPickDimStyle.Render("  export: "+e.ExportPath) + "\n")
+	if link := session.ShareLinkForID(e.ID); link != "" {
+		b.WriteString(sessPickDimStyle.Render("  share:  " + link))
+	}
+	detail := strings.TrimRight(b.String(), "\n")
+	m.sessionPickerDetailID = e.ID
+	m.sessionPickerDetailCached = detail
+	return detail
 }
 
 // formatSessionEntry formats a single session entry for display.

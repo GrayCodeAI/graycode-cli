@@ -418,6 +418,10 @@ type chatModel struct {
 	sessionPickerEntries  []session.Entry
 	sessionPickerFiltered []session.Entry
 	sessionPickerSel      int
+	// sessionPickerDetail caches the selected session's share detail (deeplink +
+	// export path) so it is computed once per selection, not per render frame.
+	sessionPickerDetailID     string
+	sessionPickerDetailCached string
 }
 
 const streamRenderInterval = 50 * time.Millisecond

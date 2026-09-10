@@ -24,8 +24,47 @@ type (
 	RuntimeGraphExport = shrikegraph.Export
 )
 
-func CountTokens(text string) int     { return shrike.EstimateTokensPrecise(text) }
-func CountTokensFast(text string) int { return shrike.EstimateTokens(text) }
+func CountTokens(text string) int {
+	if ShrikeAvailable() {
+		return shrike.EstimateTokensPrecise(text)
+	}
+	return fallbackEstimate(text)
+}
+
+func CountTokensFast(text string) int {
+	if ShrikeAvailable() {
+		return shrike.EstimateTokens(text)
+	}
+	return fallbackEstimate(text)
+}
+
+// fallbackEstimate is a self-contained BPE-style token estimate used when the
+// shrike engine is the build-harness stub (or otherwise unavailable). It lands
+// in the 3-7 chars-per-token band for English prose (the range the rest of the
+// codebase expects) and is strictly better than the stub's constant zero, so
+// context budgeting and cost accounting degrade gracefully instead of silently
+// treating every message as zero tokens. When a real shrike is linked it is
+// never used.
+func fallbackEstimate(text string) int {
+	n := len([]rune(text))
+	if n == 0 {
+		return 0
+	}
+	est := (n + 3) / 4 // ~4 chars/token
+	if est < 1 {
+		est = 1
+	}
+	return est
+}
+
+// ShrikeAvailable reports whether the underlying shrike engine is a real
+// implementation rather than a build-harness stub. The
+// stub returns zero for every token estimate, so a non-empty text probe
+// reliably distinguishes it from the real engine. Consumers use this to report
+// honest availability instead of claiming an operational token pipeline.
+func ShrikeAvailable() bool {
+	return shrike.EstimateTokensPrecise("graycode context compression pipeline") > 0
+}
 
 func Compress(text string, budget int) (string, Stats) {
 	return shrike.Compress(text, shrike.WithBudget(budget))

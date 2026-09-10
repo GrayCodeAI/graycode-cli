@@ -2,6 +2,7 @@ package merlin
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -50,6 +51,14 @@ func (b *Bridge) init(opts ...merlinLib.Option) {
 // Ready reports whether the merlin bridge is initialized and usable.
 func (b *Bridge) Ready() bool {
 	return b.ready
+}
+
+// Available reports whether the bridge is backed by a real merlin engine
+// rather than a build-harness stub (which returns empty)
+// audit reports. Status surfaces use Available() so they do not claim a live
+// audit pipeline against the stub.
+func (b *Bridge) Available() bool {
+	return b.ready && !strings.Contains(merlinLib.Version, "stub")
 }
 
 // Run crawls the target URL and runs all configured checks, returning a

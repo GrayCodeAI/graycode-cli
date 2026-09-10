@@ -53,6 +53,43 @@ func localGraycodeImage() string {
 	return "graycode-sandbox:" + sandboxImageTag
 }
 
+// DefaultSandboxImage returns the public sandbox image reference Graycode
+// provisions by default (registry:tag, or a pinned digest when
+// GRAYCODE_SANDBOX_IMAGE_DIGEST is set).
+func DefaultSandboxImage() string {
+	return defaultGraycodeImage()
+}
+
+// ImagePresent reports whether the sandbox image is already available locally
+// (either the default public image or the no-registry fallback tag). It is a
+// read-only probe and never mutates Docker state.
+func ImagePresent(ctx context.Context) (string, bool) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	for _, img := range []string{defaultGraycodeImage(), localGraycodeImage()} {
+		c, cancel := context.WithTimeout(ctx, 5*time.Second)
+		_, err := dockerImageCommand(c, "image", "inspect", img)
+		cancel()
+		if err == nil {
+			return img, true
+		}
+	}
+	return "", false
+}
+
+// RegistryReachable probes whether the sandbox image registry can be reached
+// without pulling image layers, via a non-mutating docker manifest inspect.
+func RegistryReachable(ctx context.Context) bool {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	c, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	_, err := dockerImageCommand(c, "manifest", "inspect", defaultGraycodeImage())
+	return err == nil
+}
+
 // EnsureImage makes the selected sandbox image available without requiring a
 // registry login. Graycode first uses a local image, then tries the public image,
 // and finally builds the bundled sandbox Dockerfile locally through Docker.

@@ -19,6 +19,7 @@
   <a href="#skills">Skills</a> ·
   <a href="#tools">Tools</a> ·
   <a href="#architecture">Architecture</a> ·
+  <a href="#performance--benchmarks">Benchmarks</a> ·
   <a href="#contributing">Contributing</a>
 </p>
 
@@ -30,7 +31,7 @@ graycode is an AI-powered coding agent that lives in your terminal. It reads you
 
 **Developer path:** one machine, keychain credentials, local memory. Run `graycode path` to check readiness.
 
-- **Model-agnostic** — supports 28 first-class providers through [graycode-router](https://github.com/GrayCodeAI/graycode-router), including Anthropic, OpenAI, Gemini, Fireworks AI, Concentrate AI (pay-as-you-go), DeepSeek, and Ollama
+- **Model-agnostic** — supports many first-class providers through [graycode-router](https://github.com/GrayCodeAI/graycode-router) (the exact count is dynamic — see `graycode --help`), including Anthropic, OpenAI, Gemini, Fireworks AI, Concentrate AI (pay-as-you-go), DeepSeek, and Ollama
 - **Zero CGO** — single static binary, cross-compiled for linux/darwin/windows on amd64/arm64
 - **Privacy-first** — your code never leaves your machine except to the LLM API you choose
 - **Docker-only execution** — agent commands run in an isolated container and
@@ -80,13 +81,16 @@ go build -o graycode ./cmd/graycode
 ./graycode path
 ```
 
-Docker is required for agent command execution. Start the Docker daemon before
-launching Graycode; there is no host-execution fallback. Graycode automatically uses
-the versioned public `graycodeai/graycode-sandbox` image. When the image is not
-local, Graycode pulls it anonymously; if the registry is unavailable, Graycode builds
-the bundled sandbox image locally through Docker.
+**Docker is required before your first run.** Graycode executes agent commands inside a
+container — there is no host-execution fallback (fail-closed). Start the Docker daemon
+first, then run `graycode path` (or `graycode doctor`) to see an ordered onboarding
+checklist: daemon running → sandbox image cached → registry reachable → local build.
+Graycode automatically uses the versioned public `graycodeai/graycode-sandbox` image;
+when it is not local, Graycode pulls it anonymously, and if the registry is unavailable
+it builds the bundled sandbox image locally through Docker.
 
-See [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md) for the credential model. Do not put API keys in shell env or `.env` for graycode.
+See [docs/SECURITY-DEVELOPER.md](docs/SECURITY-DEVELOPER.md) for the credential model and
+the sandbox checklist. Do not put API keys in shell env or `.env` for graycode.
 
 Optional for contributors:
 
@@ -516,6 +520,22 @@ go test -race ./...           # Run all tests with race detector
 make ci                       # Run full CI suite (lint, test, security)
 make cover                    # Generate coverage report
 ```
+
+### Performance & Benchmarks
+
+Published, reproducible CPU benchmarks (session save/load, repo-map size/tokens)
+live in [docs/BENCHMARKS.md](docs/BENCHMARKS.md), recorded with machine + commit so
+numbers are comparable across runs. Reproduce with the existing `go test -bench`
+targets there; nothing gates releases on them.
+
+Headline numbers (Go 1.26.6, AMD EPYC 7543P, `go test -bench -benchmem -count=3`):
+
+| Benchmark | Result |
+|---|---|
+| Session save (1000 msgs) | ~790 µs, 256 KB, 2,056 allocs |
+| Session load (1000 msgs) | ~5.3 ms |
+| Repo-map generate (100-file tree, 2,500 symbols) | ~2.2 ms, ~21.6k est. tokens, ~364 KB |
+| Session save (100 msgs) | ~183 µs, 32 KB, 256 allocs |
 
 ### Project Structure
 

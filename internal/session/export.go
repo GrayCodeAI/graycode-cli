@@ -798,6 +798,28 @@ func redactString(s string) string {
 	return result
 }
 
+// ShareLinkForID loads the session with the given ID and returns its
+// deterministic local share deeplink (graycode://share/<hash[:16]>), or ""
+// when the session cannot be loaded. The deeplink is content-derived, so it is
+// stable across reloads for the same session content.
+func ShareLinkForID(id string) string {
+	s, err := Load(id)
+	if err != nil {
+		return ""
+	}
+	es := &ExportedSession{
+		ID:        s.ID,
+		Model:     s.Model,
+		Provider:  s.Provider,
+		CreatedAt: s.CreatedAt,
+		Messages:  make([]ExportedMessage, 0, len(s.Messages)),
+	}
+	for _, m := range s.Messages {
+		es.Messages = append(es.Messages, ExportedMessage{Role: m.Role, Content: m.Content})
+	}
+	return GenerateShareLink(es)
+}
+
 // GenerateShareLink creates a deterministic share ID from the session content hash.
 func GenerateShareLink(session *ExportedSession) string {
 	if session == nil {

@@ -5,6 +5,7 @@ import (
 	"compress/zlib"
 	"encoding/base64"
 	"fmt"
+	"image"
 	"io"
 	"mime"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/GrayCodeAI/graycode-cli/internal/tui"
 	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
 
@@ -70,6 +72,27 @@ func ReadImageBytes(data []byte, mimeType string) *ImageAttachment {
 		Base64:   base64.StdEncoding.EncodeToString(data),
 		MIMEType: mimeType,
 	}
+}
+
+// emitTerminalImage renders a PNG image to the terminal via the Kitty graphics
+// protocol when the active terminal supports it (Gap-03). It returns true when
+// the image was emitted so callers can annotate the message; false when the
+// terminal lacks support (or the image is not a PNG) and the caller keeps its
+// existing text rendering. Emission is best-effort — a failure never fails the
+// turn and never touches the sanitized chat viewport.
+func emitTerminalImage(att *ImageAttachment) (bool, error) {
+	if att == nil || att.MIMEType != "image/png" {
+		return false, nil
+	}
+	data, err := base64.StdEncoding.DecodeString(att.Base64)
+	if err != nil {
+		return false, err
+	}
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		return false, err
+	}
+	return tui.EmitPNG(os.Stderr, data, cfg.Width, cfg.Height)
 }
 
 // isImageExtension returns true if the extension is a supported image format.

@@ -172,7 +172,7 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 	if sandbox.DockerAvailable() {
 		checks = append(checks, PathCheck{
 			Section: "Sandbox", Name: "docker", Status: PathPass,
-			Detail: "Docker daemon running — Bash runs in container by default",
+			Detail: "Docker daemon running — Bash runs in container by default", Blocking: true,
 		})
 	} else {
 		checks = append(checks, PathCheck{
@@ -180,6 +180,14 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 			Detail:   "Docker not available — agent tools are locked",
 			FixHint:  "Start Docker Desktop or another compatible Docker daemon",
 			Blocking: true,
+		})
+	}
+	// Ordered onboarding checklist (Gap-01): daemon -> image -> registry -> build.
+	for _, item := range EvaluateSandboxChecklist(ctx) {
+		checks = append(checks, PathCheck{
+			Section: "Sandbox", Name: "docker-" + item.Step,
+			Status: item.Status, Detail: item.Detail, FixHint: item.FixCmd,
+			Blocking: item.Status == PathFail,
 		})
 	}
 

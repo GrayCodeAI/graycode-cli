@@ -78,6 +78,8 @@ Available Commands:
   securitylog  Inspect the tamper-evident security event log
   sessions     List saved sessions
   setup        Run first-time setup again
+  share        Share a session (hosted URL or local deeplink)
+  site-audit   Run a site audit with merlin
   skills       Manage skills (list, search, install, remove, audit, info, trending)
   snapshot     Manage file snapshots (undo any change)
   stats        Show usage statistics and cost analytics

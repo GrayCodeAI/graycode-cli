@@ -147,6 +147,14 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 			TestsPassed:  testsPassed,
 		}
 
+		// Reflexion (arXiv 2303.11366): persist a structured failure record so
+		// a later retry or reviewer knows what went wrong and what to try next.
+		// Recording is best-effort and never fails the worker.
+		if !testsPassed {
+			store := NewReflexionStore(missionDir)
+			_ = store.Record(Reflect(feature, handoff, attemptFromBranch(feature.Branch)))
+		}
+
 		// Mark the transcript complete with the handoff result.
 		_ = writer.MarkComplete(handoff)
 		return handoff, nil
@@ -386,4 +394,22 @@ func truncate(s string, max int) string {
 		return s
 	}
 	return s[:max] + "..."
+}
+
+// attemptFromBranch extracts the attempt number from an attempt-suffixed
+// mission branch ("graycode-mission/<id>/<feat>/attempt-N"), or 0 when the
+// branch does not carry an attempt suffix.
+func attemptFromBranch(branch string) int {
+	idx := strings.LastIndex(branch, "/attempt-")
+	if idx < 0 {
+		return 0
+	}
+	n := 0
+	for _, c := range branch[idx+len("/attempt-"):] {
+		if c < '0' || c > '9' {
+			break
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n
 }

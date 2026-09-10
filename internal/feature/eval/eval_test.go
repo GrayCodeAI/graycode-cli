@@ -588,3 +588,70 @@ func TestRunProgressCallback(t *testing.T) {
 		}
 	}
 }
+
+// stubLLM returns a scripted sequence of responses, one per Complete call.
+type stubLLM struct {
+	responses []string
+	i         int
+}
+
+func (s *stubLLM) Complete(_ context.Context, _, _ string) (string, int, float64, error) {
+	resp := s.responses[s.i%len(s.responses)]
+	s.i++
+	return resp, 10, 0.01, nil
+}
+
+func consensusTask() BenchmarkTask {
+	return BenchmarkTask{
+		ID:          "consensus",
+		Description: "task whose solution must contain VALID",
+		SetupFn:     func(workDir string) error { return nil },
+		ValidateFn: func(workDir string) (bool, string) {
+			data, err := os.ReadFile(filepath.Join(workDir, "solution.go"))
+			if err != nil {
+				return false, "no solution"
+			}
+			return strings.Contains(string(data), "VALID"), "ok"
+		},
+		Prompt:      "solve",
+		MaxAttempts: 1,
+	}
+}
+
+func TestRunConsensus_MajorityVerdict(t *testing.T) {
+	r := NewRunner("m", "p")
+	r.MaxAttempts = 1
+	r.LLM = &stubLLM{responses: []string{"GOOD_VALID", "GOOD_VALID", "WRONG"}}
+	r.Samples = 3
+
+	task := consensusTask()
+	result, err := r.RunConsensus(context.Background(), &task)
+	if err != nil {
+		t.Fatalf("RunConsensus: %v", err)
+	}
+	if !result.Passed {
+		t.Error("consensus should be PASS (2/3 samples valid)")
+	}
+	if result.Attempts != 3 {
+		t.Errorf("Attempts = %d, want 3", result.Attempts)
+	}
+	if result.TokensUsed != 30 {
+		t.Errorf("TokensUsed = %d, want 30 (3 samples x 10)", result.TokensUsed)
+	}
+}
+
+func TestRunConsensus_MinorityFails(t *testing.T) {
+	r := NewRunner("m", "p")
+	r.MaxAttempts = 1
+	r.LLM = &stubLLM{responses: []string{"GOOD_VALID", "WRONG", "WRONG"}}
+	r.Samples = 3
+
+	task := consensusTask()
+	result, err := r.RunConsensus(context.Background(), &task)
+	if err != nil {
+		t.Fatalf("RunConsensus: %v", err)
+	}
+	if result.Passed {
+		t.Error("consensus should be FAIL (only 1/3 valid)")
+	}
+}

@@ -28,6 +28,13 @@ repositories:
     workspace: true
     facade: github.com/GrayCodeAI/graycode-router/engine
 
+  - directory: graycode-vscode
+    github_repo: graycode-vscode
+    product_name: Graycode VS Code extension
+    kind: extension
+    language: typescript
+    workspace: false
+
   - directory: graycode-skills
     github_repo: graycode-skills
     product_name: Graycode Community Skills

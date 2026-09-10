@@ -639,7 +639,9 @@ var preflightCmd = &cobra.Command{
 			}
 			cmd.Println(string(out))
 		} else {
-			cmd.Println(graycodeconfig.FormatEnginePreflight(r))
+			out := graycodeconfig.FormatEnginePreflight(r)
+			out += "\n\n" + graycodeconfig.FormatSandboxChecklist(graycodeconfig.EvaluateSandboxChecklist(ctx))
+			cmd.Println(out)
 		}
 		if !r.Ready {
 			if preflightLiveFlag {

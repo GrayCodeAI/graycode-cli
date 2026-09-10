@@ -435,3 +435,47 @@ func TestParsePlan_ComplexityVariants(t *testing.T) {
 		}
 	}
 }
+
+func TestArchitectPlanWithBeamSearch(t *testing.T) {
+	// A ChatFn that returns the architect plan on the first call and a
+	// refined plan on subsequent (beam-search expand/score) calls.
+	call := 0
+	a := &Architect{
+		Config: ArchitectConfig{ArchitectModel: "haiku", BeamSearch: true},
+		ChatFn: func(ctx context.Context, model string, msgs []ArchitectMessage) (string, error) {
+			call++
+			if call == 1 {
+				return "GOAL: build it\nCOMPLEXITY: moderate\nFILES: a.go\n\nSTEPS:\n1. [a.go] MODIFY: create feature", nil
+			}
+			return "GOAL: build it better\nCOMPLEXITY: moderate\nFILES: a.go, b.go\n\nSTEPS:\n1. [a.go] MODIFY: create feature\n2. [b.go] CREATE: tests", nil
+		},
+	}
+	plan, err := a.Plan(context.Background(), "build the thing", "")
+	if err != nil {
+		t.Fatalf("Plan: %v", err)
+	}
+	if plan == nil {
+		t.Fatal("expected a plan")
+	}
+	// BeamSearch should have made additional model calls to refine the plan.
+	if call < 2 {
+		t.Fatalf("expected beam-search model calls, got %d", call)
+	}
+}
+
+func TestArchitectPlanNoBeamSearch(t *testing.T) {
+	call := 0
+	a := &Architect{
+		Config: ArchitectConfig{ArchitectModel: "haiku"},
+		ChatFn: func(ctx context.Context, model string, msgs []ArchitectMessage) (string, error) {
+			call++
+			return "GOAL: build it\nCOMPLEXITY: simple\nFILES: a.go\n\nSTEPS:\n1. [a.go] MODIFY: x", nil
+		},
+	}
+	if _, err := a.Plan(context.Background(), "build", ""); err != nil {
+		t.Fatalf("Plan: %v", err)
+	}
+	if call != 1 {
+		t.Fatalf("expected exactly one model call without beam search, got %d", call)
+	}
+}
