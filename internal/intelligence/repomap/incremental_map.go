@@ -104,18 +104,18 @@ func (im *IncrementalMap) Update(rootDir string) (changed []string, err error) {
 
 		mtime := info.ModTime().UnixNano()
 
-		// Fast path: if mtime hasn't changed, skip this file entirely
-		if cached, ok := im.cache[relPath]; ok && cached.Mtime == mtime {
-			return nil
-		}
-
-		// Mtime changed (or new file): compute hash
+		// Compute the content hash. We always hash rather than trusting mtime
+		// alone: filesystems with coarse mtime granularity can rewrite a file
+		// within the same timestamp, and an mtime-only fast path would silently
+		// miss the change. Hashing is cheap relative to re-parsing symbols, so
+		// unchanged files are still skipped without a parse.
 		contentHash, hashErr := computeContentHash(path)
 		if hashErr != nil {
 			return nil // skip unreadable files
 		}
 
-		// If hash matches the cached hash, just update the mtime
+		// If the content is unchanged, just refresh the cached mtime and skip
+		// the expensive re-parse.
 		if cached, ok := im.cache[relPath]; ok && cached.Hash == contentHash {
 			cached.Mtime = mtime
 			im.cache[relPath] = cached

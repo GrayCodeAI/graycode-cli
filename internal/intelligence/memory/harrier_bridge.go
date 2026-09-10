@@ -161,6 +161,15 @@ func (b *HarrierBridge) Ready() bool {
 	return b.ready
 }
 
+// Available reports whether the bridge is backed by a real harrier store
+// rather than the build-harness stub. The stub's store returns a nil DB
+// handle, so it can never persist; Ready() alone cannot distinguish it from a
+// genuinely initialized (empty) memory graph. Status surfaces should use
+// Available() so they do not claim a live memory pipeline against the stub.
+func (b *HarrierBridge) Available() bool {
+	return b.ready && b.store != nil && b.store.DB() != nil
+}
+
 // IsReady is a public alias for Ready, exported for external consumers
 // that need to check bridge status before batching operations.
 func (b *HarrierBridge) IsReady() bool {

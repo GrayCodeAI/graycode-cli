@@ -2,11 +2,13 @@ package merlin
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
 	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
 	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
+	merlinLib "github.com/GrayCodeAI/merlin"
 )
 
 func TestNewBridge(t *testing.T) {
@@ -39,6 +41,9 @@ func TestBridge_Ready(t *testing.T) {
 }
 
 func TestRunContractsObservedRecordsQualityGraph(t *testing.T) {
+	if strings.Contains(merlinLib.Version, "stub") {
+		t.Skip("merlin engine is the build-harness stub; skipping quality-graph integration test")
+	}
 	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	observedAt := time.Date(2026, time.July, 25, 12, 0, 0, 0, time.UTC)
 	b := &Bridge{}

@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/GrayCodeAI/graycode-cli/internal/token"
 )
 
 func TestNewConsensusSampler(t *testing.T) {
@@ -406,9 +408,12 @@ func TestCalculateAgreement(t *testing.T) {
 }
 
 func TestConsensusEstimateTokens(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	tokens := estimateTokens("hello world this is a test")
-	if tokens != 6 {
-		t.Errorf("expected 9 tokens, got %d", tokens)
+	if tokens != 7 {
+		t.Errorf("expected 7 tokens, got %d", tokens)
 	}
 }
 

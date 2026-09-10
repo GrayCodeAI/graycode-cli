@@ -18,7 +18,10 @@ echo "== graycode ecosystem =="
 
 echo "== graycode path =="
 set +o pipefail
-"$BIN" path >/dev/null 2>&1 || true
+if ! PATH_OUT="$("$BIN" path 2>&1)"; then
+  echo "path reported readiness problems — ordered checklist with fix commands:"
+  echo "$PATH_OUT"
+fi
 set -o pipefail
 
 echo "== ecosystem tests =="

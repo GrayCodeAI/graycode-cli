@@ -27,7 +27,7 @@ func newTestBridge(t *testing.T) *HarrierBridge {
 
 func TestHarrierBridge_Init(t *testing.T) {
 	b := newTestBridge(t)
-	if !b.ready {
+	if !b.Available() {
 		// FIXME: test skipped in TestHarrierBridge_Init
 		// FIXME: harrier bridge requires the harrier dependency to be available at runtime
 		t.Skip("harrier bridge could not initialize (missing harrier dependency)")
@@ -37,7 +37,7 @@ func TestHarrierBridge_Init(t *testing.T) {
 func TestHarrierBridge_Remember(t *testing.T) {
 	// FIXME: test skipped in TestHarrierBridge_Remember
 	b := newTestBridge(t)
-	if !b.ready {
+	if !b.Available() {
 		// FIXME: harrier dependency must be available to test remember functionality
 		t.Skip("harrier not available")
 	}
@@ -51,7 +51,7 @@ func TestHarrierBridge_Remember(t *testing.T) {
 
 func TestHarrierBridge_Recall(t *testing.T) {
 	b := newTestBridge(t)
-	if !b.ready {
+	if !b.Available() {
 		// FIXME: harrier dependency must be available to test recall functionality
 		t.Skip("harrier not available")
 	}
@@ -68,7 +68,7 @@ func TestHarrierBridge_Recall(t *testing.T) {
 func TestHarrierBridgeRecallRecordsPortableContextGraph(t *testing.T) {
 	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	b := newTestBridge(t)
-	if !b.ready {
+	if !b.Available() {
 		// TODO: track hermetic harrier availability so this test runs without skipping.
 		t.Skip("harrier not available")
 	}
@@ -112,7 +112,7 @@ func TestHarrierBridgeRecallRecordsPortableContextGraph(t *testing.T) {
 func TestHarrierBridgeCodeSearchRecordsPortableContextGraph(t *testing.T) {
 	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	b := newTestBridge(t)
-	if !b.ready {
+	if !b.Available() {
 		// TODO: track hermetic harrier availability so this test runs without skipping.
 		t.Skip("harrier not available")
 	}
@@ -168,7 +168,7 @@ func TestHarrierBridgeCodeSearchRecordsPortableContextGraph(t *testing.T) {
 
 func TestHarrierBridge_Close(t *testing.T) {
 	b := newTestBridge(t)
-	if !b.ready {
+	if !b.Available() {
 		// FIXME: harrier not available
 		t.Skip("harrier not available")
 	}
@@ -184,7 +184,7 @@ func TestHarrierBridge_EnsureBackups(t *testing.T) {
 	_ = os.MkdirAll(dir+"/.harrier/data", 0o755)
 
 	b := NewHarrierBridge()
-	if !b.ready {
+	if !b.Available() {
 		// TODO: track hermetic harrier availability so this test runs without skipping.
 		t.Skip("harrier not available")
 	}
@@ -242,7 +242,7 @@ func TestHarrierBridge_EnsureBackups(t *testing.T) {
 
 func TestConfidenceTracker_WithBridge(t *testing.T) {
 	b := newTestBridge(t)
-	if !b.ready {
+	if !b.Available() {
 		// FIXME: test skipped
 		t.Skip("harrier not available")
 	}
@@ -257,7 +257,7 @@ func TestConfidenceTracker_WithBridge(t *testing.T) {
 func TestProactiveContext_WithBridge(t *testing.T) {
 	b := newTestBridge(t)
 	// FIXME: test skipped
-	if !b.ready {
+	if !b.Available() {
 		// FIXME: test skipped
 		t.Skip("harrier not available")
 	}
@@ -278,7 +278,7 @@ func TestGraphAwareBudget_WithBridge(t *testing.T) {
 	// FIXME: test skipped
 	b := newTestBridge(t)
 	// FIXME: test skipped
-	if !b.ready {
+	if !b.Available() {
 		// FIXME: test skipped
 		t.Skip("harrier not available")
 	}

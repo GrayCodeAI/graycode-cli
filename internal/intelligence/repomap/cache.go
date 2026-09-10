@@ -1,21 +1,23 @@
-// cache.go implements the in-process LRU symbol cache keyed
-// by (path, modtime). It is consulted by parseFileSymbols before re-parsing
-// and is cleared on process exit; for a persistent cache, use IncrementalMap.
+// cache.go implements the in-process LRU symbol cache keyed by (path, content
+// hash). It is consulted by parseFileSymbols before re-parsing and is cleared
+// on process exit; for a persistent cache, use IncrementalMap.
+//
+// The cache is keyed by content hash (not modtime) because filesystems with
+// coarse mtime granularity can rewrite a file within the same timestamp; a
+// modtime-only key would silently return stale symbols for a rapid edit.
 package repomap
 
 import (
 	"container/list"
-	"os"
 	"sync"
-	"time"
 )
 
 // defaultMaxSymbolCacheEntries is the default maximum number of symbol cache entries.
 const defaultMaxSymbolCacheEntries = 5000
 
-// cacheEntry holds cached symbols for a file with the file's mod time.
+// cacheEntry holds cached symbols for a file with the file's content hash.
 type cacheEntry struct {
-	modTime time.Time
+	hash    string
 	symbols []Symbol
 }
 
@@ -41,8 +43,9 @@ var (
 	}
 )
 
-// cacheGet returns cached symbols for path if the file hasn't been modified
-// since the cache was populated. Promotes the entry on access.
+// cacheGet returns cached symbols for path if the file's content is unchanged
+// since the cache was populated. It hashes the file to detect changes (cheap
+// relative to re-parsing) and promotes the entry on access.
 func cacheGet(path string) ([]Symbol, bool) {
 	cacheMu.Lock()
 	elem, ok := symbolCache.entries[path]
@@ -55,12 +58,9 @@ func cacheGet(path string) ([]Symbol, bool) {
 	lru, _ := elem.Value.(*lruCacheEntry)
 	cacheMu.Unlock()
 
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, false
-	}
-	if info.ModTime().After(lru.entry.modTime) {
-		return nil, false // file was modified, cache stale
+	hash, err := computeContentHash(path)
+	if err != nil || hash != lru.entry.hash {
+		return nil, false // file content changed (or unreadable), cache stale
 	}
 	return lru.entry.symbols, true
 }
@@ -68,7 +68,7 @@ func cacheGet(path string) ([]Symbol, bool) {
 // cachePut stores symbols for a file in the cache. Evicts the least recently
 // used entry if the cache exceeds its maximum size.
 func cachePut(path string, symbols []Symbol) {
-	info, err := os.Stat(path)
+	hash, err := computeContentHash(path)
 	if err != nil {
 		return
 	}
@@ -80,17 +80,14 @@ func cachePut(path string, symbols []Symbol) {
 	if elem, ok := symbolCache.entries[path]; ok {
 		symbolCache.order.MoveToFront(elem)
 		lru, _ := elem.Value.(*lruCacheEntry)
-		lru.entry = cacheEntry{modTime: info.ModTime(), symbols: symbols}
+		lru.entry = cacheEntry{hash: hash, symbols: symbols}
 		return
 	}
 
 	// Add new entry
 	lru := &lruCacheEntry{
-		key: path,
-		entry: cacheEntry{
-			modTime: info.ModTime(),
-			symbols: symbols,
-		},
+		key:   path,
+		entry: cacheEntry{hash: hash, symbols: symbols},
 	}
 	elem := symbolCache.order.PushFront(lru)
 	symbolCache.entries[path] = elem

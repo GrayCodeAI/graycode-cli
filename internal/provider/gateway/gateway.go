@@ -61,6 +61,9 @@ func New(ctx context.Context, providers []CustomProviderConfig) (*Gateway, error
 	if err != nil {
 		return nil, err
 	}
+	// Gap-05: env-gated opt-in wiring of media/STT backends to the router
+	// facade. No-op unless GRAYCODE_MEDIA=1 / GRAYCODE_STT=1.
+	wireOptionalBackends(eng)
 	p := newEngineProvider(eng)
 	return &Gateway{
 		Generator:          p,

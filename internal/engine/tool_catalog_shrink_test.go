@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/GrayCodeAI/graycode-cli/internal/token"
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
@@ -42,6 +43,9 @@ func TestShrinkGraycodeRouterToolsDisabledByDefault(t *testing.T) {
 }
 
 func TestShrinkGraycodeRouterToolsEnabledReducesAndPreservesNames(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	t.Setenv("GRAYCODE_TOOL_SHRINK", "1")
 	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	in := bloatedTools()
@@ -65,6 +69,9 @@ func TestShrinkGraycodeRouterToolsEnabledReducesAndPreservesNames(t *testing.T) 
 }
 
 func TestBuildOptionsAppliesShrink(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	t.Setenv("GRAYCODE_TOOL_SHRINK", "1")
 	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	c := &ChatService{}
@@ -78,6 +85,9 @@ func TestBuildOptionsAppliesShrink(t *testing.T) {
 }
 
 func TestOriginalCatalogPersistedForRecovery(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	stateDir := t.TempDir()
 	t.Setenv("GRAYCODE_TOOL_SHRINK", "1")
 	t.Setenv("GRAYCODE_STATE_DIR", stateDir)

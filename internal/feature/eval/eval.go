@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/consistency"
 )
 
 // BenchmarkSuite represents a collection of benchmark tasks for evaluation.
@@ -64,6 +66,10 @@ type Runner struct {
 	Cache       *Cache
 	NoCache     bool
 	Filters     []Filter
+	// Samples, when > 1, makes RunConsensus run each task this many times and
+	// decide the verdict by majority consensus (self-consistency, arXiv
+	// 2203.11171). It has no effect on Run/RunSingle.
+	Samples int
 	// Progress, when non-nil, is invoked before each task runs with the
 	// zero-based task index, the total task count, and the task ID. It lets
 	// callers surface live per-task progress for long benchmark suites.
@@ -251,5 +257,40 @@ func (r *Runner) RunSingle(ctx context.Context, task *BenchmarkTask) (*TaskResul
 	if lastErr != nil {
 		result.Error = lastErr.Error()
 	}
+	return result, nil
+}
+
+// RunConsensus runs a task Samples times (independent LLM calls) and decides
+// the final verdict by majority consensus over the per-sample pass/fail
+// results — self-consistency (Wang et al., ICLR 2023, arXiv 2203.11171).
+// Sampling N diverse solutions and taking the majority is more reliable than a
+// single greedy run. It returns a TaskResult whose Passed is the consensus and
+// whose cost/tokens/duration aggregate the samples.
+func (r *Runner) RunConsensus(ctx context.Context, task *BenchmarkTask) (*TaskResult, error) {
+	if task == nil {
+		return nil, fmt.Errorf("task cannot be nil")
+	}
+	n := r.Samples
+	if n <= 0 {
+		n = 3
+	}
+	result := &TaskResult{TaskID: task.ID, Attempts: n}
+	verdicts := make([]string, 0, n)
+	for i := 0; i < n; i++ {
+		single, err := r.RunSingle(ctx, task)
+		if err != nil {
+			return nil, err
+		}
+		verdict := "FAIL"
+		if single.Passed {
+			verdict = "PASS"
+		}
+		verdicts = append(verdicts, verdict)
+		result.TokensUsed += single.TokensUsed
+		result.CostUSD += single.CostUSD
+		result.Duration += single.Duration
+	}
+	consensusVerdict, _ := consistency.Consensus(verdicts)
+	result.Passed = consensusVerdict == "PASS"
 	return result, nil
 }

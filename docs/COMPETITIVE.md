@@ -1,8 +1,8 @@
 # graycode-cli vs Top 20 OSS — Competitive Analysis
 
-Status: Proposed (branch `feat/competitive-analysis-top20`, 2026-09-08)
+Status: Implemented (branch `feat/competitive-analysis-top20`, 2026-09-09)
 Scope: graycode-cli (this repo) vs 10 AI coding CLIs + 6 dev CLIs + 4 terminals (incl. `herdr` multiplexer)
-Related: `docs/plans/toolbench-comparison-vs-top20.md` (tool-count parity), `docs/SECURITY-DEVELOPER.md` (sandbox model), `docs/plans/pi-adoption-plan.md` (Kitty graphics already proposed)
+Related: `docs/plans/toolbench-comparison-vs-top20.md` (tool-count parity), `docs/SECURITY-DEVELOPER.md` (sandbox model), `docs/plans/pi-adoption-plan.md` (Kitty graphics already proposed), `docs/RESEARCH.md` (top-20 research-paper comparison + implementation record)
 
 ## Methodology (no assumptions)
 
@@ -77,15 +77,15 @@ External star counts below are approximate web-search snapshots (2026-09-08), no
 - **Wins to keep:** fail-closed Docker + dual `/autonomy`+`/spec` gates; portable execution graph; Go zero-CGO MIT; router-facade-only provider access; 120+ tool surface (see `docs/plans/toolbench-comparison-vs-top20.md` for category parity).
 - **Loses to fix (filed as plans):** Gap-01 onboarding friction; Gap-02 share/multi-session; Gap-03 Kitty graphics; Gap-04 published benchmarks; Gap-05 default backend wiring.
 
-## Gap plans (this branch)
+## Gap plans (this branch — implemented 2026-09-09)
 
-- `docs/plans/competitive-gap-01-docker-onboarding.md`
-- `docs/plans/competitive-gap-02-share-multisession.md`
-- `docs/plans/competitive-gap-03-kitty-graphics.md`
-- `docs/plans/competitive-gap-04-published-benchmarks.md`
-- `docs/plans/competitive-gap-05-backend-wiring.md`
+- `docs/plans/competitive-gap-01-docker-onboarding.md` ✅
+- `docs/plans/competitive-gap-02-share-multisession.md` ✅
+- `docs/plans/competitive-gap-03-kitty-graphics.md` ✅
+- `docs/plans/competitive-gap-04-published-benchmarks.md` ✅
+- `docs/plans/competitive-gap-05-backend-wiring.md` ✅
 
-Each follows the adoption-plan format (Status/Source/Existing/Decision/Priority) and respects developer-first + router-ownership + fail-closed constraints.
+Each follows the adoption-plan format (Status/Source/Existing/Decision/Priority) and respects developer-first + router-ownership + fail-closed constraints. See `docs/RESEARCH.md` for the research-paper comparison and the extra fixes surfaced by enabling the build.
 
 ## Verification
 

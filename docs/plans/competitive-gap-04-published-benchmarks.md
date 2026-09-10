@@ -1,6 +1,6 @@
 # Gap-04: Published Benchmarks (Docs from Existing Infra)
 
-Status: Proposed
+Status: Implemented (2026-09-09)
 Source: field comparison vs ripgrep/fzf/alacritty (numbers in README), Aider RepoMap token budgets
 
 Constraint: docs-only. No new benchmark framework; infra already exists.

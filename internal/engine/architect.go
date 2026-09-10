@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/GrayCodeAI/graycode-cli/internal/planning"
 	"github.com/GrayCodeAI/graycode-cli/internal/provider/routing"
+	"github.com/GrayCodeAI/graycode-cli/internal/types"
 )
 
 // ArchitectConfig configures the two-model architect/editor pipeline.
@@ -17,6 +19,9 @@ type ArchitectConfig struct {
 	EditorModel     string // expensive/precise model for edits, e.g., "sonnet"
 	PlanTokenBudget int    // max tokens for architect's plan, default 4096
 	Enabled         bool
+	// BeamSearch enables tree-search refinement of the plan (ToT/LATS) using
+	// the model as expander/scorer. Off by default: it costs extra model calls.
+	BeamSearch bool
 }
 
 // ArchitectPlan represents the structured output from the architect model.
@@ -99,9 +104,56 @@ func (a *Architect) Plan(ctx context.Context, goal string, repoContext string) (
 		return nil, fmt.Errorf("architect: failed to parse plan: %w", err)
 	}
 
+	// Optional tree-search refinement (ToT/LATS): explore plan candidates with
+	// the model as expander/scorer and keep the best reachable plan.
+	if a.Config.BeamSearch {
+		refined, rerr := planning.PlanWithBeamSearch(
+			&architectProvider{a: a},
+			model,
+			plan.RawPlan,
+			"Suggest the next implementation step for this plan, one per line.",
+			"Rate this plan step 0..1 for correctness and completeness.",
+			3, 4,
+		)
+		if rerr == nil && refined != "" && refined != plan.RawPlan {
+			if refinedPlan, perr := ParsePlan(refined); perr == nil {
+				refinedPlan.RawPlan = refined
+				plan = refinedPlan
+			}
+		}
+	}
+
 	plan.RawPlan = response
 	return plan, nil
 }
+
+// architectProvider adapts the Architect's ChatFn to the planning package's
+// types.ChatProvider so BeamSearch can drive the live architect model.
+type architectProvider struct {
+	a *Architect
+}
+
+func (p *architectProvider) Chat(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error) {
+	archMsgs := make([]ArchitectMessage, len(messages))
+	for i, m := range messages {
+		archMsgs[i] = ArchitectMessage{Role: m.Role, Content: m.Content}
+	}
+	model := p.a.Config.ArchitectModel
+	if opts.Model != "" {
+		model = opts.Model
+	}
+	out, err := p.a.ChatFn(ctx, model, archMsgs)
+	if err != nil {
+		return nil, err
+	}
+	return &types.GraycodeRouterResponse{Content: out}, nil
+}
+
+func (p *architectProvider) StreamChat(ctx context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.StreamResult, error) {
+	return nil, nil
+}
+func (p *architectProvider) Ping(ctx context.Context) error { return nil }
+func (p *architectProvider) Name() string                   { return "architect" }
 
 // ParsePlan extracts GOAL, COMPLEXITY, FILES, and STEPS from the architect's response.
 // It handles variations in formatting gracefully.

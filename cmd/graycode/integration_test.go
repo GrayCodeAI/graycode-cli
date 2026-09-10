@@ -6,25 +6,27 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/provider/routing"
 	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
+	"github.com/GrayCodeAI/graycode-cli/internal/token"
 	"github.com/GrayCodeAI/harrier/engine"
 	"github.com/GrayCodeAI/harrier/graph"
 	"github.com/GrayCodeAI/harrier/storage"
-	"github.com/GrayCodeAI/kestrel"
-	"github.com/GrayCodeAI/merlin"
+	kestrelLib "github.com/GrayCodeAI/kestrel"
+	merlinLib "github.com/GrayCodeAI/merlin"
 	"github.com/GrayCodeAI/shrike"
 )
 
-// mockKestrelProvider implements kestrel.Provider for integration testing.
+// mockKestrelProvider implements kestrelLib.Provider for integration testing.
 type mockKestrelProvider struct {
 	response string
 }
 
-func (m *mockKestrelProvider) Chat(_ context.Context, _ []kestrel.Message, _ kestrel.ChatOpts) (*kestrel.Response, error) {
-	return &kestrel.Response{Content: m.response, TokensUsed: 100}, nil
+func (m *mockKestrelProvider) Chat(_ context.Context, _ []kestrelLib.Message, _ kestrelLib.ChatOpts) (*kestrelLib.Response, error) {
+	return &kestrelLib.Response{Content: m.response, TokensUsed: 100}, nil
 }
 
 // setupHarrier creates a harrier engine backed by a temp SQLite database.
@@ -41,6 +43,9 @@ func setupHarrier(t *testing.T) *engine.Engine {
 }
 
 func TestIntegration_KestrelReviewStoreRecall(t *testing.T) {
+	if strings.Contains(kestrelLib.Version, "stub") {
+		t.Skip("kestrel engine is the build-harness stub; skipping engine-dependent test")
+	}
 	// 1. Set up mock LLM provider that returns a code review finding
 	mockResp := `[{"severity":"high","file":"main.go","line":10,"message":"SQL injection vulnerability","fix":"Use parameterized queries","reasoning":"Direct string concatenation in SQL"}]`
 	provider := &mockKestrelProvider{response: mockResp}
@@ -54,9 +59,9 @@ func TestIntegration_KestrelReviewStoreRecall(t *testing.T) {
 +}`
 
 	ctx := context.Background()
-	result, err := kestrel.Review(ctx, diff, kestrel.WithProvider(provider))
+	result, err := kestrelLib.Review(ctx, diff, kestrelLib.WithProvider(provider))
 	if err != nil {
-		t.Fatalf("kestrel.Review failed: %v", err)
+		t.Fatalf("kestrelLib.Review failed: %v", err)
 	}
 	if result == nil {
 		t.Fatal("expected non-nil result")
@@ -104,6 +109,9 @@ func TestIntegration_KestrelReviewStoreRecall(t *testing.T) {
 }
 
 func TestIntegration_MerlinScanHTTPTest(t *testing.T) {
+	if strings.Contains(merlinLib.Version, "stub") {
+		t.Skip("merlin engine is the build-harness stub; skipping engine-dependent test")
+	}
 	// 1. Start a test HTTP server with known issues
 	ts := testutil.NewLoopbackHTTPServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
@@ -120,9 +128,9 @@ func TestIntegration_MerlinScanHTTPTest(t *testing.T) {
 
 	// 2. Run merlin scan
 	ctx := context.Background()
-	report, err := merlin.Scan(ctx, ts.URL, merlin.Quick)
+	report, err := merlinLib.Scan(ctx, ts.URL, merlinLib.Quick)
 	if err != nil {
-		t.Fatalf("merlin.Scan failed: %v", err)
+		t.Fatalf("merlinLib.Scan failed: %v", err)
 	}
 	if report == nil {
 		t.Fatal("expected non-nil report")
@@ -154,6 +162,9 @@ func TestIntegration_MerlinScanHTTPTest(t *testing.T) {
 }
 
 func TestIntegration_TokCompression(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	// Generate a large repetitive text (simulates verbose CLI output)
 	var large string
 	for i := 0; i < 100; i++ {
@@ -227,6 +238,9 @@ func TestIntegration_CascadeRouting(t *testing.T) {
 }
 
 func TestIntegration_FullPipeline(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	ctx := context.Background()
 
 	// 1. Initialize all components
@@ -243,9 +257,9 @@ func TestIntegration_FullPipeline(t *testing.T) {
 	mockResp := `[{"severity":"medium","file":"app.go","line":5,"message":"Unused variable","fix":"Remove unused var"}]`
 	provider := &mockKestrelProvider{response: mockResp}
 	diff := "--- a/app.go\n+++ b/app.go\n@@ -4,0 +5 @@\n+var unused = 42"
-	reviewResult, err := kestrel.Review(ctx, diff, kestrel.WithProvider(provider))
+	reviewResult, err := kestrelLib.Review(ctx, diff, kestrelLib.WithProvider(provider))
 	if err != nil {
-		t.Fatalf("kestrel.Review: %v", err)
+		t.Fatalf("kestrelLib.Review: %v", err)
 	}
 
 	// 4. Store in harrier
@@ -265,9 +279,9 @@ func TestIntegration_FullPipeline(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	report, err := merlin.Scan(ctx, ts.URL, merlin.Quick)
+	report, err := merlinLib.Scan(ctx, ts.URL, merlinLib.Quick)
 	if err != nil {
-		t.Fatalf("merlin.Scan: %v", err)
+		t.Fatalf("merlinLib.Scan: %v", err)
 	}
 
 	// 6. Store merlin result

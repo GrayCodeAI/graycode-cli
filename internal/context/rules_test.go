@@ -66,6 +66,10 @@ func TestRuleDiscoverer_Deduplication(t *testing.T) {
 	os.WriteFile(filepath.Join(sub, "AGENTS.md"), []byte(sameContent), 0o644)
 
 	rd := NewRuleDiscoverer(dir)
+	// Isolate from host global/managed rule dirs (e.g. ~/.claude/rules) so the
+	// test is hermetic and only sees the project rules under test.
+	rd.globalDirs = nil
+	rd.managedPaths = nil
 	rules := rd.Discover(filepath.Join(sub, "main.go"))
 
 	// Same content hash → deduped to 1
@@ -166,6 +170,10 @@ func TestRuleDiscoverer_EmptyProject(t *testing.T) {
 	os.WriteFile(target, []byte("package main"), 0o644)
 
 	rd := NewRuleDiscoverer(dir)
+	// Isolate from host global/managed rule dirs (e.g. ~/.claude/rules) so the
+	// test is hermetic and only sees the project rules under test.
+	rd.globalDirs = nil
+	rd.managedPaths = nil
 	rules := rd.Discover(target)
 	if len(rules) != 0 {
 		t.Errorf("expected 0 rules in empty project, got %d", len(rules))

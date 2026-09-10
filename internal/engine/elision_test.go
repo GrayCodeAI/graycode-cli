@@ -4,9 +4,14 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/GrayCodeAI/graycode-cli/internal/token"
 )
 
 func TestElisionNoticeJSONRecords(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	var items []string
 	for i := 0; i < 10; i++ {
 		items = append(items, `{"order_id":"ord-`+strconv.Itoa(i)+`","status":"fulfilled"}`)
@@ -21,6 +26,9 @@ func TestElisionNoticeJSONRecords(t *testing.T) {
 }
 
 func TestElisionNoticeLogLines(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	var lines []string
 	for i := 0; i < 6; i++ {
 		lines = append(lines, "2026-08-22T10:00:0"+strconv.Itoa(i)+"Z INFO tick")

@@ -1,6 +1,6 @@
 # Gap-01: Docker-Onboarding Friction (Docs/UX Only)
 
-Status: Proposed
+Status: Implemented (2026-09-09)
 Source: field comparison vs Codex (net-off workspace-write), Gemini (gVisor/sandbox-exec profiles), Pi (no sandbox)
 
 Constraint (non-negotiable): mandatory Docker isolation, fail-closed, never host fallback.

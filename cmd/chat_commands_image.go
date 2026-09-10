@@ -46,6 +46,12 @@ func (m *chatModel) handleImageCommand(parts []string, text string) (tea.Model, 
 			m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 			return m, nil
 		}
+		// Gap-03: render the image directly to the terminal via Kitty graphics
+		// when supported; the text placeholder below always remains as the
+		// sanitized chat record.
+		if emitted, _ := emitTerminalImage(att); emitted {
+			m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("%s Rendered image in terminal: %s", icons.Image(), filepath.Base(path))})
+		}
 		display := prompt
 		if display == "" {
 			display = FormatImageMessage("", path)

@@ -1,6 +1,6 @@
 # Gap-02: Share Links + Multi-Session Visibility (Local-First)
 
-Status: Proposed
+Status: Implemented (2026-09-09)
 Source: field comparison vs OpenCode share-links/multi-session, herdr multiplexer, Cline checkpoints
 
 Constraint: developer-first, local by default, no cloud account required

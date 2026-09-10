@@ -1,6 +1,6 @@
 # Gap-05: Default Wiring for Media / Computer-Use / STT Backends
 
-Status: Proposed
+Status: Implemented (2026-09-09)
 Source: field comparison vs Qwen `computer_use`, Codex browser/screenshot, Goose extensions; README notes router ships `ImageClient`/`AudioClient`
 
 Constraints (non-negotiable):

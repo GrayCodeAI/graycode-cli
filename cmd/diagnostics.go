@@ -17,6 +17,7 @@ import (
 	"github.com/GrayCodeAI/graycode-cli/internal/resilience/health"
 	"github.com/GrayCodeAI/graycode-cli/internal/session"
 	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/graycode-cli/internal/stt"
 	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
 )
@@ -73,6 +74,11 @@ func doctorReport(settings graycodeconfig.Settings) string {
 	b.WriteString("\n" + graycodeconfig.FormatCatalogHealth(graycodeconfig.CatalogHealthReport(context.Background())) + "\n")
 	preflight := graycodeconfig.EnginePreflightReportWithSettings(context.Background(), settings, graycodeconfig.EnginePreflightOptions{})
 	b.WriteString("\n" + graycodeconfig.FormatEnginePreflight(preflight) + "\n")
+	b.WriteString("\n" + graycodeconfig.FormatSandboxChecklist(graycodeconfig.EvaluateSandboxChecklist(context.Background())) + "\n")
+	b.WriteString("\nBackends (Gap-05):\n")
+	b.WriteString(fmt.Sprintf("  media:      %s\n", backendStatus(tool.MediaEngineName(), tool.MediaEngineName() != "")))
+	b.WriteString(fmt.Sprintf("  stt:        %s\n", backendStatus("", stt.Enabled())))
+	b.WriteString(fmt.Sprintf("  computer:   %s\n", backendStatus(tool.ComputerBackendName(), tool.ComputerBackendName() != "")))
 	b.WriteString("\n" + graycodeconfig.CredentialStorageStatus(context.Background()).Formatted + "\n")
 	if deployReport, err := graycodeconfig.DeploymentStatusReportWithSettings(context.Background(), settings, modelName); err == nil {
 		b.WriteString("\n" + deployReport + "\n")
@@ -113,6 +119,19 @@ func doctorReport(settings graycodeconfig.Settings) string {
 
 	b.WriteString("\n" + healthCheckReport(settings, providerName) + "\n")
 	return strings.TrimRight(b.String(), "\n")
+}
+
+// backendStatus formats a pluggable backend's wiring state for the doctor
+// report (Gap-05 P2). Unwired backends fail safe by default, so the report
+// states that explicitly without leaking any credential.
+func backendStatus(name string, enabled bool) string {
+	if !enabled {
+		return "unwired (default — tool fails safe)"
+	}
+	if name == "" {
+		return "wired"
+	}
+	return "wired (" + name + ")"
 }
 
 func healthCheckReport(settings graycodeconfig.Settings, provider string) string {
@@ -261,7 +280,16 @@ func sessionsSummary() string {
 		if cwd == "" {
 			cwd = "-"
 		}
-		b.WriteString(fmt.Sprintf("  %s  %s  %s  %s\n", auditTint(e.ID, textPrimary), e.UpdatedAt.Format("2006-01-02 15:04"), cwd, e.Preview))
+		model := e.Model
+		if model == "" {
+			model = "-"
+		}
+		export := e.ExportPath
+		if export == "" {
+			export = "-"
+		}
+		b.WriteString(fmt.Sprintf("  %s  %s  model=%s  cwd=%s\n    export: %s\n    preview: %s\n",
+			auditTint(e.ID, textPrimary), e.UpdatedAt.Format("2006-01-02 15:04"), model, cwd, export, e.Preview))
 	}
 	return strings.TrimRight(b.String(), "\n")
 }

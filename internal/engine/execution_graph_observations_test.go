@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
+	"github.com/GrayCodeAI/graycode-cli/internal/token"
 	"github.com/GrayCodeAI/graycode-cli/internal/tool"
 	"github.com/GrayCodeAI/graycode-cli/internal/types"
 	shrike "github.com/GrayCodeAI/shrike"
@@ -62,6 +63,9 @@ func TestToolExecutionAutomaticallyRecordsPolicyAndVerification(t *testing.T) {
 }
 
 func TestShrikeCompressionObservationIsPrivacySafe(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	sess := NewSession("test", "test", "system", tool.NewRegistry())
 	sess.SetPersistID("shrike-runtime-session")
@@ -89,6 +93,9 @@ func TestShrikeCompressionObservationIsPrivacySafe(t *testing.T) {
 }
 
 func TestShrikeRedactionObservationIsPrivacySafe(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	sess := NewSession("test", "test", "system", tool.NewRegistry())
 	sess.SetPersistID("shrike-redaction-session")
@@ -116,6 +123,9 @@ func TestShrikeRedactionObservationIsPrivacySafe(t *testing.T) {
 }
 
 func TestShrikeUsageBudgetObservationTracksAndProjectsAuthoritativeUsage(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	sess := NewSession("test", "test", "system", tool.NewRegistry())
 	sess.SetPersistID("shrike-usage-session")
@@ -163,6 +173,9 @@ func TestShrikeUsageBudgetObservationTracksAndProjectsAuthoritativeUsage(t *test
 }
 
 func TestShrikeUsageBudgetStopsAtConfiguredLimit(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	sess := NewSession("test", "test", "system", tool.NewRegistry())
 	tracker := sess.ensureShrikeUsageTracker()
 	limits := tracker.GetLimits()
@@ -177,6 +190,9 @@ func TestShrikeUsageBudgetStopsAtConfiguredLimit(t *testing.T) {
 }
 
 func TestApplyShrikeUsageSettingsOverridesAndDisables(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	sess := NewSession("test", "test", "system", tool.NewRegistry())
 	// Defaults: token ceilings off (provider rate limits own throughput).
 	defaults := sess.ensureShrikeUsageTracker().GetLimits()
@@ -198,6 +214,9 @@ func TestApplyShrikeUsageSettingsOverridesAndDisables(t *testing.T) {
 }
 
 func TestDrainAlertsSurfacesHourlyWarning(t *testing.T) {
+	if !token.ShrikeAvailable() {
+		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
+	}
 	tracker := shrike.NewUsageTracker()
 	tracker.SetLimits(shrike.UsageLimits{
 		HourlyTokens:  100,

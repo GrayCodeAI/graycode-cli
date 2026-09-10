@@ -119,3 +119,52 @@ func TestFormatImageMessage(t *testing.T) {
 		t.Error("message should contain filename")
 	}
 }
+
+// minimalPNG is a valid 1x1 PNG (decodable by image.DecodeConfig).
+var minimalPNG = []byte{
+	0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a,
+	0x00, 0x00, 0x00, 0x0d, 'I', 'H', 'D', 'R',
+	0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00,
+	0x1f, 0x15, 0xc4, 0x89,
+	0x00, 0x00, 0x00, 0x0d, 'I', 'D', 'A', 'T', 'x', 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
+	0x0d, 0x0a, 0x2d, 0xb4,
+	0x00, 0x00, 0x00, 0x00, 'I', 'E', 'N', 'D', 0xae, 0x42, 0x60, 0x82,
+}
+
+func TestEmitTerminalImageFallsBackWhenUnsupported(t *testing.T) {
+	att := ReadImageBytes(minimalPNG, "image/png")
+	t.Setenv("TERM_PROGRAM", "Apple_Terminal")
+	t.Setenv("KITTY_PID", "")
+	t.Setenv("KITTY_WINDOW_ID", "")
+	t.Setenv("GHOSTTY_RESOURCES_DIR", "")
+	emitted, err := emitTerminalImage(att)
+	if err != nil {
+		t.Fatalf("emitTerminalImage: %v", err)
+	}
+	if emitted {
+		t.Error("must not emit on an unsupported terminal")
+	}
+}
+
+func TestEmitTerminalImageNonPNG(t *testing.T) {
+	att := ReadImageBytes([]byte("jpeg bytes"), "image/jpeg")
+	emitted, err := emitTerminalImage(att)
+	if err != nil {
+		t.Fatalf("emitTerminalImage: %v", err)
+	}
+	if emitted {
+		t.Error("non-PNG attachments must not emit")
+	}
+}
+
+func TestEmitTerminalImageEmitsOnKitty(t *testing.T) {
+	t.Setenv("KITTY_PID", "1234")
+	att := ReadImageBytes(minimalPNG, "image/png")
+	emitted, err := emitTerminalImage(att)
+	if err != nil {
+		t.Fatalf("emitTerminalImage: %v", err)
+	}
+	if !emitted {
+		t.Error("must emit on a kitty terminal")
+	}
+}

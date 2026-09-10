@@ -2,14 +2,19 @@ package kestrel
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
 	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
 	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
+	kestrelLib "github.com/GrayCodeAI/kestrel"
 )
 
 func TestReviewContractsObservedRecordsQualityGraph(t *testing.T) {
+	if strings.Contains(kestrelLib.Version, "stub") {
+		t.Skip("kestrel engine is the build-harness stub; skipping quality-graph integration test")
+	}
 	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
 	bridge := &Bridge{}
 	at := time.Date(2026, time.July, 25, 13, 0, 0, 0, time.UTC)

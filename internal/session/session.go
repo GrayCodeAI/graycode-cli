@@ -686,10 +686,12 @@ func loadLegacyJSONFile(path string) (*Session, error) {
 
 // Entry is a summary of a saved session for listing.
 type Entry struct {
-	ID        string
-	Preview   string
-	CWD       string
-	UpdatedAt time.Time
+	ID         string
+	Preview    string
+	CWD        string
+	Model      string
+	ExportPath string
+	UpdatedAt  time.Time
 }
 
 // List returns all saved sessions, newest first.
@@ -727,11 +729,14 @@ func List() ([]Entry, error) {
 		}
 
 		// Only load the first user message for preview (don't parse full file)
-		preview := loadPreview(filepath.Join(dir, e.Name()))
+		path := filepath.Join(dir, e.Name())
+		preview := loadPreview(path)
 		out = append(out, Entry{
-			ID:        id,
-			Preview:   preview,
-			UpdatedAt: info.ModTime(),
+			ID:         id,
+			Preview:    preview,
+			Model:      loadModel(path),
+			ExportPath: path,
+			UpdatedAt:  info.ModTime(),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].UpdatedAt.After(out[j].UpdatedAt) })
@@ -767,6 +772,30 @@ func loadPreview(path string) string {
 		}
 	}
 	return ""
+}
+
+// loadModel reads only the session-meta line (the first line, which is
+// plaintext even for zstd-compressed sessions) and returns the stored model,
+// or "" when it cannot be determined. It is a cheap partial read used by List.
+func loadModel(path string) string {
+	f, err := os.Open(path) // #nosec G304 -- path built from sessionsDir() + directory entry name returned by os.ReadDir
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = f.Close() }()
+
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 4096), 4096)
+	if !scanner.Scan() {
+		return ""
+	}
+	var meta struct {
+		Model string `json:"model"`
+	}
+	if err := json.Unmarshal(scanner.Bytes(), &meta); err != nil {
+		return ""
+	}
+	return meta.Model
 }
 
 // LoadLatestForCWD returns the newest saved session for cwd.

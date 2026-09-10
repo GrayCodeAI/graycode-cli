@@ -2,6 +2,7 @@ package kestrel
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -113,6 +114,14 @@ func (b *Bridge) init(c types.ChatProvider, provider string, opts ...kestrelLib.
 // Ready reports whether the kestrel bridge is initialized and usable.
 func (b *Bridge) Ready() bool {
 	return b.ready
+}
+
+// Available reports whether the bridge is backed by a real kestrel engine
+// rather than a build-harness stub (which returns empty)
+// reviews. Status surfaces use Available() so they do not claim a live review
+// pipeline against the stub.
+func (b *Bridge) Available() bool {
+	return b.ready && !strings.Contains(kestrelLib.Version, "stub")
 }
 
 // Review performs an AI-powered code review on a unified diff string.
