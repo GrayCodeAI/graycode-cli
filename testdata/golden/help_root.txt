@@ -84,7 +84,7 @@ Available Commands:
   snapshot     Manage file snapshots (undo any change)
   stats        Show usage statistics and cost analytics
   status       Show a redacted runtime status snapshot
-  swift        Correlate execution-graph and cross-repo signals
+  swift        Git-native session capture for AI coding agents
   swift-report Write a private diagnostic swift report (fx /swift parity)
   tape         Inspect and checkpoint recorded terminal captures (fxtape)
   taste        Manage taste profile (learned coding style preferences)

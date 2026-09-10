@@ -1,3 +1,5 @@
+//go:build media_engine
+
 package gateway
 
 import (

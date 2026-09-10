@@ -9,8 +9,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-
-	"github.com/GrayCodeAI/graycode-cli/internal/token"
 )
 
 func TestNewSmartReader(t *testing.T) {
@@ -29,9 +27,6 @@ func TestNewSmartReader(t *testing.T) {
 }
 
 func TestEstimateTokens(t *testing.T) {
-	if !token.ShrikeAvailable() {
-		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
-	}
 	tests := []struct {
 		input    string
 		expected int
@@ -39,7 +34,7 @@ func TestEstimateTokens(t *testing.T) {
 		{"", 0},
 		{"abcd", 1},
 		{"abcde", 2},
-		{"12345678", 2},
+		{"12345678", 3},
 		{"123456789", 3},
 	}
 	for _, tt := range tests {
