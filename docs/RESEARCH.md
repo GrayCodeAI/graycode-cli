@@ -91,8 +91,8 @@ All 20 papers now have at least a concrete implementation or confirmed existing
 coverage. The two search/consensus techniques were added this branch as tested
 modules:
 
-- **Tree-search backtracking** — `internal/planning.BeamSearch` (value function
-  + beam + dead-end pruning/backtracking), tests in `search_test.go`.
+- **Tree-search backtracking** — `internal/planning.BeamSearch` (value function,
+  beam, dead-end pruning/backtracking), tests in `search_test.go`.
 - **Self-consistency** — `internal/intelligence/consistency.Consensus`
   (majority/consensus over sampled answers), tests in `consistency_test.go`;
   wired into the eval runner as `Runner.RunConsensus` (samples N, majority

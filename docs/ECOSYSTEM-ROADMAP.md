@@ -125,8 +125,8 @@ dropped.
   defaults `API_URL` to `https://api.graycodeai.com` and the device-flow
   `verificationUri` hardcodes `graycodeai.com`. The cloud control plane is
   unreachable at a stable hostname.
-- **Correctness:** duplicate migration prefix `0022` (`0022_graph_retention.sql`
-  + `0022_identity_ui.sql`); identity schema duplicated across the cloud D1 and
+- **Correctness:** duplicate migration prefix `0022` (`0022_graph_retention.sql`,
+  `0022_identity_ui.sql`); identity schema duplicated across the cloud D1 and
   the bff identity D1; `openapi.yaml:7` carries a pre-prod TODO.
 - **Config-gated:** GitHub webhook secret optional → that feature silently off.
 
