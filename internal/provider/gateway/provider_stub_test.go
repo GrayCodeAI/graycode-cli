@@ -136,6 +136,7 @@ func (s *stubProvider) ClearSelection(context.Context) error               { ret
 func (s *stubProvider) ProviderStateSecurityStatus() eyrieengine.ProviderStateSecurity {
 	return eyrieengine.ProviderStateSecurity{}
 }
+
 func (s *stubProvider) SupportsNativeCompaction(context.Context, string, string) bool { return false }
 
 func (s *stubProvider) CompactNative(context.Context, eyrieengine.NativeCompactionRequest) (string, error) {

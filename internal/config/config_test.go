@@ -174,11 +174,14 @@ func TestLoadSettingsUsesUserConfigOnly(t *testing.T) {
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(`{"allowedTools":["Read"]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(`{"model":"stale-model","provider":"openai","allowedTools":["Read"]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	settings := LoadSettings()
+	if settings.Model != "" || settings.Provider != "" {
+		t.Fatalf("stale settings.json model/provider must be ignored, got model=%q provider=%q", settings.Model, settings.Provider)
+	}
 	if len(settings.AllowedTools) != 1 || settings.AllowedTools[0] != "Read" {
 		t.Fatalf("expected global allowedTools, got %v", settings.AllowedTools)
 	}

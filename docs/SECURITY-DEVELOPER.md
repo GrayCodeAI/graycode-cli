@@ -37,7 +37,7 @@ Eyrie engine discover/apply (credentials from store, not JSON body)
 SetupUI JSON (display_name + canonical_id per model)
         |
         v
-User picks model -> settings.json (canonical id only)
+User picks model -> Eyrie provider.json (canonical id only)
 ```
 
 Remove a stored key: `/config key remove` (interactive picker).
