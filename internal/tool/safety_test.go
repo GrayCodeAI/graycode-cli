@@ -263,13 +263,12 @@ func TestIsSensitivePath(t *testing.T) {
 func TestIsSensitivePath_HawkConfigDir(t *testing.T) {
 	cfgDir := t.TempDir()
 	t.Setenv("HAWK_CONFIG_DIR", cfgDir)
-	prov := filepath.Join(cfgDir, "provider.json")
-	if reason := IsSensitivePath(prov); reason == "" {
-		t.Fatalf("expected custom HAWK_CONFIG_DIR provider.json blocked, got empty")
+	if reason := IsSensitivePath(filepath.Join(cfgDir, "env")); reason == "" {
+		t.Fatalf("expected custom HAWK_CONFIG_DIR env file blocked, got empty")
 	}
 }
 
-func TestIsSensitivePath_EyrieConfigDirTakesPrecedence(t *testing.T) {
+func TestIsSensitivePath_EyrieConfigDir(t *testing.T) {
 	hawkDir := filepath.Join(t.TempDir(), "hawk")
 	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
 	t.Setenv("HAWK_CONFIG_DIR", hawkDir)

@@ -39,13 +39,12 @@ func TestProviderConfigPathUsesEyrieOverrideWithoutMovingHawkSettings(t *testing
 	}
 }
 
-func TestProviderConfigPathFallsBackToHawkOverride(t *testing.T) {
-	hawkDir := filepath.Join(t.TempDir(), "hawk")
-	t.Setenv(envConfigDir, hawkDir)
+func TestProviderConfigPathDefaultsToEyrieDir(t *testing.T) {
+	t.Setenv(envConfigDir, filepath.Join(t.TempDir(), "hawk"))
 	t.Setenv(envEyrieConfigDir, "  ")
 
-	if got, want := ProviderConfigPath(), filepath.Join(hawkDir, "provider.json"); got != want {
-		t.Fatalf("ProviderConfigPath() = %q, want HAWK_CONFIG_DIR fallback %q", got, want)
+	if got, want := ProviderConfigPath(), filepath.Join(mustUserConfigDir(), "eyrie", "provider.json"); got != want {
+		t.Fatalf("ProviderConfigPath() = %q, want Eyrie default %q", got, want)
 	}
 }
 

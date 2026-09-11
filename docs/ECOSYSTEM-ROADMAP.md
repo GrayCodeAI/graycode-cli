@@ -7,8 +7,8 @@ depend on.
 **Evidence base:** `docs/RESEARCH.md`, `docs/COMPETITIVE.md`, `docs/plans/competitive-gap-*.md`
 (top-20 OSS + top-20 arXiv papers, 2026-09-09), source audits of all 4 repos,
 and web research (2026-09-09). This document supersedes the stale
-`IMPLEMENTATION-ROADMAP.md` (which still references the retired `starling` /
-`hawk` / `eyrie` names and a 2026-07-05 baseline).
+`IMPLEMENTATION-ROADMAP.md` (which still references the retired `starling`
+name and a 2026-07-05 baseline).
 
 > **Execution status: Phases 0–5 DONE (2026-09-09).** Phase 0 (integrity),
 > Phase 1 (restore the 5 engines), Phase 2 (product honesty + verification

@@ -79,8 +79,8 @@ hawk models refresh
 - legacy `~/.hawk/env` or `~/.hawk/.env` files should be migrated away
 - sensitive files like provider config and SSH paths should be blocked from agent reads
 
-Eyrie resolves provider state from `EYRIE_CONFIG_DIR` first, then
-`HAWK_CONFIG_DIR` for compatibility, then the platform user-config directory.
+Eyrie resolves provider state from `EYRIE_CONFIG_DIR` first, then the
+platform user-config directory.
 Hawk protects that resolved path even when it is customized or symlinked.
 
 If Hawk detects old plaintext secrets, run Hawk once and complete `/config`, or remove the secret fields manually after backing up the file.

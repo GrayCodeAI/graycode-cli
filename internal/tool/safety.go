@@ -289,10 +289,6 @@ func IsSensitivePath(path string) string {
 	}
 
 	if cfgDir := strings.TrimSpace(env.Getenv("HAWK_CONFIG_DIR")); cfgDir != "" {
-		customProv := filepath.Join(cfgDir, "provider.json")
-		if matchesResolvedPath(clean, customProv) {
-			return "access to provider.json is blocked for security (API credentials)"
-		}
 		customEnv := filepath.Join(cfgDir, "env")
 		if matchesResolvedPath(clean, customEnv) {
 			return "access to hawk env file is blocked for security (API keys)"
@@ -389,7 +385,7 @@ func CommandReferencesSensitivePath(command string) string {
 	command = expandCommandPathVariables(command)
 	configuredPaths := []string{storage.ProviderConfigPath()}
 	if cfgDir := strings.TrimSpace(env.Getenv("HAWK_CONFIG_DIR")); cfgDir != "" {
-		configuredPaths = append(configuredPaths, filepath.Join(cfgDir, "provider.json"), filepath.Join(cfgDir, "env"), filepath.Join(cfgDir, ".env"))
+		configuredPaths = append(configuredPaths, filepath.Join(cfgDir, "env"), filepath.Join(cfgDir, ".env"))
 	}
 	for _, candidate := range configuredPaths {
 		if candidate != "" && strings.Contains(command, candidate) {

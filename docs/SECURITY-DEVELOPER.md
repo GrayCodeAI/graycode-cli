@@ -99,8 +99,7 @@ required for users, and neither provisioning path enables host execution.
 Eyrie owns the provider-state path. Resolution order is:
 
 1. `EYRIE_CONFIG_DIR/provider.json`
-2. `HAWK_CONFIG_DIR/provider.json` (compatibility fallback)
-3. the platform user-config directory under `hawk/provider.json`
+2. the platform user-config directory under `eyrie/provider.json`
 
 Hawk's Read/Edit/Write and Bash safety checks protect the resolved path,
 including a custom or symlinked `EYRIE_CONFIG_DIR`; protection is not limited

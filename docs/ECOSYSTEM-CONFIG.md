@@ -152,7 +152,7 @@ setting; the unified key is rendered down to it.
 | `gateway.model_catalog.path_env`     | `EYRIE_MODEL_CATALOG_PATH`           |
 | `gateway.model_catalog.url_env`      | `EYRIE_MODEL_CATALOG_URL`            |
 | `gateway.model_catalog.refresh`      | `EYRIE_MODEL_CATALOG_REFRESH` / `HAWK_AUTO_REFRESH_CATALOG` / `HAWK_CATALOG_REFRESH_ALWAYS` |
-| `gateway` config dir                 | `HAWK_CONFIG_DIR` (default `~/.eyrie`) |
+| `gateway` config dir                 | `EYRIE_CONFIG_DIR` (default `<user config dir>/eyrie`) |
 
 ### harrier: memory
 

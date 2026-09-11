@@ -49,13 +49,12 @@ func SettingsPath() string {
 }
 
 func ProviderConfigPath() string {
-	// Eyrie owns provider routing state. Keep HAWK_CONFIG_DIR as the
-	// compatibility fallback, but let Eyrie's host-neutral override win when
-	// both variables are configured.
+	// Eyrie owns provider routing state and resolves it from EYRIE_CONFIG_DIR,
+	// defaulting to its own directory under the user config root.
 	if dir := cleanEnvDir(envEyrieConfigDir); dir != "" {
 		return filepath.Join(dir, "provider.json")
 	}
-	return filepath.Join(ConfigDir(), "provider.json")
+	return filepath.Join(mustUserConfigDir(), "eyrie", "provider.json")
 }
 
 func SessionsDir() string {

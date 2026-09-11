@@ -284,25 +284,11 @@ func TestProviderConfigPath_EyrieOverride(t *testing.T) {
 	}
 }
 
-func TestProviderConfigPath_HawkFallback(t *testing.T) {
-	hawkDir := filepath.Join(t.TempDir(), "hawk")
-	t.Setenv(envConfigDir, hawkDir)
-	t.Setenv(envEyrieConfigDir, "")
-
-	got := ProviderConfigPath()
-	want := filepath.Join(hawkDir, "provider.json")
-	if got != want {
-		t.Errorf("ProviderConfigPath() = %q, want %q", got, want)
-	}
-}
-
 func TestProviderConfigPath_EyrieWhitespaceIgnored(t *testing.T) {
-	hawkDir := filepath.Join(t.TempDir(), "hawk")
-	t.Setenv(envConfigDir, hawkDir)
 	t.Setenv(envEyrieConfigDir, "   ") // whitespace should be treated as empty
 
 	got := ProviderConfigPath()
-	want := filepath.Join(hawkDir, "provider.json")
+	want := filepath.Join(mustUserConfigDir(), "eyrie", "provider.json")
 	if got != want {
 		t.Errorf("ProviderConfigPath() = %q, want %q", got, want)
 	}

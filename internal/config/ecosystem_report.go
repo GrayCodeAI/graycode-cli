@@ -12,7 +12,7 @@ import (
 
 // EcosystemReport is the structured view of the ecosystem panel.
 type EcosystemReport struct {
-	Eyre    EcosystemEyrie   `json:"eyrie"`
+	Eyrie   EcosystemEyrie   `json:"eyrie"`
 	Harrier EcosystemHarrier `json:"harrier"`
 	Shrike  EcosystemShrike  `json:"shrike"`
 }
@@ -42,16 +42,16 @@ func BuildEcosystemReport(ctx context.Context, provider, model string) Ecosystem
 
 	// eyrie
 	cat := CatalogHealthReport(ctx)
-	r.Eyre.CatalogExists = cat.Exists
-	r.Eyre.ModelCount = cat.Models
+	r.Eyrie.CatalogExists = cat.Exists
+	r.Eyrie.ModelCount = cat.Models
 	pre := EnginePreflightReport(ctx)
-	r.Eyre.Ready = pre.Ready
+	r.Eyrie.Ready = pre.Ready
 	if strings.TrimSpace(provider) != "" && provider != "auto" {
-		r.Eyre.Provider = provider
+		r.Eyrie.Provider = provider
 	}
 	if dep, err := EngineDeploymentSummary(ctx, model); err == nil {
-		r.Eyre.RoutingSource = dep.RoutingSource
-		r.Eyre.RoutingStages = dep.RoutingStages
+		r.Eyrie.RoutingSource = dep.RoutingSource
+		r.Eyrie.RoutingStages = dep.RoutingStages
 	}
 
 	// harrier
