@@ -204,7 +204,7 @@ Install a skill from a source.
 
 ```
 /skills install go-review
-graycode skills install go-review
+hawk skills install go-review
 ```
 
 ### `/skills audit`
@@ -213,7 +213,7 @@ Security scan installed skills.
 
 ```
 /skills audit
-graycode skills audit
+hawk skills audit
 ```
 
 ---
@@ -359,7 +359,7 @@ Quick ready-to-chat check.
 
 ### `/ecosystem`
 
-Show ecosystem component status (GraycodeRouter, harrier, shrike).
+Show ecosystem component status (Eyrie, harrier, shrike).
 
 ```
 /ecosystem
@@ -455,7 +455,7 @@ Toggle vim-style keybindings.
 
 ### `/refresh-model-catalog`
 
-Fetch the latest deployment-aware model catalog from GraycodeRouter.
+Fetch the latest deployment-aware model catalog from Eyrie.
 
 ```
 /refresh-model-catalog

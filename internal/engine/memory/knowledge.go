@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/safewrite"
+	"github.com/GrayCodeAI/hawk/internal/safewrite"
 )
 
 // KnowledgeEntry represents a single piece of distilled knowledge.

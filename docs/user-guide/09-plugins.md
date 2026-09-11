@@ -20,12 +20,12 @@ For example, a `team-tools` plugin might include a deploy skill, a code-review a
 
 ## Plugin Locations
 
-Graycode discovers plugins from these locations, in priority order:
+Hawk discovers plugins from these locations, in priority order:
 
 | Location | Scope | Trust Required |
 |----------|-------|----------------|
-| `.graycode/plugins/` | Project | Yes |
-| `~/.graycode/plugins/` | User | No |
+| `.hawk/plugins/` | Project | Yes |
+| `~/.hawk/plugins/` | User | No |
 | `--plugin-dir` | Process | No |
 
 When two plugins share a name, the higher-priority location wins.
@@ -38,21 +38,21 @@ Manage plugins from the command line:
 
 ```bash
 # List installed plugins
-graycode plugins list
+hawk plugins list
 
 # Install a plugin
-graycode plugins install user/repo
-graycode plugins install user/repo@v1.0
-graycode plugins install /path/to/local/plugin
+hawk plugins install user/repo
+hawk plugins install user/repo@v1.0
+hawk plugins install /path/to/local/plugin
 
 # Install with trust (required for project plugins)
-graycode plugins install user/repo --trust
+hawk plugins install user/repo --trust
 
 # Uninstall a plugin
-graycode plugins uninstall my-plugin
+hawk plugins uninstall my-plugin
 
 # Update plugins
-graycode plugins update
+hawk plugins update
 ```
 
 ---
@@ -63,15 +63,15 @@ Browse and install plugins from the community marketplace:
 
 ```bash
 # Search marketplace
-graycode plugins search go
+hawk plugins search go
 
 # Install from marketplace
-graycode plugins install go-review --trust
+hawk plugins install go-review --trust
 ```
 
 ### Adding Marketplace Sources
 
-Configure additional marketplaces in `~/.graycode/settings.json`:
+Configure additional marketplaces in `~/.hawk/settings.json`:
 
 ```json
 {
@@ -90,13 +90,13 @@ Configure additional marketplaces in `~/.graycode/settings.json`:
 
 ## Trust Model
 
-- **User plugins** (`~/.graycode/plugins/`) — Trusted automatically
-- **Project plugins** (`.graycode/plugins/`) — Require explicit trust before activation
+- **User plugins** (`~/.hawk/plugins/`) — Trusted automatically
+- **Project plugins** (`.hawk/plugins/`) — Require explicit trust before activation
 
 Trust is required because plugins can execute code via hooks and MCP servers. To trust a plugin:
 
 ```bash
-graycode plugins install <source> --trust
+hawk plugins install <source> --trust
 ```
 
 ---

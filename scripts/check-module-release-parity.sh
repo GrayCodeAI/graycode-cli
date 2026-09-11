@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Workspace release parity: verify every ecosystem module Graycode requires
+# Workspace release parity: verify every ecosystem module Hawk requires
 # resolves to a published, reachable commit. This is a multi-repository
 # check; the repositories are sibling checkouts, not Git submodules.
-# Run from the Graycode repository root.
+# Run from the Hawk repository root.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MANIFEST="${ROOT_DIR}/ecosystem.yaml"
 repos=()
 while IFS= read -r repo; do
-  [[ "${repo}" != "graycode-cli" && -n "${repo}" ]] && repos+=("${repo}")
+  [[ "${repo}" != "hawk" && -n "${repo}" ]] && repos+=("${repo}")
 done < <("${ROOT_DIR}/scripts/ecosystem-manifest.sh" list workspace)
 failed=0
 
-# Directory and module path differ when a repo is renamed (e.g. graycode-router
-# hosts module github.com/GrayCodeAI/graycode-router), so resolve via the manifest.
+# Directory and module path differ when a repo is renamed (e.g. eyrie
+# hosts module github.com/GrayCodeAI/eyrie), so resolve via the manifest.
 module_for_repo() {
   awk -v dir="$1" '
     /^  - directory:/ { cur=$0; sub(/^  - directory:[[:space:]]*/, "", cur); next }

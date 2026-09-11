@@ -13,8 +13,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/safewrite"
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/safewrite"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // TokenStore manages authentication tokens.
@@ -61,7 +61,7 @@ func (s *SecureStorage) Get(account string) (string, error) {
 	if runtime.GOOS == "windows" {
 		return s.getWindows(account)
 	}
-	// Fallback to file-based storage for Linux (keyring handled by graycode-router layer)
+	// Fallback to file-based storage for Linux (keyring handled by eyrie layer)
 	return s.getFile(account)
 }
 

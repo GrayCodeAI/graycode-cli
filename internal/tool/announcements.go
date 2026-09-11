@@ -1,4 +1,4 @@
-// announcements.go — System announcements for Graycode.
+// announcements.go — System announcements for Hawk.
 //
 // Provides notification banners for releases, important updates, and system notices.
 // Announcements can be shown/dismissed and support expiry dates.
@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // Announcement represents a system announcement.
@@ -164,9 +164,9 @@ func PruneHiddenIDs(state *AnnouncementsState, active []*Announcement) bool {
 }
 
 // ResolveStartupAnnouncements resolves announcements with env override support.
-// GRAYCODE_ANNOUNCEMENTS_OVERRIDE can be set to a JSON array of announcements.
+// HAWK_ANNOUNCEMENTS_OVERRIDE can be set to a JSON array of announcements.
 func ResolveStartupAnnouncements(remote []*Announcement) []*Announcement {
-	override := os.Getenv("GRAYCODE_ANNOUNCEMENTS_OVERRIDE")
+	override := os.Getenv("HAWK_ANNOUNCEMENTS_OVERRIDE")
 	if override != "" {
 		var overrideAnnouncements []*Announcement
 		if err := json.Unmarshal([]byte(override), &overrideAnnouncements); err == nil {

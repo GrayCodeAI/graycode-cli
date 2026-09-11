@@ -1,6 +1,6 @@
 # Agent Mode (ACP) and IDE Integration
 
-Agent mode runs Graycode as an ACP (Agent Client Protocol) server for IDE integration and custom tooling.
+Agent mode runs Hawk as an ACP (Agent Client Protocol) server for IDE integration and custom tooling.
 
 ---
 
@@ -17,10 +17,10 @@ The [Agent Client Protocol (ACP)](https://agentclientprotocol.com) is a standard
 
 ## stdio Transport
 
-Run Graycode as an ACP server over stdio:
+Run Hawk as an ACP server over stdio:
 
 ```bash
-graycode agent stdio
+hawk agent stdio
 ```
 
 Clients include:
@@ -31,9 +31,9 @@ Clients include:
 ### Options
 
 ```bash
-graycode agent --model gpt-4o stdio
-graycode agent --auto stdio
-graycode agent --agent-profile path/to/profile.yaml stdio
+hawk agent --model gpt-4o stdio
+hawk agent --auto stdio
+hawk agent --agent-profile path/to/profile.yaml stdio
 ```
 
 | Flag | Description |
@@ -49,7 +49,7 @@ graycode agent --agent-profile path/to/profile.yaml stdio
 ### WebSocket Server
 
 ```bash
-graycode agent serve --bind 127.0.0.1:2419 --secret <token>
+hawk agent serve --bind 127.0.0.1:2419 --secret <token>
 ```
 
 Connect clients over WebSocket using the secret token for authentication.
@@ -81,7 +81,7 @@ ACP streams structured events with `sessionUpdate` types:
 
 ## Extension Methods
 
-Graycode provides `x.ai/*` extension methods:
+Hawk provides `x.ai/*` extension methods:
 
 | Category | Methods |
 |----------|---------|
@@ -110,7 +110,7 @@ Graycode provides `x.ai/*` extension methods:
 import { spawn } from "child_process";
 
 // Start ACP server
-const proc = spawn("graycode", ["agent", "stdio"]);
+const proc = spawn("hawk", ["agent", "stdio"]);
 
 // Initialize
 proc.stdin.write(JSON.stringify({

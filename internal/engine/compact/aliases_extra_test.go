@@ -3,7 +3,7 @@ package compact
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -83,7 +83,7 @@ func TestCountClearableToolResults(t *testing.T) {
 
 func TestIsThinkingMessage(t *testing.T) {
 	// Empty message
-	result := isThinkingMessage(types.GraycodeRouterMessage{})
+	result := isThinkingMessage(types.EyrieMessage{})
 	if result {
 		t.Error("expected false for empty message")
 	}
@@ -130,7 +130,7 @@ func TestReadSessionMemory_NonExistent(t *testing.T) {
 
 func TestIsCompactBoundary(t *testing.T) {
 	// Empty message
-	result := IsCompactBoundary(types.GraycodeRouterMessage{})
+	result := IsCompactBoundary(types.EyrieMessage{})
 	if result {
 		t.Error("expected false for empty message")
 	}

@@ -5,12 +5,12 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // spinnerWaveColors — 20 distinct hues; the wave flows glyph → verb → ▪▫▫.
 var spinnerWaveColors = [20][3]int{
-	{255, 215, 0}, // Talon Gold — anchor the wave in Graycode's brand color.
+	{255, 215, 0}, // Talon Gold — anchor the wave in Hawk's brand color.
 	{255, 60, 60},
 	{255, 100, 80},
 	{255, 150, 60},
@@ -46,7 +46,7 @@ func ansiSpinnerWaveColor(index int) string {
 // renderSpinnerWaveLine paints glyph + verb + ▪▫▫ as one flowing strip (20 colors).
 func renderSpinnerWaveLine(glyph, verb string, wavePhase, dotPhase int) string {
 	verbRunes := utf8.RuneCountInString(verb)
-	total := 1 + verbRunes + 1 + graycodeTypingDots
+	total := 1 + verbRunes + 1 + hawkTypingDots
 	if verb == "" {
 		total = 1
 	}
@@ -66,10 +66,10 @@ func renderSpinnerWaveLine(glyph, verb string, wavePhase, dotPhase int) string {
 	}
 	b.WriteString(renderSpinnerWaveSlot(' ', wavePhase+pos, head == pos, false))
 	pos++
-	for i := 0; i < graycodeTypingDots; i++ {
+	for i := 0; i < hawkTypingDots; i++ {
 		g := icons.CircleOutline()
 		bold := false
-		if i == dotPhase%graycodeTypingDots {
+		if i == dotPhase%hawkTypingDots {
 			g = icons.CircleFilled()
 			bold = true
 		}

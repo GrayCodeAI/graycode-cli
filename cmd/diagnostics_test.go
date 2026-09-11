@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
-	"github.com/GrayCodeAI/graycode-cli/internal/resilience/health"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/hawk/internal/resilience/health"
 )
 
 type diagnosticsContextKey struct{}
@@ -25,7 +25,7 @@ func (s *contextRecordingCredentialStore) Get(ctx context.Context, account strin
 
 func TestDoctorReport(t *testing.T) {
 	t.Parallel()
-	settings := graycodeconfig.Settings{}
+	settings := hawkconfig.Settings{}
 	report := doctorReport(settings)
 	if report == "" {
 		t.Error("doctorReport should produce non-empty output")
@@ -33,14 +33,14 @@ func TestDoctorReport(t *testing.T) {
 	if !strings.Contains(report, "Version") {
 		t.Error("report should mention version")
 	}
-	if !strings.Contains(report, "Ecosystem (graycode-router · harrier · shrike)") {
+	if !strings.Contains(report, "Ecosystem (eyrie · harrier · shrike)") {
 		t.Error("report should include ecosystem panel")
 	}
 }
 
 func TestDoctorReportProviderModelOrder(t *testing.T) {
 	t.Parallel()
-	settings := graycodeconfig.Settings{
+	settings := hawkconfig.Settings{
 		Model:    "claude-sonnet-4-20250514",
 		Provider: "anthropic",
 	}
@@ -56,14 +56,14 @@ func TestDoctorReportProviderModelOrder(t *testing.T) {
 
 func TestDoctorReportUsesResolvedProviderForChecks(t *testing.T) {
 	isolateCredentialHome(t)
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	gateway.SetDefaultStore(&gateway.MapStore{})
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 
-	report := doctorReport(graycodeconfig.Settings{
+	report := doctorReport(hawkconfig.Settings{
 		Model:    "claude-sonnet-4-20250514",
 		Provider: "anthropic",
 	})
@@ -74,23 +74,23 @@ func TestDoctorReportUsesResolvedProviderForChecks(t *testing.T) {
 
 func TestProviderCredentialHealthCheckerResolvesAuto(t *testing.T) {
 	isolateCredentialHome(t)
-	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", t.TempDir())
-	graycodeconfig.InvalidateConfigUICache()
+	t.Setenv("EYRIE_CONFIG_DIR", t.TempDir())
+	hawkconfig.InvalidateConfigUICache()
 	store := &contextRecordingCredentialStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.WithValue(context.Background(), diagnosticsContextKey{}, "checker-context")
 	if err := store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatal(err)
 	}
-	if err := graycodeconfig.SetActiveProvider(ctx, "openrouter"); err != nil {
+	if err := hawkconfig.SetActiveProvider(ctx, "openrouter"); err != nil {
 		t.Fatal(err)
 	}
-	if err := graycodeconfig.SetActiveModel(ctx, "gpt-4o"); err != nil {
+	if err := hawkconfig.SetActiveModel(ctx, "gpt-4o"); err != nil {
 		t.Fatal(err)
 	}
 	store.contextValue = nil
@@ -117,12 +117,12 @@ func TestProviderCredentialHealthCheckerResolvesAuto(t *testing.T) {
 
 func TestProviderCredentialHealthCheckerMissingIsUnhealthy(t *testing.T) {
 	isolateCredentialHome(t)
-	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", t.TempDir())
-	graycodeconfig.InvalidateConfigUICache()
+	t.Setenv("EYRIE_CONFIG_DIR", t.TempDir())
+	hawkconfig.InvalidateConfigUICache()
 	gateway.SetDefaultStore(&gateway.MapStore{})
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 
 	result := providerCredentialHealthChecker("openai")(context.Background())
@@ -142,7 +142,7 @@ func TestProviderCredentialHealthCheckerMissingIsUnhealthy(t *testing.T) {
 
 func TestSettingsSummary(t *testing.T) {
 	t.Parallel()
-	settings := graycodeconfig.Settings{
+	settings := hawkconfig.Settings{
 		Model:    "claude-sonnet-4-20250514",
 		Provider: "anthropic",
 	}
@@ -154,7 +154,7 @@ func TestSettingsSummary(t *testing.T) {
 
 func TestMcpConfigSummary(t *testing.T) {
 	t.Parallel()
-	settings := graycodeconfig.Settings{}
+	settings := hawkconfig.Settings{}
 	summary := mcpConfigSummary(settings)
 	if summary == "" {
 		t.Error("mcpConfigSummary should produce output")

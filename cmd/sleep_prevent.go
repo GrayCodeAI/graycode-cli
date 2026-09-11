@@ -43,7 +43,7 @@ func preventSleepLinux() func() {
 		"systemd-inhibit",
 		"--mode=block",
 		"--what=idle:sleep",
-		"--who=graycode",
+		"--who=hawk",
 		"--why=Agent turn in progress",
 		"sleep", "86400")
 	if err := cmd.Start(); err != nil {

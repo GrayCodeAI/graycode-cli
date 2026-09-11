@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestFileTracker_NewFileTracker(t *testing.T) {
@@ -67,7 +67,7 @@ func TestFileTracker_RecordModified_Empty(t *testing.T) {
 func TestFileTracker_ExtractFromMessages(t *testing.T) {
 	t.Parallel()
 	ft := NewFileTracker()
-	messages := []types.GraycodeRouterMessage{
+	messages := []types.EyrieMessage{
 		{
 			Role: "assistant",
 			ToolUse: []types.ToolCall{
@@ -88,7 +88,7 @@ func TestFileTracker_ExtractFromMessages(t *testing.T) {
 func TestFileTracker_ExtractFromMessages_SkipNonAssistant(t *testing.T) {
 	t.Parallel()
 	ft := NewFileTracker()
-	messages := []types.GraycodeRouterMessage{
+	messages := []types.EyrieMessage{
 		{Role: "user", ToolUse: []types.ToolCall{{Name: "Read", Arguments: map[string]interface{}{"path": "x.go"}}}},
 	}
 	ft.ExtractFromMessages(messages)

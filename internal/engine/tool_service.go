@@ -9,17 +9,17 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/diff"
-	"github.com/GrayCodeAI/graycode-cli/internal/hooks"
-	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
-	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/repomap"
-	"github.com/GrayCodeAI/graycode-cli/internal/observability/metrics"
-	"github.com/GrayCodeAI/graycode-cli/internal/observability/oteltrace"
-	"github.com/GrayCodeAI/graycode-cli/internal/prompts"
-	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
-	"github.com/GrayCodeAI/graycode-cli/internal/securitylog"
-	"github.com/GrayCodeAI/graycode-cli/internal/tool"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/engine/diff"
+	"github.com/GrayCodeAI/hawk/internal/hooks"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/repomap"
+	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
+	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/hawk/internal/prompts"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/securitylog"
+	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // ToolService is the Session's view of the tool execution surface:
@@ -454,7 +454,7 @@ func (s *ToolService) ExecuteOne(ctx context.Context, tc types.ToolCall, overrid
 	var commitChat func(context.Context, string) (string, error)
 	if s.deps.chat != nil {
 		commitChat = func(chatCtx context.Context, prompt string) (string, error) {
-			resp, err := s.deps.chat.Chat(chatCtx, []types.GraycodeRouterMessage{{Role: "user", Content: prompt}}, types.ChatOptions{Provider: s.deps.chat.Provider(), Model: s.deps.chat.Model(), MaxTokens: 256})
+			resp, err := s.deps.chat.Chat(chatCtx, []types.EyrieMessage{{Role: "user", Content: prompt}}, types.ChatOptions{Provider: s.deps.chat.Provider(), Model: s.deps.chat.Model(), MaxTokens: 256})
 			if err != nil {
 				return "", err
 			}

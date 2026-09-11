@@ -3,8 +3,8 @@ package harness
 import (
 	"time"
 
-	harnesscontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/harness"
-	typescontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
+	harnesscontracts "github.com/GrayCodeAI/hawk/internal/contracts/harness"
+	typescontracts "github.com/GrayCodeAI/hawk/internal/contracts/types"
 )
 
 // Dimension represents one of the five core dimensions of the Agent Work Loop.
@@ -100,7 +100,7 @@ type EvaluateOptions struct {
 	OutputDir       string
 }
 
-// ToContractReport converts the native Graycode HarnessReport to the neutral contracts Report.
+// ToContractReport converts the native Hawk HarnessReport to the neutral contracts Report.
 func (r *HarnessReport) ToContractReport() *harnesscontracts.Report {
 	if r == nil {
 		return nil

@@ -5,13 +5,13 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestSynthesizeSubAgent(t *testing.T) {
 	t.Run("tools disabled and prompt appended", func(t *testing.T) {
 		mock := &synthesisMockClient{response: "Here is my summary of findings."}
-		conversation := []types.GraycodeRouterMessage{
+		conversation := []types.EyrieMessage{
 			{Role: "user", Content: "Find all Go files with errors"},
 			{Role: "assistant", Content: "I'll search for Go files."},
 		}
@@ -42,7 +42,7 @@ func TestSynthesizeSubAgent(t *testing.T) {
 	})
 
 	t.Run("nil client returns error", func(t *testing.T) {
-		_, err := SynthesizeSubAgent(context.Background(), nil, "model", []types.GraycodeRouterMessage{{Role: "user", Content: "test"}})
+		_, err := SynthesizeSubAgent(context.Background(), nil, "model", []types.EyrieMessage{{Role: "user", Content: "test"}})
 		if err == nil {
 			t.Fatal("expected error for nil client")
 		}
@@ -50,14 +50,14 @@ func TestSynthesizeSubAgent(t *testing.T) {
 
 	t.Run("provider error propagated", func(t *testing.T) {
 		mock := &synthesisMockClient{err: errors.New("provider unavailable")}
-		_, err := SynthesizeSubAgent(context.Background(), mock, "model", []types.GraycodeRouterMessage{{Role: "user", Content: "test"}})
+		_, err := SynthesizeSubAgent(context.Background(), mock, "model", []types.EyrieMessage{{Role: "user", Content: "test"}})
 		if err == nil {
 			t.Fatal("expected error from provider")
 		}
 	})
 
 	t.Run("empty response returns error", func(t *testing.T) {
-		_, err := SynthesizeSubAgent(context.Background(), &synthesisMockClient{}, "model", []types.GraycodeRouterMessage{{Role: "user", Content: "test"}})
+		_, err := SynthesizeSubAgent(context.Background(), &synthesisMockClient{}, "model", []types.EyrieMessage{{Role: "user", Content: "test"}})
 		if err == nil {
 			t.Fatal("expected error for empty response")
 		}
@@ -68,16 +68,16 @@ type synthesisMockClient struct {
 	response string
 	err      error
 	calls    int
-	messages []types.GraycodeRouterMessage
+	messages []types.EyrieMessage
 	options  types.ChatOptions
 }
 
-func (m *synthesisMockClient) Chat(_ context.Context, messages []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error) {
+func (m *synthesisMockClient) Chat(_ context.Context, messages []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
 	m.calls++
-	m.messages = append([]types.GraycodeRouterMessage(nil), messages...)
+	m.messages = append([]types.EyrieMessage(nil), messages...)
 	m.options = opts
 	if m.err != nil {
 		return nil, m.err
 	}
-	return &types.GraycodeRouterResponse{Content: m.response, FinishReason: "end_turn"}, nil
+	return &types.EyrieResponse{Content: m.response, FinishReason: "end_turn"}, nil
 }

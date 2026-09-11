@@ -97,12 +97,12 @@ func TestAttemptFromBranch(t *testing.T) {
 		branch string
 		want   int
 	}{
-		{"graycode-mission/m1/f1/attempt-1", 1},
-		{"graycode-mission/m1/f1/attempt-3", 3},
-		{"graycode-mission/m1/f1/attempt-12", 12},
-		{"graycode-mission/m1/f1", 0},
+		{"hawk-mission/m1/f1/attempt-1", 1},
+		{"hawk-mission/m1/f1/attempt-3", 3},
+		{"hawk-mission/m1/f1/attempt-12", 12},
+		{"hawk-mission/m1/f1", 0},
 		{"", 0},
-		{"graycode-mission/m1/f1/attempt-", 0},
+		{"hawk-mission/m1/f1/attempt-", 0},
 	}
 	for _, tc := range tests {
 		if got := attemptFromBranch(tc.branch); got != tc.want {

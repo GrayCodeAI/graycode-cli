@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 func TestTerminal_LifecycleAndRead(t *testing.T) {
@@ -16,7 +16,7 @@ func TestTerminal_LifecycleAndRead(t *testing.T) {
 	defer cancel()
 
 	// Spawn echo / interactive shell
-	term, err := store.Create(ctx, "session-1", "", "echo hello_graycode", 24, 80, sandbox.SandboxConfig{})
+	term, err := store.Create(ctx, "session-1", "", "echo hello_hawk", 24, 80, sandbox.SandboxConfig{})
 	if err != nil {
 		t.Fatalf("Create terminal failed: %v", err)
 	}
@@ -35,12 +35,12 @@ func TestTerminal_LifecycleAndRead(t *testing.T) {
 			t.Fatalf("Read failed: %v", rErr)
 		}
 		out += chunk
-		if strings.Contains(out, "hello_graycode") {
+		if strings.Contains(out, "hello_hawk") {
 			break
 		}
 	}
-	if !strings.Contains(out, "hello_graycode") {
-		t.Errorf("expected output to contain hello_graycode, got %q", out)
+	if !strings.Contains(out, "hello_hawk") {
+		t.Errorf("expected output to contain hello_hawk, got %q", out)
 	}
 }
 

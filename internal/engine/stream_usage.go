@@ -6,21 +6,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
-	"github.com/GrayCodeAI/graycode-cli/internal/usage"
+	"github.com/GrayCodeAI/hawk/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
+	"github.com/GrayCodeAI/hawk/internal/usage"
 
-	analytics "github.com/GrayCodeAI/graycode-cli/internal/observability"
+	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 )
 
 // streamUsageLedger prevents providers that repeat their final usage on the
 // done event from being billed twice. Distinct usage events are preserved so
 // multi-request continuation streams still account for every provider call.
 type streamUsageLedger struct {
-	lastUsageEvent *types.GraycodeRouterUsage
+	lastUsageEvent *types.EyrieUsage
 }
 
-func (l *streamUsageLedger) shouldRecord(usage *types.GraycodeRouterUsage, terminal bool) bool {
+func (l *streamUsageLedger) shouldRecord(usage *types.EyrieUsage, terminal bool) bool {
 	if usage == nil {
 		return false
 	}
@@ -37,14 +37,14 @@ func (l *streamUsageLedger) reset() {
 	l.lastUsageEvent = nil
 }
 
-func equalStreamUsage(a, b *types.GraycodeRouterUsage) bool {
+func equalStreamUsage(a, b *types.EyrieUsage) bool {
 	if a == nil || b == nil {
 		return false
 	}
 	return *a == *b
 }
 
-func cloneStreamUsage(usage *types.GraycodeRouterUsage) *types.GraycodeRouterUsage {
+func cloneStreamUsage(usage *types.EyrieUsage) *types.EyrieUsage {
 	if usage == nil {
 		return nil
 	}
@@ -69,7 +69,7 @@ func updateResolvedRoute(provider, model string, route *types.ResolvedRoute) (st
 }
 
 // recordStreamUsage updates session billing/context counters and notifies the TUI.
-// Provider and model are the concrete route selected by GraycodeRouter, not merely the
+// Provider and model are the concrete route selected by Eyrie, not merely the
 // user's preference, so fallback usage is attributed to the transport that ran.
 func (s *Session) recordStreamUsage(ch chan<- StreamEvent, prompt, completion int, provider, model, taskType string, apiStart time.Time) {
 	if prompt <= 0 && completion <= 0 {

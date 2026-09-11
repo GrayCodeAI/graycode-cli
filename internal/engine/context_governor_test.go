@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestResolveModelContextWindow_Fallback(t *testing.T) {
@@ -38,7 +38,7 @@ func TestMaybeSpillToolOutput_SmallUnchanged(t *testing.T) {
 }
 
 func TestMaybeSpillToolOutput_LargeSpills(t *testing.T) {
-	t.Setenv("GRAYCODE_CACHE_DIR", t.TempDir())
+	t.Setenv("HAWK_CACHE_DIR", t.TempDir())
 	in := strings.Repeat("x", toolOutputSpillMinChars+100)
 	got := maybeSpillToolOutput(in, "Bash", "call-1")
 	if !strings.Contains(got, "/scratch/") {
@@ -51,7 +51,7 @@ func TestMaybeSpillToolOutput_LargeSpills(t *testing.T) {
 
 func TestManageContextBeforeTurn_CollapseOnly(t *testing.T) {
 	s := NewSession("", "test-model", "sys", nil)
-	s.Persistence().SetRawMessages([]types.GraycodeRouterMessage{
+	s.Persistence().SetRawMessages([]types.EyrieMessage{
 		{Role: "user", ToolResults: []types.ToolResult{{Content: "err", IsError: true}}},
 		{Role: "user", ToolResults: []types.ToolResult{{Content: "err", IsError: true}}},
 	})

@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/routing"
+	"github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 const testProvider = "anthropic"

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestCacheDecisionNonAnthropicOff(t *testing.T) {
@@ -31,7 +31,7 @@ func TestCacheDecisionLargePrefixOn(t *testing.T) {
 }
 
 func TestCacheDecisionCountsToolCatalog(t *testing.T) {
-	tools := []types.GraycodeRouterTool{
+	tools := []types.EyrieTool{
 		{Name: "t1", Description: strings.Repeat("d", 9000), Parameters: map[string]interface{}{"type": "object"}},
 	}
 	sys := "small"

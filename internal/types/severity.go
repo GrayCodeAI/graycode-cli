@@ -1,10 +1,10 @@
-// Package types provides Graycode-owned runtime types and shared compatibility aliases.
+// Package types provides Hawk-owned runtime types and shared compatibility aliases.
 // Severity, TokenSeverity, and AuditSeverity are forwarded from internal/contracts/types.
 // Provider-facing compatibility now lives in explicit adapters inside internal/types/client.go.
 package types
 
 import (
-	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
+	contracts "github.com/GrayCodeAI/hawk/internal/contracts/types"
 )
 
 // Severity represents the impact level of a finding.

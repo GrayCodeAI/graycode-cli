@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	graycodeKestrel "github.com/GrayCodeAI/graycode-cli/internal/bridge/kestrel"
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	reviewcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/review"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	hawkKestrel "github.com/GrayCodeAI/hawk/internal/bridge/kestrel"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	reviewcontracts "github.com/GrayCodeAI/hawk/internal/contracts/review"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	kestrelLib "github.com/GrayCodeAI/kestrel"
 	"github.com/spf13/cobra"
 )
@@ -38,9 +38,9 @@ Types:
   test-fixtures  Find test helper opportunities
 
 Examples:
-  graycode review analyze security ./...
-  graycode review analyze complexity --fix main.go
-  graycode review analyze duplication ./internal/...`,
+  hawk review analyze security ./...
+  hawk review analyze complexity --fix main.go
+  hawk review analyze duplication ./internal/...`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runReviewAnalyze,
 }
@@ -124,9 +124,9 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Build the Kestrel bridge through Graycode's GraycodeRouter engine boundary.
+	// Build the Kestrel bridge through Hawk's Eyrie engine boundary.
 	ctx := context.Background()
-	selection := graycodeconfig.EffectiveSelection(ctx, graycodeconfig.SelectionOptions{
+	selection := hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{
 		ProviderOverride: strings.TrimSpace(provider),
 		ModelOverride:    strings.TrimSpace(analyzeModel),
 	})
@@ -141,7 +141,7 @@ func runReviewAnalyze(_ *cobra.Command, args []string) error {
 	}
 	opts = append(opts, kestrelLib.WithConcerns(analysisType))
 
-	bridge := graycodeKestrel.NewBridge(chatProvider, providerID, opts...)
+	bridge := hawkKestrel.NewBridge(chatProvider, providerID, opts...)
 	if !bridge.Ready() {
 		return fmt.Errorf("kestrel bridge not ready (check API key)")
 	}
@@ -257,12 +257,12 @@ func autoFixAnalysis(result *reviewcontracts.Result) error {
 	}
 	b.WriteString("\nApply minimal, focused fixes. Commit with 'fix: address analysis findings'.")
 
-	graycodeBin, err := os.Executable()
+	hawkBin, err := os.Executable()
 	if err != nil {
-		graycodeBin = "graycode"
+		hawkBin = "hawk"
 	}
 
-	cmd := exec.CommandContext(context.Background(), graycodeBin, "exec", "--auto", "full", b.String()) // #nosec G204 -- graycodeBin resolved via os.Executable() or literal 'graycode'; args are internal flags
+	cmd := exec.CommandContext(context.Background(), hawkBin, "exec", "--auto", "full", b.String()) // #nosec G204 -- hawkBin resolved via os.Executable() or literal 'hawk'; args are internal flags
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

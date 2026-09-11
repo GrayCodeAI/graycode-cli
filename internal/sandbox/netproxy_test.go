@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func startTestProxy(t *testing.T, proxy *NetworkProxy, ctx context.Context) string {

@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-router/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
 )
 
 func TestContentPartJSONContract(t *testing.T) {
-	in := GraycodeRouterMessage{
+	in := EyrieMessage{
 		Role: "user",
 		ContentParts: []ContentPart{
 			{Type: "text", Text: "hello"},
@@ -22,7 +22,7 @@ func TestContentPartJSONContract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	var got GraycodeRouterMessage
+	var got EyrieMessage
 	if err := json.Unmarshal(raw, &got); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}

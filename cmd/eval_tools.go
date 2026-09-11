@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/feature/eval"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/feature/eval"
+	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +29,7 @@ var evalToolsCmd = &cobra.Command{
 }
 
 // defaultToolUseCases is a small built-in set exercising clear positive and
-// negative tool-trigger situations against graycode's standard tools.
+// negative tool-trigger situations against hawk's standard tools.
 func defaultToolUseCases() []eval.ToolUseCase {
 	return []eval.ToolUseCase{
 		{
@@ -68,7 +68,7 @@ func defaultToolUseCases() []eval.ToolUseCase {
 }
 
 func runEvalTools(cmd *cobra.Command, _ []string) error {
-	settings := graycodeconfig.LoadSettings()
+	settings := hawkconfig.LoadSettings()
 
 	registry, err := defaultRegistry(settings)
 	if err != nil {
@@ -79,18 +79,18 @@ func runEvalTools(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	modelName, providerName := effectiveModelAndProvider(settings)
-	sess, err := newConfiguredGraycodeSession(settings, providerName, modelName, systemPrompt, registry, nil)
+	sess, err := newConfiguredHawkSession(settings, providerName, modelName, systemPrompt, registry, nil)
 	if err != nil {
 		return err
 	}
 
-	tools := registry.GraycodeRouterTools()
+	tools := registry.EyrieTools()
 
 	// caller performs one tool-aware turn and reports the first tool the model
 	// chose (if any). It does not execute the tool — we are scoring selection,
 	// not effects.
 	caller := func(ctx context.Context, c eval.ToolUseCase) (eval.ObservedCall, error) {
-		resp, err := sess.Chat(ctx, []types.GraycodeRouterMessage{
+		resp, err := sess.Chat(ctx, []types.EyrieMessage{
 			{Role: "user", Content: c.Prompt},
 		}, types.ChatOptions{Model: model, Tools: tools})
 		if err != nil {

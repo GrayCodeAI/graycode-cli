@@ -11,8 +11,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/session"
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 type sessionSaveResultMsg struct {
@@ -85,9 +85,9 @@ func (m *chatModel) saveSessionCmd() tea.Cmd {
 
 func formatQuitResumeMessage(sessionID string) string {
 	if strings.TrimSpace(sessionID) == "" {
-		return "Thank you for using Graycode!\n"
+		return "Thank you for using Hawk!\n"
 	}
-	return fmt.Sprintf("Thank you for using Graycode!\n\nTo resume this session, run: graycode --resume %s\n", sessionID)
+	return fmt.Sprintf("Thank you for using Hawk!\n\nTo resume this session, run: hawk --resume %s\n", sessionID)
 }
 
 // handleSessionCommand dispatches session-management slash commands.
@@ -534,7 +534,7 @@ func (m *chatModel) handleSessionCommand(cmd string, parts []string, text string
 	case "/session":
 		info := fmt.Sprintf("Session: %s\nModel: %s/%s\nSpec stage: %s\nMessages: %d\nTools: %d\n%s",
 			m.sessionID, m.session.Provider(), m.session.Model(),
-			specStageLabel(m.session), m.session.MessageCount(), len(m.registry.GraycodeRouterTools()), m.session.CostValue().Summary())
+			specStageLabel(m.session), m.session.MessageCount(), len(m.registry.EyrieTools()), m.session.CostValue().Summary())
 		m.messages = append(m.messages, displayMsg{role: "system", content: info})
 		return m, nil
 

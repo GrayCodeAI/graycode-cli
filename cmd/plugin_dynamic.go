@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
-	"github.com/GrayCodeAI/graycode-cli/internal/theme"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/theme"
 	"github.com/spf13/cobra"
 )
 
@@ -90,7 +90,7 @@ var pluginStatusCmd = &cobra.Command{
 		statuses := dm.Status()
 
 		if len(statuses) == 0 {
-			cmd.Println(auditTint("No plugins discovered. Run 'graycode plugin install' to add plugins.", textMuted))
+			cmd.Println(auditTint("No plugins discovered. Run 'hawk plugin install' to add plugins.", textMuted))
 			return nil
 		}
 
@@ -209,7 +209,7 @@ var pluginCreateCmd = &cobra.Command{
 		manifest := &plugin.ManifestV2{
 			Name:        name,
 			Version:     "0.1.0",
-			Description: fmt.Sprintf("A graycode plugin: %s", name),
+			Description: fmt.Sprintf("A hawk plugin: %s", name),
 			Author:      "",
 			Mode:        "subprocess",
 			Tools: []plugin.ManifestTool{
@@ -281,12 +281,12 @@ func main() {
 		// Write README.md
 		readme := fmt.Sprintf(`# %s
 
-A graycode plugin.
+A hawk plugin.
 
 ## Installation
 
 `+"```bash"+`
-graycode plugin install ./%s
+hawk plugin install ./%s
 `+"```"+`
 
 ## Usage
@@ -339,8 +339,8 @@ See `+"`plugin.json`"+` for the full manifest configuration.
 		cmd.Println()
 		cmd.Printf("%s\n", auditTint("Next steps:", textPrimary))
 		cmd.Printf("%s\n", auditTint("  cd "+name+" && go mod init "+name, textMuted))
-		cmd.Printf("%s\n", auditTint("  graycode plugin install ./"+name, textMuted))
-		cmd.Printf("%s\n", auditTint("  graycode plugin activate "+name, textMuted))
+		cmd.Printf("%s\n", auditTint("  hawk plugin install ./"+name, textMuted))
+		cmd.Printf("%s\n", auditTint("  hawk plugin activate "+name, textMuted))
 		return nil
 	},
 }
@@ -422,13 +422,13 @@ var pluginMarketplaceListCmd = &cobra.Command{
 		entries, err := mc.FetchAll()
 		if err != nil {
 			prog.Abort()
-			return fmt.Errorf("fetch marketplace: %w (indexes may be unpublished; add a source with graycode plugin marketplace add)", err)
+			return fmt.Errorf("fetch marketplace: %w (indexes may be unpublished; add a source with hawk plugin marketplace add)", err)
 		}
 		prog.CompleteStep(0)
 		prog.Done()
 		if len(entries) == 0 {
 			cmd.Println(auditTint("No marketplace plugins found.", textMuted))
-			cmd.Println(auditTint("Add a source: graycode plugin marketplace add <name> <index-url>", textMuted))
+			cmd.Println(auditTint("Add a source: hawk plugin marketplace add <name> <index-url>", textMuted))
 			return nil
 		}
 		rows := make([][]string, 0, len(entries))

@@ -11,7 +11,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-// DiscordGateway bridges graycode to Discord via the official Gateway (WebSocket),
+// DiscordGateway bridges hawk to Discord via the official Gateway (WebSocket),
 // using bwmarrin/discordgo. Unlike a REST-poll bridge it receives message events
 // in real time — guild @mentions and direct messages — with reconnection,
 // heartbeats, and rate limiting handled by the library. Authorized prompts are
@@ -21,7 +21,7 @@ type DiscordGateway struct {
 	cfg        DiscordConfig
 	daemonAddr string
 	apiKey     string
-	client     *http.Client // for forwardToGraycode
+	client     *http.Client // for forwardToHawk
 	auth       *authorizer
 	dispatch   *asyncDispatcher
 
@@ -140,7 +140,7 @@ func (g *DiscordGateway) handleMessage(ctx context.Context, senderID, channelID,
 
 	if isPair, ok := g.auth.tryPair(senderID, text); isPair {
 		if ok {
-			reply("Paired. You can now chat with graycode.")
+			reply("Paired. You can now chat with hawk.")
 		} else {
 			reply("Pairing failed: invalid code.")
 		}
@@ -151,7 +151,7 @@ func (g *DiscordGateway) handleMessage(ctx context.Context, senderID, channelID,
 		return
 	}
 
-	resp, err := forwardToGraycode(ctx, g.client, g.daemonAddr, g.apiKey, text)
+	resp, err := forwardToHawk(ctx, g.client, g.daemonAddr, g.apiKey, text)
 	if err != nil {
 		resp = fmt.Sprintf("Error: %v", err)
 	}

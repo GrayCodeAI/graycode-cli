@@ -49,7 +49,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "markdown-bullets",
 			Tags:         []string{"text", "summary", "general"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "explain_code",
@@ -59,7 +59,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "markdown",
 			Tags:         []string{"code", "explanation", "education"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "find_bugs",
@@ -69,7 +69,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "markdown-list",
 			Tags:         []string{"code", "bugs", "review", "quality"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "improve_code",
@@ -79,7 +79,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "markdown",
 			Tags:         []string{"code", "improvement", "refactor", "quality"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "write_tests",
@@ -89,7 +89,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "code",
 			Tags:         []string{"code", "testing", "quality"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "extract_todos",
@@ -99,7 +99,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "markdown-list",
 			Tags:         []string{"code", "todos", "project-management"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "security_review",
@@ -109,7 +109,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "markdown",
 			Tags:         []string{"code", "security", "review", "vulnerabilities"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "api_docs",
@@ -119,7 +119,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "markdown",
 			Tags:         []string{"code", "documentation", "api"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "commit_message",
@@ -129,7 +129,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "text",
 			Tags:         []string{"git", "commit", "workflow"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "review_pr",
@@ -139,7 +139,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "markdown",
 			Tags:         []string{"code", "review", "git", "pr"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "debug_error",
@@ -149,7 +149,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "markdown",
 			Tags:         []string{"code", "debugging", "errors"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "refactor_plan",
@@ -159,7 +159,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "markdown",
 			Tags:         []string{"code", "refactor", "architecture", "planning"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "architecture_doc",
@@ -169,7 +169,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "markdown",
 			Tags:         []string{"code", "architecture", "documentation"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "performance_review",
@@ -179,7 +179,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "markdown-list",
 			Tags:         []string{"code", "performance", "optimization"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 		{
 			Name:         "accessibility_check",
@@ -189,7 +189,7 @@ func (pl *PatternLibrary) LoadBuiltins() {
 			OutputFormat: "markdown-list",
 			Tags:         []string{"ui", "accessibility", "a11y", "frontend"},
 			Version:      "1.0.0",
-			Author:       "graycode",
+			Author:       "hawk",
 		},
 	}
 

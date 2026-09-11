@@ -6,31 +6,31 @@ schema_version: 1
 # file instead of carrying its own repo-name list. Only repositories that
 # exist are listed: removed siblings stay out until they are restored.
 contracts:
-  portable_graph_schema: graycode.graph/v1
+  portable_graph_schema: hawk.graph/v1
   cloud_graph_schema: graycode-cloud.graph/v1
   usage_event: usage.recorded.v1
 
 repositories:
-  - directory: graycode-cli
-    github_repo: graycode-cli
-    product_name: Graycode
+  - directory: hawk
+    github_repo: hawk
+    product_name: Hawk
     kind: product
     language: go
-    module: github.com/GrayCodeAI/graycode-cli
+    module: github.com/GrayCodeAI/hawk
     workspace: true
 
-  - directory: graycode-router
-    github_repo: graycode-router
-    product_name: Graycode Router
+  - directory: eyrie
+    github_repo: eyrie
+    product_name: Eyrie
     kind: engine
     language: go
-    module: github.com/GrayCodeAI/graycode-router
+    module: github.com/GrayCodeAI/eyrie
     workspace: true
-    facade: github.com/GrayCodeAI/graycode-router/engine
+    facade: github.com/GrayCodeAI/eyrie/engine
 
   - directory: graycode-skills
     github_repo: graycode-skills
-    product_name: Graycode Community Skills
+    product_name: Hawk Community Skills
     kind: extension
     language: python
     workspace: false

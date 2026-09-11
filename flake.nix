@@ -1,12 +1,12 @@
 {
-  description = "Graycode - AI coding agent powered by graycode-router";
+  description = "Hawk - AI coding agent powered by eyrie";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     # GrayCodeAI sibling repos — the public Go proxy has stale v0.1.0 tags
     # (post-history-rewrite), so resolve them locally like the Dockerfile.
-    graycode-router   = { url = "github:GrayCodeAI/graycode-router";   flake = false; };
+    eyrie   = { url = "github:GrayCodeAI/eyrie";   flake = false; };
     merlin = { url = "github:GrayCodeAI/merlin"; flake = false; };
     kestrel   = { url = "github:GrayCodeAI/kestrel";   flake = false; };
     shrike     = { url = "github:GrayCodeAI/shrike";     flake = false; };
@@ -14,14 +14,14 @@
     harrier    = { url = "github:GrayCodeAI/harrier";    flake = false; };
   };
 
-  outputs = { self, nixpkgs, flake-utils, graycode-router, merlin, kestrel, shrike, swift, harrier }:
+  outputs = { self, nixpkgs, flake-utils, eyrie, merlin, kestrel, shrike, swift, harrier }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         inherit (pkgs) lib;
 
         siblings = {
-          "github.com/GrayCodeAI/graycode-router"   = graycode-router;
+          "github.com/GrayCodeAI/eyrie"   = eyrie;
           "github.com/GrayCodeAI/merlin" = merlin;
           "github.com/GrayCodeAI/kestrel"   = kestrel;
           "github.com/GrayCodeAI/shrike"     = shrike;
@@ -53,8 +53,8 @@
           ) siblings)}
         '';
 
-        graycode = pkgs.buildGoModule rec {
-          pname = "graycode";
+        hawk = pkgs.buildGoModule rec {
+          pname = "hawk";
           version = "0.0.1";
 
           src = ./.;
@@ -96,7 +96,7 @@
 
           meta = with lib; {
             description = "AI coding agent that reads, writes, and runs code in your terminal";
-            homepage = "https://github.com/GrayCodeAI/graycode-cli";
+            homepage = "https://github.com/GrayCodeAI/hawk";
             license = licenses.mit;
             maintainers = [ ];
           };
@@ -104,8 +104,8 @@
       in
       {
         packages = {
-          default = graycode;
-          inherit graycode;
+          default = hawk;
+          inherit hawk;
         };
 
         devShells.default = pkgs.mkShell {
@@ -119,14 +119,14 @@
           ];
 
           shellHook = ''
-            echo "Graycode development shell"
+            echo "Hawk development shell"
             echo "Go version: $(go version)"
           '';
         };
 
         apps.default = {
           type = "app";
-          program = "${graycode}/bin/graycode";
+          program = "${hawk}/bin/hawk";
         };
       });
 }

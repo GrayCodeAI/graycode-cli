@@ -13,15 +13,15 @@ import (
 	"sync"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
-	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
-	"github.com/GrayCodeAI/graycode-cli/internal/graycodeerr"
 	harrier "github.com/GrayCodeAI/harrier"
 	harrierEngine "github.com/GrayCodeAI/harrier/engine"
 	harrierGraph "github.com/GrayCodeAI/harrier/graph"
 	"github.com/GrayCodeAI/harrier/portablegraph"
 	harrierPortableGraph "github.com/GrayCodeAI/harrier/portablegraph/graph"
 	"github.com/GrayCodeAI/harrier/storage"
+	graphcontracts "github.com/GrayCodeAI/hawk/internal/contracts/graph"
+	"github.com/GrayCodeAI/hawk/internal/graphjournal"
+	"github.com/GrayCodeAI/hawk/internal/hawkerr"
 )
 
 // Backup tuning for the harrier snapshot scheduler. Snapshots go to
@@ -45,7 +45,7 @@ var (
 	harrierBackupDirs = make(map[string]struct{})
 )
 
-// HarrierBridge connects graycode's memory system to the harrier memory graph.
+// HarrierBridge connects hawk's memory system to the harrier memory graph.
 // If harrier is not initialized (missing DB), operations return a BridgeError
 // and log a warning on first access.
 type HarrierBridge struct {
@@ -100,7 +100,7 @@ func (b *HarrierBridge) init() {
 	if v := strings.TrimSpace(os.Getenv(harrierEncryptionKeyEnv)); v != "" {
 		if err := store.EnableEncryption(storage.NewEnvKeyProvider(harrierEncryptionKeyEnv)); err != nil {
 			_ = store.Close()
-			slog.Warn("[graycode/memory] harrier encryption key invalid; memory disabled", "error", err)
+			slog.Warn("[hawk/memory] harrier encryption key invalid; memory disabled", "error", err)
 			return
 		}
 	}
@@ -146,7 +146,7 @@ func (b *HarrierBridge) EnsureBackups() {
 		harrierBackupsMu.Lock()
 		delete(harrierBackupDirs, b.dbDir)
 		harrierBackupsMu.Unlock()
-		slog.Warn("[graycode/memory] harrier backup scheduler not started", "error", err)
+		slog.Warn("[hawk/memory] harrier backup scheduler not started", "error", err)
 		return
 	}
 	sched.Start()
@@ -177,7 +177,7 @@ func (b *HarrierBridge) IsReady() bool {
 }
 
 // ConfigureGraphObservation binds future successful recalls to a persisted
-// Graycode session. Empty session IDs disable capture.
+// Hawk session. Empty session IDs disable capture.
 func (b *HarrierBridge) ConfigureGraphObservation(sessionID string, scope graphcontracts.Scope) {
 	if b == nil {
 		return
@@ -191,9 +191,9 @@ func (b *HarrierBridge) ConfigureGraphObservation(sessionID string, scope graphc
 // notReadyError logs a warning once and returns a structured BridgeError.
 func (b *HarrierBridge) notReadyError(op string) error {
 	b.warnOnce.Do(func() {
-		slog.Warn("[graycode/memory] harrier bridge is not initialized; memory operations will be skipped", "hint", "ensure ~/.harrier/data/ is accessible")
+		slog.Warn("[hawk/memory] harrier bridge is not initialized; memory operations will be skipped", "hint", "ensure ~/.harrier/data/ is accessible")
 	})
-	return &graycodeerr.BridgeError{
+	return &hawkerr.BridgeError{
 		Bridge: "harrier",
 		Op:     op,
 		Reason: "bridge not initialized",
@@ -463,7 +463,7 @@ func (b *HarrierBridge) recordContextGraph(query string, result *harrierEngine.R
 		ProducerVersion: harrier.Version,
 	})
 	if err != nil {
-		slog.Warn("[graycode/memory] harrier context graph projection failed", "error", err)
+		slog.Warn("[hawk/memory] harrier context graph projection failed", "error", err)
 		return
 	}
 	if err := graphjournal.AppendContextGraph(
@@ -475,12 +475,12 @@ func (b *HarrierBridge) recordContextGraph(query string, result *harrierEngine.R
 		toContractEvents(projection.Events),
 		projection.GeneratedAt,
 	); err != nil {
-		slog.Warn("[graycode/memory] harrier context graph observation failed", "error", err)
+		slog.Warn("[hawk/memory] harrier context graph observation failed", "error", err)
 	}
 }
 
 // The following helpers convert Harrier's vendored portable-graph contract
-// types into Graycode's contracts/graph contract types (and the reverse for scope).
+// types into Hawk's contracts/graph contract types (and the reverse for scope).
 // The definitions are byte-identical, so conversion is a field-by-field copy
 // at the sibling boundary.
 
@@ -583,7 +583,7 @@ func (b *HarrierBridge) recordSelectedContext(label string, nodes []*storage.Nod
 	}
 	edges, err := b.store.GetEdgesBetween(context.Background(), ids)
 	if err != nil {
-		slog.Warn("[graycode/memory] harrier selected context edge lookup failed", "error", err)
+		slog.Warn("[hawk/memory] harrier selected context edge lookup failed", "error", err)
 		edges = nil
 	}
 	b.recordContextGraph(label, &harrierEngine.RecallResult{Nodes: nodes, Edges: edges})
@@ -672,7 +672,7 @@ func (b *HarrierBridge) recordCodeContext(query string, records []*storage.CodeC
 		sourceID := bridgeDigest(record.ID)
 		ref := graphcontracts.Ref{
 			Kind: graphcontracts.NodeKnowledge,
-			ID:   "graycode/code-chunk/" + sourceID,
+			ID:   "hawk/code-chunk/" + sourceID,
 		}
 		node := graphcontracts.Node{
 			ID:        ref.ID,
@@ -680,9 +680,9 @@ func (b *HarrierBridge) recordCodeContext(query string, records []*storage.CodeC
 			Scope:     b.graphScope,
 			CreatedAt: occurredAt,
 			Provenance: graphcontracts.Provenance{
-				Producer: "graycode",
+				Producer: "hawk",
 				SourceID: sourceID,
-				Evidence: []graphcontracts.ArtifactRef{{URI: "graycode://code-index/" + sourceID}},
+				Evidence: []graphcontracts.ArtifactRef{{URI: "hawk://code-index/" + sourceID}},
 			},
 			Attributes: map[string]string{
 				"entity_type":         "code_chunk",
@@ -699,26 +699,26 @@ func (b *HarrierBridge) recordCodeContext(query string, records []*storage.CodeC
 		}
 		nodes = append(nodes, node)
 		events = append(events, graphcontracts.Event{
-			ID:             "graycode/event/code-chunk/" + sourceID + "/observed/" + querySHA256,
+			ID:             "hawk/event/code-chunk/" + sourceID + "/observed/" + querySHA256,
 			Type:           graphcontracts.EventObserved,
 			Subject:        ref,
 			Scope:          b.graphScope,
 			OccurredAt:     occurredAt,
 			CorrelationID:  querySHA256,
-			IdempotencyKey: "graycode/code-chunk/" + sourceID + "/observed/" + querySHA256,
+			IdempotencyKey: "hawk/code-chunk/" + sourceID + "/observed/" + querySHA256,
 			Provenance:     node.Provenance,
 		})
 	}
 	if err := graphjournal.AppendContextGraph(
 		b.graphSessionID,
-		"graycode-index",
+		"hawk-index",
 		querySHA256,
 		nodes,
 		nil,
 		events,
 		occurredAt,
 	); err != nil {
-		slog.Warn("[graycode/memory] code context graph observation failed", "error", err)
+		slog.Warn("[hawk/memory] code context graph observation failed", "error", err)
 	}
 }
 
@@ -957,7 +957,7 @@ func HarrierStatus() string {
 func FormatHarrierDetail(maxPerType int) string {
 	bridge := NewHarrierBridge()
 	if !bridge.Ready() {
-		return "Harrier: not initialized\nEnsure ~/.harrier/data/ is writable. Graycode uses harrier as an embedded library (no separate daemon required)."
+		return "Harrier: not initialized\nEnsure ~/.harrier/data/ is writable. Hawk uses harrier as an embedded library (no separate daemon required)."
 	}
 
 	var b strings.Builder
@@ -982,7 +982,7 @@ func FormatHarrierDetail(maxPerType int) string {
 		}
 	}
 	if !any {
-		b.WriteString("  (none yet — graycode stores memories via CoreMemory tools and auto-remember)\n")
+		b.WriteString("  (none yet — hawk stores memories via CoreMemory tools and auto-remember)\n")
 	}
 	return strings.TrimRight(b.String(), "\n")
 }

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 // newReviewTestServer starts a daemon. RegisterReviewRoutes() is already
@@ -119,7 +119,7 @@ func TestDaemon_ReviewStatus(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	// `graycode review status` shells out to the graycode binary; in a sandboxed
+	// `hawk review status` shells out to the hawk binary; in a sandboxed
 	// test environment that command may not resolve, so the handler's own
 	// 500 branch is just as valid an outcome as a real 200 — both are
 	// well-defined, deterministic behavior we can assert on.

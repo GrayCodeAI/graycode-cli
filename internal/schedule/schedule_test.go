@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 )
 
 func TestFoldEvents(t *testing.T) {

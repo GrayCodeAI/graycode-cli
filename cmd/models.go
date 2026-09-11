@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -19,18 +19,18 @@ var (
 
 var modelsCmd = &cobra.Command{
 	Use:   "models",
-	Short: "Deployment-aware model catalog (via graycode-router)",
-	Long: `Manage the graycode-router model catalog used by graycode for models, pricing, and deployment routing.
+	Short: "Deployment-aware model catalog (via eyrie)",
+	Long: `Manage the eyrie model catalog used by hawk for models, pricing, and deployment routing.
 
-The catalog is stored at ~/.graycode-router/model_catalog.json (override with GRAYCODE_ROUTER_MODEL_CATALOG_PATH).
-Graycode refreshes the catalog automatically on startup when the cache is missing, empty, or stale (disable with --no-auto-catalog-refresh or GRAYCODE_AUTO_REFRESH_CATALOG=0).
-Use 'graycode models refresh' for a manual refresh or full discover report.`,
+The catalog is stored at ~/.eyrie/model_catalog.json (override with EYRIE_MODEL_CATALOG_PATH).
+Hawk refreshes the catalog automatically on startup when the cache is missing, empty, or stale (disable with --no-auto-catalog-refresh or HAWK_AUTO_REFRESH_CATALOG=0).
+Use 'hawk models refresh' for a manual refresh or full discover report.`,
 }
 
 var modelsRefreshCmd = &cobra.Command{
 	Use:     "refresh",
 	Aliases: []string{"update"},
-	Short:   "Discover model catalog (graycode-router remote + live provider APIs) into ~/.graycode-router/model_catalog.json",
+	Short:   "Discover model catalog (eyrie remote + live provider APIs) into ~/.eyrie/model_catalog.json",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		settings, err := loadEffectiveSettings()
 		if err != nil {
@@ -41,7 +41,7 @@ var modelsRefreshCmd = &cobra.Command{
 		prog := NewCLIProgress("Models", []string{"Discovering catalog"})
 		defer prog.Abort()
 		prog.StartStep(0)
-		summary, err := graycodeconfig.RefreshModelCatalogV1WithSettings(ctx, settings)
+		summary, err := hawkconfig.RefreshModelCatalogV1WithSettings(ctx, settings)
 		if err != nil {
 			prog.FailStep(0, err.Error())
 			return err
@@ -62,13 +62,13 @@ var modelsStatusCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		cmd.Println(graycodeconfig.FormatCatalogHealth(graycodeconfig.CatalogHealthReport(ctx)))
+		cmd.Println(hawkconfig.FormatCatalogHealth(hawkconfig.CatalogHealthReport(ctx)))
 		cmd.Println()
 		modelName, _ := effectiveModelAndProvider(settings)
 		if len(args) > 0 {
 			modelName = args[0]
 		}
-		report, err := graycodeconfig.DeploymentStatusReportWithSettings(ctx, settings, modelName)
+		report, err := hawkconfig.DeploymentStatusReportWithSettings(ctx, settings, modelName)
 		if err != nil {
 			return err
 		}
@@ -87,7 +87,7 @@ var modelsRoutingPreviewCmd = &cobra.Command{
 			return err
 		}
 		modelName := args[0]
-		out, err := graycodeconfig.RoutingPreviewJSONWithSettings(cmd.Context(), settings, modelName)
+		out, err := hawkconfig.RoutingPreviewJSONWithSettings(cmd.Context(), settings, modelName)
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ var modelsRoutingPreviewCmd = &cobra.Command{
 
 var modelsListCmd = &cobra.Command{
 	Use:   "list [provider]",
-	Short: "List models from the graycode-router catalog cache (or live provider API)",
+	Short: "List models from the eyrie catalog cache (or live provider API)",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		settings, err := loadEffectiveSettings()
 		if err != nil {
@@ -109,7 +109,7 @@ var modelsListCmd = &cobra.Command{
 			providerName = args[0]
 		}
 		ctx := cmd.Context()
-		var models []graycodeconfig.EngineModel
+		var models []hawkconfig.EngineModel
 		// Only the live provider fetch is slow enough to animate, and only when
 		// the output is a human table (JSON/raw must stay pure).
 		animate := modelsListLive && !modelsListJSON && !modelsListRaw
@@ -121,11 +121,11 @@ var modelsListCmd = &cobra.Command{
 		}
 		if modelsListLive {
 			if providerName == "" {
-				return fmt.Errorf("provider required with --live (e.g. graycode models list canopywave --live --json)")
+				return fmt.Errorf("provider required with --live (e.g. hawk models list canopywave --live --json)")
 			}
-			models, err = graycodeconfig.ListLiveEngineModelsWithSettings(ctx, settings, graycodeconfig.ActiveProviderID(providerName))
+			models, err = hawkconfig.ListLiveEngineModelsWithSettings(ctx, settings, hawkconfig.ActiveProviderID(providerName))
 		} else {
-			models, err = graycodeconfig.FetchModelsForProviderWithSettings(ctx, settings, providerName)
+			models, err = hawkconfig.FetchModelsForProviderWithSettings(ctx, settings, providerName)
 		}
 		if err != nil {
 			if prog != nil {
@@ -159,9 +159,9 @@ var modelsListCmd = &cobra.Command{
 	},
 }
 
-// modelListJSONEntry is Graycode's versioned command-output contract. Keep this
-// separate from GraycodeRouter's host-facing Model DTO so engine-only fields can evolve
-// without breaking users that consume `graycode models list --json`.
+// modelListJSONEntry is Hawk's versioned command-output contract. Keep this
+// separate from Eyrie's host-facing Model DTO so engine-only fields can evolve
+// without breaking users that consume `hawk models list --json`.
 type modelListJSONEntry struct {
 	ID               string          `json:"id"`
 	InputPricePer1M  float64         `json:"input_price_per_1m"`
@@ -175,7 +175,7 @@ type modelListJSONEntry struct {
 	LiveMetadata     json.RawMessage `json:"live_metadata,omitempty"`
 }
 
-func modelListJSONEntryFromEngine(m graycodeconfig.EngineModel) modelListJSONEntry {
+func modelListJSONEntryFromEngine(m hawkconfig.EngineModel) modelListJSONEntry {
 	return modelListJSONEntry{
 		ID:               m.ID,
 		InputPricePer1M:  m.InputPricePer1M,
@@ -198,7 +198,7 @@ func validModelLiveMetadata(raw json.RawMessage) json.RawMessage {
 	return append(json.RawMessage(nil), metadata...)
 }
 
-func marshalModelListJSON(models []graycodeconfig.EngineModel, rawOnly, live bool) ([]byte, error) {
+func marshalModelListJSON(models []hawkconfig.EngineModel, rawOnly, live bool) ([]byte, error) {
 	entries := make([]modelListJSONEntry, len(models))
 	for i, model := range models {
 		entries[i] = modelListJSONEntryFromEngine(model)

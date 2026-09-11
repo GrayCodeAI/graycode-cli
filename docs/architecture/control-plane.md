@@ -1,10 +1,10 @@
-# Graycode Control Plane (proposed → implemented core)
+# Hawk Control Plane (proposed → implemented core)
 
 Status: **core wired** on branch work (isolation · spawn · lazy tools · plan/act/review).
 
 ## Goal
 
-World-class CLI experience: **one face (Graycode)**, deep engines, progressive power.
+World-class CLI experience: **one face (Hawk)**, deep engines, progressive power.
 
 ```text
 Faces (TUI / headless / ACP / daemon)
@@ -19,7 +19,7 @@ Faces (TUI / headless / ACP / daemon)
               Session kernel
            (agentLoop · tools)
                     │
-     graycode-router · harrier · shrike · swift · kestrel · merlin
+     eyrie · harrier · shrike · swift · kestrel · merlin
 ```
 
 ## Pieces
@@ -53,7 +53,7 @@ Single entry for subagents + background tasks:
 ### 3. Lazy model surface (`tool.Registry`)
 
 - Essential tools registered and **model-visible**
-- Optional tools registered for **execution + ToolSearch**, hidden from `GraycodeRouterTools`
+- Optional tools registered for **execution + ToolSearch**, hidden from `EyrieTools`
 - `ToolSearch` `select:Name` **promotes** tool onto the model surface
 - APIs: `EnableLazyModelSurface`, `SetModelVisibility`, `PromoteModelTool`
 
@@ -120,12 +120,12 @@ Single entry for subagents + background tasks:
 - `attachRequiredContainer` and TUI container-ready path call `ApplyIsolationProfile(IsolationContainer)`
 
 ### Onboarding / CI
-- CLI `Welcome` surfaces control-plane commands + `graycode exec`
-- Example workflow: `examples/github/graycode-ci-exec.yml`
+- CLI `Welcome` surfaces control-plane commands + `hawk exec`
+- Example workflow: `examples/github/hawk-ci-exec.yml`
 
 ### ACP
-- `initialize` advertises `graycodeCapabilities` (work modes, isolation, lazy tools, …)
-- `session/new` returns `graycode` snapshot (`workMode`, `isolation`, `autoCommit`) and defaults act mode
+- `initialize` advertises `hawkCapabilities` (work modes, isolation, lazy tools, …)
+- `session/new` returns `hawk` snapshot (`workMode`, `isolation`, `autoCommit`) and defaults act mode
 - `session/setMode` — switch work mode (plan|act|review)
 - `session/setIsolation` — apply isolation profile
 - `session/status` — control-plane snapshot (mode, isolation, autoCommit, message count)

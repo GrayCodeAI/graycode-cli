@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/fsutil"
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
 )
 
 // TestLoop implements an auto-test loop similar to Aider's auto_test feature.

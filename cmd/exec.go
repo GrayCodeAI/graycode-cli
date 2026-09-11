@@ -14,16 +14,16 @@ import (
 	"time"
 	"unicode/utf8"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
-	"github.com/GrayCodeAI/graycode-cli/internal/errhint"
-	"github.com/GrayCodeAI/graycode-cli/internal/multiagent/agents"
-	"github.com/GrayCodeAI/graycode-cli/internal/notify"
-	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
-	cloud "github.com/GrayCodeAI/graycode-cli/internal/platform/cloud"
-	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
-	"github.com/GrayCodeAI/graycode-cli/internal/session"
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/errhint"
+	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
+	"github.com/GrayCodeAI/hawk/internal/notify"
+	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	cloud "github.com/GrayCodeAI/hawk/internal/platform/cloud"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 	"github.com/spf13/cobra"
 )
 
@@ -93,13 +93,13 @@ Autonomy Levels:
   yolo                  Never ask for permission
 
 Examples:
-  graycode exec "analyze this codebase"
-  graycode exec --auto full "fix the tests and commit"
-  graycode exec --json "what files are in src/"
-  graycode exec --ephemeral --json "run tests and report" > result.json
-  echo "explain main.go" | graycode exec -
-  graycode exec --agent reviewer "review the latest commit"
-  graycode exec --model claude-sonnet-4-6 "quick fix: typo in README"`,
+  hawk exec "analyze this codebase"
+  hawk exec --auto full "fix the tests and commit"
+  hawk exec --json "what files are in src/"
+  hawk exec --ephemeral --json "run tests and report" > result.json
+  echo "explain main.go" | hawk exec -
+  hawk exec --agent reviewer "review the latest commit"
+  hawk exec --model claude-sonnet-4-6 "quick fix: typo in README"`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runExec,
 }
@@ -110,7 +110,7 @@ func init() {
 	execCmd.Flags().StringVarP(&execModel, "model", "m", "", "Model ID to use")
 	execCmd.Flags().IntVar(&execMaxTurns, "max-turns", 0, "Maximum agentic turns (0 = unlimited)")
 	execCmd.Flags().StringVar(&execCWD, "cwd", "", "Working directory")
-	execCmd.Flags().StringVar(&execAgent, "agent", "", "Agent persona to use (from Graycode user state)")
+	execCmd.Flags().StringVar(&execAgent, "agent", "", "Agent persona to use (from Hawk user state)")
 	execCmd.Flags().StringVarP(&execSessionID, "session-id", "s", "", "Continue an existing session")
 	execCmd.Flags().StringVar(&execTag, "tag", "", "Session tag for categorization")
 	execCmd.Flags().BoolVarP(&execWorktree, "worktree", "w", false, "Run in an isolated git worktree")
@@ -176,7 +176,7 @@ func runExec(_ *cobra.Command, args []string) error {
 		base := getCurrentBranch(cwd)
 		branch := execWorktreeName
 		if branch == "" {
-			branch = fmt.Sprintf("graycode-exec/%d-%s", start.UnixMilli(), randomHex(4))
+			branch = fmt.Sprintf("hawk-exec/%d-%s", start.UnixMilli(), randomHex(4))
 		}
 		var wtErr error
 		wtPath, wtErr = createExecWorktree(cwd, base, branch)
@@ -191,7 +191,7 @@ func runExec(_ *cobra.Command, args []string) error {
 	}
 
 	// Load settings
-	settings := graycodeconfig.LoadSettings()
+	settings := hawkconfig.LoadSettings()
 
 	// Build system prompt
 	systemPrompt, err := buildSystemPrompt()
@@ -227,7 +227,7 @@ func runExec(_ *cobra.Command, args []string) error {
 	}
 
 	// Create engine session
-	sess, cfgErr := newConfiguredGraycodeSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error), execMaxTurns)
+	sess, cfgErr := newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error), execMaxTurns)
 	if cfgErr != nil {
 		return cfgErr
 	}
@@ -250,11 +250,11 @@ func runExec(_ *cobra.Command, args []string) error {
 	// GitHub Actions event (an outside contributor's issue/PR/comment body),
 	// clamp autonomy to read-only auto-approval so attacker-controlled text
 	// cannot drive writes or Bash. Maintainers can opt out with
-	// GRAYCODE_GHA_TRUST_EVENT=1.
+	// HAWK_GHA_TRUST_EVENT=1.
 	if ghaCtx.Active && !ghaCtx.Trusted {
 		const ceiling = engine.AutonomyBasic
 		if sess.PermSvc().Autonomy() > ceiling {
-			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("graycode: untrusted GitHub event (author_association=%q); capping autonomy at %s", ghaCtx.AuthorAssociation, ceiling), warnAmber))
+			fmt.Fprintf(os.Stderr, "%s\n", auditTint(fmt.Sprintf("hawk: untrusted GitHub event (author_association=%q); capping autonomy at %s", ghaCtx.AuthorAssociation, ceiling), warnAmber))
 			sess.PermSvc().SetAutonomy(ceiling)
 		}
 	}
@@ -381,7 +381,7 @@ func runExec(_ *cobra.Command, args []string) error {
 			DeviceID:     cfg.DeviceID,
 			ProjectID:    cfg.ProjectID,
 			SessionID:    sessionID,
-			Capability:   "graycode",
+			Capability:   "hawk",
 			Model:        effectiveModel,
 			InputTokens:  totalIn,
 			OutputTokens: totalOut,
@@ -402,10 +402,10 @@ func runExec(_ *cobra.Command, args []string) error {
 			fmt.Println()
 		}
 		if !IsQuiet() {
-			summary := fmt.Sprintf("graycode: %d tokens in / %d out · %d turn(s) · %s · %s",
+			summary := fmt.Sprintf("hawk: %d tokens in / %d out · %d turn(s) · %s · %s",
 				totalIn, totalOut, turns, time.Since(start).Round(time.Millisecond), effectiveModel)
 			if cacheRead > 0 || cacheWrite > 0 {
-				summary = fmt.Sprintf("graycode: %d tokens in / %d out (cache %d read · %d write) · %d turn(s) · %s · %s",
+				summary = fmt.Sprintf("hawk: %d tokens in / %d out (cache %d read · %d write) · %d turn(s) · %s · %s",
 					totalIn, totalOut, cacheRead, cacheWrite, turns, time.Since(start).Round(time.Millisecond), effectiveModel)
 			}
 			fmt.Fprintf(os.Stderr, "%s\n", auditTint(summary, textMuted))
@@ -470,16 +470,16 @@ type GHAMode string
 const (
 	// GHAModeNone means we are not running inside GitHub Actions.
 	GHAModeNone GHAMode = ""
-	// GHAModeInteractive is used when a human mentioned @graycode in a comment and
+	// GHAModeInteractive is used when a human mentioned @hawk in a comment and
 	// expects a conversational reply.
 	GHAModeInteractive GHAMode = "interactive"
-	// GHAModeAutomation is used for label/issue triggers where graycode should act
+	// GHAModeAutomation is used for label/issue triggers where hawk should act
 	// autonomously on the issue/PR body.
 	GHAModeAutomation GHAMode = "automation"
 )
 
 // ghMention is the trigger token that promotes an event to interactive mode.
-const ghMention = "@graycode"
+const ghMention = "@hawk"
 
 // ghTrustedAssociations are the GitHub author_association values that identify
 // a repository insider. Everyone else (CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR,
@@ -497,7 +497,7 @@ type GHAContext struct {
 	EventName         string  // GITHUB_EVENT_NAME
 	Mode              GHAMode // resolved operating mode
 	Prompt            string  // event-derived prompt body
-	Mention           bool    // whether an @graycode mention was found in a comment
+	Mention           bool    // whether an @hawk mention was found in a comment
 	AuthorAssociation string  // GitHub author_association of the triggering actor
 	Trusted           bool    // author is a repo insider (or explicitly trusted)
 }
@@ -530,7 +530,7 @@ func detectGitHubActions(getenv func(string) string, readFile func(string) ([]by
 	// Trust signal: GitHub reports the actor's relationship to the repo.
 	// Only insiders are trusted to drive high-autonomy tool use; content
 	// from outside contributors is untrusted (prompt-injection surface).
-	// GRAYCODE_GHA_TRUST_EVENT=1 lets a maintainer opt into trusting all events.
+	// HAWK_GHA_TRUST_EVENT=1 lets a maintainer opt into trusting all events.
 	ctx.AuthorAssociation = ghAuthorAssociation(payload)
 	ctx.Trusted = ghTrustedAssociations[strings.ToUpper(strings.TrimSpace(ctx.AuthorAssociation))] ||
 		ghTrustEventOverride(getenv)
@@ -558,7 +558,7 @@ func detectGitHubActions(getenv func(string) string, readFile func(string) ([]by
 // ghTrustEventOverride reports whether the maintainer has opted into
 // trusting GitHub Actions event content regardless of author association.
 func ghTrustEventOverride(getenv func(string) string) bool {
-	switch strings.ToLower(strings.TrimSpace(getenv("GRAYCODE_GHA_TRUST_EVENT"))) {
+	switch strings.ToLower(strings.TrimSpace(getenv("HAWK_GHA_TRUST_EVENT"))) {
 	case "1", "true", "yes", "on":
 		return true
 	default:
@@ -615,7 +615,7 @@ func ghIssueBody(payload map[string]interface{}) string {
 	return strings.TrimSpace(ghCommentBody(payload))
 }
 
-// ghStripMention removes the leading @graycode mention from a comment so the
+// ghStripMention removes the leading @hawk mention from a comment so the
 // remaining text becomes the prompt.
 func ghStripMention(body string) string {
 	out := body
@@ -637,7 +637,7 @@ type skillRunner interface {
 	Run(name string) (string, error)
 }
 
-// pluginSkillRunner is the production skillRunner backed by Graycode skill storage.
+// pluginSkillRunner is the production skillRunner backed by Hawk skill storage.
 type pluginSkillRunner struct{}
 
 func (pluginSkillRunner) Run(name string) (string, error) {
@@ -647,7 +647,7 @@ func (pluginSkillRunner) Run(name string) (string, error) {
 			return fmt.Sprintf("[Skill: %s]\n\n%s", s.Name, s.Content), nil
 		}
 	}
-	return "", fmt.Errorf("skill %q not found (run `graycode skills` to list available skills)", name)
+	return "", fmt.Errorf("skill %q not found (run `hawk skills` to list available skills)", name)
 }
 
 // defaultSkillRunner is overridable in tests.
@@ -776,7 +776,7 @@ func runExecFanout(prompt string, n int) error {
 		fmt.Fprintf(os.Stderr, "\n%s\n", auditTint(fmt.Sprintf("=== fanout attempt %d/%d ===", i, n), infoSky))
 		att := fanoutAttempt{Attempt: i}
 
-		branch := fmt.Sprintf("graycode-exec/%d-fanout%d-%s", start.UnixMilli(), i, randomHex(4))
+		branch := fmt.Sprintf("hawk-exec/%d-fanout%d-%s", start.UnixMilli(), i, randomHex(4))
 		wtPath, wtErr := createExecWorktree(cwd, base, branch)
 		if wtErr != nil {
 			att.Error = fmt.Sprintf("worktree: %v", wtErr)
@@ -845,7 +845,7 @@ func runExecFanout(prompt string, n int) error {
 	// best-effort and only when a channel is configured.
 	title := fmt.Sprintf("Fan-out finished: %d/%d attempts succeeded", countOK(attempts), n)
 	_ = notify.SendCompletion(notify.Completion{
-		Title: title, Source: "graycode exec --fanout", OK: anyOK, Body: fanoutSummaryLines(attempts),
+		Title: title, Source: "hawk exec --fanout", OK: anyOK, Body: fanoutSummaryLines(attempts),
 	})
 
 	if !anyOK {
@@ -909,7 +909,7 @@ func printFanoutReport(attempts []fanoutAttempt) {
 // (expected to be the attempt's worktree) and returns the structured result.
 // Stream events are captured rather than printed so N attempts do not interleave.
 func execOnceInWorktree(prompt string, attemptIdx int) (*ExecResult, error) {
-	settings := graycodeconfig.LoadSettings()
+	settings := hawkconfig.LoadSettings()
 
 	systemPrompt, err := buildSystemPrompt()
 	if err != nil {
@@ -932,7 +932,7 @@ func execOnceInWorktree(prompt string, attemptIdx int) (*ExecResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	sess, cfgErr := newConfiguredGraycodeSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error), execMaxTurns)
+	sess, cfgErr := newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error), execMaxTurns)
 	if cfgErr != nil {
 		return nil, cfgErr
 	}

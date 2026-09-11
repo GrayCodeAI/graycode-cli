@@ -1,6 +1,6 @@
 # Background Tasks and Monitoring
 
-Graycode runs long-lived processes without blocking the conversation. This covers background commands, `/loop`, and the `monitor` tool.
+Hawk runs long-lived processes without blocking the conversation. This covers background commands, `/loop`, and the `monitor` tool.
 
 ---
 

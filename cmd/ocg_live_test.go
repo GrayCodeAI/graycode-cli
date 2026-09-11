@@ -4,7 +4,7 @@
 // Live integration test for the OpenCodeGo provider adapter end-to-end.
 // Opt-in only — not run by default `go test ./...` or CI. Run with:
 //
-//	OPENCODEGO_API_KEY=... go test -tags=live_test -run TestLiveOpenCodeGoMiniMaxM3FullGraycodePath ./cmd
+//	OPENCODEGO_API_KEY=... go test -tags=live_test -run TestLiveOpenCodeGoMiniMaxM3FullHawkPath ./cmd
 //
 // Or via `make test-live` in this repo.
 package cmd
@@ -15,15 +15,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
-	graycoderoutercfg "github.com/GrayCodeAI/graycode-router/config"
-	"github.com/GrayCodeAI/graycode-router/credentials"
-	"github.com/GrayCodeAI/graycode-router/setup"
+	eyriecfg "github.com/GrayCodeAI/eyrie/config"
+	"github.com/GrayCodeAI/eyrie/credentials"
+	"github.com/GrayCodeAI/eyrie/setup"
+	"github.com/GrayCodeAI/hawk/internal/observability/logger"
 )
 
-func TestLiveOpenCodeGoMiniMaxM3FullGraycodePath(t *testing.T) {
+func TestLiveOpenCodeGoMiniMaxM3FullHawkPath(t *testing.T) {
 	if credentials.LookupSecret(context.Background(), "OPENCODEGO_API_KEY") == "" {
-		t.Skip("OPENCODEGO_API_KEY not configured") // TODO: https://github.com/GrayCodeAI/graycode-cli/issues/29
+		t.Skip("OPENCODEGO_API_KEY not configured") // TODO: https://github.com/GrayCodeAI/hawk/issues/29
 	}
 	settings, err := loadEffectiveSettings()
 	if err != nil {
@@ -38,12 +38,12 @@ func TestLiveOpenCodeGoMiniMaxM3FullGraycodePath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("provider=%s model=%s tools=%d system_len=%d", effectiveProvider, effectiveModel, len(registry.GraycodeRouterTools()), len(systemPrompt))
+	t.Logf("provider=%s model=%s tools=%d system_len=%d", effectiveProvider, effectiveModel, len(registry.EyrieTools()), len(systemPrompt))
 
-	adapter := setup.ConfiguredDeploymentAdapters(graycoderoutercfg.LoadProviderConfig(""))["opencodego"]
+	adapter := setup.ConfiguredDeploymentAdapters(eyriecfg.LoadProviderConfig(""))["opencodego"]
 	t.Logf("adapter_type=%T", adapter.Provider)
 
-	sess := newGraycodeSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
+	sess := newHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry)
 	sess.SetLogger(logger.New(ioDiscard{}, logger.Info))
 	if cfgErr := configureSession(sess, settings); cfgErr != nil {
 		t.Fatal(cfgErr)

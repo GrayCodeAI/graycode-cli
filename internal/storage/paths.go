@@ -9,15 +9,15 @@ import (
 )
 
 const (
-	appName                    = "graycode"
-	envConfigDir               = "GRAYCODE_CONFIG_DIR"
-	envGraycodeRouterConfigDir = "GRAYCODE_ROUTER_CONFIG_DIR"
-	envStateDir                = "GRAYCODE_STATE_DIR"
-	envCacheDir                = "GRAYCODE_CACHE_DIR"
-	projectIDHashLen           = 12
+	appName           = "hawk"
+	envConfigDir      = "HAWK_CONFIG_DIR"
+	envEyrieConfigDir = "EYRIE_CONFIG_DIR"
+	envStateDir       = "HAWK_STATE_DIR"
+	envCacheDir       = "HAWK_CACHE_DIR"
+	projectIDHashLen  = 12
 )
 
-// ConfigDir returns the per-user configuration directory for Graycode.
+// ConfigDir returns the per-user configuration directory for Hawk.
 func ConfigDir() string {
 	if dir := cleanEnvDir(envConfigDir); dir != "" {
 		return dir
@@ -49,10 +49,10 @@ func SettingsPath() string {
 }
 
 func ProviderConfigPath() string {
-	// GraycodeRouter owns provider routing state. Keep GRAYCODE_CONFIG_DIR as the
-	// compatibility fallback, but let GraycodeRouter's host-neutral override win when
+	// Eyrie owns provider routing state. Keep HAWK_CONFIG_DIR as the
+	// compatibility fallback, but let Eyrie's host-neutral override win when
 	// both variables are configured.
-	if dir := cleanEnvDir(envGraycodeRouterConfigDir); dir != "" {
+	if dir := cleanEnvDir(envEyrieConfigDir); dir != "" {
 		return filepath.Join(dir, "provider.json")
 	}
 	return filepath.Join(ConfigDir(), "provider.json")
@@ -124,8 +124,8 @@ func mustUserConfigDir() string {
 		// (e.g. unset HOME in a cron/daemon context). Fall back to a
 		// stable, writable location under the OS temp dir so the process
 		// still functions; the effective paths are also overridable via
-		// GRAYCODE_CONFIG_DIR / GRAYCODE_STATE_DIR / GRAYCODE_CACHE_DIR.
-		return filepath.Join(os.TempDir(), "graycode-config")
+		// HAWK_CONFIG_DIR / HAWK_STATE_DIR / HAWK_CACHE_DIR.
+		return filepath.Join(os.TempDir(), "hawk-config")
 	}
 	return dir
 }
@@ -133,7 +133,7 @@ func mustUserConfigDir() string {
 func mustUserCacheDir() string {
 	dir, err := os.UserCacheDir()
 	if err != nil || dir == "" {
-		return filepath.Join(os.TempDir(), "graycode-cache")
+		return filepath.Join(os.TempDir(), "hawk-cache")
 	}
 	return dir
 }

@@ -5,7 +5,7 @@
 **Date:** 2026-07-05
 **Source:** Historical comparison document; feature and market claims require
 independent revalidation. Architecture status is tracked in
-`docs/architecture/graycode-architecture-baseline.md`.
+`docs/architecture/hawk-architecture-baseline.md`.
 
 ---
 
@@ -27,14 +27,14 @@ Numeric scores are intentionally not used as current architecture evidence.
 
 ## Phase 1: High Priority (Immediate - Score Impact: +0.5)
 
-### 1. Add VS Code Extension Integration (graycode repo)
+### 1. Add VS Code Extension Integration (hawk repo)
 
 **Effort:** Large (2-3 weeks)
 **Priority:** HIGH
 
 **What:**
-- Create `graycode-vscode` repo for VS Code extension
-- Use Graycode SDK for communication
+- Create `hawk-vscode` repo for VS Code extension
+- Use Hawk SDK for communication
 - Add WebSocket transport for real-time updates
 
 **Why:**
@@ -45,12 +45,12 @@ Numeric scores are intentionally not used as current architecture evidence.
 **Implementation Plan:**
 ```bash
 # Create new repo
-mkdir graycode-vscode
-cd graycode-vscode
+mkdir hawk-vscode
+cd hawk-vscode
 
 # Initialize
 git init
-go mod init github.com/GrayCodeAI/graycode-cli-vscode
+go mod init github.com/GrayCodeAI/hawk-vscode
 
 # Add extension scaffold
 mkdir -p cmd extension/src
@@ -64,8 +64,8 @@ go get golang.org/x/net/websocket
 # Create extension files
 cat > extension/package.json << 'EOF'
 {
-  "name": "graycode",
-  "displayName": "Graycode",
+  "name": "hawk",
+  "displayName": "Hawk",
   "description": "AI coding assistant in terminal",
   "version": "0.1.0",
   "engines": { "vscode": "^1.90.0" },
@@ -75,14 +75,14 @@ cat > extension/package.json << 'EOF'
   "contributes": {
     "commands": [
       {
-        "command": "graycode.activate",
-        "title": "Activate Graycode"
+        "command": "hawk.activate",
+        "title": "Activate Hawk"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "graycode.activate",
+          "command": "hawk.activate",
           "when": "editorLangId"
         }
       ]
@@ -94,22 +94,22 @@ EOF
 # Add extension scaffold
 cat > extension/src/extension.ts << 'EOF'
 import * as vscode from 'vscode';
-import * as graycodesdk from '@graycodeai/graycodesdk';
+import * as hawksdk from '@graycodeai/hawksdk';
 
 export function activate(context: vscode.ExtensionContext) {
-  const client = new graycodesdk.Client();
+  const client = new hawksdk.Client();
   
   // Register completion provider
   vscode.languages.registerCompletionItemProvider(
     'go',
-    new GraycodeCompletionProvider(client),
+    new HawkCompletionProvider(client),
     'g', 'h'
   );
   
   // Register hover provider
   vscode.languages.registerHoverProvider(
     'go',
-    new GraycodeHoverProvider(client)
+    new HawkHoverProvider(client)
   );
 }
 EOF
@@ -123,7 +123,7 @@ vsce publish
 
 **Repository Structure:**
 ```
-graycode-vscode/
+hawk-vscode/
 ├── extension/           # VS Code extension code
 │   ├── src/
 │   │   ├── extension.ts
@@ -140,25 +140,25 @@ graycode-vscode/
 
 ---
 
-### 2. Add Extension Marketplace (graycode repo)
+### 2. Add Extension Marketplace (hawk repo)
 
 **Effort:** Medium (1-2 weeks)
 **Priority:** HIGH
 
 **What:**
 - Create marketplace for community extensions
-- Add extension discovery endpoint to graycode
+- Add extension discovery endpoint to hawk
 - Create `starling` integration
 - Add version compatibility checking
 
 **Why:**
 - Top agents have 100+ extensions
-- Build ecosystem around Graycode
+- Build ecosystem around Hawk
 - Increase adoption
 
 **Implementation Plan:**
 ```go
-// Add to graycode
+// Add to hawk
 package marketplace
 
 // Extension represents a community extension
@@ -305,12 +305,12 @@ cat >> SKILL.md << 'EOF'
 
 To discover available extensions, use:
 ```
-graycode extensions list
+hawk extensions list
 ```
 
 To install an extension:
 ```
-graycode extensions install <extension-id>
+hawk extensions install <extension-id>
 ```
 EOF
 ```
@@ -431,7 +431,7 @@ go build forum.go
 
 ---
 
-### 5. Add More Extension Points (graycode)
+### 5. Add More Extension Points (hawk)
 
 **Effort:** Small (3-5 days)
 **Priority:** MEDIUM
@@ -499,7 +499,7 @@ func main() {
 
 ## Phase 3: Low Priority (Backlog - Score Impact: +0.2)
 
-### 6. Add AI Code Completion (graycode-router)
+### 6. Add AI Code Completion (eyrie)
 
 **Effort:** Medium (1-2 weeks)
 **Priority:** LOW
@@ -514,7 +514,7 @@ func main() {
 
 ---
 
-### 7. Add Debugging Support (graycode)
+### 7. Add Debugging Support (hawk)
 
 **Effort:** Large (2-3 weeks)
 **Priority:** LOW
@@ -530,7 +530,7 @@ func main() {
 
 ---
 
-### 8. Add Web UI for Monitoring (graycode)
+### 8. Add Web UI for Monitoring (hawk)
 
 **Effort:** Small (3-5 days)
 **Priority:** LOW
@@ -562,7 +562,7 @@ func main() {
 
 ---
 
-### 10. Add Completion Endpoint to graycode-router
+### 10. Add Completion Endpoint to eyrie
 
 **Effort:** Medium (1 week)
 **Priority:** LOW
@@ -579,7 +579,7 @@ func main() {
 
 ## Detailed Repo-Specific Roadmap
 
-### **graycode** (Main Repo) - Primary Product
+### **hawk** (Main Repo) - Primary Product
 
 | Phase | Improvement | Effort | Impact | Status |
 |-------|--------------|--------|--------|--------|
@@ -590,7 +590,7 @@ func main() {
 | 3 | Add Web UI for monitoring | Small | +0.2 | Planned |
 | 3 | Add SDK analytics | Small | +0.1 | Planned |
 
-Current architecture status: see `docs/architecture/graycode-architecture-baseline.md`.
+Current architecture status: see `docs/architecture/hawk-architecture-baseline.md`.
 
 ---
 
@@ -628,7 +628,7 @@ Current architecture status: see `docs/architecture/graycode-architecture-baseli
 
 ---
 
-### **graycode-router** (LLM Runtime)
+### **eyrie** (LLM Runtime)
 
 | Phase | Improvement | Effort | Impact | Status |
 |-------|--------------|--------|--------|--------|
@@ -657,7 +657,7 @@ Current architecture status: see `docs/architecture/graycode-architecture-baseli
 
 The roadmap is sequenced by product value and implementation effort. It does
 not assign target architecture scores. Current architecture status is tracked
-in `docs/architecture/graycode-architecture-baseline.md`.
+in `docs/architecture/hawk-architecture-baseline.md`.
 
 ---
 
@@ -667,7 +667,7 @@ in `docs/architecture/graycode-architecture-baseline.md`.
 |------|--------|------------|
 | Marketplace competition | High | Focus on quality extensions |
 | Community building | Medium | Active engagement, good docs |
-| Development velocity | Medium | Prioritize graycode SDK first |
+| Development velocity | Medium | Prioritize hawk SDK first |
 | Adoption curve | Medium | VS Code extension is key |
 
 ---

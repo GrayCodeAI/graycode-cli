@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	reviewcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/review"
-	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
+	reviewcontracts "github.com/GrayCodeAI/hawk/internal/contracts/review"
+	contracts "github.com/GrayCodeAI/hawk/internal/contracts/types"
 )
 
 // captureStdout runs fn with stdout redirected to a pipe and returns what was

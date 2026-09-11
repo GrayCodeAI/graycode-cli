@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/token"
+	"github.com/GrayCodeAI/hawk/internal/token"
 )
 
 func TestElisionNoticeJSONRecords(t *testing.T) {

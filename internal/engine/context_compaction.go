@@ -3,10 +3,10 @@ package engine
 import (
 	"path/filepath"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
-	"github.com/GrayCodeAI/graycode-cli/internal/session"
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // CompactionEvent describes a completed context compaction.
@@ -20,7 +20,7 @@ type CompactionEvent struct {
 // OnCompaction is invoked after compaction (TUI, logging, etc.).
 type OnCompaction func(CompactionEvent)
 
-// PersistID is the on-disk session id under Graycode's user state sessions dir.
+// PersistID is the on-disk session id under Hawk's user state sessions dir.
 // Set from the TUI when a chat session is created or resumed.
 func (s *Session) SetPersistID(id string) {
 	if s == nil {
@@ -134,7 +134,7 @@ func (s *Session) checkpointManager() *session.CheckpointManager {
 	return p.CheckpointManager()
 }
 
-func rawToSessionMessages(raw []types.GraycodeRouterMessage) []session.Message {
+func rawToSessionMessages(raw []types.EyrieMessage) []session.Message {
 	return session.FromRuntimeMessages(raw)
 }
 

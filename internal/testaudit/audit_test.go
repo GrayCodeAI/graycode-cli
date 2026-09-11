@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-// repoRoot returns the graycode repo root directory.
+// repoRoot returns the hawk repo root directory.
 // It walks up from the test file's location to find go.mod.
 func repoRoot(t *testing.T) string {
 	t.Helper()
@@ -52,8 +52,8 @@ var getEnvExemptions = map[string]bool{
 	"terminal_context.go":        true, // TMUX, STY, TERM_PROGRAM for terminal detection
 	"sandbox/seatbelt.go":        true, // HOME, GOPATH for sandbox policy
 	"prompts/loader.go":          true, // SHELL for prompt context
-	"health/diagnostics.go":      true, // SHELL, GRAYCODE_MODEL for health checks
-	"tool/safety.go":             true, // GRAYCODE_CONFIG_DIR for security checks
+	"health/diagnostics.go":      true, // SHELL, HAWK_MODEL for health checks
+	"tool/safety.go":             true, // HAWK_CONFIG_DIR for security checks
 	"tool/treesitter.go":         true, // HOME for grammar dir (uses os.UserHomeDir)
 	"tool/web_search_brave.go":   true, // BRAVE_SEARCH_API_KEY
 	"tool/web_search_searxng.go": true, // SEARXNG_URL
@@ -184,9 +184,9 @@ func TestNoDirectOsGetenvInInternal(t *testing.T) {
 	t.Logf("Total os.Getenv violations in internal/: %d (logged as tech debt)", violationCount)
 }
 
-// TestNoDirectLowerGraycodeRouterImports verifies production Graycode code uses only
-// GraycodeRouter's stable engine facade. Tests may import lower packages for fixtures.
-func TestNoDirectLowerGraycodeRouterImports(t *testing.T) {
+// TestNoDirectLowerEyrieImports verifies production Hawk code uses only
+// Eyrie's stable engine facade. Tests may import lower packages for fixtures.
+func TestNoDirectLowerEyrieImports(t *testing.T) {
 	root := repoRoot(t)
 	paths := []string{
 		filepath.Join(root, "internal"),
@@ -202,30 +202,30 @@ func TestNoDirectLowerGraycodeRouterImports(t *testing.T) {
 			}
 			for _, imp := range pf.File.Imports {
 				path := strings.Trim(imp.Path.Value, `"`)
-				if !strings.HasPrefix(path, "github.com/GrayCodeAI/graycode-router/") ||
-					path == "github.com/GrayCodeAI/graycode-router/engine" ||
-					strings.HasPrefix(path, "github.com/GrayCodeAI/graycode-router/engine/") {
+				if !strings.HasPrefix(path, "github.com/GrayCodeAI/eyrie/") ||
+					path == "github.com/GrayCodeAI/eyrie/engine" ||
+					strings.HasPrefix(path, "github.com/GrayCodeAI/eyrie/engine/") {
 					continue
 				}
-				// Graycode uses the full vendored GraycodeRouter API surface for provider,
+				// Hawk uses the full vendored Eyrie API surface for provider,
 				// graph, and tooling contracts that the engine facade does not
 				// re-export.
 				switch path {
-				case "github.com/GrayCodeAI/graycode-router/llm",
-					"github.com/GrayCodeAI/graycode-router/graph",
-					"github.com/GrayCodeAI/graycode-router/tools":
+				case "github.com/GrayCodeAI/eyrie/llm",
+					"github.com/GrayCodeAI/eyrie/graph",
+					"github.com/GrayCodeAI/eyrie/tools":
 					continue
 				}
 				pos := pf.FSet.Position(imp.Pos())
-				t.Fatalf("forbidden lower-level GraycodeRouter import %q at %s:%d; use github.com/GrayCodeAI/graycode-router/engine", path, rel, pos.Line)
+				t.Fatalf("forbidden lower-level Eyrie import %q at %s:%d; use github.com/GrayCodeAI/eyrie/engine", path, rel, pos.Line)
 			}
 		}
 	}
 }
 
-// TestNoLazyProviderConstructionInGraycode verifies Graycode does not construct lazy
-// provider transports directly. Provider/model transport resolution belongs in GraycodeRouter.
-func TestNoLazyProviderConstructionInGraycode(t *testing.T) {
+// TestNoLazyProviderConstructionInHawk verifies Hawk does not construct lazy
+// provider transports directly. Provider/model transport resolution belongs in Eyrie.
+func TestNoLazyProviderConstructionInHawk(t *testing.T) {
 	root := repoRoot(t)
 	paths := []string{
 		filepath.Join(root, "internal"),
@@ -249,14 +249,14 @@ func TestNoLazyProviderConstructionInGraycode(t *testing.T) {
 					return true
 				}
 				pos := pf.FSet.Position(call.Pos())
-				t.Fatalf("forbidden graycode-router lazy provider construction at %s:%d; use the graycode-router/engine facade", rel, pos.Line)
+				t.Fatalf("forbidden eyrie lazy provider construction at %s:%d; use the eyrie/engine facade", rel, pos.Line)
 				return true
 			})
 		}
 	}
 }
 
-// TestNoDirectSharedTypesImports verifies Graycode does not reintroduce the removed
+// TestNoDirectSharedTypesImports verifies Hawk does not reintroduce the removed
 // legacy shared/types import path into production code.
 func TestNoDirectSharedTypesImports(t *testing.T) {
 	root := repoRoot(t)
@@ -271,11 +271,11 @@ func TestNoDirectSharedTypesImports(t *testing.T) {
 			rel := relPath(root, pf.Path)
 			for _, imp := range pf.File.Imports {
 				path := strings.Trim(imp.Path.Value, `"`)
-				if path != "github.com/GrayCodeAI/graycode-cli/shared/types" {
+				if path != "github.com/GrayCodeAI/hawk/shared/types" {
 					continue
 				}
 				pos := pf.FSet.Position(imp.Pos())
-				t.Fatalf("forbidden direct graycode/shared/types import at %s:%d; the path has been removed, use internal/contracts instead", rel, pos.Line)
+				t.Fatalf("forbidden direct hawk/shared/types import at %s:%d; the path has been removed, use internal/contracts instead", rel, pos.Line)
 			}
 		}
 	}

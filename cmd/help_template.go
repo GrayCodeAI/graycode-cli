@@ -10,7 +10,7 @@ import (
 // last column so coloring them (zero-width ANSI) cannot break alignment. All
 // color honors ShouldColor() (NO_COLOR, --quiet, non-TTY) via auditTint.
 func init() {
-	cobra.AddTemplateFunc("gcHeader", func(s string) string { return auditTint(s, graycodeColor) })
+	cobra.AddTemplateFunc("gcHeader", func(s string) string { return auditTint(s, hawkColor) })
 	cobra.AddTemplateFunc("gcCmd", func(s string) string { return auditTint(s, textPrimary) })
 	cobra.AddTemplateFunc("gcDesc", func(s string) string { return auditTint(s, textMuted) })
 	rootCmd.SetUsageTemplate(modernUsageTemplate)

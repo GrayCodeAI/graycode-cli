@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 // controlPlaneOnboardingHint is a short first-session tip (not a wall of text).
@@ -24,7 +24,7 @@ func workModeSwitchSummary(sess *engine.Session, wm engine.WorkMode) string {
 	}
 	visible := 0
 	if sess != nil && sess.Tools() != nil && sess.Tools().Registry() != nil {
-		visible = len(sess.Tools().Registry().GraycodeRouterTools())
+		visible = len(sess.Tools().Registry().EyrieTools())
 	}
 	return fmt.Sprintf("Work mode → %s\n%s\nModel-visible tools: %d  ·  /status for full control plane", wm, hint, visible)
 }

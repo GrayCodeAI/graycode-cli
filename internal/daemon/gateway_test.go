@@ -211,7 +211,7 @@ func TestAuthorizer_PairingAndAllowlist(t *testing.T) {
 	}
 }
 
-func TestForwardToGraycode(t *testing.T) {
+func TestForwardToHawk(t *testing.T) {
 	var gotAuth, gotPrompt string
 	ts := newIPv4GatewayServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("Authorization")
@@ -224,9 +224,9 @@ func TestForwardToGraycode(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	reply, err := forwardToGraycode(context.Background(), ts.Client(), ts.URL, "key123", "ping")
+	reply, err := forwardToHawk(context.Background(), ts.Client(), ts.URL, "key123", "ping")
 	if err != nil {
-		t.Fatalf("forwardToGraycode: %v", err)
+		t.Fatalf("forwardToHawk: %v", err)
 	}
 	if reply != "pong" {
 		t.Errorf("reply=%q want pong", reply)
@@ -367,22 +367,22 @@ func TestSlackGateway_RejectsBadSignature(t *testing.T) {
 }
 
 func TestDiscordGateway_HandleMessage_FlowsThroughAllowlist(t *testing.T) {
-	graycode := newIPv4GatewayServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, ChatResponse{Response: "graycode-reply"})
+	hawk := newIPv4GatewayServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, ChatResponse{Response: "hawk-reply"})
 	}))
-	defer graycode.Close()
+	defer hawk.Close()
 
-	g := newDiscordGateway(DiscordConfig{Token: "bot", PairingCode: "code"}, graycode.URL, "")
+	g := newDiscordGateway(DiscordConfig{Token: "bot", PairingCode: "code"}, hawk.URL, "")
 	var sent []string
 	send := func(s string) error { sent = append(sent, s); return nil }
 
-	// Unauthorized non-pair message -> "Unauthorized", no graycode call.
+	// Unauthorized non-pair message -> "Unauthorized", no hawk call.
 	g.handleMessage(context.Background(), "u1", "C", "hello", send)
 	// Wrong pairing code -> failure.
 	g.handleMessage(context.Background(), "u1", "C", "/pair nope", send)
 	// Correct pairing code -> paired.
 	g.handleMessage(context.Background(), "u1", "C", "/pair code", send)
-	// Authorized -> forwarded to graycode.
+	// Authorized -> forwarded to hawk.
 	g.handleMessage(context.Background(), "u1", "C", "do it", send)
 
 	if len(sent) != 4 {
@@ -397,8 +397,8 @@ func TestDiscordGateway_HandleMessage_FlowsThroughAllowlist(t *testing.T) {
 	if !strings.Contains(sent[2], "Paired") {
 		t.Errorf("sent[2]=%q want Paired", sent[2])
 	}
-	if sent[3] != "graycode-reply" {
-		t.Errorf("sent[3]=%q want graycode-reply", sent[3])
+	if sent[3] != "hawk-reply" {
+		t.Errorf("sent[3]=%q want hawk-reply", sent[3])
 	}
 	if !g.auth.allowed("u1") {
 		t.Errorf("u1 should be allowed after pairing")

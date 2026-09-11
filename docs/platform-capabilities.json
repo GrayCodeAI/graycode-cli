@@ -51,13 +51,13 @@
     "features": ["tools", "resources", "prompts", "sampling"]
   },
   "ecosystem_compatibility": {
-    "graycode+graycode-router": "full",
-    "graycode+shrike": "full",
-    "graycode+kestrel": "full",
-    "graycode+merlin": "full",
-    "graycode+harrier": "full",
-    "graycode+swift": "full",
-    "graycode-router+shrike": "token_compression",
+    "hawk+eyrie": "full",
+    "hawk+shrike": "full",
+    "hawk+kestrel": "full",
+    "hawk+merlin": "full",
+    "hawk+harrier": "full",
+    "hawk+swift": "full",
+    "eyrie+shrike": "token_compression",
     "kestrel+merlin": "security_review"
   }
 }

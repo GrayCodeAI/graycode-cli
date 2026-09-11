@@ -92,7 +92,7 @@ func SpecConfigPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	dir := filepath.Join(cwd, ".graycode")
+	dir := filepath.Join(cwd, ".hawk")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
 	}
@@ -105,7 +105,7 @@ func LoadSpecConfig() SpecConfig {
 	if err != nil {
 		return SpecConfig{}
 	}
-	data, err := os.ReadFile(path) // #nosec G304 -- path from SpecConfigPath(), derived from cwd + fixed ".graycode" dir
+	data, err := os.ReadFile(path) // #nosec G304 -- path from SpecConfigPath(), derived from cwd + fixed ".hawk" dir
 	if err != nil {
 		return SpecConfig{}
 	}

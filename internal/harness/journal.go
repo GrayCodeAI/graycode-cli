@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
-	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
+	graphcontracts "github.com/GrayCodeAI/hawk/internal/contracts/graph"
+	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 )
 
-// JournalHarnessReport records a privacy-safe quality observation of a harness report into Graycode's execution graph.
+// JournalHarnessReport records a privacy-safe quality observation of a harness report into Hawk's execution graph.
 func JournalHarnessReport(report *HarnessReport, sessionID string) error {
 	if report == nil {
 		return nil

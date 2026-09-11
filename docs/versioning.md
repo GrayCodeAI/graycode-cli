@@ -12,7 +12,7 @@ repository that follows this layout. Adopted 2026-05-14.
 
 ## Pattern by repo type
 
-### Go binaries (`graycode`, `harrier`, `swift`)
+### Go binaries (`hawk`, `harrier`, `swift`)
 
 - `VERSION` at the repo root.
 - A version package (`internal/version` for binaries, or `main` itself) declares
@@ -38,7 +38,7 @@ repository that follows this layout. Adopted 2026-05-14.
   the `VERSION` file because release-please bumps both atomically).
 - This is the Kubernetes / Helm / gh-cli pattern.
 
-### Go libraries (`sparrow`, `graycode-router`, `kestrel`, `merlin`, `shrike`)
+### Go libraries (`sparrow`, `eyrie`, `kestrel`, `merlin`, `shrike`)
 
 - `VERSION` at the repo root.
 - A `version.go` file co-located with `VERSION` uses `//go:embed` to read it at
@@ -90,7 +90,7 @@ func init() {
   pattern = "^(?P<version>[^\\s]+)"
 
   [tool.hatch.build.targets.wheel]
-  force-include = { "VERSION" = "graycode/VERSION" }
+  force-include = { "VERSION" = "hawk/VERSION" }
   ```
 - `_version.py` reads the same `VERSION` file at runtime via `pathlib`, so
   `__version__` matches the package metadata both in source checkouts and in

@@ -4,7 +4,7 @@
 package engine
 
 import (
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/agent"
+	"github.com/GrayCodeAI/hawk/internal/engine/agent"
 )
 
 type (

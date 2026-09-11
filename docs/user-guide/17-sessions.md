@@ -1,6 +1,6 @@
 # Sessions
 
-Graycode saves every conversation to disk automatically. Whether you work in the TUI, in headless mode, or over ACP, Graycode records the exchange as a session.
+Hawk saves every conversation to disk automatically. Whether you work in the TUI, in headless mode, or over ACP, Hawk records the exchange as a session.
 
 ---
 
@@ -14,7 +14,7 @@ A session is a persistent conversation with full history:
 - Token usage and turn counts
 - Subagent sessions
 
-Sessions are identified by a unique session ID and stored under `~/.graycode/sessions/`.
+Sessions are identified by a unique session ID and stored under `~/.hawk/sessions/`.
 
 ---
 
@@ -36,7 +36,7 @@ This clears the current context and starts fresh.
 
 Alias: `/exit`
 
-To leave the session but stay in Graycode:
+To leave the session but stay in Hawk:
 
 ```
 /home
@@ -58,13 +58,13 @@ Opens a session picker. Select a session to resume.
 
 ```bash
 # Resume specific session
-graycode --resume <session-id>
+hawk --resume <session-id>
 
 # Continue most recent
-graycode --continue
+hawk --continue
 
 # New session with specific ID
-graycode --session-id <uuid> -p "prompt"
+hawk --session-id <uuid> -p "prompt"
 ```
 
 ---
@@ -122,10 +122,10 @@ Maintain context across headless calls:
 
 ```bash
 # Start and capture ID
-ID=$(graycode -p "First" --output-format json | jq -r '.sessionId')
+ID=$(hawk -p "First" --output-format json | jq -r '.sessionId')
 
 # Continue
-graycode -p "Second" --resume "$ID"
+hawk -p "Second" --resume "$ID"
 ```
 
 ---

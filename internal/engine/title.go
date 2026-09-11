@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // GenerateTitle derives a concise, descriptive title for the session.
@@ -82,7 +82,7 @@ func (s *Session) generateTitleLLM(ctx context.Context) (string, error) {
 	}
 
 	// Fast streaming call for title generation
-	reqMsgs := []types.GraycodeRouterMessage{
+	reqMsgs := []types.EyrieMessage{
 		{
 			Role:    "user",
 			Content: titlePrompt,

@@ -7,11 +7,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
-// configModelOption is one row in the /config model picker (display from graycode-router, id for settings).
+// configModelOption is one row in the /config model picker (display from eyrie, id for settings).
 type configModelOption struct {
 	ID               string
 	CanonicalID      string
@@ -42,7 +42,7 @@ func InvalidateModelCache() {
 	modelSyncAttempted = make(map[string]bool)
 	modelSyncMu.Unlock()
 	invalidatePlatformContextCache()
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 }
 
 // InvalidateModelCacheProvider drops one gateway's cached picker rows.
@@ -54,7 +54,7 @@ func InvalidateModelCacheProvider(provider string) {
 	modelSyncMu.Lock()
 	delete(modelSyncAttempted, provider)
 	modelSyncMu.Unlock()
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 }
 
 func fetchModelsAsync(provider string) tea.Cmd {
@@ -62,19 +62,19 @@ func fetchModelsAsync(provider string) tea.Cmd {
 		ctx := context.Background()
 		provider = strings.TrimSpace(provider)
 		if provider == "" {
-			provider = graycodeconfig.DefaultModelProviderFilter(ctx)
+			provider = hawkconfig.DefaultModelProviderFilter(ctx)
 		}
-		entries, err := graycodeconfig.ListEngineModels(ctx, provider, false)
+		entries, err := hawkconfig.ListEngineModels(ctx, provider, false)
 		if err != nil {
-			if _, derr := graycodeconfig.ListEngineModels(ctx, provider, true); derr == nil {
+			if _, derr := hawkconfig.ListEngineModels(ctx, provider, true); derr == nil {
 				InvalidateModelCacheProvider(provider)
-				entries, err = graycodeconfig.ListEngineModels(ctx, provider, false)
+				entries, err = hawkconfig.ListEngineModels(ctx, provider, false)
 			}
 		}
 		if err != nil {
 			return modelsFetchedMsg{provider: provider, err: err}
 		}
-		opts := configModelOptionsFromGraycodeRouter(entries)
+		opts := configModelOptionsFromEyrie(entries)
 		if len(opts) > 0 {
 			modelCacheMu.Lock()
 			modelCache[provider] = opts
@@ -84,7 +84,7 @@ func fetchModelsAsync(provider string) tea.Cmd {
 	}
 }
 
-func configModelOptionsFromGraycodeRouter(entries []graycodeconfig.EngineModel) []configModelOption {
+func configModelOptionsFromEyrie(entries []hawkconfig.EngineModel) []configModelOption {
 	opts := make([]configModelOption, len(entries))
 	for i, e := range entries {
 		opts[i] = configModelOption{
@@ -168,10 +168,10 @@ func ensureModelCacheLoaded(provider string) {
 	modelSyncMu.Unlock()
 
 	ctx := context.Background()
-	entries, err := graycodeconfig.ListEngineModels(ctx, provider, false)
+	entries, err := hawkconfig.ListEngineModels(ctx, provider, false)
 	if err != nil {
-		if _, derr := graycodeconfig.ListEngineModels(ctx, provider, true); derr == nil {
-			entries, err = graycodeconfig.ListEngineModels(ctx, provider, false)
+		if _, derr := hawkconfig.ListEngineModels(ctx, provider, true); derr == nil {
+			entries, err = hawkconfig.ListEngineModels(ctx, provider, false)
 		}
 	}
 	if err != nil || len(entries) == 0 {
@@ -180,7 +180,7 @@ func ensureModelCacheLoaded(provider string) {
 		modelSyncMu.Unlock()
 		return
 	}
-	opts := configModelOptionsFromGraycodeRouter(entries)
+	opts := configModelOptionsFromEyrie(entries)
 	modelCacheMu.Lock()
 	modelCache[provider] = opts
 	modelCacheMu.Unlock()
@@ -250,9 +250,9 @@ func loadConfigModelOptions(provider string) []configModelOption {
 		return cached
 	}
 	modelCacheMu.RUnlock()
-	entries, err := graycodeconfig.ListEngineModels(context.Background(), provider, false)
+	entries, err := hawkconfig.ListEngineModels(context.Background(), provider, false)
 	if err == nil && len(entries) > 0 {
-		opts := configModelOptionsFromGraycodeRouter(entries)
+		opts := configModelOptionsFromEyrie(entries)
 		modelCacheMu.Lock()
 		modelCache[provider] = opts
 		modelCacheMu.Unlock()

@@ -4,11 +4,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestRuntimeMessageRoundTrip(t *testing.T) {
-	in := []types.GraycodeRouterMessage{
+	in := []types.EyrieMessage{
 		{
 			Role:    "assistant",
 			Content: "working",

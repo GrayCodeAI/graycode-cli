@@ -1,6 +1,6 @@
 # Permissions and Safety Controls
 
-Graycode can read files, edit code, and run shell commands. The permission system controls what the agent is allowed to do.
+Hawk can read files, edit code, and run shell commands. The permission system controls what the agent is allowed to do.
 
 ---
 

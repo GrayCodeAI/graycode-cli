@@ -228,15 +228,15 @@ func TestRepoMapCacheDir(t *testing.T) {
 func TestConfigDir_Default(t *testing.T) {
 	// Clear env var to test default behavior
 	t.Setenv(envConfigDir, "")
-	t.Setenv(envGraycodeRouterConfigDir, "")
+	t.Setenv(envEyrieConfigDir, "")
 
 	got := ConfigDir()
 	if got == "" {
 		t.Error("ConfigDir() should return non-empty string")
 	}
-	// Should end with "graycode"
-	if !strings.HasSuffix(got, "graycode") {
-		t.Errorf("ConfigDir() = %q, want suffix 'graycode'", got)
+	// Should end with "hawk"
+	if !strings.HasSuffix(got, "hawk") {
+		t.Errorf("ConfigDir() = %q, want suffix 'hawk'", got)
 	}
 }
 
@@ -273,36 +273,36 @@ func TestSettingsPath(t *testing.T) {
 
 // --- ProviderConfigPath tests ---
 
-func TestProviderConfigPath_GraycodeRouterOverride(t *testing.T) {
-	graycodeRouterDir := filepath.Join(t.TempDir(), "graycode-router")
-	t.Setenv(envGraycodeRouterConfigDir, graycodeRouterDir)
+func TestProviderConfigPath_EyrieOverride(t *testing.T) {
+	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
+	t.Setenv(envEyrieConfigDir, eyrieDir)
 
 	got := ProviderConfigPath()
-	want := filepath.Join(graycodeRouterDir, "provider.json")
+	want := filepath.Join(eyrieDir, "provider.json")
 	if got != want {
 		t.Errorf("ProviderConfigPath() = %q, want %q", got, want)
 	}
 }
 
-func TestProviderConfigPath_GraycodeFallback(t *testing.T) {
-	graycodeDir := filepath.Join(t.TempDir(), "graycode")
-	t.Setenv(envConfigDir, graycodeDir)
-	t.Setenv(envGraycodeRouterConfigDir, "")
+func TestProviderConfigPath_HawkFallback(t *testing.T) {
+	hawkDir := filepath.Join(t.TempDir(), "hawk")
+	t.Setenv(envConfigDir, hawkDir)
+	t.Setenv(envEyrieConfigDir, "")
 
 	got := ProviderConfigPath()
-	want := filepath.Join(graycodeDir, "provider.json")
+	want := filepath.Join(hawkDir, "provider.json")
 	if got != want {
 		t.Errorf("ProviderConfigPath() = %q, want %q", got, want)
 	}
 }
 
-func TestProviderConfigPath_GraycodeRouterWhitespaceIgnored(t *testing.T) {
-	graycodeDir := filepath.Join(t.TempDir(), "graycode")
-	t.Setenv(envConfigDir, graycodeDir)
-	t.Setenv(envGraycodeRouterConfigDir, "   ") // whitespace should be treated as empty
+func TestProviderConfigPath_EyrieWhitespaceIgnored(t *testing.T) {
+	hawkDir := filepath.Join(t.TempDir(), "hawk")
+	t.Setenv(envConfigDir, hawkDir)
+	t.Setenv(envEyrieConfigDir, "   ") // whitespace should be treated as empty
 
 	got := ProviderConfigPath()
-	want := filepath.Join(graycodeDir, "provider.json")
+	want := filepath.Join(hawkDir, "provider.json")
 	if got != want {
 		t.Errorf("ProviderConfigPath() = %q, want %q", got, want)
 	}

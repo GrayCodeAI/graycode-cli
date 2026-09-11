@@ -10,9 +10,9 @@ func ResolveCanonicalModel(model string) string {
 	return CanonicalModelID(context.Background(), strings.TrimSpace(model))
 }
 
-// DeploymentStatusReport returns graycode deployment routing diagnostics.
+// DeploymentStatusReport returns hawk deployment routing diagnostics.
 func DeploymentStatusReport(ctx context.Context, activeModel string) (string, error) {
-	engine, err := newGraycodeRouterEngine()
+	engine, err := newEyrieEngine()
 	if err != nil {
 		return "", err
 	}
@@ -20,16 +20,16 @@ func DeploymentStatusReport(ctx context.Context, activeModel string) (string, er
 }
 
 func DeploymentStatusReportWithSettings(ctx context.Context, settings Settings, activeModel string) (string, error) {
-	engine, err := NewGraycodeRouterEngineForSettings(settings)
+	engine, err := NewEyrieEngineForSettings(settings)
 	if err != nil {
 		return "", err
 	}
 	return engine.DeploymentStatus(ctx, activeModel)
 }
 
-// RoutingPreviewJSON returns effective routing for a model (graycode-router routing JSON preview).
+// RoutingPreviewJSON returns effective routing for a model (eyrie routing JSON preview).
 func RoutingPreviewJSON(ctx context.Context, model string) (string, error) {
-	engine, err := newGraycodeRouterEngine()
+	engine, err := newEyrieEngine()
 	if err != nil {
 		return "", err
 	}
@@ -37,7 +37,7 @@ func RoutingPreviewJSON(ctx context.Context, model string) (string, error) {
 }
 
 func RoutingPreviewJSONWithSettings(ctx context.Context, settings Settings, model string) (string, error) {
-	engine, err := NewGraycodeRouterEngineForSettings(settings)
+	engine, err := NewEyrieEngineForSettings(settings)
 	if err != nil {
 		return "", err
 	}

@@ -4,22 +4,22 @@ import (
 	"strings"
 	"testing"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 func TestConfigGatewayRows_ShowsSavedKey(t *testing.T) {
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 	if err := store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatalf("store.Set: %v", err)
 	}
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 
 	rows := chatModel{}.configGatewayRows()
 	var found bool
@@ -35,36 +35,36 @@ func TestConfigGatewayRows_ShowsSavedKey(t *testing.T) {
 }
 
 func TestConfiguredCredentialProviders_UsedByGatewaysTab(t *testing.T) {
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 	if err := store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatalf("store.Set: %v", err)
 	}
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 
-	got := graycodeconfig.ConfiguredCredentialProviders()
+	got := hawkconfig.ConfiguredCredentialProviders()
 	if len(got) != 1 || got[0] != "openrouter" {
 		t.Fatalf("configured = %v", got)
 	}
 }
 
 func TestRemoveCredentialAsync(t *testing.T) {
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 	if err := store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatalf("store.Set: %v", err)
 	}
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 
 	cmd := removeCredentialAsync("openrouter")
 	if cmd == nil {

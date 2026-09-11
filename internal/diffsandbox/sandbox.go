@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/theme"
+	"github.com/GrayCodeAI/hawk/internal/theme"
 )
 
 // ChangeType identifies the kind of file modification.

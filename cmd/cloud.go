@@ -7,15 +7,15 @@ import (
 	"runtime"
 	"time"
 
-	cloud "github.com/GrayCodeAI/graycode-cli/internal/platform/cloud"
+	cloud "github.com/GrayCodeAI/hawk/internal/platform/cloud"
 	"github.com/spf13/cobra"
 )
 
-var cloudCmd = &cobra.Command{Use: "cloud", Short: "Manage optional Graycode Cloud synchronization"}
+var cloudCmd = &cobra.Command{Use: "cloud", Short: "Manage optional Hawk Cloud synchronization"}
 
 var cloudConnectCmd = &cobra.Command{
 	Use:   "connect",
-	Short: "Connect this Graycode device to Graycode Cloud",
+	Short: "Connect this Hawk device to Hawk Cloud",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		endpoint, _ := cmd.Flags().GetString("endpoint")
 		deviceID, _ := cmd.Flags().GetString("device-id")
@@ -27,22 +27,22 @@ var cloudConnectCmd = &cobra.Command{
 		if err := cloud.SaveDeviceConfig(cloud.DeviceConfig{Endpoint: endpoint, DeviceID: deviceID, ProjectID: projectID}, token); err != nil {
 			return err
 		}
-		cmd.Println(auditTint("Graycode Cloud connected. Usage synchronization is opt-in and fail-open.", doneGreen))
+		cmd.Println(auditTint("Hawk Cloud connected. Usage synchronization is opt-in and fail-open.", doneGreen))
 		return nil
 	},
 }
 
 var cloudLoginCmd = &cobra.Command{
 	Use:   "login",
-	Short: "Sign in to Graycode Cloud in a browser",
+	Short: "Sign in to Hawk Cloud in a browser",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		endpoint, _ := cmd.Flags().GetString("endpoint")
 		label, _ := cmd.Flags().GetString("label")
 		if endpoint == "" {
-			endpoint = os.Getenv("GRAYCODE_CLOUD_URL")
+			endpoint = os.Getenv("HAWK_CLOUD_URL")
 		}
 		if endpoint == "" {
-			return fmt.Errorf("graycode cloud endpoint is required (use --endpoint or GRAYCODE_CLOUD_URL)")
+			return fmt.Errorf("hawk cloud endpoint is required (use --endpoint or HAWK_CLOUD_URL)")
 		}
 		if label == "" {
 			label, _ = os.Hostname()
@@ -54,7 +54,7 @@ var cloudLoginCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		cmd.Printf("%s\n", auditTint("Open ", textPrimary)+auditTint(start.VerificationURI, infoSky)+auditTint(" and enter code ", textPrimary)+auditTint(start.UserCode, graycodeColor))
+		cmd.Printf("%s\n", auditTint("Open ", textPrimary)+auditTint(start.VerificationURI, infoSky)+auditTint(" and enter code ", textPrimary)+auditTint(start.UserCode, hawkColor))
 		if err := openBrowser(start.VerificationURI + "?code=" + start.UserCode); err != nil {
 			cmd.Printf("%s\n", auditTint(fmt.Sprintf("Could not open the browser automatically: %v", err), textMuted))
 		}
@@ -82,7 +82,7 @@ var cloudLoginCmd = &cobra.Command{
 			case "approved":
 				if poll.Token == "" || poll.DeviceID == "" || poll.ProjectID == "" {
 					prog.FailStep(0, "incomplete device authorization")
-					return fmt.Errorf("graycode cloud returned an incomplete device authorization")
+					return fmt.Errorf("hawk cloud returned an incomplete device authorization")
 				}
 				if err := cloud.SaveDeviceConfig(cloud.DeviceConfig{Endpoint: endpoint, DeviceID: poll.DeviceID, ProjectID: poll.ProjectID}, poll.Token); err != nil {
 					prog.FailStep(0, err.Error())
@@ -90,39 +90,39 @@ var cloudLoginCmd = &cobra.Command{
 				}
 				prog.CompleteStep(0)
 				prog.Done()
-				cmd.Println(auditTint("Graycode Cloud connected for project ", doneGreen) + auditTint(poll.ProjectID, textPrimary) + auditTint(".", doneGreen))
+				cmd.Println(auditTint("Hawk Cloud connected for project ", doneGreen) + auditTint(poll.ProjectID, textPrimary) + auditTint(".", doneGreen))
 				return nil
 			case "expired":
 				prog.FailStep(0, "device authorization expired")
-				return fmt.Errorf("graycode cloud device authorization expired")
+				return fmt.Errorf("hawk cloud device authorization expired")
 			default:
 				prog.FailStep(0, fmt.Sprintf("unknown status %q", poll.Status))
-				return fmt.Errorf("graycode cloud returned unknown device authorization status %q", poll.Status)
+				return fmt.Errorf("hawk cloud returned unknown device authorization status %q", poll.Status)
 			}
 		}
 	},
 }
 
 var cloudStatusCmd = &cobra.Command{
-	Use: "status", Short: "Show Graycode Cloud connection status",
+	Use: "status", Short: "Show Hawk Cloud connection status",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		client, cfg, err := cloud.LoadClient()
 		if err != nil || !client.Enabled() {
-			cmd.Println(auditTint("Graycode Cloud is not connected.", textMuted))
+			cmd.Println(auditTint("Hawk Cloud is not connected.", textMuted))
 			return nil
 		}
-		cmd.Println(auditTint("Graycode Cloud connected: ", doneGreen) + auditTint(cfg.Endpoint, textPrimary) + auditTint(fmt.Sprintf(" (device %s, project %s)", cfg.DeviceID, cfg.ProjectID), textMuted))
+		cmd.Println(auditTint("Hawk Cloud connected: ", doneGreen) + auditTint(cfg.Endpoint, textPrimary) + auditTint(fmt.Sprintf(" (device %s, project %s)", cfg.DeviceID, cfg.ProjectID), textMuted))
 		return nil
 	},
 }
 
 var cloudContextCmd = &cobra.Command{
 	Use:   "context",
-	Short: "Sync repository context to Graycode Cloud",
+	Short: "Sync repository context to Hawk Cloud",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		client, cfg, err := cloud.LoadClient()
 		if err != nil || !client.Enabled() {
-			return fmt.Errorf("graycode cloud is not connected")
+			return fmt.Errorf("hawk cloud is not connected")
 		}
 		detected, detectErr := detectGitContext(cmd.Context())
 		repository, _ := cmd.Flags().GetString("repository")
@@ -182,7 +182,7 @@ var cloudContextCmd = &cobra.Command{
 			event.Deployment = &cloud.DeploymentContext{Provider: contextProvider, ExternalID: deploymentID, Environment: deploymentEnvironment, Status: deploymentStatus}
 		}
 		client.RecordDeliveryContext(cmd.Context(), event)
-		cmd.Println(auditTint("Repository context queued for Graycode Cloud.", doneGreen))
+		cmd.Println(auditTint("Repository context queued for Hawk Cloud.", doneGreen))
 		return nil
 	},
 }
@@ -197,12 +197,12 @@ func firstValue(values ...string) string {
 }
 
 func init() {
-	cloudLoginCmd.Flags().String("endpoint", "", "Graycode Cloud endpoint (or GRAYCODE_CLOUD_URL)")
-	cloudLoginCmd.Flags().String("label", "", "Name for this Graycode device")
-	cloudConnectCmd.Flags().String("endpoint", "", "Graycode Cloud endpoint")
-	cloudConnectCmd.Flags().String("device-id", "", "Graycode Cloud device ID")
-	cloudConnectCmd.Flags().String("project-id", "", "Graycode Cloud project ID")
-	cloudConnectCmd.Flags().String("token", "", "Graycode Cloud device token")
+	cloudLoginCmd.Flags().String("endpoint", "", "Hawk Cloud endpoint (or HAWK_CLOUD_URL)")
+	cloudLoginCmd.Flags().String("label", "", "Name for this Hawk device")
+	cloudConnectCmd.Flags().String("endpoint", "", "Hawk Cloud endpoint")
+	cloudConnectCmd.Flags().String("device-id", "", "Hawk Cloud device ID")
+	cloudConnectCmd.Flags().String("project-id", "", "Hawk Cloud project ID")
+	cloudConnectCmd.Flags().String("token", "", "Hawk Cloud device token")
 	cloudContextCmd.Flags().String("repository", "", "Repository name (auto-detected from Git when omitted)")
 	cloudContextCmd.Flags().String("provider", "", "Repository provider (auto-detected when omitted)")
 	cloudContextCmd.Flags().String("external-id", "", "Provider repository identifier (defaults to repository)")

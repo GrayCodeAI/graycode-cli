@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 )
 
 func TestFoldLastSwitchWins(t *testing.T) {

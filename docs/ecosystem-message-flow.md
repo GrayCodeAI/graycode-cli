@@ -1,11 +1,11 @@
-# Ecosystem message flow (graycode-router · harrier · shrike)
+# Ecosystem message flow (eyrie · harrier · shrike)
 
-How one user message travels through graycode and the GrayCodeAI ecosystem libraries.
+How one user message travels through hawk and the GrayCodeAI ecosystem libraries.
 
 ## Overview
 
 ```
-User prompt (TUI or graycode exec)
+User prompt (TUI or hawk exec)
         │
         ▼
 ┌───────────────────┐
@@ -26,7 +26,7 @@ User prompt (TUI or graycode exec)
           │
           ▼
 ┌───────────────────┐     ┌─────────────┐
-│  Graycode ChatClient   │────►│ graycode-router/engine│  catalog, credentials, routing
+│  Hawk ChatClient   │────►│ eyrie/engine│  catalog, credentials, routing
 │  port + adapter    │     │ generate/   │────► provider API
 └─────────┬─────────┘     │ stream      │
                           └─────────────┘
@@ -42,25 +42,25 @@ User prompt (TUI or graycode exec)
           ▼ (when context grows)
 ┌───────────────────┐
 │  shrike Compress      │  fast path before LLM summarization
-│  + graycode-router compact   │
+│  + eyrie compact   │
 └───────────────────┘
 ```
 
 ## Step by step
 
-### 1. Session start (`graycode` or `graycode exec`)
+### 1. Session start (`hawk` or `hawk exec`)
 
-- **graycode-router**: The Graycode composition root creates an `graycode-router/engine.Engine` with
-  GraycodeRouter-owned state paths, an injected secret store, and per-engine custom
+- **eyrie**: The Hawk composition root creates an `eyrie/engine.Engine` with
+  Eyrie-owned state paths, an injected secret store, and per-engine custom
   gateway metadata. The engine loads provider state and the model catalog, then
-  builds transport behind Graycode's `ChatClient` port.
-- **harrier**: `configureSession` creates `HarrierBridge` → opens `~/.harrier/data/harrier.db`. If missing, graycode runs without persistent memory.
+  builds transport behind Hawk's `ChatClient` port.
+- **harrier**: `configureSession` creates `HarrierBridge` → opens `~/.harrier/data/harrier.db`. If missing, hawk runs without persistent memory.
 - **shrike**: No startup step — linked at compile time.
 
 ### 2. System prompt assembly
 
-- Graycode templates (`internal/prompts/templates/*.md`) define behavior, tools, and practices.
-- Project `AGENTS.md` is appended via `graycodeconfig.BuildContextWithDirs`.
+- Hawk templates (`internal/prompts/templates/*.md`) define behavior, tools, and practices.
+- Project `AGENTS.md` is appended via `hawkconfig.BuildContextWithDirs`.
 - **harrier**: `Memory.Recall` injects relevant graph nodes into the system prompt.
 
 ### 3. User message → agent loop (`internal/engine/stream.go`)
@@ -68,8 +68,8 @@ User prompt (TUI or graycode exec)
 Each turn:
 
 1. **harrier** — recall memories matching the latest user message (token budget ~2000).
-2. **graycode-router** — Graycode's adapter calls engine generate/stream with Graycode-owned tool
-   definitions; GraycodeRouter normalizes provider events and tool requests.
+2. **eyrie** — Hawk's adapter calls engine generate/stream with Hawk-owned tool
+   definitions; Eyrie normalizes provider events and tool requests.
 3. Tools run with `HarrierBridge` in context for `CoreMemory*` tools.
 4. **harrier** — sleeptime consolidation, skill distillation, auto-remember after turns.
 
@@ -78,7 +78,7 @@ Each turn:
 When messages exceed limits (`internal/engine/compact.go`):
 
 1. **shrike** — `shrike.Compress()` tries a fast compression path for summaries.
-2. **graycode-router** — if shrike reduction is insufficient, graycode calls the LLM to summarize, then keeps recent messages.
+2. **eyrie** — if shrike reduction is insufficient, hawk calls the LLM to summarize, then keeps recent messages.
 
 ### 5. Token accounting
 
@@ -87,24 +87,24 @@ When messages exceed limits (`internal/engine/compact.go`):
 ## Verify locally
 
 ```bash
-graycode doctor              # ecosystem panel + graycode-router preflight + harrier status
-graycode harrier                # merlin memory graph
-./scripts/smoke-graycode.sh  # build + quick tests
+hawk doctor              # ecosystem panel + eyrie preflight + harrier status
+hawk harrier                # merlin memory graph
+./scripts/smoke-hawk.sh  # build + quick tests
 ```
 
 ## Module layout
 
-| Module | Role in graycode | Required? |
+| Module | Role in hawk | Required? |
 |--------|----------------|-----------|
-| **graycode-router** | LLM APIs, catalog, credentials, routing | Yes |
+| **eyrie** | LLM APIs, catalog, credentials, routing | Yes |
 | **harrier** | SQLite memory graph at `~/.harrier/data/` | No (degrades gracefully) |
 | **shrike** | Token estimate + context compression | Yes (embedded, no config) |
 
-The support repositories are independent sibling checkouts: `graycode-router`,
+The support repositories are independent sibling checkouts: `eyrie`,
 `harrier` (Harrier), and `shrike` (Shrike), with the parent `go.work` wiring the
 local Go workspace.
 
-Production Graycode code imports GraycodeRouter only through `graycode-router/engine`. Conversation
-history, WAL/resume, permissions, and tool execution remain in Graycode; provider
+Production Hawk code imports Eyrie only through `eyrie/engine`. Conversation
+history, WAL/resume, permissions, and tool execution remain in Hawk; provider
 credentials, discovery, selection, transport, resilience, and normalized
-streaming remain in GraycodeRouter.
+streaming remain in Eyrie.

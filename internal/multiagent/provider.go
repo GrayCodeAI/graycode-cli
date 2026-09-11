@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/acp"
+	"github.com/GrayCodeAI/hawk/internal/acp"
 )
 
 var (

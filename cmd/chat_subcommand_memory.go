@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 // memorySubcommand implements the /memory slash command.
@@ -17,7 +17,7 @@ func (m *memorySubcommand) Aliases() []string   { return nil }
 func (m *memorySubcommand) Description() string { return "print project instructions (AGENTS.md)" }
 func (m *memorySubcommand) Usage() string       { return "" }
 func (m *memorySubcommand) Handle(ml *chatModel, args []string, text string) (tea.Model, tea.Cmd) {
-	md := strings.TrimSpace(graycodeconfig.LoadAgentsMD())
+	md := strings.TrimSpace(hawkconfig.LoadAgentsMD())
 	if md == "" {
 		ml.messages = append(ml.messages, displayMsg{role: "system", content: "No AGENTS.md project instructions found.\nUse /harrier for persistent graph memory."})
 	} else {

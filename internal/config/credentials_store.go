@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
-	"github.com/GrayCodeAI/graycode-cli/internal/theme"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/hawk/internal/theme"
 )
 
-// PersistAPIKey saves a provider API key via graycode-router (OS secret store).
+// PersistAPIKey saves a provider API key via eyrie (OS secret store).
 func PersistAPIKey(ctx context.Context, envKey, secret string) error {
 	secret = strings.TrimSpace(secret)
 	envKey = strings.TrimSpace(envKey)
 	if secret == "" || envKey == "" {
 		return nil
 	}
-	engine, err := newGraycodeRouterEngine()
+	engine, err := newEyrieEngine()
 	if err != nil {
 		return err
 	}
@@ -27,7 +27,7 @@ func PersistAPIKey(ctx context.Context, envKey, secret string) error {
 	return nil
 }
 
-// CredentialInference is one graycode-router provider match for a pasted API key.
+// CredentialInference is one eyrie provider match for a pasted API key.
 type CredentialInference struct {
 	ProviderID   string
 	DeploymentID string
@@ -35,7 +35,7 @@ type CredentialInference struct {
 	DisplayName  string
 }
 
-// CredentialProviderOption is one graycode-router provider row for /config pickers.
+// CredentialProviderOption is one eyrie provider row for /config pickers.
 type CredentialProviderOption struct {
 	ProviderID   string
 	DeploymentID string
@@ -46,7 +46,7 @@ type CredentialProviderOption struct {
 	Rank         int
 }
 
-// CredentialResolveResult is graycode-router paste-key resolution (format check + full provider list; no prefix inference).
+// CredentialResolveResult is eyrie paste-key resolution (format check + full provider list; no prefix inference).
 type CredentialResolveResult struct {
 	FormatOK                bool
 	FormatError             string
@@ -54,9 +54,9 @@ type CredentialResolveResult struct {
 	ProbeDisambiguationUsed bool
 }
 
-// ResolveCredential validates format and lists all providers from graycode-router registry.
+// ResolveCredential validates format and lists all providers from eyrie registry.
 func ResolveCredential(ctx context.Context, secret string) CredentialResolveResult {
-	engine, err := newGraycodeRouterEngine()
+	engine, err := newEyrieEngine()
 	if err != nil {
 		return CredentialResolveResult{FormatError: err.Error()}
 	}
@@ -91,9 +91,9 @@ func InferenceFromOption(opt CredentialProviderOption) CredentialInference {
 	}
 }
 
-// SaveCredential validates, probes, and stores via graycode-router keychain.
+// SaveCredential validates, probes, and stores via eyrie keychain.
 func SaveCredential(ctx context.Context, inference CredentialInference, secret string) error {
-	engine, err := newGraycodeRouterEngine()
+	engine, err := newEyrieEngine()
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func SaveCredential(ctx context.Context, inference CredentialInference, secret s
 
 // HasStoredCredentialForProvider reports whether the OS secret store has a key for this gateway.
 func HasStoredCredentialForProvider(ctx context.Context, providerID string) bool {
-	engine, err := newGraycodeRouterEngine()
+	engine, err := newEyrieEngine()
 	if err != nil {
 		return false
 	}
@@ -117,7 +117,7 @@ func HasStoredCredentialForProvider(ctx context.Context, providerID string) bool
 // CredentialEnvironmentConflict reports a safe environment-vs-keychain
 // mismatch for a provider. It returns identifiers only, never secret values.
 func CredentialEnvironmentConflict(ctx context.Context, providerID string) (envVar string, conflict bool) {
-	engine, err := newGraycodeRouterEngine()
+	engine, err := newEyrieEngine()
 	if err != nil {
 		return "", false
 	}
@@ -137,7 +137,7 @@ func ConfiguredCredentialProviders() []string {
 	return configuredCredentialProvidersCached(context.Background())
 }
 
-// FormatCredentialCLIStatus returns graycode credentials status output (providers, not raw env names).
+// FormatCredentialCLIStatus returns hawk credentials status output (providers, not raw env names).
 func FormatCredentialCLIStatus(ctx context.Context) string {
 	if ctx == nil {
 		ctx = context.Background()
@@ -165,7 +165,7 @@ func RemoveStoredCredential(ctx context.Context, target string) ([]string, error
 	if target == "" {
 		return nil, fmt.Errorf("provider or env var name required")
 	}
-	engine, err := newGraycodeRouterEngine()
+	engine, err := newEyrieEngine()
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +189,7 @@ func MaskCredentialForProvider(ctx context.Context, provider string) string {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	engine, err := newGraycodeRouterEngine()
+	engine, err := newEyrieEngine()
 	if err == nil {
 		status, statusErr := engine.CredentialStatus(ctx, provider)
 		if statusErr == nil && status.Masked != "" {
@@ -214,7 +214,7 @@ func maskCredentialSecret(secret string) string {
 
 // CredentialInferenceForProvider returns save metadata for a gateway chosen in /config.
 func CredentialInferenceForProvider(providerID string) (CredentialInference, error) {
-	engine, err := newGraycodeRouterEngine()
+	engine, err := newEyrieEngine()
 	if err != nil {
 		return CredentialInference{}, err
 	}
@@ -235,7 +235,7 @@ func LocalCredentialInference(providerID string) (CredentialInference, error) {
 	return CredentialInferenceForProvider(providerID)
 }
 
-// FormatConfigProviderError maps graycode-router setup errors to user-facing /config hints.
+// FormatConfigProviderError maps eyrie setup errors to user-facing /config hints.
 func FormatConfigProviderError(providerID string, err error) string {
 	if err == nil {
 		return ""

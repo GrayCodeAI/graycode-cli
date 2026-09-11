@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/token"
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/engine/token"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 type SessionMemoryConfig struct {
@@ -25,7 +25,7 @@ func DefaultSessionMemoryConfig() SessionMemoryConfig {
 	}
 }
 
-func CalculateMessagesToKeepIndex(msgs []types.GraycodeRouterMessage, cfg SessionMemoryConfig) int {
+func CalculateMessagesToKeepIndex(msgs []types.EyrieMessage, cfg SessionMemoryConfig) int {
 	if len(msgs) == 0 {
 		return 0
 	}
@@ -55,8 +55,8 @@ func CalculateMessagesToKeepIndex(msgs []types.GraycodeRouterMessage, cfg Sessio
 	return idx
 }
 
-func FilterCompactBoundaries(msgs []types.GraycodeRouterMessage) []types.GraycodeRouterMessage {
-	result := make([]types.GraycodeRouterMessage, 0, len(msgs))
+func FilterCompactBoundaries(msgs []types.EyrieMessage) []types.EyrieMessage {
+	result := make([]types.EyrieMessage, 0, len(msgs))
 	for _, m := range msgs {
 		if IsCompactBoundary(m) {
 			continue
@@ -66,7 +66,7 @@ func FilterCompactBoundaries(msgs []types.GraycodeRouterMessage) []types.Graycod
 	return result
 }
 
-func IsCompactBoundary(m types.GraycodeRouterMessage) bool {
+func IsCompactBoundary(m types.EyrieMessage) bool {
 	if m.Role != "user" {
 		return false
 	}

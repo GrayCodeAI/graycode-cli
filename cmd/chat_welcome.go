@@ -9,15 +9,15 @@ import (
 
 	"github.com/mattn/go-runewidth"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
-	"github.com/GrayCodeAI/graycode-cli/internal/session"
-	"github.com/GrayCodeAI/graycode-cli/internal/tool"
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 type welcomeStatusSnapshot struct {
-	setup    graycodeconfig.SetupState
+	setup    hawkconfig.SetupState
 	agentsOK bool
 }
 
@@ -53,8 +53,8 @@ func (m chatModel) welcomeDockerRunning() *bool {
 func loadWelcomeStatusSnapshot() welcomeStatusSnapshot {
 	ctx := context.Background()
 	return welcomeStatusSnapshot{
-		setup:    graycodeconfig.EvaluateSetupCached(ctx),
-		agentsOK: graycodeconfig.LoadAgentsMD() != "",
+		setup:    hawkconfig.EvaluateSetupCached(ctx),
+		agentsOK: hawkconfig.LoadAgentsMD() != "",
 	}
 }
 
@@ -100,8 +100,8 @@ func (m *chatModel) rebuildWelcomeCache(opts ...any) {
 	m.welcomeCache = buildWelcomeMessageWithSnapshot(m.session, m.sessionID, m.registry, nil, m.settings, skillsCount, connectedMCPCount(m.registry), frame, width, height, m.welcomeDockerRunning(), m.welcomeStatusSnapshot(), m.containerEnabled, m.lastCommand)
 }
 
-// buildWelcomeMessage renders the branded inline GRAYCODE welcome block.
-func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings graycodeconfig.Settings, skillsCount int, blinkClosed bool, width, height int, dockerRunning *bool) string {
+// buildWelcomeMessage renders the branded inline HAWK welcome block.
+func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount int, blinkClosed bool, width, height int, dockerRunning *bool) string {
 	frame := 0
 	if blinkClosed {
 		frame = 2
@@ -109,8 +109,8 @@ func buildWelcomeMessage(sess *engine.Session, sessionID string, registry *tool.
 	return buildWelcomeMessageWithSnapshot(sess, sessionID, registry, saved, settings, skillsCount, connectedMCPCount(registry), frame, width, height, dockerRunning, loadWelcomeStatusSnapshot(), false, "")
 }
 
-func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings graycodeconfig.Settings, skillsCount, mcpCount int, eyeFrame int, width, height int, dockerRunning *bool, snapshot welcomeStatusSnapshot, containerMode bool, lastCommand string) string {
-	// Talon Gold is used for the GRAYCODE wordmark. All escapes come from the
+func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, registry *tool.Registry, saved *session.Session, settings hawkconfig.Settings, skillsCount, mcpCount int, eyeFrame int, width, height int, dockerRunning *bool, snapshot welcomeStatusSnapshot, containerMode bool, lastCommand string) string {
+	// Talon Gold is used for the HAWK wordmark. All escapes come from the
 	// theme palette (theme.go) so a rebrand stays a one-file change.
 	logoC := ansiOrange
 	dimC := ansiDim
@@ -148,7 +148,7 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 		return strings.Repeat(" ", pad) + styled
 	}
 
-	art := graycodeLogoArtLines
+	art := hawkLogoArtLines
 	var eyeGlyph string
 	switch eyeFrame {
 	case 1, 3:
@@ -157,13 +157,13 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 		eyeGlyph = "|-\\/-|"
 	}
 	if eyeGlyph != "" {
-		art = append([]string(nil), graycodeLogoArtLines...)
+		art = append([]string(nil), hawkLogoArtLines...)
 		for i, line := range art {
 			art[i] = strings.Replace(line, "|0\\/0|", eyeGlyph, 1)
 		}
 	}
 
-	// Inject the version into the graycode's body — centered in the lower gap.
+	// Inject the version into the hawk's body — centered in the lower gap.
 	verStr := DisplayVersion()
 	if verStr != "" && !strings.HasPrefix(verStr, "v") && !strings.HasPrefix(verStr, "V") {
 		verStr = "v" + verStr
@@ -186,13 +186,13 @@ func buildWelcomeMessageWithSnapshot(sess *engine.Session, sessionID string, reg
 
 	if tight {
 		// Compact single-line wordmark for small terminals — version sits
-		// inline so it's always visible even when the full graycode is hidden.
+		// inline so it's always visible even when the full hawk is hidden.
 		verDisplay := DisplayVersion()
 		if verDisplay != "" && !strings.HasPrefix(verDisplay, "v") && !strings.HasPrefix(verDisplay, "V") {
 			verDisplay = "v" + verDisplay
 		}
-		compactArt := logoC + "GRAYCODE" + rst + "  " + verDisplay
-		b.WriteString(center(runewidth.StringWidth("GRAYCODE   "+verDisplay), compactArt) + "\n")
+		compactArt := logoC + "HAWK" + rst + "  " + verDisplay
+		b.WriteString(center(runewidth.StringWidth("HAWK   "+verDisplay), compactArt) + "\n")
 	} else {
 		artW := blockLinesWidth(art)
 		for _, line := range art {
@@ -373,7 +373,7 @@ func toolListSummary(registry *tool.Registry) string {
 	if registry == nil {
 		return "No tools enabled."
 	}
-	tools := registry.GraycodeRouterTools()
+	tools := registry.EyrieTools()
 	registered := len(registry.PrimaryTools())
 	if len(tools) == 0 {
 		return "No tools enabled."
@@ -403,7 +403,7 @@ func envSummary(provider, model string) string {
 
 func envSummaryWithSelection(provider, model string, includeSelection bool) string {
 	var providers []string
-	for _, gateway := range graycodeconfig.GatewayStatuses(context.Background(), provider, model) {
+	for _, gateway := range hawkconfig.GatewayStatuses(context.Background(), provider, model) {
 		providers = append(providers, gateway.ID)
 	}
 	sort.Strings(providers)
@@ -411,17 +411,17 @@ func envSummaryWithSelection(provider, model string, includeSelection bool) stri
 	if includeSelection {
 		b.WriteString(fmt.Sprintf("Provider: %s\nModel: %s\n\n", provider, model))
 	}
-	b.WriteString(fmt.Sprintf("Credentials (%s):\n", graycodeconfig.CredentialStoreName()))
+	b.WriteString(fmt.Sprintf("Credentials (%s):\n", hawkconfig.CredentialStoreName()))
 	for _, providerID := range providers {
-		b.WriteString(fmt.Sprintf("  %s: %s\n", providerID, graycodeconfig.EnvKeyStatus(providerID)))
+		b.WriteString(fmt.Sprintf("  %s: %s\n", providerID, hawkconfig.EnvKeyStatus(providerID)))
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func configCommandSummary(settings graycodeconfig.Settings) string {
+func configCommandSummary(settings hawkconfig.Settings) string {
 	_ = settings
-	providerName := displayConfigValue(graycodeconfig.ActiveProvider(context.Background()))
-	modelName := displayConfigValue(graycodeconfig.ActiveModel(context.Background()))
+	providerName := displayConfigValue(hawkconfig.ActiveProvider(context.Background()))
+	modelName := displayConfigValue(hawkconfig.ActiveModel(context.Background()))
 	keys := configuredKeyList()
 	keysColor := infoSky
 	if keys == "(none)" {
@@ -431,15 +431,15 @@ func configCommandSummary(settings graycodeconfig.Settings) string {
 
   /config  → paste API key (OS keychain) + pick model
   /path    → verify readiness in TUI
-  graycode path (CLI)
+  hawk path (CLI)
 
 %s:
   %s %s
   %s %s
   %s %s
 
-Model catalog and routing live in graycode-router — graycode is the UI only.`,
-		auditTint("Setup (graycode-router)", textPrimary),
+Model catalog and routing live in eyrie — hawk is the UI only.`,
+		auditTint("Setup (eyrie)", textPrimary),
 		auditTint("Current", textPrimary),
 		auditTint("provider:", textMuted), auditTint(providerName, infoSky),
 		auditTint("model:", textMuted), auditTint(modelName, infoSky),
@@ -447,7 +447,7 @@ Model catalog and routing live in graycode-router — graycode is the UI only.`,
 }
 
 func apiKeyConfigSummary() string {
-	return auditTint("API keys ("+graycodeconfig.CredentialStoreName()+")", textPrimary) + "\n" + indentedAPIKeyLines()
+	return auditTint("API keys ("+hawkconfig.CredentialStoreName()+")", textPrimary) + "\n" + indentedAPIKeyLines()
 }
 
 func configuredKeyList() string {
@@ -493,11 +493,11 @@ func apiKeyStatusColor(status string) color.Color {
 }
 
 func apiKeyStatusLines() []string {
-	providers := graycodeconfig.AllSetupGateways()
+	providers := hawkconfig.AllSetupGateways()
 	sort.Strings(providers)
 	var lines []string
 	for _, provider := range providers {
-		lines = append(lines, fmt.Sprintf("%s: %s", provider, graycodeconfig.EnvKeyStatus(provider)))
+		lines = append(lines, fmt.Sprintf("%s: %s", provider, hawkconfig.EnvKeyStatus(provider)))
 	}
 	return lines
 }

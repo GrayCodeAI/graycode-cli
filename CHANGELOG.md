@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Memory and config failures no longer silently dropped**: stream-loop memory persists (assistant learnings, skills, conversation summaries, insights) and the self-improve lesson store log failures via slog, corrupt lesson stores are reported, and the config panel surfaces failed `provider` setting saves instead of ignoring them.
 
 ### Changed
+- **Renamed graycode back to hawk**: module `github.com/GrayCodeAI/hawk`, binary `hawk`, `HAWK_*` env vars, `~/.hawk` config, `cmd/hawk`, `internal/hawkerr`, and `npm/hawk*` packages, matching the `GrayCodeAI/hawk` repository name. The router dependency is `github.com/GrayCodeAI/eyrie` again (`Eyrie*` types, `eyrieengine`, `EYRIE_*` env vars, `~/.eyrie`). Hard break with no `~/.graycode` migration. `graycode-skills`, `graycode-platform`, `graycode-cloud` and the `graycode-cloud.graph/v1` schema keep their names.
 - **Makefile lint pin matches CI**: `make lint`/`lint-fix`/`setup` install `golangci-lint@v2.1.0` (was `@latest`), the same version CI enforces.
 - **Docs truth and housekeeping**: SECURITY.md/CONTRIBUTING.md now describe the actual Go toolchain (golangci-lint, go vet, govulncheck) instead of the polyglot template's ruff/mypy/pip-audit/pnpm-lock language, CONTRIBUTING documents `make setup`/`boundaries`/`test-10x`/`smoke`, and the planning docs (`SPEC_DRIVEN_PLAN.md`, `SPEC_DRIVEN_PHASE2_PLAN.md`, `internal/engine/REFACTOR_PLAN.md`) moved to `docs/plans/`.
 

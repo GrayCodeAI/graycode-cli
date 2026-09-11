@@ -1,6 +1,6 @@
 # Terminal Support and Troubleshooting
 
-Graycode runs as a full-screen TUI powered by Bubble Tea. This covers terminal compatibility and common fixes.
+Hawk runs as a full-screen TUI powered by Bubble Tea. This covers terminal compatibility and common fixes.
 
 ---
 
@@ -24,7 +24,7 @@ set -as terminal-features ",*:RGB"
 
 ## Terminal Detection
 
-Graycode detects these terminals:
+Hawk detects these terminals:
 
 - Apple Terminal
 - iTerm2
@@ -61,7 +61,7 @@ Run `/terminal-setup` for diagnostics.
 
 **Cause**: Zellij, tmux control mode, or config.
 
-**Fix**: Set in `~/.graycode/settings.json`:
+**Fix**: Set in `~/.hawk/settings.json`:
 
 ```json
 { "terminal": { "alt_screen": "always" } }
@@ -128,7 +128,7 @@ set -g set-clipboard on
 
 ## Diagnostics
 
-Run in Graycode:
+Run in Hawk:
 
 ```
 /terminal-setup

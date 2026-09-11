@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // SandboxChecklistItem is one ordered step in the Docker onboarding checklist.
@@ -20,7 +20,7 @@ type SandboxChecklistItem struct {
 // EvaluateSandboxChecklist returns the ordered Docker onboarding checklist
 // (daemon -> image cached -> registry reachable -> local build available),
 // emitted identically by path, preflight, and doctor. It is diagnostic only:
-// it never mutates Docker state. graycode is fail-closed — there is no
+// it never mutates Docker state. hawk is fail-closed — there is no
 // host-execution fallback (see docs/SECURITY-DEVELOPER.md).
 func EvaluateSandboxChecklist(ctx context.Context) []SandboxChecklistItem {
 	if ctx == nil {
@@ -50,7 +50,7 @@ func EvaluateSandboxChecklist(ctx context.Context) []SandboxChecklistItem {
 		Status: statusFor(daemon && present),
 		Detail: boolDetail(present,
 			"Image present: "+img,
-			"Image not cached — Graycode pulls or builds it on first run"),
+			"Image not cached — Hawk pulls or builds it on first run"),
 		FixCmd: "docker pull " + sandbox.DefaultSandboxImage(),
 	})
 

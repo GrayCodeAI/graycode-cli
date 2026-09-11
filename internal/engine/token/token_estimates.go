@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
-func EstimateTokens(msgs []types.GraycodeRouterMessage) int {
+func EstimateTokens(msgs []types.EyrieMessage) int {
 	total := 0
 	for _, m := range msgs {
 		total += EstimateMessageTokens(m)
@@ -15,7 +15,7 @@ func EstimateTokens(msgs []types.GraycodeRouterMessage) int {
 	return total
 }
 
-func EstimateMessageTokens(m types.GraycodeRouterMessage) int {
+func EstimateMessageTokens(m types.EyrieMessage) int {
 	tokens := CountTokens(m.Content)
 	for _, tc := range m.ToolUse {
 		tokens += CountTokens(tc.Name)

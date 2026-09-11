@@ -3,11 +3,11 @@ package types
 import (
 	"context"
 
-	"github.com/GrayCodeAI/graycode-router/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
 )
 
-// ContentPart is a provider-neutral multimodal message part. Graycode owns this
-// conversation shape; the GraycodeRouter engine adapter translates it at the transport
+// ContentPart is a provider-neutral multimodal message part. Hawk owns this
+// conversation shape; the Eyrie engine adapter translates it at the transport
 // boundary. It aliases the canonical contract type.
 type ContentPart = llm.ContentPart
 
@@ -17,67 +17,67 @@ type ImageURLPart = llm.ImageURLPart
 // InputAudioPart describes base64-encoded audio content.
 type InputAudioPart = llm.InputAudioPart
 
-// ChatProvider is Graycode's transport-provider interface.
+// ChatProvider is Hawk's transport-provider interface.
 type ChatProvider interface {
-	Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error)
-	StreamChat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*StreamResult, error)
+	Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error)
+	StreamChat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*StreamResult, error)
 	Ping(ctx context.Context) error
 	Name() string
 }
 
 // ChatClient is the session-level agent-loop client interface.
 type ChatClient interface {
-	Chat(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions) (*GraycodeRouterResponse, error)
-	StreamChatContinue(ctx context.Context, messages []GraycodeRouterMessage, opts ChatOptions, cfg ContinuationConfig) (*StreamResult, error)
+	Chat(ctx context.Context, messages []EyrieMessage, opts ChatOptions) (*EyrieResponse, error)
+	StreamChatContinue(ctx context.Context, messages []EyrieMessage, opts ChatOptions, cfg ContinuationConfig) (*StreamResult, error)
 }
 
-// ResponseFormat specifies the desired output format for a Graycode runtime request.
+// ResponseFormat specifies the desired output format for a Hawk runtime request.
 type ResponseFormat = llm.ResponseFormat
 
 // ToolChoiceOption controls how the model uses tools.
 type ToolChoiceOption = llm.ToolChoiceOption
 
-// GraycodeRouterTool is Graycode's runtime tool definition DTO.
-type GraycodeRouterTool = llm.GraycodeRouterTool
+// EyrieTool is Hawk's runtime tool definition DTO.
+type EyrieTool = llm.EyrieTool
 
-// ChatOptions holds Graycode-owned request options for an engine chat call.
+// ChatOptions holds Hawk-owned request options for an engine chat call.
 type ChatOptions = llm.ChatOptions
 
-// ContinuationConfig controls output continuation behavior for Graycode runtime calls.
+// ContinuationConfig controls output continuation behavior for Hawk runtime calls.
 type ContinuationConfig = llm.ContinuationConfig
 
-// DefaultContinuationConfig is Graycode's agent-loop continuation policy. GraycodeRouter
+// DefaultContinuationConfig is Hawk's agent-loop continuation policy. Eyrie
 // receives these limits through its engine request rather than owning the
 // product policy.
 func DefaultContinuationConfig() ContinuationConfig {
 	return ContinuationConfig{MaxContinuations: 3, MaxTotalTokens: 32000}
 }
 
-// ToolCall is Graycode's runtime tool invocation DTO.
+// ToolCall is Hawk's runtime tool invocation DTO.
 type ToolCall = llm.ToolCall
 
-// ToolResult is Graycode's runtime tool result DTO.
+// ToolResult is Hawk's runtime tool result DTO.
 type ToolResult = llm.ToolResult
 
-// GraycodeRouterUsage tracks token usage for Graycode runtime responses and streams.
-type GraycodeRouterUsage = llm.GraycodeRouterUsage
+// EyrieUsage tracks token usage for Hawk runtime responses and streams.
+type EyrieUsage = llm.EyrieUsage
 
-// ResolvedRoute is Graycode's view of the concrete provider/model route selected
-// by the provider engine. Keeping this projection Graycode-owned prevents GraycodeRouter's
+// ResolvedRoute is Hawk's view of the concrete provider/model route selected
+// by the provider engine. Keeping this projection Hawk-owned prevents Eyrie's
 // transport DTOs from leaking into product state and observability payloads.
 type ResolvedRoute = llm.ResolvedRoute
 
-// GraycodeRouterResponse is Graycode's runtime chat response DTO.
-type GraycodeRouterResponse = llm.GraycodeRouterResponse
+// EyrieResponse is Hawk's runtime chat response DTO.
+type EyrieResponse = llm.EyrieResponse
 
-// GraycodeRouterStreamEvent is Graycode's runtime stream event DTO.
-type GraycodeRouterStreamEvent = llm.GraycodeRouterStreamEvent
+// EyrieStreamEvent is Hawk's runtime stream event DTO.
+type EyrieStreamEvent = llm.EyrieStreamEvent
 
-// StreamResult wraps a Graycode-owned streaming response with cleanup. It aliases
+// StreamResult wraps a Hawk-owned streaming response with cleanup. It aliases
 // the canonical contract type; its Close() method and canonical constructor
-// (NewStreamResult) live in github.com/GrayCodeAI/graycode-router/llm.
+// (NewStreamResult) live in github.com/GrayCodeAI/eyrie/llm.
 type StreamResult = llm.StreamResult
 
-// GraycodeRouterMessage is Graycode's runtime conversation DTO.
-// It intentionally mirrors the engine boundary shape while remaining Graycode-owned.
-type GraycodeRouterMessage = llm.GraycodeRouterMessage
+// EyrieMessage is Hawk's runtime conversation DTO.
+// It intentionally mirrors the engine boundary shape while remaining Hawk-owned.
+type EyrieMessage = llm.EyrieMessage

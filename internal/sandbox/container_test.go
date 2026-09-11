@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 func TestDockerAvailable(t *testing.T) {
@@ -102,7 +102,7 @@ func TestContainerSandbox_StopForceRemovesContainer(t *testing.T) {
 
 	cs := NewContainerSandbox(t.TempDir())
 	cs.running = true
-	cs.containerID = "graycode-test-container"
+	cs.containerID = "hawk-test-container"
 
 	if err := cs.Stop(); err != nil {
 		t.Fatal(err)
@@ -113,8 +113,8 @@ func TestContainerSandbox_StopForceRemovesContainer(t *testing.T) {
 	if cs.ContainerID() != "" {
 		t.Fatal("stopped container ID should be cleared")
 	}
-	if gotID != "graycode-test-container" {
-		t.Fatalf("removed container = %q, want %q", gotID, "graycode-test-container")
+	if gotID != "hawk-test-container" {
+		t.Fatalf("removed container = %q, want %q", gotID, "hawk-test-container")
 	}
 }
 
@@ -123,9 +123,9 @@ func TestContainerSandbox_StopForceRemovesContainer(t *testing.T) {
 func TestContainerSandbox_DockerRunArgs_Hardened(t *testing.T) {
 	projectDir := t.TempDir()
 	cs := NewContainerSandbox(projectDir)
-	cs.SetImage("graycode:test")
+	cs.SetImage("hawk:test")
 
-	args := cs.dockerRunArgs("graycode-test", "/tmp/attach", "/tmp/cache")
+	args := cs.dockerRunArgs("hawk-test", "/tmp/attach", "/tmp/cache")
 	joined := strings.Join(args, " ")
 
 	for _, want := range []string{
@@ -137,7 +137,7 @@ func TestContainerSandbox_DockerRunArgs_Hardened(t *testing.T) {
 		"--tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m",
 		"-w " + projectDir,
 		"--entrypoint sleep",
-		"graycode:test infinity",
+		"hawk:test infinity",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("docker run args missing %q:\n%s", want, joined)
@@ -153,9 +153,9 @@ func TestContainerSandbox_DockerRunArgs_SSHAgentSocket(t *testing.T) {
 	t.Setenv("SSH_AUTH_SOCK", fakeSock)
 
 	cs := NewContainerSandbox(t.TempDir())
-	cs.SetImage("graycode:test")
+	cs.SetImage("hawk:test")
 
-	args := cs.dockerRunArgs("graycode-test", "/tmp/attach", "/tmp/cache")
+	args := cs.dockerRunArgs("hawk-test", "/tmp/attach", "/tmp/cache")
 	joined := strings.Join(args, " ")
 
 	wantSockArg := fakeSock + ":/ssh-agent.sock:ro"
@@ -169,7 +169,7 @@ func TestContainerSandbox_DockerRunArgs_SSHAgentSocket(t *testing.T) {
 
 func TestResolveImage_Default(t *testing.T) {
 	img := resolveImage(t.TempDir())
-	expected := "graycodeai/graycode-sandbox:" + sandboxImageTag
+	expected := "graycodeai/hawk-sandbox:" + sandboxImageTag
 	if img != expected {
 		t.Fatalf("expected default image %s, got %s", expected, img)
 	}
@@ -182,7 +182,7 @@ func TestEnsureImageAlreadyLocal(t *testing.T) {
 	var calls int
 	dockerImageCommand = func(_ context.Context, args ...string) ([]byte, error) {
 		calls++
-		if strings.Join(args, " ") != "image inspect "+defaultGraycodeImage() {
+		if strings.Join(args, " ") != "image inspect "+defaultHawkImage() {
 			t.Fatalf("unexpected Docker command: %v", args)
 		}
 		return nil, nil
@@ -212,7 +212,7 @@ func TestEnsureImagePullsPublicImage(t *testing.T) {
 		if strings.HasPrefix(command, "image inspect ") {
 			return nil, errors.New("missing")
 		}
-		if command == "pull "+defaultGraycodeImage() {
+		if command == "pull "+defaultHawkImage() {
 			return []byte("pulled"), nil
 		}
 		return nil, errors.New("unexpected command")
@@ -244,7 +244,7 @@ func TestEnsureImageBuildsBundledFallback(t *testing.T) {
 			return nil, errors.New("missing")
 		case strings.HasPrefix(command, "pull "):
 			return []byte("registry unavailable"), errors.New("pull failed")
-		case strings.HasPrefix(command, "build -t "+localGraycodeImage()+" "):
+		case strings.HasPrefix(command, "build -t "+localHawkImage()+" "):
 			return []byte("built"), nil
 		default:
 			return nil, errors.New("unexpected command")
@@ -259,8 +259,8 @@ func TestEnsureImageBuildsBundledFallback(t *testing.T) {
 	if result != ImageBuilt {
 		t.Fatalf("result = %q, want %q", result, ImageBuilt)
 	}
-	if cs.Image() != localGraycodeImage() {
-		t.Fatalf("image = %q, want %q", cs.Image(), localGraycodeImage())
+	if cs.Image() != localHawkImage() {
+		t.Fatalf("image = %q, want %q", cs.Image(), localHawkImage())
 	}
 	if len(calls) != 4 {
 		t.Fatalf("Docker calls = %v, want public inspect + local inspect + pull + build", calls)
@@ -280,8 +280,8 @@ func TestResolveImage_WithDockerfile(t *testing.T) {
 	if img == "ubuntu:24.04" {
 		t.Fatal("expected custom image tag, got default")
 	}
-	if !contains(img, "graycode-sandbox:") {
-		t.Fatalf("expected graycode-sandbox tag, got %s", img)
+	if !contains(img, "hawk-sandbox:") {
+		t.Fatalf("expected hawk-sandbox tag, got %s", img)
 	}
 }
 
@@ -314,12 +314,12 @@ func TestContainerSandbox_DockerRunArgs_UserFallback(t *testing.T) {
 
 	projectDir := t.TempDir()
 	cs := NewContainerSandbox(projectDir)
-	cs.SetImage("graycode:test")
+	cs.SetImage("hawk:test")
 
 	// userns unavailable -> --user with host uid:gid.
 	resetUsernsCache()
 	usernsProbe = func() (bool, error) { return false, nil }
-	args := strings.Join(cs.dockerRunArgs("graycode-test", "/tmp/attach", "/tmp/cache"), " ")
+	args := strings.Join(cs.dockerRunArgs("hawk-test", "/tmp/attach", "/tmp/cache"), " ")
 	wantUser := fmt.Sprintf("--user %d:%d", os.Getuid(), os.Getgid())
 	if !strings.Contains(args, wantUser) {
 		t.Fatalf("expected %q in run args without userns, got:\n%s", wantUser, args)
@@ -331,7 +331,7 @@ func TestContainerSandbox_DockerRunArgs_UserFallback(t *testing.T) {
 	// userns available still uses the valid --user flag; remapping is daemon-side.
 	resetUsernsCache()
 	usernsProbe = func() (bool, error) { return true, nil }
-	args = strings.Join(cs.dockerRunArgs("graycode-test", "/tmp/attach", "/tmp/cache"), " ")
+	args = strings.Join(cs.dockerRunArgs("hawk-test", "/tmp/attach", "/tmp/cache"), " ")
 	if !strings.Contains(args, wantUser) {
 		t.Fatalf("expected %q in run args with daemon userns, got:\n%s", wantUser, args)
 	}
@@ -380,18 +380,18 @@ func TestUsernsRemapAvailable_FalseOnProbeError(t *testing.T) {
 	}
 }
 
-func TestDefaultGraycodeImageDigestOverride(t *testing.T) {
+func TestDefaultHawkImageDigestOverride(t *testing.T) {
 	prev := sandboxImageDigestOverride
 	sandboxImageDigestOverride = "abc123digest"
 	defer func() { sandboxImageDigestOverride = prev }()
 
-	got := defaultGraycodeImage()
+	got := defaultHawkImage()
 	wantRepo := sandboxImageRepository + "@sha256:"
 	if !strings.HasPrefix(got, wantRepo) {
-		t.Fatalf("defaultGraycodeImage=%q, want prefix %q", got, wantRepo)
+		t.Fatalf("defaultHawkImage=%q, want prefix %q", got, wantRepo)
 	}
 	if !strings.HasSuffix(got, "abc123digest") {
-		t.Fatalf("defaultGraycodeImage=%q, want digest suffix", got)
+		t.Fatalf("defaultHawkImage=%q, want digest suffix", got)
 	}
 }
 

@@ -19,7 +19,7 @@ const (
 
 // scrollbarThumbStyle — Talon Gold thumb so it reads as a brand control.
 var (
-	scrollbarThumbStyle = lipgloss.NewStyle().Foreground(graycodeColor)
+	scrollbarThumbStyle = lipgloss.NewStyle().Foreground(hawkColor)
 	scrollbarTrackStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
 )
 

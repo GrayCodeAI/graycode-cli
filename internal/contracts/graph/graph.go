@@ -1,5 +1,5 @@
 // Vendored from github.com/GrayCodeAI/eagle/graph at v0.0.0-20260902153929-5877bed17503 (MIT, Copyright (c) 2026 GrayCode AI).
-// The upstream repository no longer exists; this copy is owned by Graycode as its contract surface.
+// The upstream repository no longer exists; this copy is owned by Hawk as its contract surface.
 // Package graph defines the portable graph vocabulary shared across graycode-eco.
 //
 // The package contains data contracts only. Individual repositories retain

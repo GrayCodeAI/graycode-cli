@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestMain(m *testing.M) {

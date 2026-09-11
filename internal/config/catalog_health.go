@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/theme"
+	"github.com/GrayCodeAI/hawk/internal/theme"
 )
 
 var (
@@ -18,7 +18,7 @@ var (
 
 const catalogHealthCacheTTL = 15 * time.Second
 
-// CatalogHealth summarizes the on-disk graycode-router model catalog for doctor / status output.
+// CatalogHealth summarizes the on-disk eyrie model catalog for doctor / status output.
 type CatalogHealth struct {
 	CachePath   string    `json:"cache_path"`
 	Exists      bool      `json:"exists"`
@@ -33,7 +33,7 @@ type CatalogHealth struct {
 	Error       string    `json:"error,omitempty"`
 }
 
-// CatalogHealthReport inspects ~/.graycode-router/model_catalog.json (or GRAYCODE_ROUTER_MODEL_CATALOG_PATH).
+// CatalogHealthReport inspects ~/.eyrie/model_catalog.json (or EYRIE_MODEL_CATALOG_PATH).
 func CatalogHealthReport(ctx context.Context) CatalogHealth {
 	path := CatalogCachePathForDisplay()
 	catalogHealthMu.Lock()
@@ -61,7 +61,7 @@ func InvalidateCatalogHealthCache() {
 }
 
 func catalogHealthReportUncached(ctx context.Context) CatalogHealth {
-	engine, err := newGraycodeRouterEngine()
+	engine, err := newEyrieEngine()
 	if err != nil {
 		return CatalogHealth{Error: err.Error()}
 	}
@@ -73,15 +73,15 @@ func catalogHealthReportUncached(ctx context.Context) CatalogHealth {
 		Source: status.Source, Error: status.Error,
 	}
 	if !h.Exists && h.Error == "" {
-		h.Error = "cache missing — graycode will discover automatically on start"
+		h.Error = "cache missing — hawk will discover automatically on start"
 	}
 	return h
 }
 
-// FormatCatalogHealth returns human-readable catalog status for graycode doctor.
+// FormatCatalogHealth returns human-readable catalog status for hawk doctor.
 func FormatCatalogHealth(h CatalogHealth) string {
 	var b strings.Builder
-	b.WriteString(theme.Tint("Model catalog (graycode-router):", theme.ReportInfo) + "\n")
+	b.WriteString(theme.Tint("Model catalog (eyrie):", theme.ReportInfo) + "\n")
 	b.WriteString("  " + theme.Tint("path:", theme.ReportMuted) + " " + theme.Tint(h.CachePath, theme.ReportInfo) + "\n")
 	if h.Error != "" {
 		b.WriteString("  " + theme.Tint("status:", theme.ReportMuted) + " " + theme.Tint(h.Error, theme.ReportError) + "\n")
@@ -93,7 +93,7 @@ func FormatCatalogHealth(h CatalogHealth) string {
 	}
 	b.WriteString("  " + theme.Tint("models:", theme.ReportMuted) + " " + theme.Tint(fmt.Sprintf("%d", h.Models), theme.ReportInfo) + "  " + theme.Tint("deployments:", theme.ReportMuted) + " " + theme.Tint(fmt.Sprintf("%d", h.Deployments), theme.ReportInfo) + "  " + theme.Tint("offerings:", theme.ReportMuted) + " " + theme.Tint(fmt.Sprintf("%d", h.Offerings), theme.ReportInfo) + "\n")
 	if h.Stale {
-		b.WriteString("  " + theme.Tint("stale:", theme.ReportMuted) + " " + theme.Tint("yes", theme.ReportWarn) + fmt.Sprintf(" (after %s) — graycode refreshes automatically on start\n", h.StaleAfter.UTC().Format(time.RFC3339)))
+		b.WriteString("  " + theme.Tint("stale:", theme.ReportMuted) + " " + theme.Tint("yes", theme.ReportWarn) + fmt.Sprintf(" (after %s) — hawk refreshes automatically on start\n", h.StaleAfter.UTC().Format(time.RFC3339)))
 	} else if !h.StaleAfter.IsZero() {
 		b.WriteString("  " + theme.Tint("stale:", theme.ReportMuted) + " " + theme.Tint("no", theme.ReportSuccess) + fmt.Sprintf(" (until %s)\n", h.StaleAfter.UTC().Format(time.RFC3339)))
 	}
@@ -108,7 +108,7 @@ func CatalogEmptyHint(ctx context.Context) string {
 	if !HasConfiguredDeploymentCached(ctx) {
 		return "run /config to paste an API key or set up Ollama (local, no key)"
 	}
-	return "check network access, then graycode preflight or /config — graycode refreshes the catalog automatically"
+	return "check network access, then hawk preflight or /config — hawk refreshes the catalog automatically"
 }
 
 // EnsureCatalogAvailable returns an error when the production catalog cache is missing or empty.
@@ -128,7 +128,7 @@ func EnsureCatalogAvailable(ctx context.Context) error {
 
 // CatalogCachePathForDisplay returns the path users should care about.
 func CatalogCachePathForDisplay() string {
-	engine, err := newGraycodeRouterEngine()
+	engine, err := newEyrieEngine()
 	if err == nil {
 		return engine.StatePaths().Catalog
 	}

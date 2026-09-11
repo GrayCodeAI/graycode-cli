@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	agentcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/agent"
+	agentcontracts "github.com/GrayCodeAI/hawk/internal/contracts/agent"
 )
 
 // Kind classifies a background task.

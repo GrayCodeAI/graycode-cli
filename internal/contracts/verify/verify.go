@@ -1,14 +1,14 @@
 // Vendored from github.com/GrayCodeAI/eagle/verify at v0.0.0-20260902153929-5877bed17503 (MIT, Copyright (c) 2026 GrayCode AI).
-// The upstream repository no longer exists; this copy is owned by Graycode as its contract surface.
+// The upstream repository no longer exists; this copy is owned by Hawk as its contract surface.
 package verify
 
 import (
 	"time"
 
-	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
+	contracts "github.com/GrayCodeAI/hawk/internal/contracts/types"
 )
 
-// Finding is the neutral verification finding contract shared across Graycode and verification engines.
+// Finding is the neutral verification finding contract shared across Hawk and verification engines.
 type Finding struct {
 	Check    string             `json:"check"`
 	Severity contracts.Severity `json:"severity"`

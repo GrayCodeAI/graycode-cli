@@ -11,7 +11,7 @@ import (
 	"container/list"
 	"sync"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 )
 
 // PreparationPhase tracks the lifecycle of one cached entry.

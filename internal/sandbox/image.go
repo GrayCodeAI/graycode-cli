@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
-const sandboxImageRepository = "graycodeai/graycode-sandbox"
+const sandboxImageRepository = "graycodeai/hawk-sandbox"
 
 //go:embed container_version
 var rawSandboxImageTag string
@@ -23,10 +23,10 @@ var bundledSandboxDockerfile string
 
 var sandboxImageTag = strings.TrimSpace(rawSandboxImageTag)
 
-// sandboxImageDigestOverride, when non-empty (set via GRAYCODE_SANDBOX_IMAGE_DIGEST),
+// sandboxImageDigestOverride, when non-empty (set via HAWK_SANDBOX_IMAGE_DIGEST),
 // pins EnsureImage to an immutable digest instead of a mutable tag (LOW finding:
 // pulling by mutable tag can silently roll a different image under the same tag).
-var sandboxImageDigestOverride = strings.TrimSpace(os.Getenv("GRAYCODE_SANDBOX_IMAGE_DIGEST"))
+var sandboxImageDigestOverride = strings.TrimSpace(os.Getenv("HAWK_SANDBOX_IMAGE_DIGEST"))
 
 // dockerImageCommand is replaceable in tests.
 var dockerImageCommand = func(ctx context.Context, args ...string) ([]byte, error) {
@@ -42,22 +42,22 @@ const (
 	ImageBuilt        ImageProvisionResult = "built"
 )
 
-func defaultGraycodeImage() string {
+func defaultHawkImage() string {
 	if sandboxImageDigestOverride != "" {
 		return sandboxImageRepository + "@sha256:" + sandboxImageDigestOverride
 	}
 	return sandboxImageRepository + ":" + sandboxImageTag
 }
 
-func localGraycodeImage() string {
-	return "graycode-sandbox:" + sandboxImageTag
+func localHawkImage() string {
+	return "hawk-sandbox:" + sandboxImageTag
 }
 
-// DefaultSandboxImage returns the public sandbox image reference Graycode
+// DefaultSandboxImage returns the public sandbox image reference Hawk
 // provisions by default (registry:tag, or a pinned digest when
-// GRAYCODE_SANDBOX_IMAGE_DIGEST is set).
+// HAWK_SANDBOX_IMAGE_DIGEST is set).
 func DefaultSandboxImage() string {
-	return defaultGraycodeImage()
+	return defaultHawkImage()
 }
 
 // ImagePresent reports whether the sandbox image is already available locally
@@ -67,7 +67,7 @@ func ImagePresent(ctx context.Context) (string, bool) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	for _, img := range []string{defaultGraycodeImage(), localGraycodeImage()} {
+	for _, img := range []string{defaultHawkImage(), localHawkImage()} {
 		c, cancel := context.WithTimeout(ctx, 5*time.Second)
 		_, err := dockerImageCommand(c, "image", "inspect", img)
 		cancel()
@@ -86,12 +86,12 @@ func RegistryReachable(ctx context.Context) bool {
 	}
 	c, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	_, err := dockerImageCommand(c, "manifest", "inspect", defaultGraycodeImage())
+	_, err := dockerImageCommand(c, "manifest", "inspect", defaultHawkImage())
 	return err == nil
 }
 
 // EnsureImage makes the selected sandbox image available without requiring a
-// registry login. Graycode first uses a local image, then tries the public image,
+// registry login. Hawk first uses a local image, then tries the public image,
 // and finally builds the bundled sandbox Dockerfile locally through Docker.
 func (c *ContainerSandbox) EnsureImage(ctx context.Context) (ImageProvisionResult, error) {
 	if ctx == nil {
@@ -107,9 +107,9 @@ func (c *ContainerSandbox) EnsureImage(ctx context.Context) (ImageProvisionResul
 	}
 
 	// Project-specific images are rebuilt from their persisted Dockerfile.
-	if image != defaultGraycodeImage() {
+	if image != defaultHawkImage() {
 		dfPath := filepath.Join(storage.ProjectStateDir(c.projectDir), "Dockerfile")
-		content, err := os.ReadFile(dfPath) // #nosec G304 -- projectStateDir is Graycode-managed state for this workspace
+		content, err := os.ReadFile(dfPath) // #nosec G304 -- projectStateDir is Hawk-managed state for this workspace
 		if err != nil {
 			return "", fmt.Errorf("sandbox image %s is unavailable and its Dockerfile cannot be read: %w", image, err)
 		}
@@ -122,7 +122,7 @@ func (c *ContainerSandbox) EnsureImage(ctx context.Context) (ImageProvisionResul
 	}
 
 	// Reuse a previous no-registry fallback build before contacting Docker Hub.
-	localImage := localGraycodeImage()
+	localImage := localHawkImage()
 	localInspectCtx, localInspectCancel := context.WithTimeout(ctx, 10*time.Second)
 	_, localInspectErr := dockerImageCommand(localInspectCtx, "image", "inspect", localImage)
 	localInspectCancel()
@@ -153,7 +153,7 @@ func (c *ContainerSandbox) EnsureImage(ctx context.Context) (ImageProvisionResul
 }
 
 func buildBundledSandboxImage(ctx context.Context, image string) ([]byte, error) {
-	buildDir, err := os.MkdirTemp("", "graycode-sandbox-image-*")
+	buildDir, err := os.MkdirTemp("", "hawk-sandbox-image-*")
 	if err != nil {
 		return nil, err
 	}

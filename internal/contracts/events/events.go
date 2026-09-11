@@ -1,10 +1,10 @@
 // Vendored from github.com/GrayCodeAI/eagle/events at v0.0.0-20260902153929-5877bed17503 (MIT, Copyright (c) 2026 GrayCode AI).
-// The upstream repository no longer exists; this copy is owned by Graycode as its contract surface.
+// The upstream repository no longer exists; this copy is owned by Hawk as its contract surface.
 package events
 
 import "time"
 
-// ToolEvent represents a normalized tool event emitted by Graycode workflows.
+// ToolEvent represents a normalized tool event emitted by Hawk workflows.
 type ToolEvent struct {
 	ToolName   string                 `json:"tool_name"`
 	ToolInput  map[string]interface{} `json:"tool_input,omitempty"`

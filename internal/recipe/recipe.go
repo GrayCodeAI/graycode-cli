@@ -11,7 +11,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"gopkg.in/yaml.v3"
 )
 

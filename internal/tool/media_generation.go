@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // MediaEngine is the pluggable backend that actually generates image/video
-// assets. graycode does not bundle a media provider; a host (or a provider-backed
-// graycode-router integration) wires one in via SetMediaEngine. The tool and the
+// assets. hawk does not bundle a media provider; a host (or a provider-backed
+// eyrie integration) wires one in via SetMediaEngine. The tool and the
 // local-persistence contract are provider-agnostic, so generation, saving, and
 // result reporting all work the same regardless of backend.
 type MediaEngine interface {
@@ -79,7 +79,7 @@ func MediaEngineName() string {
 }
 
 // DefaultMediaDir returns the stable, user-scoped directory for generated media
-// (the graycode analog of grok-cli's .grok/generated-media).
+// (the hawk analog of grok-cli's .grok/generated-media).
 func DefaultMediaDir() string {
 	return filepath.Join(storage.StateDir(), "generated-media")
 }

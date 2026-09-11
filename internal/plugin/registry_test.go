@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func testIndex() SkillIndex {
@@ -18,8 +18,8 @@ func testIndex() SkillIndex {
 		Version:   1,
 		UpdatedAt: "2026-05-01T00:00:00Z",
 		Skills: []SkillEntry{
-			{Name: "api-review", Description: "Reviews API endpoints", Author: "graycode", Repo: "GrayCodeAI/graycode-skills", Category: "engineering", Tags: []string{"api", "review"}, Version: "1.0.0", Installs: 342},
-			{Name: "security-scan", Description: "Scans for security vulnerabilities", Author: "graycode", Repo: "GrayCodeAI/graycode-skills", Category: "security", Tags: []string{"security", "scan"}, Version: "2.1.0", Installs: 891},
+			{Name: "api-review", Description: "Reviews API endpoints", Author: "hawk", Repo: "GrayCodeAI/graycode-skills", Category: "engineering", Tags: []string{"api", "review"}, Version: "1.0.0", Installs: 342},
+			{Name: "security-scan", Description: "Scans for security vulnerabilities", Author: "hawk", Repo: "GrayCodeAI/graycode-skills", Category: "security", Tags: []string{"security", "scan"}, Version: "2.1.0", Installs: 891},
 			{Name: "changelog", Description: "Generates changelogs from git commits", Author: "community", Repo: "community/skills", Category: "workflow", Tags: []string{"changelog", "git"}, Version: "1.2.0", Installs: 156},
 		},
 	}
@@ -160,11 +160,11 @@ func TestParseSmartSkillExtendedFields(t *testing.T) {
 name: api-review
 description: Reviews API endpoints
 version: "1.2.0"
-author: graycode
+author: hawk
 license: MIT
 category: engineering
 tags: ["api", "review", "rest"]
-agents: ["graycode", "claude-code"]
+agents: ["hawk", "claude-code"]
 source-repo: GrayCodeAI/graycode-skills
 source-ref: v1.2.0
 source-installed-at: 2026-05-01T00:00:00Z
@@ -175,7 +175,7 @@ Review all API endpoints.
 	if skill.Version != `"1.2.0"` {
 		t.Errorf("version: got %q", skill.Version)
 	}
-	if skill.Author != "graycode" {
+	if skill.Author != "hawk" {
 		t.Errorf("author: got %q", skill.Author)
 	}
 	if skill.License != "MIT" {
@@ -231,7 +231,7 @@ func TestInjectSourceMetadata(t *testing.T) {
 
 func TestRemove(t *testing.T) {
 	dir := t.TempDir()
-	skillDir := filepath.Join(dir, ".graycode", "skills", "test-skill")
+	skillDir := filepath.Join(dir, ".hawk", "skills", "test-skill")
 	os.MkdirAll(skillDir, 0o755)
 	os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("test"), 0o644)
 
@@ -246,7 +246,7 @@ func TestFormatSkillEntry(t *testing.T) {
 	e := SkillEntry{
 		Name:        "api-review",
 		Version:     "1.0.0",
-		Author:      "graycode",
+		Author:      "hawk",
 		Description: "Reviews API endpoints",
 		Repo:        "GrayCodeAI/graycode-skills",
 		Installs:    342,
@@ -258,7 +258,7 @@ func TestFormatSkillEntry(t *testing.T) {
 	if !strings.Contains(out, "v1.0.0") {
 		t.Error("expected version")
 	}
-	if !strings.Contains(out, "graycode") {
+	if !strings.Contains(out, "hawk") {
 		t.Error("expected author")
 	}
 	if !strings.Contains(out, "342 installs") {
@@ -270,7 +270,7 @@ func TestFormatSkillInfo(t *testing.T) {
 	s := SmartSkill{
 		Name:     "api-review",
 		Version:  "1.0.0",
-		Author:   "graycode",
+		Author:   "hawk",
 		License:  "MIT",
 		Category: "engineering",
 		Tags:     []string{"api", "review"},

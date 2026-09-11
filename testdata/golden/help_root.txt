@@ -1,55 +1,55 @@
-graycode is an AI coding agent that reads, writes, and runs code in your terminal.
+hawk is an AI coding agent that reads, writes, and runs code in your terminal.
 
-It connects to 28 first-class LLM providers through graycode-router, executes tools (file I/O, shell,
+It connects to 28 first-class LLM providers through eyrie, executes tools (file I/O, shell,
 git, web search), and manages sessions — all from a keyboard-driven TUI or
 headless mode for scripts and CI.
 
 Quick orientation:
-  graycode                     Start interactive TUI
-  graycode -p "prompt"         One-shot: send prompt, print response, exit
-  graycode exec "task"         Autonomous multi-turn execution
-  graycode path                Check environment readiness
-  graycode doctor              Run diagnostics
-  graycode config              Manage settings and credentials
+  hawk                     Start interactive TUI
+  hawk -p "prompt"         One-shot: send prompt, print response, exit
+  hawk exec "task"         Autonomous multi-turn execution
+  hawk path                Check environment readiness
+  hawk doctor              Run diagnostics
+  hawk config              Manage settings and credentials
 
 API keys are stored in the OS keychain (macOS Keychain / Linux keyring).
-Run graycode and use /config to set up your first provider.
+Run hawk and use /config to set up your first provider.
 
 Usage:
-  graycode [prompt] [flags]
-  graycode [command]
+  hawk [prompt] [flags]
+  hawk [command]
 
 Examples:
-  graycode
-  graycode -p "explain this repo"
-  graycode exec "fix failing tests"
-  graycode preflight
-  graycode path
+  hawk
+  hawk -p "explain this repo"
+  hawk exec "fix failing tests"
+  hawk preflight
+  hawk path
 
 Available Commands:
-  acp          Run graycode as an Agent Client Protocol (ACP) server
+  acp          Run hawk as an Agent Client Protocol (ACP) server
   agent        Manage custom agent personas
   attach       Attach to a running background session
   audit        Analyze past sessions for wasteful patterns
   bg           Run a session in the background
   bug-report   Print a redacted diagnostic report for bug reports
   checkpoint   Save and restore named session checkpoints
-  cloud        Manage optional Graycode Cloud synchronization
+  cloud        Manage optional Hawk Cloud synchronization
   completion   Generate shell completion script
   config       Show or update settings
   context      Export project context as a single document for use in any LLM
   cost         [Experimental] Analyze and optimize LLM API spend
   credentials  Manage secure API key storage (macOS Keychain / Linux secret service)
-  daemon       Manage the graycode background server
+  daemon       Manage the hawk background server
   doctor       Run local diagnostics
-  ecosystem    Show graycode-router, harrier, and shrike integration status
+  ecosystem    Show eyrie, harrier, and shrike integration status
   eval         Evaluate model performance on coding benchmarks
   exec         Execute a single command non-interactively
   features     List and manage feature flags
-  feedback     Submit feedback about graycode
+  feedback     Submit feedback about hawk
   fingerprint  Generate a repository fingerprint (languages, deps, git info)
   governance   Inspect and validate the governance policy ceiling
-  graph        Merlin Graycode's portable execution graph
+  graph        Merlin Hawk's portable execution graph
   harness      Audit workspace AI agent harness, work loop dimensions, and generation reports
   help         Help about any command
   history      Search and browse command history
@@ -57,9 +57,9 @@ Available Commands:
   issue        Draft or publish a GitHub issue (fx issue parity)
   learn        Manage lessons learned across sessions
   manpage      Generate man page in roff format
-  mcp          Show MCP configuration; run or register graycode as an MCP server
+  mcp          Show MCP configuration; run or register hawk as an MCP server
   mission      Run a multi-agent mission (parallel feature execution)
-  models       Deployment-aware model catalog (via graycode-router)
+  models       Deployment-aware model catalog (via eyrie)
   path         Developer path readiness (setup, security, sandbox, ecosystem)
   permissions  List and manage exact permission rules
   plan         Create and manage structured development plans
@@ -73,7 +73,7 @@ Available Commands:
   review       Continuous AI code review on commits
   rules        Detect, import, and export AI coding rules between tool formats
   sandbox      View, apply, or discard pending diff sandbox changes
-  schema       Output JSON schema for graycode settings.json
+  schema       Output JSON schema for hawk settings.json
   search       Search across saved sessions
   securitylog  Inspect the tamper-evident security event log
   sessions     List saved sessions
@@ -91,10 +91,10 @@ Available Commands:
   tools        List built-in tools
   toolset      List or resolve composable tool groups
   trust        Manage folder trust for project automation
-  update       Check for graycode updates
+  update       Check for hawk updates
   usage        Show local LLM token usage and spend (fx usage parity)
   verify       Run local self-verification (security log, governance policy)
-  version      Print graycode version
+  version      Print hawk version
 
 Flags:
       --add-dir stringArray                additional directories to include in session context
@@ -109,14 +109,14 @@ Flags:
       --disallowed-tools stringArray       comma or space-separated tool permission rules to deny (e.g. "Bash(git:*) Edit")
       --dry-run                            deny every tool call unconditionally (preview only, nothing executes)
       --fork-session                       when resuming, create a new session ID instead of reusing the original
-  -h, --help                               help for graycode
+  -h, --help                               help for hawk
       --input-format string                input format for --print: "text" or "stream-json" (default "text")
       --map-tokens int                     token budget for the --repo-map overview (default 1024)
       --markdown                           render --print text output as styled markdown (needs color; ignored for json/stream-json)
       --max-budget-usd float               maximum estimated API spend in USD
       --max-turns int                      maximum number of agentic turns in non-interactive mode
       --mcp stringArray                    MCP server command
-  -m, --model string                       model to use (from graycode-router catalog; see /models)
+  -m, --model string                       model to use (from eyrie catalog; see /models)
       --no-auto-catalog-refresh            disable automatic catalog refresh when cache is missing, empty, or stale
       --no-session-persistence             disable session persistence in print mode
       --output-fields string               comma-separated field whitelist for --output-format json (e.g. "result,session_id")
@@ -128,7 +128,7 @@ Flags:
   -q, --quiet                              suppress non-essential output (spinners, progress, decoration); machine-parseable output only
       --record string                      record interactive REPL output to an fxtape file (fx --record parity)
       --recover                            scan for interrupted sessions and offer to resume
-      --refresh-catalog                    refresh the graycode-router model catalog before starting
+      --refresh-catalog                    refresh the eyrie model catalog before starting
       --repl                               start interactive REPL mode (like aider) for multi-turn conversation without TUI
       --repo-map                           inject an AST-ranked repository map (Aider-style) into the system prompt
   -r, --resume string                      resume a saved session by ID
@@ -146,4 +146,4 @@ Flags:
       --vibe                               vibe coding mode: auto-apply, auto-run, no confirmations
       --watch                              watch the working directory for file changes and re-run on changes
 
-Use "graycode [command] --help" for more information about a command.
+Use "hawk [command] --help" for more information about a command.

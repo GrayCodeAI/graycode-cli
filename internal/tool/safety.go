@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/env"
-	"github.com/GrayCodeAI/graycode-cli/internal/home"
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/env"
+	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -270,17 +270,17 @@ func IsSensitivePath(path string) string {
 	homeDir := home.MustDir()
 
 	if homeDir != "" {
-		graycodeProv := filepath.Join(homeDir, ".graycode", "provider.json")
-		if clean == graycodeProv {
-			return "access to ~/.graycode/provider.json is blocked for security (API credentials)"
+		hawkProv := filepath.Join(homeDir, ".hawk", "provider.json")
+		if clean == hawkProv {
+			return "access to ~/.hawk/provider.json is blocked for security (API credentials)"
 		}
-		graycodeEnv := filepath.Join(homeDir, ".graycode", "env")
-		if clean == graycodeEnv {
-			return "access to ~/.graycode/env is blocked for security (API keys)"
+		hawkEnv := filepath.Join(homeDir, ".hawk", "env")
+		if clean == hawkEnv {
+			return "access to ~/.hawk/env is blocked for security (API keys)"
 		}
-		graycodeDotEnv := filepath.Join(homeDir, ".graycode", ".env")
-		if clean == graycodeDotEnv {
-			return "access to ~/.graycode/.env is blocked for security (API keys)"
+		hawkDotEnv := filepath.Join(homeDir, ".hawk", ".env")
+		if clean == hawkDotEnv {
+			return "access to ~/.hawk/.env is blocked for security (API keys)"
 		}
 	}
 
@@ -288,18 +288,18 @@ func IsSensitivePath(path string) string {
 		return "access to provider.json is blocked for security (API credentials)"
 	}
 
-	if cfgDir := strings.TrimSpace(env.Getenv("GRAYCODE_CONFIG_DIR")); cfgDir != "" {
+	if cfgDir := strings.TrimSpace(env.Getenv("HAWK_CONFIG_DIR")); cfgDir != "" {
 		customProv := filepath.Join(cfgDir, "provider.json")
 		if matchesResolvedPath(clean, customProv) {
 			return "access to provider.json is blocked for security (API credentials)"
 		}
 		customEnv := filepath.Join(cfgDir, "env")
 		if matchesResolvedPath(clean, customEnv) {
-			return "access to graycode env file is blocked for security (API keys)"
+			return "access to hawk env file is blocked for security (API keys)"
 		}
 		customDotEnv := filepath.Join(cfgDir, ".env")
 		if matchesResolvedPath(clean, customDotEnv) {
-			return "access to graycode .env is blocked for security (API keys)"
+			return "access to hawk .env is blocked for security (API keys)"
 		}
 	}
 
@@ -356,8 +356,8 @@ func expandCommandPathVariables(command string) string {
 		value string
 	}{
 		{name: "HOME", value: home.MustDir()},
-		{name: "GRAYCODE_CONFIG_DIR", value: strings.TrimSpace(env.Getenv("GRAYCODE_CONFIG_DIR"))},
-		{name: "GRAYCODE_ROUTER_CONFIG_DIR", value: strings.TrimSpace(env.Getenv("GRAYCODE_ROUTER_CONFIG_DIR"))},
+		{name: "HAWK_CONFIG_DIR", value: strings.TrimSpace(env.Getenv("HAWK_CONFIG_DIR"))},
+		{name: "EYRIE_CONFIG_DIR", value: strings.TrimSpace(env.Getenv("EYRIE_CONFIG_DIR"))},
 	} {
 		if item.value == "" {
 			continue
@@ -377,18 +377,18 @@ func expandCommandPathVariables(command string) string {
 // the file tools.
 func CommandReferencesSensitivePath(command string) string {
 	// Do not try to emulate every shell parameter-expansion form here. An
-	// GRAYCODE_ROUTER_CONFIG_DIR reference is itself sensitive because the variable
+	// EYRIE_CONFIG_DIR reference is itself sensitive because the variable
 	// identifies the credential-bearing provider-state directory. This also
-	// closes modifier forms such as ${GRAYCODE_ROUTER_CONFIG_DIR%/}/provider.json.
-	if strings.Contains(command, "GRAYCODE_ROUTER_CONFIG_DIR") {
-		return "command references GRAYCODE_ROUTER_CONFIG_DIR, blocked for security"
+	// closes modifier forms such as ${EYRIE_CONFIG_DIR%/}/provider.json.
+	if strings.Contains(command, "EYRIE_CONFIG_DIR") {
+		return "command references EYRIE_CONFIG_DIR, blocked for security"
 	}
 	if !strings.ContainsAny(command, "/.") {
 		return ""
 	}
 	command = expandCommandPathVariables(command)
 	configuredPaths := []string{storage.ProviderConfigPath()}
-	if cfgDir := strings.TrimSpace(env.Getenv("GRAYCODE_CONFIG_DIR")); cfgDir != "" {
+	if cfgDir := strings.TrimSpace(env.Getenv("HAWK_CONFIG_DIR")); cfgDir != "" {
 		configuredPaths = append(configuredPaths, filepath.Join(cfgDir, "provider.json"), filepath.Join(cfgDir, "env"), filepath.Join(cfgDir, ".env"))
 	}
 	for _, candidate := range configuredPaths {
@@ -412,7 +412,7 @@ func CommandReferencesSensitivePath(command string) string {
 			}
 		}
 		// Keep Bash aligned with the Read/Edit/Write path policy, including a
-		// provider.json rooted at GRAYCODE_ROUTER_CONFIG_DIR. ResolvePath also handles
+		// provider.json rooted at EYRIE_CONFIG_DIR. ResolvePath also handles
 		// relative custom config directories and symlinked parents.
 		if reason := IsSensitivePath(tok); reason != "" {
 			return "command references a sensitive path: " + reason
@@ -425,7 +425,7 @@ func CommandReferencesSensitivePath(command string) string {
 		if strings.Contains(tok, "/.ssh/") || strings.HasSuffix(tok, "/.ssh") {
 			return "command references ~/.ssh, blocked for security"
 		}
-		if strings.HasSuffix(tok, ".graycode/provider.json") {
+		if strings.HasSuffix(tok, ".hawk/provider.json") {
 			return "command references provider.json, blocked for security (API credentials)"
 		}
 		base := tok

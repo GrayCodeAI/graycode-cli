@@ -9,7 +9,7 @@ import (
 
 // preflightReportShape mirrors the JSON-tagged PreflightReport returned by
 // EnginePreflightReportWithSettings. We assert against a local shape to
-// avoid coupling the test to the exact gateway/graycode-router import path.
+// avoid coupling the test to the exact gateway/eyrie import path.
 type preflightReportShape struct {
 	Ready  bool                  `json:"ready"`
 	Checks []preflightCheckShape `json:"checks"`
@@ -23,7 +23,7 @@ type preflightCheckShape struct {
 
 func TestPreflightJSON_Structure(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("GRAYCODE_STATE_DIR", filepath.Join(dir, "state"))
+	t.Setenv("HAWK_STATE_DIR", filepath.Join(dir, "state"))
 
 	old := preflightJSON
 	oldLive := preflightLiveFlag
@@ -59,7 +59,7 @@ func TestPreflightJSON_Structure(t *testing.T) {
 
 func TestPreflightText_NotJSON(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("GRAYCODE_STATE_DIR", filepath.Join(dir, "state"))
+	t.Setenv("HAWK_STATE_DIR", filepath.Join(dir, "state"))
 
 	old := preflightJSON
 	oldLive := preflightLiveFlag

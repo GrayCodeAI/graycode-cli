@@ -7,20 +7,20 @@ import (
 	tea "charm.land/bubbletea/v2"
 	lipgloss "charm.land/lipgloss/v2"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func (m chatModel) configStatus() (gateway, model string, configured bool) {
 	ctx := context.Background()
-	if !graycodeconfig.HasConfiguredDeploymentCached(ctx) {
+	if !hawkconfig.HasConfiguredDeploymentCached(ctx) {
 		return "none", "", false
 	}
 	gw := strings.TrimSpace(m.configModelProvider)
-	if gw != "" && graycodeconfig.IsSetupGateway(gw) {
-		gw = graycodeconfig.GatewayDisplayName(gw)
-	} else if active := graycodeconfig.ActiveGateway(ctx); active != "" {
-		gw = graycodeconfig.GatewayDisplayName(active)
+	if gw != "" && hawkconfig.IsSetupGateway(gw) {
+		gw = hawkconfig.GatewayDisplayName(gw)
+	} else if active := hawkconfig.ActiveGateway(ctx); active != "" {
+		gw = hawkconfig.GatewayDisplayName(active)
 	} else {
 		gw = "none"
 	}
@@ -28,7 +28,7 @@ func (m chatModel) configStatus() (gateway, model string, configured bool) {
 		model = strings.TrimSpace(m.session.Model())
 	}
 	if model == "" {
-		model = strings.TrimSpace(graycodeconfig.ActiveModel(ctx))
+		model = strings.TrimSpace(hawkconfig.ActiveModel(ctx))
 	}
 	return gw, model, true
 }
@@ -44,7 +44,7 @@ func configTabDot(active bool) string {
 
 func configTabLabelStyle(active bool) lipgloss.Style {
 	if active {
-		return lipgloss.NewStyle().Foreground(graycodeColor).Bold(true)
+		return lipgloss.NewStyle().Foreground(hawkColor).Bold(true)
 	}
 	return configMutedStyle()
 }
@@ -90,7 +90,7 @@ func (m chatModel) switchConfigTab(tab int) (chatModel, tea.Cmd) {
 		m = m.stopConfigModelSearch(true)
 	}
 	ctx := context.Background()
-	if tab == configTabModels && !graycodeconfig.HasConfiguredDeploymentCached(ctx) {
+	if tab == configTabModels && !hawkconfig.HasConfiguredDeploymentCached(ctx) {
 		tab = configTabGateways
 		m.configNotice = "Select a gateway first · enter · paste API key"
 		m = m.focusConfigActiveGateway()
@@ -122,9 +122,9 @@ func (m chatModel) openConfigAtTab(tab int) (chatModel, tea.Cmd) {
 	m.configSel = 0
 	m.configScroll = 0
 	m.viewDirty = true
-	graycodeconfig.RefreshConfigCredSnapshot(ctx)
+	hawkconfig.RefreshConfigCredSnapshot(ctx)
 	m = m.refreshConfigGatewayRows()
-	setup := graycodeconfig.EvaluateSetupCached(ctx)
+	setup := hawkconfig.EvaluateSetupCached(ctx)
 
 	if tab < 0 {
 		if setup.HasCredentials {

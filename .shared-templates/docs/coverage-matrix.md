@@ -8,8 +8,8 @@ repo's threshold, update both the CI file and this table in the same PR.**
 
 | Repo | Threshold | Mechanism |
 |---|---|---|
-| `graycode-cli` | 65% | inline `bc` check in `ci.yml` |
-| `graycode-router` | 60% | inline `bc` check in `ci.yml` |
+| `hawk` | 65% | inline `bc` check in `ci.yml` |
+| `eyrie` | 60% | inline `bc` check in `ci.yml` |
 | `graycode-skills` | n/a | no Go/Python test suite (skill/content registry) |
 
 ## Why thresholds differ per repo

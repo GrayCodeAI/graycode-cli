@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 func TestFileWriteAndRead(t *testing.T) {
@@ -392,7 +392,7 @@ func TestSkillToolListsAndReadsSkills(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	stateDir := filepath.Join(home, "state")
-	t.Setenv("GRAYCODE_STATE_DIR", stateDir)
+	t.Setenv("HAWK_STATE_DIR", stateDir)
 	dir := filepath.Join(stateDir, "skills", "review")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
@@ -435,7 +435,7 @@ func TestRegistryExposesArchiveNamesAndAcceptsAliases(t *testing.T) {
 	}
 
 	var exposed []string
-	for _, t := range r.GraycodeRouterTools() {
+	for _, t := range r.EyrieTools() {
 		exposed = append(exposed, t.Name)
 	}
 	for _, alias := range []string{"bash", "file_read", "file_write", "file_edit", "ls"} {

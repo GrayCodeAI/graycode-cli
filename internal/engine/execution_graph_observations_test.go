@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
-	"github.com/GrayCodeAI/graycode-cli/internal/token"
-	"github.com/GrayCodeAI/graycode-cli/internal/tool"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/graphjournal"
+	"github.com/GrayCodeAI/hawk/internal/token"
+	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/types"
 	shrike "github.com/GrayCodeAI/shrike"
 )
 
@@ -26,7 +26,7 @@ func (graphVerifyTool) Execute(context.Context, json.RawMessage) (string, error)
 }
 
 func TestToolExecutionAutomaticallyRecordsPolicyAndVerification(t *testing.T) {
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 
 	sess := NewSession("test", "test", "system", tool.NewRegistry(graphVerifyTool{}))
 	sess.SetPersistID("graph-runtime-session")
@@ -66,7 +66,7 @@ func TestShrikeCompressionObservationIsPrivacySafe(t *testing.T) {
 	if !token.ShrikeAvailable() {
 		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
 	}
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	sess := NewSession("test", "test", "system", tool.NewRegistry())
 	sess.SetPersistID("shrike-runtime-session")
 	sess.recordShrikeCompressionObservation(
@@ -96,7 +96,7 @@ func TestShrikeRedactionObservationIsPrivacySafe(t *testing.T) {
 	if !token.ShrikeAvailable() {
 		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
 	}
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	sess := NewSession("test", "test", "system", tool.NewRegistry())
 	sess.SetPersistID("shrike-redaction-session")
 	sess.recordShrikeRedactionObservation(
@@ -126,7 +126,7 @@ func TestShrikeUsageBudgetObservationTracksAndProjectsAuthoritativeUsage(t *test
 	if !token.ShrikeAvailable() {
 		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
 	}
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	sess := NewSession("test", "test", "system", tool.NewRegistry())
 	sess.SetPersistID("shrike-usage-session")
 	if err := sess.SetMaxBudgetUSD(1); err != nil {
@@ -234,19 +234,19 @@ func TestDrainAlertsSurfacesHourlyWarning(t *testing.T) {
 	}
 }
 
-func TestGraycodeRouterOperationObservationIsPrivacySafe(t *testing.T) {
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+func TestEyrieOperationObservationIsPrivacySafe(t *testing.T) {
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	sess := NewSession("test", "test", "system", tool.NewRegistry())
-	sess.SetPersistID("graycode-router-runtime-session")
-	sess.recordGraycodeRouterOperationObservation(
+	sess.SetPersistID("eyrie-runtime-session")
+	sess.recordEyrieOperationObservation(
 		"private-provider",
 		"private/model",
 		"stop",
 		"private generated content",
 		2,
-		&types.GraycodeRouterUsage{PromptTokens: 100, CompletionTokens: 20, TotalTokens: 120},
+		&types.EyrieUsage{PromptTokens: 100, CompletionTokens: 20, TotalTokens: 120},
 	)
-	entries, err := graphjournal.Load("graycode-router-runtime-session")
+	entries, err := graphjournal.Load("eyrie-runtime-session")
 	if err != nil {
 		t.Fatalf("graphjournal.Load() error = %v", err)
 	}
@@ -259,7 +259,7 @@ func TestGraycodeRouterOperationObservationIsPrivacySafe(t *testing.T) {
 	}
 	for _, secret := range []string{"private-provider", "private/model", "private generated content"} {
 		if strings.Contains(string(payload), secret) {
-			t.Fatalf("GraycodeRouter graph observation leaked %q", secret)
+			t.Fatalf("Eyrie graph observation leaked %q", secret)
 		}
 	}
 }

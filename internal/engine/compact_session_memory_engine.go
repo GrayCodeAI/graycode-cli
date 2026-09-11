@@ -6,16 +6,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/compact"
+	"github.com/GrayCodeAI/hawk/internal/engine/compact"
 )
 
 type SessionMemoryStrategy struct{}
 
 func (s *SessionMemoryStrategy) Name() string { return "session_memory" }
 
-func (s *SessionMemoryStrategy) ShouldTrigger(msgs []types.GraycodeRouterMessage, tokenCount, threshold int) bool {
+func (s *SessionMemoryStrategy) ShouldTrigger(msgs []types.EyrieMessage, tokenCount, threshold int) bool {
 	if tokenCount < threshold {
 		return false
 	}
@@ -50,12 +50,12 @@ func (s *SessionMemoryStrategy) Compact(ctx context.Context, sess *Session) (*Co
 	kept := messages[keepIdx:]
 	kept = compact.FilterCompactBoundaries(kept)
 
-	result := make([]types.GraycodeRouterMessage, 0, len(kept)+2)
-	result = append(result, types.GraycodeRouterMessage{
+	result := make([]types.EyrieMessage, 0, len(kept)+2)
+	result = append(result, types.EyrieMessage{
 		Role:    "user",
 		Content: "[Session memory summary]\n" + memContent + "\n\n[Continue from the recent messages below.]",
 	})
-	result = append(result, types.GraycodeRouterMessage{
+	result = append(result, types.EyrieMessage{
 		Role:    "assistant",
 		Content: "Understood. I have the context from the session memory above. Continuing with the recent conversation.",
 	})

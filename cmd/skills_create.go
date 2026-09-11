@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
-	"github.com/GrayCodeAI/graycode-cli/internal/tool"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -30,10 +30,10 @@ func runSkillsCreate(_ *cobra.Command, args []string) error {
 		return err
 	}
 	model, provider := effectiveModelAndProvider(settings)
-	sess := newGraycodeSession(settings, provider, model, "You are a skill author.", tool.NewRegistry())
+	sess := newHawkSession(settings, provider, model, "You are a skill author.", tool.NewRegistry())
 
 	prompt := plugin.BuildNewSkillPrompt(desc)
-	resp, err := sess.Chat(context.Background(), []types.GraycodeRouterMessage{
+	resp, err := sess.Chat(context.Background(), []types.EyrieMessage{
 		{Role: "user", Content: prompt},
 	}, types.ChatOptions{Model: model, MaxTokens: 4096})
 	if err != nil {

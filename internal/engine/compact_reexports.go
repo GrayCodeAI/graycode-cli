@@ -4,9 +4,9 @@
 package engine
 
 import (
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/compact"
+	"github.com/GrayCodeAI/hawk/internal/engine/compact"
 )
 
 type CompactVariant = compact.CompactVariant
@@ -42,16 +42,16 @@ func BuildIncrementalCompactPrompt(priorSummary string) string {
 	return compact.BuildIncrementalCompactPrompt(priorSummary)
 }
 
-func ExtractPriorSummary(msgs []types.GraycodeRouterMessage) string {
+func ExtractPriorSummary(msgs []types.EyrieMessage) string {
 	return compact.ExtractPriorSummary(msgs)
 }
 
-// PriorSummaryPrefix is the marker prefix graycode prepends to a persisted
+// PriorSummaryPrefix is the marker prefix hawk prepends to a persisted
 // conversation summary message.
 const PriorSummaryPrefix = compact.PriorSummaryPrefix
 
 func IsCompactableTool(name string) bool { return compact.IsCompactableTool(name) }
-func AdjustIndexToPreserveAPIInvariants(msgs []types.GraycodeRouterMessage, startIdx int) int {
+func AdjustIndexToPreserveAPIInvariants(msgs []types.EyrieMessage, startIdx int) int {
 	return compact.AdjustIndexToPreserveAPIInvariants(msgs, startIdx)
 }
-func HasTextContent(m types.GraycodeRouterMessage) bool { return compact.HasTextContent(m) }
+func HasTextContent(m types.EyrieMessage) bool { return compact.HasTextContent(m) }

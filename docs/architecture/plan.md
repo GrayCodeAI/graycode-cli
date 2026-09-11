@@ -1,8 +1,8 @@
-# Graycode Architecture - Technical Plan
+# Hawk Architecture - Technical Plan
 
 ## Overview
 
-This plan defines the technical approach for implementing the graycode architecture specification. The architecture is already largely implemented; this plan documents the existing design decisions and identifies gaps.
+This plan defines the technical approach for implementing the hawk architecture specification. The architecture is already largely implemented; this plan documents the existing design decisions and identifies gaps.
 
 ## Architecture Decisions
 
@@ -151,7 +151,7 @@ services; it is not a claim that those fields have already moved.
 
 ## Dependencies
 
-- **graycode-router:** LLM provider engine behind `graycode-router/engine` (workspace sibling)
+- **eyrie:** LLM provider engine behind `eyrie/engine` (workspace sibling)
 - **harrier:** Graph-based persistent memory (workspace sibling)
 - **shrike:** Tokenizer, compression (workspace sibling)
 - **eagle:** Shared types (workspace sibling)

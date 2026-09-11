@@ -1,32 +1,32 @@
-# ADR-0003: Grok behavioral port keeps Go multi-repo Graycode
+# ADR-0003: Grok behavioral port keeps Go multi-repo Hawk
 
 - Status: Accepted
 - Date: 2026-07-16
-- Owners: Graycode maintainers
-- Related: `docs/plans/FULL-GROK-ECO-TO-GRAYCODE-ECO-PORT-PLAN.md`,
+- Owners: Hawk maintainers
+- Related: `docs/plans/FULL-GROK-ECO-TO-HAWK-ECO-PORT-PLAN.md`,
   `docs/plans/GROK-CLASS-CAPABILITY-LONG-HORIZON-PLAN.md`,
   `docs/plans/YEAR-0-ACTIVE.md`
 
 ## Context
 
 Grok Build (`grok-eco/grok-build`) is a large Rust monorepo for a terminal AI
-coding agent. Graycode is a multi-repo Go platform: product (`graycode`) plus peer
-engines (`graycode-router`, `harrier`, `shrike`, `swift`, `kestrel`, `merlin`), foundation
+coding agent. Hawk is a multi-repo Go platform: product (`hawk`) plus peer
+engines (`eyrie`, `harrier`, `shrike`, `swift`, `kestrel`, `merlin`), foundation
 contracts (`eagle`, `falcon`), SDKs, cloud, and skills.
 
 The product goal is Grok-class **agent control-plane quality** (typed
 subagents, sandbox profiles, folder trust, hooks, plugins/marketplace, task
-runtime, plan UX) without abandoning Graycode’s multi-provider, local-first, and
+runtime, plan UX) without abandoning Hawk’s multi-provider, local-first, and
 peer-engine advantages.
 
 ## Decision
 
 1. **Port means behavioral reimplementation in Go**, not a Rust crate copy,
    not a monorepo collapse, and not a runtime dependency on Grok binaries.
-2. **Graycode remains multi-repo.** Map Grok capabilities onto existing owners:
-   - product surface → `graycode`
+2. **Hawk remains multi-repo.** Map Grok capabilities onto existing owners:
+   - product surface → `hawk`
    - shared DTOs → `eagle`
-   - LLM routing/stream → `graycode-router`
+   - LLM routing/stream → `eyrie`
    - memory → `harrier`
    - tokens/secrets/compress → `shrike`
    - session capture/import → `swift`
@@ -50,7 +50,7 @@ peer-engine advantages.
 ## Consequences
 
 - New shared agent spawn types live in `eagle/agent` (stdlib
-  only). Engines and SDKs may import them; contracts never import graycode.
+  only). Engines and SDKs may import them; contracts never import hawk.
 - Feature work updates the matrices in the full/long-horizon plans rather
   than inventing parallel roadmaps.
 - Skip lists stay explicit: Ratatui widgets, Mixpanel defaults, Grok-only

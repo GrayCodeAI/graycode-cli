@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
-// Manifest defines a graycode plugin.
+// Manifest defines a hawk plugin.
 type Manifest struct {
 	Name        string       `json:"name"`
 	Version     string       `json:"version"`

@@ -1,6 +1,6 @@
-// Package token is Graycode's dependency boundary for the external Shrike library.
+// Package token is Hawk's dependency boundary for the external Shrike library.
 // Generic token counting, compression, chunking, secret detection, and usage
-// tracking should enter Graycode through this package.
+// tracking should enter Hawk through this package.
 package token
 
 import (
@@ -63,7 +63,7 @@ func fallbackEstimate(text string) int {
 // reliably distinguishes it from the real engine. Consumers use this to report
 // honest availability instead of claiming an operational token pipeline.
 func ShrikeAvailable() bool {
-	return shrike.EstimateTokensPrecise("graycode context compression pipeline") > 0
+	return shrike.EstimateTokensPrecise("hawk context compression pipeline") > 0
 }
 
 func Compress(text string, budget int) (string, Stats) {

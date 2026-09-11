@@ -799,7 +799,7 @@ func redactString(s string) string {
 }
 
 // ShareLinkForID loads the session with the given ID and returns its
-// deterministic local share deeplink (graycode://share/<hash[:16]>), or ""
+// deterministic local share deeplink (hawk://share/<hash[:16]>), or ""
 // when the session cannot be loaded. The deeplink is content-derived, so it is
 // stable across reloads for the same session content.
 func ShareLinkForID(id string) string {
@@ -837,7 +837,7 @@ func GenerateShareLink(session *ExportedSession) string {
 	}
 
 	hash := hex.EncodeToString(h.Sum(nil))
-	return fmt.Sprintf("graycode://share/%s", hash[:16])
+	return fmt.Sprintf("hawk://share/%s", hash[:16])
 }
 
 // CalculateStats computes session statistics from a slice of messages.

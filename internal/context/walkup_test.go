@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/hooks"
+	"github.com/GrayCodeAI/hawk/internal/hooks"
 )
 
 func TestWalkUpDiscoverer_FindsAgentsMd(t *testing.T) {

@@ -13,8 +13,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/tui"
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	"github.com/GrayCodeAI/hawk/internal/tui"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ImageAttachment represents an image ready to be attached to a message.
@@ -188,7 +188,7 @@ func IsPDFFile(path string) bool {
 
 // ReadPDFText reads a PDF and extracts its text content using stdlib only.
 //
-// graycode-router does not expose a native document/PDF content block, so PDFs are
+// eyrie does not expose a native document/PDF content block, so PDFs are
 // degraded to text and injected inline. This is a best-effort extractor: it
 // inflates FlateDecode content streams and pulls text from PDF text-showing
 // operators (Tj / TJ). It does not handle every PDF (encrypted, scanned-image,

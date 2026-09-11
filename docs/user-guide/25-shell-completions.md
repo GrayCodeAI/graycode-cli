@@ -1,15 +1,15 @@
 # Shell Completions
 
-graycode ships completion scripts for **bash**, **zsh**, **fish**, and **PowerShell**,
+hawk ships completion scripts for **bash**, **zsh**, **fish**, and **PowerShell**,
 plus a machine-readable **JSON** spec for IDE integration.
 
 ## Quick Install
 
 ```bash
 # Auto-install to the standard location for your shell and OS:
-graycode completion install bash
-graycode completion install zsh
-graycode completion install fish
+hawk completion install bash
+hawk completion install zsh
+hawk completion install fish
 ```
 
 ## Manual Setup
@@ -18,50 +18,50 @@ graycode completion install fish
 
 ```bash
 # Load for current session:
-source <(graycode completion bash)
+source <(hawk completion bash)
 
 # Persist (Linux):
-graycode completion bash > ~/.local/share/bash-completion/completions/graycode
+hawk completion bash > ~/.local/share/bash-completion/completions/hawk
 
 # Persist (macOS with Homebrew):
-graycode completion bash > /opt/homebrew/etc/bash_completion.d/graycode
+hawk completion bash > /opt/homebrew/etc/bash_completion.d/hawk
 ```
 
 ### Zsh
 
 ```bash
 # Load for current session:
-source <(graycode completion zsh)
+source <(hawk completion zsh)
 
 # Persist:
-graycode completion zsh > "${fpath[1]}/_graycode"
+hawk completion zsh > "${fpath[1]}/_hawk"
 ```
 
 ### Fish
 
 ```bash
 # Load for current session:
-graycode completion fish | source
+hawk completion fish | source
 
 # Persist:
-graycode completion fish > ~/.config/fish/completions/graycode.fish
+hawk completion fish > ~/.config/fish/completions/hawk.fish
 ```
 
 ### PowerShell
 
 ```powershell
 # Load for current session:
-graycode completion powershell | Out-String | Invoke-Expression
+hawk completion powershell | Out-String | Invoke-Expression
 
 # Persist: add to your $PROFILE
-graycode completion powershell > graycode.ps1
-. ./graycode.ps1
+hawk completion powershell > hawk.ps1
+. ./hawk.ps1
 ```
 
 ## JSON Spec (IDE Integration)
 
 ```bash
-graycode completion json
+hawk completion json
 ```
 
 Prints a machine-readable command/flag spec that IDEs and editor plugins can
@@ -69,10 +69,10 @@ consume for inline completions without shell integration.
 
 ## Install Paths
 
-`graycode completion install` resolves the correct path automatically:
+`hawk completion install` resolves the correct path automatically:
 
 | Shell | Linux | macOS (Homebrew) |
 |-------|-------|-------------------|
-| bash | `~/.local/share/bash-completion/completions/graycode` | `/opt/homebrew/etc/bash_completion.d/graycode` |
-| zsh | First `$fpath` entry (e.g. `/usr/local/share/zsh/site-functions/_graycode`) | Same |
-| fish | `~/.config/fish/completions/graycode.fish` | Same |
+| bash | `~/.local/share/bash-completion/completions/hawk` | `/opt/homebrew/etc/bash_completion.d/hawk` |
+| zsh | First `$fpath` entry (e.g. `/usr/local/share/zsh/site-functions/_hawk`) | Same |
+| fish | `~/.config/fish/completions/hawk.fish` | Same |

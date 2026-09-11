@@ -5,7 +5,7 @@ Source: field comparison vs ripgrep/fzf/alacritty (numbers in README), Aider Rep
 
 Constraint: docs-only. No new benchmark framework; infra already exists.
 
-## Existing graycode capabilities (verified)
+## Existing hawk capabilities (verified)
 
 - `make bench` (`go test -bench=. -benchmem -count=3`) in `Makefile:100-101`.
 - `internal/bench/suite.go` (eco suite runner + report formatter).
@@ -21,7 +21,7 @@ Do not adopt: new eval harness, SWE-bench claims, provider-funded comparisons.
 ## Priority model
 
 - P0: fixed command + env (`make bench` subset: session save/load 100/1000, repomap size/tokens) recorded with machine + commit.
-- P1: `docs/BENCHMARKS.md` table (TUI-independent, no latency theater): session save/load, repomap tokens, tool-catalog size before/after `GRAYCODE_TOOL_SHRINK=1`.
+- P1: `docs/BENCHMARKS.md` table (TUI-independent, no latency theater): session save/load, repomap tokens, tool-catalog size before/after `HAWK_TOOL_SHRINK=1`.
 - P2: CI artifact (optional): nightly `bench` JSON upload; never gate releases on it.
 
 ## Steps

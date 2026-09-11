@@ -1,7 +1,7 @@
 # Research & Competitive Comparison — graycode-eco
 
 Status: Implemented (branch `feat/competitive-analysis-top20`, 2026-09-09)
-Scope: 4 repos (`graycode-cli`, `graycode-router`, `graycode-platform`, `graycode-skills`) vs
+Scope: 4 repos (`hawk`, `eyrie`, `graycode-platform`, `graycode-skills`) vs
 top-20 OSS competitors and top-20 AI-coding-agent research papers.
 
 This document maps the field (competitors + research) to our repos, records what
@@ -12,15 +12,15 @@ plans in `docs/plans/competitive-gap-*.md` and the extra fixes they surfaced.
 
 - Competitors: `docs/COMPETITIVE.md` (20 OSS tools, source-cited).
 - Research: 20 papers read via arXiv (abstracts) 2026-09-09 — listed below.
-- Repo capability inventory: `graycode-cli/README.md`, `graycode-router/README.md`,
+- Repo capability inventory: `hawk/README.md`, `eyrie/README.md`,
   `graycode-platform/README.md`, `graycode-skills/README.md`, plus source audits.
 
 ## Our repos at a glance
 
 | Repo | Role | Key strengths |
 |---|---|---|
-| graycode-cli | Product face (Go, Bubble Tea v2) | 120+ tools, Docker fail-closed sandbox, `/autonomy`+`/spec` gates, `mission` multi-agent, execution-graph export, AST repomap + Harrier memory, MCP/LSP |
-| graycode-router | Provider engine facade | 22 gateways, routing/retry/caching/compaction, OpenAI-compat proxy, model catalog |
+| hawk | Product face (Go, Bubble Tea v2) | 120+ tools, Docker fail-closed sandbox, `/autonomy`+`/spec` gates, `mission` multi-agent, execution-graph export, AST repomap + Harrier memory, MCP/LSP |
+| eyrie | Provider engine facade | 22 gateways, routing/retry/caching/compaction, OpenAI-compat proxy, model catalog |
 | graycode-platform | Optional cloud/BFF plane | web + identity BFF + control-plane worker (not a runtime dep) |
 | graycode-skills | Skill marketplace | 14,015 skills, 27 categories, SKILL.md frontmatter + validation |
 

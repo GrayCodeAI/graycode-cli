@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/textutil"
+	"github.com/GrayCodeAI/hawk/internal/textutil"
 )
 
 // ToolInfo describes a single tool available to the LLM.

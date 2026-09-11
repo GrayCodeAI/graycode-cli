@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	graycodeModule       = "github.com/GrayCodeAI/graycode-cli"
-	graycodeRouterModule = "github.com/GrayCodeAI/graycode-router"
+	hawkModule  = "github.com/GrayCodeAI/hawk"
+	eyrieModule = "github.com/GrayCodeAI/eyrie"
 )
 
-var supportEngines = []string{"graycode-router", "harrier", "shrike", "swift", "kestrel", "merlin"}
+var supportEngines = []string{"eyrie", "harrier", "shrike", "swift", "kestrel", "merlin"}
 
 type packageImport struct {
 	file string
@@ -32,37 +32,37 @@ type packageImport struct {
 func TestPackageDependencyGraph(t *testing.T) {
 	root := repoRoot(t)
 
-	checkGraycodeGraycodeRouterFacade(t, root)
-	checkGraycodeInternalLayers(t, root)
+	checkHawkEyrieFacade(t, root)
+	checkHawkInternalLayers(t, root)
 	checkSupportRepositoryBoundaries(t, root)
 }
 
-func checkGraycodeGraycodeRouterFacade(t *testing.T, root string) {
+func checkHawkEyrieFacade(t *testing.T, root string) {
 	paths := []string{filepath.Join(root, "internal"), filepath.Join(root, "cmd")}
 	var violations []string
 
 	for _, path := range paths {
 		for _, imp := range productionImports(t, root, path) {
-			if !strings.HasPrefix(imp.path, graycodeRouterModule+"/") {
+			if !strings.HasPrefix(imp.path, eyrieModule+"/") {
 				continue
 			}
-			if imp.path == graycodeRouterModule+"/engine" || strings.HasPrefix(imp.path, graycodeRouterModule+"/engine/") {
+			if imp.path == eyrieModule+"/engine" || strings.HasPrefix(imp.path, eyrieModule+"/engine/") {
 				continue
 			}
-			// Graycode uses the full vendored GraycodeRouter API surface for provider, graph,
+			// Hawk uses the full vendored Eyrie API surface for provider, graph,
 			// and tooling contracts that the engine facade does not re-export.
 			switch imp.path {
-			case graycodeRouterModule + "/llm", graycodeRouterModule + "/graph", graycodeRouterModule + "/tools":
+			case eyrieModule + "/llm", eyrieModule + "/graph", eyrieModule + "/tools":
 				continue
 			}
-			violations = append(violations, formatImportViolation(root, imp, "use the graycode-router/engine facade"))
+			violations = append(violations, formatImportViolation(root, imp, "use the eyrie/engine facade"))
 		}
 	}
 
-	assertNoPackageViolations(t, "Graycode GraycodeRouter facade", violations)
+	assertNoPackageViolations(t, "Hawk Eyrie facade", violations)
 }
 
-func checkGraycodeInternalLayers(t *testing.T, root string) {
+func checkHawkInternalLayers(t *testing.T, root string) {
 	rules := map[string][]string{
 		"internal/engine":      {"cmd", "internal/daemon", "internal/platform", "internal/bridge"},
 		"internal/permissions": {"cmd", "internal/daemon", "internal/engine", "internal/platform", "internal/bridge"},
@@ -78,18 +78,18 @@ func checkGraycodeInternalLayers(t *testing.T, root string) {
 			if err != nil {
 				t.Fatalf("relative path for %s: %v", imp.file, err)
 			}
-			if !strings.HasPrefix(imp.path, graycodeModule+"/") {
+			if !strings.HasPrefix(imp.path, hawkModule+"/") {
 				continue
 			}
 			for _, prefix := range forbidden {
-				if strings.HasPrefix(imp.path, graycodeModule+"/"+prefix+"/") || imp.path == graycodeModule+"/"+prefix {
+				if strings.HasPrefix(imp.path, hawkModule+"/"+prefix+"/") || imp.path == hawkModule+"/"+prefix {
 					violations = append(violations, fmt.Sprintf("%s:%d imports %s (%s); %s must not depend on %s", filepath.ToSlash(rel), imp.line, imp.path, source, source, prefix))
 				}
 			}
 		}
 	}
 
-	assertNoPackageViolations(t, "Graycode internal layers", violations)
+	assertNoPackageViolations(t, "Hawk internal layers", violations)
 }
 
 func checkSupportRepositoryBoundaries(t *testing.T, root string) {
@@ -98,8 +98,8 @@ func checkSupportRepositoryBoundaries(t *testing.T, root string) {
 	for _, owner := range supportEngines {
 		for _, repoRoot := range repositoryRoots(root, owner) {
 			for _, imp := range productionImports(t, root, repoRoot) {
-				if strings.HasPrefix(imp.path, graycodeModule+"/internal/") || imp.path == graycodeModule+"/shared/types" {
-					violations = append(violations, formatImportViolation(root, imp, "support engines must not import Graycode internals"))
+				if strings.HasPrefix(imp.path, hawkModule+"/internal/") || imp.path == hawkModule+"/shared/types" {
+					violations = append(violations, formatImportViolation(root, imp, "support engines must not import Hawk internals"))
 					continue
 				}
 

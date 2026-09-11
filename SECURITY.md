@@ -1,4 +1,4 @@
-# Security Policy — graycode
+# Security Policy — hawk
 
 ## Supported versions
 
@@ -7,15 +7,15 @@ minor versions once `1.x` ships. Older versions receive critical-severity
 fixes only on a best-effort basis.
 
 The current canonical version is the contents of the [`VERSION`](./VERSION)
-file at the repo root. See [`docs/versioning.md`](https://github.com/GrayCodeAI/graycode-cli/blob/main/docs/versioning.md)
+file at the repo root. See [`docs/versioning.md`](https://github.com/GrayCodeAI/hawk/blob/main/docs/versioning.md)
 for the eco-wide versioning scheme.
 
 ## Reporting a vulnerability
 
 **Do not open a public GitHub issue for security vulnerabilities.** Instead:
 
-1. Open a private [GitHub Security Advisory](https://github.com/GrayCodeAI/graycode-cli/security/advisories/new), **or**
-2. Email `security@graycode.ai` with the details below.
+1. Open a private [GitHub Security Advisory](https://github.com/GrayCodeAI/hawk/security/advisories/new), **or**
+2. Email `security@hawk.ai` with the details below.
 
 Include in your report:
 
@@ -63,28 +63,28 @@ This policy covers the code in this repository and the release artefacts
 published from it. It does not cover:
 
 - Third-party dependencies (report to upstream).
-- LLM provider services that graycode integrates with (report to the
+- LLM provider services that hawk integrates with (report to the
   provider).
 - Local filesystem misuse where an attacker already has shell access (out of
   threat model).
 
-For graycode-specific threat-model notes, see the README and any docs in
+For hawk-specific threat-model notes, see the README and any docs in
 this repo.
 
 ## Config security model
 
 ### Clone-and-load attack defense
 
-Project-level `.graycode/settings.json` can be committed to a git repository.
+Project-level `.hawk/settings.json` can be committed to a git repository.
 An attacker who controls a repository could define MCP servers that execute
-arbitrary commands when a developer clones and runs graycode in that directory.
+arbitrary commands when a developer clones and runs hawk in that directory.
 
 **Mitigation:** Project-level MCP servers are stripped from project config
 (`projectSafeSettings` in `internal/config/settings.go`) and project
 hooks/MCP/plugins/LSP additionally require folder trust: the project root
-must be trusted via `graycode trust add` (`AllowProjectAutomation` in
+must be trusted via `hawk trust add` (`AllowProjectAutomation` in
 `internal/trust/store.go`). There is no `--allow-project-mcp` flag.
-Global MCP servers (from `~/.graycode/settings.json`) are always loaded.
+Global MCP servers (from `~/.hawk/settings.json`) are always loaded.
 
 ### Security-sensitive fields
 
@@ -107,8 +107,8 @@ Highest priority first (`LoadSettings` / `LoadSettingsWithOverride` in
 1. CLI `--settings` JSON override
 2. Per-command CLI flags (e.g., `--model`, `--provider`)
 3. Environment variables (only where explicitly read; there is no global env layer)
-4. Project `.graycode/settings.json` (repository-safe subset only — see above)
-5. Global `~/.graycode/settings.json`
+4. Project `.hawk/settings.json` (repository-safe subset only — see above)
+5. Global `~/.hawk/settings.json`
 6. Built-in defaults (lowest priority)
 
 Project-level config CANNOT escalate permissions beyond what global config
@@ -118,7 +118,7 @@ implements field-by-field merging with explicit precedence rules.
 ### Credential storage
 
 API keys and secrets are stored in the OS secret store (macOS Keychain,
-Linux secret service, Windows Credential Manager) via the `graycode-router/credentials`
+Linux secret service, Windows Credential Manager) via the `eyrie/credentials`
 package. They are never written to `settings.json`, `.env`, or any file
 in the repository. The `/config` command manages credential storage
 interactively.

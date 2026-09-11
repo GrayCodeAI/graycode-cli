@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
-	"github.com/GrayCodeAI/graycode-cli/internal/theme"
-	"github.com/GrayCodeAI/graycode-cli/internal/token"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/theme"
+	"github.com/GrayCodeAI/hawk/internal/token"
 )
 
 // EcosystemReport is the structured view of the ecosystem panel.
 type EcosystemReport struct {
-	Eyre    EcosystemGraycodeRouter `json:"graycode-router"`
-	Harrier EcosystemHarrier        `json:"harrier"`
-	Shrike  EcosystemShrike         `json:"shrike"`
+	Eyre    EcosystemEyrie   `json:"eyrie"`
+	Harrier EcosystemHarrier `json:"harrier"`
+	Shrike  EcosystemShrike  `json:"shrike"`
 }
 
-type EcosystemGraycodeRouter struct {
+type EcosystemEyrie struct {
 	CatalogExists bool   `json:"catalog_exists"`
 	ModelCount    int    `json:"model_count,omitempty"`
 	Ready         bool   `json:"ready"`
@@ -40,7 +40,7 @@ type EcosystemShrike struct {
 func BuildEcosystemReport(ctx context.Context, provider, model string) EcosystemReport {
 	var r EcosystemReport
 
-	// graycode-router
+	// eyrie
 	cat := CatalogHealthReport(ctx)
 	r.Eyre.CatalogExists = cat.Exists
 	r.Eyre.ModelCount = cat.Models
@@ -64,41 +64,41 @@ func BuildEcosystemReport(ctx context.Context, provider, model string) Ecosystem
 
 	// shrike
 	r.Shrike.Embedded = token.ShrikeAvailable()
-	r.Shrike.SampleTokens = token.CountTokensFast("graycode context compression pipeline")
+	r.Shrike.SampleTokens = token.CountTokensFast("hawk context compression pipeline")
 
 	return r
 }
 
-// FormatEcosystemPanel summarizes graycode-router, harrier, and shrike integration for doctor and status output.
+// FormatEcosystemPanel summarizes eyrie, harrier, and shrike integration for doctor and status output.
 func FormatEcosystemPanel(ctx context.Context, provider, model string) string {
 	var b strings.Builder
-	b.WriteString(theme.Tint("Ecosystem (graycode-router · harrier · shrike):", theme.ReportInfo) + "\n")
+	b.WriteString(theme.Tint("Ecosystem (eyrie · harrier · shrike):", theme.ReportInfo) + "\n")
 
-	// graycode-router — LLM provider layer
+	// eyrie — LLM provider layer
 	cat := CatalogHealthReport(ctx)
-	graycodeRouterLine := "  " + theme.Tint("graycode-router:", theme.ReportMuted) + " "
+	eyrieLine := "  " + theme.Tint("eyrie:", theme.ReportMuted) + " "
 	if cat.Exists {
-		graycodeRouterLine += theme.Tint(fmt.Sprintf("catalog %d models", cat.Models), theme.ReportInfo)
+		eyrieLine += theme.Tint(fmt.Sprintf("catalog %d models", cat.Models), theme.ReportInfo)
 	} else {
-		graycodeRouterLine += theme.Tint("catalog missing (run graycode models refresh)", theme.ReportWarn)
+		eyrieLine += theme.Tint("catalog missing (run hawk models refresh)", theme.ReportWarn)
 	}
 	pre := EnginePreflightReport(ctx)
 	if pre.Ready {
-		graycodeRouterLine += " · " + theme.Tint("locally ready", theme.ReportSuccess)
+		eyrieLine += " · " + theme.Tint("locally ready", theme.ReportSuccess)
 	} else {
-		graycodeRouterLine += " · " + theme.Tint("setup incomplete", theme.ReportWarn)
+		eyrieLine += " · " + theme.Tint("setup incomplete", theme.ReportWarn)
 	}
 	if strings.TrimSpace(provider) != "" && provider != "auto" {
-		graycodeRouterLine += " · " + theme.Tint("provider "+provider, theme.ReportInfo)
+		eyrieLine += " · " + theme.Tint("provider "+provider, theme.ReportInfo)
 	}
 	if dep, err := EngineDeploymentSummary(ctx, model); err == nil {
 		if dep.RoutingStages > 0 {
-			graycodeRouterLine += " · " + theme.Tint(fmt.Sprintf("routing %s (%d stages)", dep.RoutingSource, dep.RoutingStages), theme.ReportInfo)
+			eyrieLine += " · " + theme.Tint(fmt.Sprintf("routing %s (%d stages)", dep.RoutingSource, dep.RoutingStages), theme.ReportInfo)
 		} else {
-			graycodeRouterLine += " · " + theme.Tint("routing "+dep.RoutingSource, theme.ReportInfo)
+			eyrieLine += " · " + theme.Tint("routing "+dep.RoutingSource, theme.ReportInfo)
 		}
 	}
-	b.WriteString(graycodeRouterLine + "\n")
+	b.WriteString(eyrieLine + "\n")
 
 	// harrier — persistent memory graph
 	bridge := memory.NewHarrierBridge()
@@ -111,7 +111,7 @@ func FormatEcosystemPanel(ctx context.Context, provider, model string) string {
 
 	// shrike — token counting and context compression (embedded only when a
 	// real shrike engine is linked; the build-harness stub reports 0 tokens).
-	sample := token.CountTokensFast("graycode context compression pipeline")
+	sample := token.CountTokensFast("hawk context compression pipeline")
 	if token.ShrikeAvailable() {
 		b.WriteString("  " + theme.Tint("shrike:", theme.ReportMuted) + " " + theme.Tint("embedded", theme.ReportInfo) + " · " + theme.Tint("token/compress pipeline OK", theme.ReportSuccess) + fmt.Sprintf(" (sample=%d tokens)", sample) + "\n")
 	} else {

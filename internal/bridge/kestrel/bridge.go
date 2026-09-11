@@ -6,36 +6,36 @@ import (
 	"sync"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
-	reviewcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/review"
-	typescontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
-	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	graphcontracts "github.com/GrayCodeAI/hawk/internal/contracts/graph"
+	reviewcontracts "github.com/GrayCodeAI/hawk/internal/contracts/review"
+	typescontracts "github.com/GrayCodeAI/hawk/internal/contracts/types"
+	"github.com/GrayCodeAI/hawk/internal/graphjournal"
+	"github.com/GrayCodeAI/hawk/internal/types"
 	kestrelLib "github.com/GrayCodeAI/kestrel"
 	kestrelgraph "github.com/GrayCodeAI/kestrel/graph"
 	"github.com/GrayCodeAI/kestrel/qualitygraph"
 	kestrelreview "github.com/GrayCodeAI/kestrel/review"
 )
 
-// GraycodeRouterAdapter implements kestrel's Provider interface using graycode's graycode-router client.
-// It translates between kestrel.Message/kestrel.ChatOpts and Graycode runtime DTOs.
-type GraycodeRouterAdapter struct {
+// EyrieAdapter implements kestrel's Provider interface using hawk's eyrie client.
+// It translates between kestrel.Message/kestrel.ChatOpts and Hawk runtime DTOs.
+type EyrieAdapter struct {
 	client   types.ChatProvider
 	provider string
 }
 
-// NewGraycodeRouterAdapter creates an adapter that satisfies kestrel.Provider using
-// the given graycode-router client and provider name (e.g. "anthropic", "openai").
-func NewGraycodeRouterAdapter(c types.ChatProvider, provider string) *GraycodeRouterAdapter {
-	return &GraycodeRouterAdapter{client: c, provider: provider}
+// NewEyrieAdapter creates an adapter that satisfies kestrel.Provider using
+// the given eyrie client and provider name (e.g. "anthropic", "openai").
+func NewEyrieAdapter(c types.ChatProvider, provider string) *EyrieAdapter {
+	return &EyrieAdapter{client: c, provider: provider}
 }
 
-// Chat translates a kestrel LLM request into an graycode-router call and returns the
+// Chat translates a kestrel LLM request into an eyrie call and returns the
 // result in kestrel's Response format.
-func (a *GraycodeRouterAdapter) Chat(ctx context.Context, messages []kestrelLib.Message, opts kestrelLib.ChatOpts) (*kestrelLib.Response, error) {
-	graycodeRouterMessages := make([]types.GraycodeRouterMessage, len(messages))
+func (a *EyrieAdapter) Chat(ctx context.Context, messages []kestrelLib.Message, opts kestrelLib.ChatOpts) (*kestrelLib.Response, error) {
+	eyrieMessages := make([]types.EyrieMessage, len(messages))
 	for i, m := range messages {
-		graycodeRouterMessages[i] = types.GraycodeRouterMessage{
+		eyrieMessages[i] = types.EyrieMessage{
 			Role:    m.Role,
 			Content: m.Content,
 		}
@@ -47,7 +47,7 @@ func (a *GraycodeRouterAdapter) Chat(ctx context.Context, messages []kestrelLib.
 		temp = &t
 	}
 
-	graycodeRouterOpts := types.ChatOptions{
+	eyrieOpts := types.ChatOptions{
 		Provider:    a.provider,
 		Model:       opts.Model,
 		MaxTokens:   opts.MaxTokens,
@@ -55,7 +55,7 @@ func (a *GraycodeRouterAdapter) Chat(ctx context.Context, messages []kestrelLib.
 		System:      opts.System,
 	}
 
-	resp, err := a.client.Chat(ctx, graycodeRouterMessages, graycodeRouterOpts)
+	resp, err := a.client.Chat(ctx, eyrieMessages, eyrieOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -71,11 +71,11 @@ func (a *GraycodeRouterAdapter) Chat(ctx context.Context, messages []kestrelLib.
 	}, nil
 }
 
-// Bridge connects graycode to the kestrel code-review library.
+// Bridge connects hawk to the kestrel code-review library.
 // If initialization fails, all operations degrade gracefully and return
 // empty results rather than errors.
 type Bridge struct {
-	adapter  *GraycodeRouterAdapter
+	adapter  *EyrieAdapter
 	reviewer *kestrelLib.Reviewer
 	opts     []kestrelLib.Option
 	mu       sync.Mutex
@@ -91,7 +91,7 @@ type GraphObservation struct {
 	MaxFindings int
 }
 
-// NewBridge creates a bridge to the kestrel library using the given Graycode
+// NewBridge creates a bridge to the kestrel library using the given Hawk
 // transport client and provider name. Additional kestrel options (model,
 // concerns, etc.) are applied to all operations.
 func NewBridge(c types.ChatProvider, provider string, opts ...kestrelLib.Option) *Bridge {
@@ -104,7 +104,7 @@ func (b *Bridge) init(c types.ChatProvider, provider string, opts ...kestrelLib.
 	if c == nil {
 		return
 	}
-	b.adapter = NewGraycodeRouterAdapter(c, provider)
+	b.adapter = NewEyrieAdapter(c, provider)
 	// Prepend the provider option so callers don't have to.
 	b.opts = append([]kestrelLib.Option{kestrelLib.WithProvider(b.adapter)}, opts...)
 	b.reviewer = kestrelLib.NewReviewer(b.opts...)
@@ -227,7 +227,7 @@ func (b *Bridge) Improve(ctx context.Context, diff string) (*kestrelLib.ImproveR
 }
 
 // The following helpers convert Kestrel's vendored contract types into
-// Graycode's contracts/* contract types (and the reverse for scope). The definitions
+// Hawk's contracts/* contract types (and the reverse for scope). The definitions
 // are byte-identical, so conversion is a field-by-field copy at the boundary.
 
 func toKestrelScope(s graphcontracts.Scope) kestrelgraph.Scope {

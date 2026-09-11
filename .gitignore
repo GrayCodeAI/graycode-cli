@@ -1,9 +1,9 @@
 # Binaries
-/graycode
+/hawk
 # Ignore build output in bin/, but track committed source scripts like bin/buf.
 bin/*
 !bin/buf
-graycode_bin
+hawk_bin
 *.exe
 *.dll
 *.so
@@ -12,7 +12,7 @@ graycode_bin
 .claude/
 .codegraph/
 .commandcode/
-.graycode/
+.hawk/
 .harrier/
 .openclaude/
 .pi/
@@ -45,8 +45,8 @@ go.work.sum
 # Lefthook-generated git hook wrappers
 .githooks/
 __pycache__/
-graycode_bin
+hawk_bin
 
 # Logs
 *.log
-graycode-sec105b.log
+hawk-sec105b.log

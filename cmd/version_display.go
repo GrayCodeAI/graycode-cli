@@ -7,13 +7,13 @@ import (
 )
 
 // versionLine is the single user-facing version format shared by
-// `graycode --version` and `graycode version`.
+// `hawk --version` and `hawk version`.
 func versionLine() string {
 	ver := DisplayVersion()
 	if ver != "" && !strings.HasPrefix(ver, "v") && !strings.HasPrefix(ver, "V") {
 		ver = "v" + ver
 	}
-	line := auditTint("graycode", textPrimary) + " " + auditTint(ver, graycodeColor)
+	line := auditTint("hawk", textPrimary) + " " + auditTint(ver, hawkColor)
 	if d := strings.TrimSpace(buildDate); d != "" && d != "unknown" {
 		line += auditTint(" (built "+d+")", textMuted)
 	}

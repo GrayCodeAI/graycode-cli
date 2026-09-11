@@ -9,7 +9,7 @@ import (
 	"time"
 
 	lipgloss "charm.land/lipgloss/v2"
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // CLIProgress renders a ProgressTracker as live single-line progress for
@@ -36,7 +36,7 @@ func newCLIProgress(title string, steps []string, w io.Writer, tty bool) *CLIPro
 	for _, s := range steps {
 		pt.AddStep(s)
 	}
-	return &CLIProgress{w: w, pt: pt, spinner: NewBrailleSpinner(SpinnerGraycode, ""), tty: tty}
+	return &CLIProgress{w: w, pt: pt, spinner: NewBrailleSpinner(SpinnerHawk, ""), tty: tty}
 }
 
 // StartStep marks step i active and, on a TTY, starts animating it in place.
@@ -47,7 +47,7 @@ func (c *CLIProgress) StartStep(i int) {
 	if IsQuiet() || !c.tty || i < 0 || i >= len(c.pt.Steps) {
 		return
 	}
-	c.spinner = NewBrailleSpinner(SpinnerGraycode, c.pt.Steps[i].Name)
+	c.spinner = NewBrailleSpinner(SpinnerHawk, c.pt.Steps[i].Name)
 	c.spinner.Start(80*time.Millisecond, func(frame string) {
 		eta := ""
 		if remaining := c.pt.EstimateRemaining(); remaining > 0 {

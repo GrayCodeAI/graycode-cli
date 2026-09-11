@@ -3,7 +3,7 @@ package tools
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/lsp"
+	"github.com/GrayCodeAI/hawk/internal/lsp"
 )
 
 func TestLSPToolNames(t *testing.T) {

@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // TestSetModelPreservesHistory verifies that a mid-session model switch re-routes
@@ -12,7 +12,7 @@ import (
 func TestSetModelPreservesHistory(t *testing.T) {
 	s := NewSession("anthropic", "claude-sonnet-4-6", "system", nil)
 
-	history := []types.GraycodeRouterMessage{
+	history := []types.EyrieMessage{
 		{Role: "user", Content: "what is 2+2?"},
 		{Role: "assistant", Content: "4"},
 		{Role: "user", Content: "and 3+3?"},

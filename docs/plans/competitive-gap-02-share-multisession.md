@@ -6,9 +6,9 @@ Source: field comparison vs OpenCode share-links/multi-session, herdr multiplexe
 Constraint: developer-first, local by default, no cloud account required
 (per `.github/ISSUE_TEMPLATE/feature_request.yml:60-63`).
 
-## Existing graycode capabilities (verified)
+## Existing hawk capabilities (verified)
 
-- `GenerateShareLink` returns local deeplink `graycode://share/<hash[:16]>` (`internal/session/export.go:801-819`); deterministic, no hosted URL.
+- `GenerateShareLink` returns local deeplink `hawk://share/<hash[:16]>` (`internal/session/export.go:801-819`); deterministic, no hosted URL.
 - Session export (`session_export.go`), mission graph export (`cmd/execution_graph.go`, `mission-graph.json`), daemon sessions, `mission` worktrees.
 - Completion list includes `exec`, `daemon`, `mission`, `sessions`, `tools`, `skills` (`cmd/completions_test.go:50`).
 
@@ -21,7 +21,7 @@ Do not adopt: hosted share URLs, cloud account,/Desktop app.
 ## Priority model
 
 - P0: `sessions` list shows id/model/updated + export path; document `graph export` bundle as the share unit.
-- P1: TUI session picker surfaces the `graycode://share/<id>` deeplink + export file path for copy-paste.
+- P1: TUI session picker surfaces the `hawk://share/<id>` deeplink + export file path for copy-paste.
 - P2: Mission watchdog read-only overview (already in HUD panel) exposed via `mission --dry-run`/status; no new runtime.
 
 ## Steps
