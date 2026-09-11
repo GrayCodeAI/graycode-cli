@@ -35,7 +35,6 @@ Status note:
 ### Forbidden edges stay forbidden
 
 - [x] no support repo imports `hawk/internal/*`
-- [x] no support repo imports removed `hawk/shared/types`
 - [x] no SDK/skills repo references support engines as primary dependencies
 - [x] Hawk production code imports Eyrie only through `eyrie/engine`
 - [x] Hawk's graph/projection imports are documented as explicit integration
@@ -67,7 +66,7 @@ Adoption bar:
 
 ### Enforcement
 
-- [x] Hawk CI runs ecosystem, shared-types, eyrie-client, and peer-coupling guards
+- [x] Hawk CI runs ecosystem, eyrie-client, and peer-coupling guards
 - [x] each support repo runs `check-ecosystem-boundaries.sh` in CI
 - [x] Go SDK runs consumer boundary guard in CI
 - [x] Python SDK and community skills run consumer boundary guards in CI
@@ -111,7 +110,7 @@ Remove compatibility shims only when:
 From `hawk`:
 
 ```bash
-make ecosystem-guard contracts-guard eyrie-client-guard eyrie-engine-guard peer-guard
+make ecosystem-guard eyrie-client-guard eyrie-engine-guard peer-guard
 go test ./internal/testaudit/... -count=1
 go test ./... -count=1
 ```

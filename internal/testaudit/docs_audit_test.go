@@ -72,28 +72,3 @@ func TestArchitectureDocsMentionCurrentReviewVerifyContracts(t *testing.T) {
 		}
 	}
 }
-
-func TestArchitectureDocsDescribeSharedTypesAsRemoved(t *testing.T) {
-	root := repoRoot(t)
-
-	files := []string{
-		"README.md",
-		"AGENTS.md",
-		"docs/architecture.md",
-	}
-
-	for _, rel := range files {
-		path := filepath.Join(root, rel)
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("read %s: %v", rel, err)
-		}
-		content := strings.ToLower(string(data))
-		if !strings.Contains(content, "shared/types") {
-			t.Fatalf("expected %s to mention shared/types", rel)
-		}
-		if !strings.Contains(content, "removed") {
-			t.Fatalf("expected %s to describe shared/types as removed", rel)
-		}
-	}
-}

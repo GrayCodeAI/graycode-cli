@@ -399,10 +399,6 @@ func CredentialStorage(ctx context.Context) CredentialStorageReport {
 	return eyrieengine.CredentialStorage(ctx)
 }
 
-func MigrateEnvFileCredentials(ctx context.Context) (int, error) {
-	return eyrieengine.MigrateEnvFileCredentials(ctx)
-}
-
 func CredentialGuidance(providerID, secret string) string {
 	return eyrieengine.CredentialGuidance(providerID, secret)
 }

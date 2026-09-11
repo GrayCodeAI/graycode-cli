@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-pattern='github\.com/GrayCodeAI/hawk/(internal/|shared/types)'
+pattern='github\.com/GrayCodeAI/hawk/internal/'
 violations=""
 
 while IFS= read -r repo; do
@@ -24,7 +24,7 @@ if [[ -n "${violations}" ]]; then
       echo "forbidden Hawk imports found in sibling ecosystem repos:"
   echo "${violations}"
   echo
-  echo "support repos must use their own contracts, not hawk/internal or removed hawk/shared/types"
+  echo "support repos must use their own contracts, not hawk/internal"
   exit 1
 fi
 

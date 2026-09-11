@@ -16,7 +16,7 @@ cd "$ROOT_DIR"
 # Engines are peers: they may depend on falcon,
 # but never on hawk/internal/* or another engine.
 # =============================================================================
-FORBIDDEN_HAWK='github\.com/GrayCodeAI/hawk/(internal/|shared/types)'
+FORBIDDEN_HAWK='github\.com/GrayCodeAI/hawk/internal/'
 FORBIDDEN_ENGINES='github\.com/GrayCodeAI/(harrier|shrike|swift|kestrel|merlin)(/|")'
 # ^ list every OTHER engine here — never include yourself.
 
@@ -34,7 +34,7 @@ if [[ -n "${violations}" ]]; then
   echo "forbidden Hawk imports found:"
   echo "${violations}"
   echo
-  echo "support repos must use local contracts, not hawk/internal or removed hawk/shared/types"
+  echo "support repos must use local contracts, not hawk/internal"
   exit_code=1
 fi
 

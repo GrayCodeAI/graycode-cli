@@ -17,12 +17,8 @@ This document describes how hawk and eyrie handle API keys and agent isolation f
 |-------|------|--------|
 | `/config` paste flow → `eyrie/engine.Engine.SaveCredential` | `Engine.ResolveCredential` (secret store only) | `/config key remove` or `hawk credentials remove` |
 
-On startup, Hawk asks the Eyrie engine facade to migrate legacy
-`~/.hawk/env` / `~/.hawk/.env` values into the secret store and delete those
-files. It also imports recognized historical secret fields from
-`provider.json` before atomically rewriting that file with metadata only. A
-secret-store or state-write failure aborts the rewrite and rolls back newly
-imported values.
+Hawk does not import keys from legacy `~/.hawk/env` / `~/.hawk/.env` files or
+from secret fields in `provider.json`. Save every key through `/config`.
 
 Check status: `hawk credentials status`, `hawk path`, or `hawk preflight`.
 
@@ -84,15 +80,14 @@ required for users, and neither provisioning path enables host execution.
   `~/.ssh/*`, etc.
 - **Bash**: `printenv`, `env`, reading hawk env paths, echoing `*_API_KEY` variables.
 
-## Migration
+## Secrets left on disk
 
-- **Legacy env files**: startup migration imports `~/.hawk/env` and
-  `~/.hawk/.env` into the OS secret store, then deletes the plaintext files.
-- **provider.json secrets**: Eyrie transactionally imports recognized top-level
-  and deployment credentials, atomically writes sanitized metadata, and uses a
-  temporary `provider.json.pre-secret-migrate.bak` only during the transaction.
-- **All subsequent writes**: the Eyrie engine applies the same sanitization and
-  atomic-write path, so migrated secret fields cannot be reintroduced.
+- **provider.json secrets**: `hawk path` fails its `provider.json` security
+  check when the file still holds secret fields. Hawk does not remove them
+  automatically: back up the file, delete the secret fields, and save the keys
+  again through `/config`.
+- **Provider state writes**: the Eyrie engine sanitizes provider state and
+  writes it atomically, so secret fields are never written back to disk.
 
 ## Provider state path
 

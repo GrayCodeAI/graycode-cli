@@ -47,30 +47,7 @@ var credentialsRemoveCmd = &cobra.Command{
 	},
 }
 
-var credentialsMigrateCmd = &cobra.Command{
-	Use:   "migrate",
-	Short: "Import plaintext credential files into the OS secret store",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
-		storage := hawkconfig.CredentialStorageStatus(ctx)
-		if !storage.Writable {
-			return fmt.Errorf("cannot migrate: %s", storage.Detail)
-		}
-		n, err := hawkconfig.MigrateEnvFileCredentials(ctx)
-		if err != nil {
-			return err
-		}
-		if n == 0 {
-			cmd.Println(auditTint("No plaintext credential files found (already using secure storage).", textMuted))
-		} else {
-			cmd.Printf("%s\n", auditTint(fmt.Sprintf("Migrated %d key(s) to %s and removed plaintext credential files.", n, hawkconfig.CredentialStoreName()), doneGreen))
-		}
-		return nil
-	},
-}
-
 func init() {
 	credentialsCmd.AddCommand(credentialsStatusCmd)
-	credentialsCmd.AddCommand(credentialsMigrateCmd)
 	credentialsCmd.AddCommand(credentialsRemoveCmd)
 }

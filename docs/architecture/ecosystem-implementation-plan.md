@@ -78,7 +78,6 @@ bash hawk/scripts/check-ecosystem-boundaries.sh
 bash hawk/scripts/check-support-repo-coupling.sh
 bash hawk/scripts/check-eyrie-engine-boundary.sh
 bash hawk/scripts/check-eyrie-client-imports.sh
-bash hawk/scripts/check-shared-types-imports.sh
 bash hawk/scripts/check-no-replace-directives.sh
 ```
 

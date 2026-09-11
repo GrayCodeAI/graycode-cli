@@ -117,7 +117,6 @@ func GenerateManPage() string {
 	b.WriteString("Use \\fBhawk\\fR and \\fB/config\\fR to save keys; hawk does not read API keys from .env files.\n")
 	b.WriteString(".TP\n\\fBhawk credentials status\\fR\nShow secure storage status\n")
 	b.WriteString(".TP\n\\fBhawk credentials remove <provider|env-var>\\fR\nRemove a stored API key from the OS secret store\n")
-	b.WriteString(".TP\n\\fBhawk credentials migrate\\fR\nImport legacy plaintext credential files into the OS store\n")
 
 	// Environment
 	b.WriteString(".SH ENVIRONMENT\n")
