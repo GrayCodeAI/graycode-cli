@@ -187,7 +187,7 @@ hawk verify
 
 ### Architecture note: cross-repo contracts
 
-Legacy `hawk/shared/types` has been removed. Cross-repo severity and finding contracts now live in hawk's `internal/contracts` (vendored from the removed `github.com/GrayCodeAI/eagle` module) — extensions and support repos must vendor the needed DTOs instead of Hawk internals until a published contracts module exists.
+Cross-repo severity and finding contracts now live in hawk's `internal/contracts` (vendored from the removed `github.com/GrayCodeAI/eagle` module) — extensions and support repos must vendor the needed DTOs instead of Hawk internals until a published contracts module exists.
 
 ### Architecture note: provider ownership
 

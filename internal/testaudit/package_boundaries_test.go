@@ -98,7 +98,7 @@ func checkSupportRepositoryBoundaries(t *testing.T, root string) {
 	for _, owner := range supportEngines {
 		for _, repoRoot := range repositoryRoots(root, owner) {
 			for _, imp := range productionImports(t, root, repoRoot) {
-				if strings.HasPrefix(imp.path, hawkModule+"/internal/") || imp.path == hawkModule+"/shared/types" {
+				if strings.HasPrefix(imp.path, hawkModule+"/internal/") {
 					violations = append(violations, formatImportViolation(root, imp, "support engines must not import Hawk internals"))
 					continue
 				}

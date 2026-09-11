@@ -106,7 +106,6 @@ type CatalogMaintenance interface {
 	DefaultProviderFilter(ctx context.Context) string
 	PreflightWithOptions(ctx context.Context, opts eyrieengine.PreflightOptions) eyrieengine.PreflightReport
 	ProviderStateSecurityStatus() eyrieengine.ProviderStateSecurity
-	MigrateProviderSecrets() error
 }
 
 // engineProvider is the production Provider: a thin wrapper over Eyrie's
@@ -301,10 +300,6 @@ func (p *engineProvider) ClearSelection(ctx context.Context) error {
 
 func (p *engineProvider) ProviderStateSecurityStatus() eyrieengine.ProviderStateSecurity {
 	return p.eng.ProviderStateSecurityStatus()
-}
-
-func (p *engineProvider) MigrateProviderSecrets() error {
-	return p.eng.MigrateProviderSecrets()
 }
 
 func (p *engineProvider) SupportsNativeCompaction(ctx context.Context, provider, model string) bool {

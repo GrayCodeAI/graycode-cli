@@ -45,44 +45,6 @@ func TestVerify_ProviderJSONOnDiskHasNoSecrets(t *testing.T) {
 	assertProviderJSONFileHasNoSecrets(t, path)
 }
 
-func TestVerify_MigrateProviderSecretsStripsDisk(t *testing.T) {
-	hawkDir := isolateMilestoneTest(t)
-	store := &credentials.MapStore{}
-	credentials.SetDefaultStore(store)
-	t.Cleanup(func() { credentials.SetDefaultStore(nil) })
-	path := filepath.Join(hawkDir, "provider.json")
-	secret := "sk-ant-migrate-verify-key-1234567890"
-	raw := `{
-  "version": "1",
-  "config_version": 2,
-  "openai_api_key": "` + secret + `-top-level",
-  "deployments": {
-    "anthropic-direct": {
-      "api_key": "` + secret + `"
-    }
-  }
-}`
-	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := MigrateProviderSecrets(); err != nil {
-		t.Fatal(err)
-	}
-	for _, envKey := range []string{"OPENAI_API_KEY", "ANTHROPIC_API_KEY"} {
-		if value, err := store.Get(context.Background(), credentials.AccountForEnv(envKey)); err != nil || !strings.Contains(value, secret) {
-			t.Fatalf("legacy %s was not imported before sanitizing: value=%q err=%v", envKey, value, err)
-		}
-	}
-	assertProviderJSONFileHasNoSecrets(t, path)
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(data), secret) {
-		t.Fatal("provider.json still contains a legacy or deployment API key after migrate")
-	}
-}
-
 func TestVerify_PersistAPIKeyDoesNotWriteProviderJSON(t *testing.T) {
 	hawkDir := isolateMilestoneTest(t)
 	credentials.SetDefaultStore(emptyCredentialStore{})

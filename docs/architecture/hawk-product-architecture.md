@@ -218,7 +218,7 @@ Status:
 
 Status:
 - completed for current workspace boundaries
-- local/CI guards now block support-repo imports of `hawk/internal/*` and removed legacy `hawk/shared/types`
+- local/CI guards now block support-repo imports of `hawk/internal/*`
 
 ### Phase 4
 - harden orchestration boundaries in Hawk
@@ -238,13 +238,6 @@ Status:
 - `sparrow` is covered by the support-repo coupling guard so it cannot grow
   direct engine imports
 - broader non-Go consumer enforcement remains future work
-
-### Phase 6
-- remove legacy `hawk/shared/types`
-- keep import guards in place so the old path cannot return
-
-Status:
-- completed in the local ecosystem
 
 ## Done criteria
 

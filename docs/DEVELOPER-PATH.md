@@ -76,14 +76,13 @@ hawk models refresh
 `hawk path` treats these as important security conditions:
 
 - Eyrie's resolved `provider.json` must not contain secret fields
-- legacy `~/.hawk/env` or `~/.hawk/.env` files should be migrated away
 - sensitive files like provider config and SSH paths should be blocked from agent reads
 
 Eyrie resolves provider state from `EYRIE_CONFIG_DIR` first, then the
 platform user-config directory.
 Hawk protects that resolved path even when it is customized or symlinked.
 
-If Hawk detects old plaintext secrets, run Hawk once and complete `/config`, or remove the secret fields manually after backing up the file.
+If Hawk detects secret fields in `provider.json`, back up the file, remove those fields manually, and save your keys again through `/config`.
 
 Read the full credential and isolation model in [SECURITY-DEVELOPER.md](./SECURITY-DEVELOPER.md).
 

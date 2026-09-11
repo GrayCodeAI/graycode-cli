@@ -56,10 +56,6 @@ func CredentialStorageStatus(ctx context.Context) gateway.CredentialStorageRepor
 	return gateway.CredentialStorage(ctx)
 }
 
-func MigrateEnvFileCredentials(ctx context.Context) (int, error) {
-	return gateway.MigrateEnvFileCredentials(ctx)
-}
-
 // EnginePreflightReport runs preflight against the default gateway.
 func EnginePreflightReport(ctx context.Context) EnginePreflight {
 	return gateway.PreflightWithProviders(ctx, nil, EnginePreflightOptions{})
@@ -122,14 +118,6 @@ func ProviderStateSecurityStatus() gateway.ProviderStateSecurity {
 		return gateway.ProviderStateSecurity{Error: err.Error(), Detail: "Eyrie engine initialization failed"}
 	}
 	return gw.ProviderStateSecurityStatus()
-}
-
-func MigrateEngineProviderSecrets() error {
-	gw, err := newEyrieEngine()
-	if err != nil {
-		return err
-	}
-	return gw.MigrateProviderSecrets()
 }
 
 func EngineDeploymentSummary(ctx context.Context, model string) (gateway.DeploymentSummary, error) {

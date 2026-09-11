@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Makefile lint pin matches CI**: `make lint`/`lint-fix`/`setup` install `golangci-lint@v2.1.0` (was `@latest`), the same version CI enforces.
 - **Docs truth and housekeeping**: SECURITY.md/CONTRIBUTING.md now describe the actual Go toolchain (golangci-lint, go vet, govulncheck) instead of the polyglot template's ruff/mypy/pip-audit/pnpm-lock language, CONTRIBUTING documents `make setup`/`boundaries`/`test-10x`/`smoke`, and the planning docs (`SPEC_DRIVEN_PLAN.md`, `SPEC_DRIVEN_PHASE2_PLAN.md`, `internal/engine/REFACTOR_PLAN.md`) moved to `docs/plans/`.
 
+### Removed
+- **BREAKING — `hawk credentials migrate` removed**: the subcommand, its man page entry, and the `MigrateEnvFileCredentials` wrappers are gone, and `hawk path` no longer reports legacy `~/.hawk/env` / `~/.hawk/.env` files. Save keys through `/config`.
+- **BREAKING — settings model/provider migration removed**: `LoadSettings` no longer moves `model`/`provider` from `settings.json` into Eyrie's `provider.json`, and `SetActiveSelection` is deleted. Stale `model`/`provider` values left in `settings.json` are now ignored on load (Eyrie's selection wins; `--settings` overrides still apply); select the model in `/config`.
+- **BREAKING — startup provider-secrets migration removed**: print/REPL/watch/TUI startup no longer calls `MigrateProviderSecrets`, and the method is dropped from the gateway `CatalogMaintenance` interface. `hawk path` still fails when `provider.json` holds secrets; remove those fields manually.
+- **BREAKING — `shared/types` guards removed**: `scripts/check-shared-types-imports.sh`, the `contracts-guard` make target, its lefthook and CI steps, and the matching testaudit checks are deleted because the package no longer exists. The ecosystem boundary guards still block `hawk/internal` imports.
+
 ## [0.2.0] — 2026-07-13
 
 ### Changed

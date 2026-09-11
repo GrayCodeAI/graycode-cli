@@ -32,8 +32,9 @@ type Settings struct {
 	// PolicySchemaVersion versions permission/autonomy/sandbox fields. Zero is
 	// the legacy format and is migrated to CurrentPolicySchemaVersion on load.
 	PolicySchemaVersion int `json:"policy_schema_version,omitempty"`
-	// Model and Provider are retained only for one-time migration into eyrie provider.json.
-	// Hawk does not persist model/provider here; use SetActiveModel / SetActiveProvider.
+	// Model and Provider carry runtime host overrides only (e.g. --settings).
+	// Eyrie owns the stored selection (SetActiveModel / SetActiveProvider);
+	// values found in settings.json are dropped on load and on save.
 	Model           string   `json:"model,omitempty"`
 	Provider        string   `json:"provider,omitempty"`
 	Theme           string   `json:"theme,omitempty"`
@@ -222,6 +223,9 @@ func LoadGlobalSettings() Settings {
 			slog.Warn("failed to parse settings", "path", path, "error", err)
 		}
 	}
+	// Eyrie owns the stored model/provider selection. Stale values left in
+	// settings.json must not act as a host override.
+	s = stripHostModelSelection(s)
 	if s.PolicySchemaVersion == 0 {
 		s.PolicySchemaVersion = CurrentPolicySchemaVersion
 	}
@@ -238,7 +242,6 @@ func LoadSettings() Settings {
 		// authority stays in the user profile or explicit runtime overrides.
 		s = MergeSettings(s, projectSafeSettings(*project))
 	}
-	migrateStoredModelProvider(&s)
 	if s.PolicySchemaVersion == 0 {
 		s.PolicySchemaVersion = CurrentPolicySchemaVersion
 	}

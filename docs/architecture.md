@@ -55,9 +55,6 @@ hawk/
 └── (ecosystem siblings live at ../<repo> in the graycode-eco workspace; see docs/architecture/ecosystem-design.md)
 ```
 
-Legacy note: `hawk/shared/types` has been removed. Shared cross-repo severity
-and finding contracts now live in `eagle/types`.
-
 ---
 
 ## <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/globe.svg" width="16" height="16" alt="globe" /> Daemon HTTP API (:4590)
@@ -130,4 +127,4 @@ Tool Call → <img src="https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/i
 | Zero CGO | Pure Go, cross-compilable. Tree-sitter is optional |
 | `internal/` is private | Other repos should not import `internal/*` |
 | `go.work` | Resolves the ecosystem siblings (`../<repo>`) for local and CI workspace integration |
-| `eagle` | Shared cross-repo severity, findings, review, verify, tools, events, and policy contracts — engines import this instead of `hawk/internal` or removed `hawk/shared/types` |
+| `eagle` | Shared cross-repo severity, findings, review, verify, tools, events, and policy contracts — engines import this instead of `hawk/internal` |

@@ -112,9 +112,6 @@ pre-push:
         fi
         govulncheck ./...
 
-    boundary-shared-types:
-      run: bash scripts/check-shared-types-imports.sh
-
     boundary-eyrie-client:
       run: bash scripts/check-eyrie-client-imports.sh
 

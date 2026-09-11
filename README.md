@@ -471,8 +471,7 @@ Local development uses:
 
 Cross-repo contracts now live in `internal/contracts` (vendored from the
 removed `github.com/GrayCodeAI/eagle` module) so support repos do not depend
-on Hawk internals. The old `hawk/shared/types` path has been removed;
-external consumers should vendor the needed DTOs from `internal/contracts`
+on Hawk internals. External consumers should vendor the needed DTOs from `internal/contracts`
 until a published contracts module exists.
 
 Current contract packages (`internal/contracts/`):

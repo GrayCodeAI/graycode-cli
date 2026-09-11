@@ -58,14 +58,6 @@ func TestProviderJSONHasSecretsOnDisk_None(t *testing.T) {
 	}
 }
 
-func TestPlaintextCredentialFilesPresent_None(t *testing.T) {
-	isolateMilestoneTest(t)
-	found, paths := plaintextCredentialFilesPresent()
-	if found || len(paths) > 0 {
-		t.Fatalf("expected no plaintext files, got %v", paths)
-	}
-}
-
 func TestPathStatusGlyph(t *testing.T) {
 	if pathStatusGlyph(PathPass) != icons.CheckBold() {
 		t.Fatal("pass glyph")

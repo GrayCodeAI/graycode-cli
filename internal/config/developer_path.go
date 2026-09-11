@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"image/color"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -125,27 +124,13 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 		checks = append(checks, PathCheck{
 			Section: "Security", Name: "provider.json", Status: PathFail,
 			Detail:   detail,
-			FixHint:  "Run hawk start once (MigrateProviderSecrets) or remove secret fields manually",
+			FixHint:  "Back up provider.json, remove its secret fields, then save keys via /config",
 			Blocking: true,
 		})
 	} else {
 		checks = append(checks, PathCheck{
 			Section: "Security", Name: "provider.json", Status: PathPass,
 			Detail:   "No API secrets on disk (routing only)",
-			Blocking: true,
-		})
-	}
-
-	if present, paths := plaintextCredentialFilesPresent(); present {
-		checks = append(checks, PathCheck{
-			Section: "Security", Name: "plaintext env", Status: PathWarn,
-			Detail:  "Plaintext credential files: " + strings.Join(paths, ", "),
-			FixHint: "Run hawk credentials migrate",
-		})
-	} else {
-		checks = append(checks, PathCheck{
-			Section: "Security", Name: "plaintext env", Status: PathPass,
-			Detail:   "No ~/.hawk/env or ~/.hawk/.env files",
 			Blocking: true,
 		})
 	}
@@ -345,16 +330,4 @@ func providerJSONHasSecretsOnDisk() (bool, string) {
 		return true, status.Error
 	}
 	return status.HasSecrets, status.Detail
-}
-
-func plaintextCredentialFilesPresent() (bool, []string) {
-	hawkDir := filepath.Join(home.MustDir(), ".hawk")
-	var paths []string
-	for _, name := range []string{"env", ".env"} {
-		p := filepath.Join(hawkDir, name)
-		if _, err := os.Stat(p); err == nil {
-			paths = append(paths, "~/.hawk/"+name)
-		}
-	}
-	return len(paths) > 0, paths
 }

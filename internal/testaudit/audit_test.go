@@ -256,31 +256,6 @@ func TestNoLazyProviderConstructionInHawk(t *testing.T) {
 	}
 }
 
-// TestNoDirectSharedTypesImports verifies Hawk does not reintroduce the removed
-// legacy shared/types import path into production code.
-func TestNoDirectSharedTypesImports(t *testing.T) {
-	root := repoRoot(t)
-	paths := []string{
-		filepath.Join(root, "internal"),
-		filepath.Join(root, "cmd"),
-	}
-
-	for _, dir := range paths {
-		files := parseGoFiles(t, dir)
-		for _, pf := range files {
-			rel := relPath(root, pf.Path)
-			for _, imp := range pf.File.Imports {
-				path := strings.Trim(imp.Path.Value, `"`)
-				if path != "github.com/GrayCodeAI/hawk/shared/types" {
-					continue
-				}
-				pos := pf.FSet.Position(imp.Pos())
-				t.Fatalf("forbidden direct hawk/shared/types import at %s:%d; the path has been removed, use internal/contracts instead", rel, pos.Line)
-			}
-		}
-	}
-}
-
 // TestAllExportedTypesHaveDocComments verifies that all exported type
 // declarations in non-test .go files have doc comments.
 func TestAllExportedTypesHaveDocComments(t *testing.T) {
