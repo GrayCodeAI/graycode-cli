@@ -25,27 +25,26 @@ func TestStorageDirsRespectOverrides(t *testing.T) {
 	}
 }
 
-func TestProviderConfigPathUsesGraycodeRouterOverrideWithoutMovingGraycodeSettings(t *testing.T) {
-	graycodeDir := filepath.Join(t.TempDir(), "graycode")
-	graycodeRouterDir := filepath.Join(t.TempDir(), "graycode-router")
-	t.Setenv(envConfigDir, graycodeDir)
-	t.Setenv(envGraycodeRouterConfigDir, graycodeRouterDir)
+func TestProviderConfigPathUsesEyrieOverrideWithoutMovingHawkSettings(t *testing.T) {
+	hawkDir := filepath.Join(t.TempDir(), "hawk")
+	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
+	t.Setenv(envConfigDir, hawkDir)
+	t.Setenv(envEyrieConfigDir, eyrieDir)
 
-	if got, want := ProviderConfigPath(), filepath.Join(graycodeRouterDir, "provider.json"); got != want {
-		t.Fatalf("ProviderConfigPath() = %q, want GRAYCODE_ROUTER_CONFIG_DIR path %q", got, want)
+	if got, want := ProviderConfigPath(), filepath.Join(eyrieDir, "provider.json"); got != want {
+		t.Fatalf("ProviderConfigPath() = %q, want EYRIE_CONFIG_DIR path %q", got, want)
 	}
-	if got, want := SettingsPath(), filepath.Join(graycodeDir, "settings.json"); got != want {
-		t.Fatalf("SettingsPath() = %q, want GRAYCODE_CONFIG_DIR path %q", got, want)
+	if got, want := SettingsPath(), filepath.Join(hawkDir, "settings.json"); got != want {
+		t.Fatalf("SettingsPath() = %q, want HAWK_CONFIG_DIR path %q", got, want)
 	}
 }
 
-func TestProviderConfigPathFallsBackToGraycodeOverride(t *testing.T) {
-	graycodeDir := filepath.Join(t.TempDir(), "graycode")
-	t.Setenv(envConfigDir, graycodeDir)
-	t.Setenv(envGraycodeRouterConfigDir, "  ")
+func TestProviderConfigPathDefaultsToEyrieDir(t *testing.T) {
+	t.Setenv(envConfigDir, filepath.Join(t.TempDir(), "hawk"))
+	t.Setenv(envEyrieConfigDir, "  ")
 
-	if got, want := ProviderConfigPath(), filepath.Join(graycodeDir, "provider.json"); got != want {
-		t.Fatalf("ProviderConfigPath() = %q, want GRAYCODE_CONFIG_DIR fallback %q", got, want)
+	if got, want := ProviderConfigPath(), filepath.Join(mustUserConfigDir(), "eyrie", "provider.json"); got != want {
+		t.Fatalf("ProviderConfigPath() = %q, want Eyrie default %q", got, want)
 	}
 }
 

@@ -31,7 +31,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 const (
@@ -151,7 +151,7 @@ func WriteReport(recovered any, stack []byte) (string, error) {
 
 func formatReport(r CrashReport) string {
 	var b strings.Builder
-	b.WriteString("graycode crash report\n")
+	b.WriteString("hawk crash report\n")
 	fmt.Fprintf(&b, "timestamp:   %s\n", r.Timestamp.Format(time.RFC3339Nano))
 	if r.Version != "" {
 		fmt.Fprintf(&b, "version:     %s\n", r.Version)

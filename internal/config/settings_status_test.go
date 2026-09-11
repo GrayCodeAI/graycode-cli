@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
-func TestEnvKeyStatusUsesGraycodeRouterCredentialStatus(t *testing.T) {
+func TestEnvKeyStatusUsesEyrieCredentialStatus(t *testing.T) {
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() { gateway.SetDefaultStore(nil) })

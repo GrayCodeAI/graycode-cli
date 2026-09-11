@@ -43,9 +43,9 @@ func (r ValidationResult) Error() string {
 func ValidateSettings(s Settings) ValidationResult {
 	var errors []ValidationError
 
-	// Provider names are delegated to GraycodeRouter. Do not hardcode/validate here.
+	// Provider names are delegated to Eyrie. Do not hardcode/validate here.
 
-	// Validate model selection (stored in graycode-router provider.json)
+	// Validate model selection (stored in eyrie provider.json)
 	activeModel := strings.TrimSpace(s.Model)
 	if activeModel == "" {
 		activeModel = ActiveModel(context.Background())
@@ -62,7 +62,7 @@ func ValidateSettings(s Settings) ValidationResult {
 	if activeProvider == "" {
 		activeProvider = ActiveProvider(context.Background())
 	}
-	// Graycode: validate API key is in the OS secret store (not in settings)
+	// Hawk: validate API key is in the OS secret store (not in settings)
 	if activeProvider != "" {
 		envKey := ProviderAPIKeyEnv(activeProvider)
 		if envKey != "" && EnvKeyStatus(activeProvider) != "set" {

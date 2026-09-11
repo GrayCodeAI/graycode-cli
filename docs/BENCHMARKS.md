@@ -1,6 +1,6 @@
 # Benchmarks
 
-Published, reproducible CPU benchmarks for graycode-cli. These are TUI-independent
+Published, reproducible CPU benchmarks for hawk. These are TUI-independent
 measurements (no latency theater) run with existing `go test -bench` targets; they
 exist so performance is documented and regressions are visible, not to make
 marketing claims.

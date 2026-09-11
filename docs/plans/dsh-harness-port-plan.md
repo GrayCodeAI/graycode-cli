@@ -1,4 +1,4 @@
-# Adopt durable-design ideas from deepseek-harness in graycode
+# Adopt durable-design ideas from deepseek-harness in hawk
 
 Status: Phase 0 scaffolded on `feat/dsh-harness-port-p0-eventlog`.
 
@@ -11,14 +11,14 @@ Status: Phase 0 scaffolded on `feat/dsh-harness-port-p0-eventlog`.
 
 ## Reference sources
 
-| dsh file | Extract | Maps to graycode |
+| dsh file | Extract | Maps to hawk |
 | --- | --- | --- |
 | `packages/core/session/src/index.ts` | append-only `SessionEvent` log + `session/event` emit | `internal/eventlog` |
 | `docs/architecture.md` "Turn flow" | `deriveMessages`; "model-visible ⟺ logged" | `Session.Persistence()` projection |
 | `packages/core/tools/src/index.ts` | `tools/pre-execute` / `tools/execute` / `tools/post-execute` waterfall | `internal/tool/interceptor.go` (Phase 1) |
 | `packages/interaction/user-approval/src/index.ts:30` | `approval/request` waterfall, fail-closed | `internal/engine/approval_gate.go` (Phase 1) |
 | `docs/cordis-primer.md` "Waterfall Semantics" | `next()` delegate / short-circuit | interceptor contract |
-| `docs/capability-seams.md` | owner / impl / consumer roles | `docs/architecture/graycode-capability-seams.md` (Phase 2) |
+| `docs/capability-seams.md` | owner / impl / consumer roles | `docs/architecture/hawk-capability-seams.md` (Phase 2) |
 
 ## Phase 0 — Event-sourced session log + "model-visible ⟺ logged"
 
@@ -93,7 +93,7 @@ concrete tool, carry it through `toolExecResult` in a later PR.
 
 ## Phase 2 — Seam discipline (docs + disposers)
 
-- `docs/architecture/graycode-capability-seams.md`: owner / impl / consumer table.
+- `docs/architecture/hawk-capability-seams.md`: owner / impl / consumer table.
 - Registrations return disposers (tool registry, hooks, MCP client).
 - "Where new behavior goes" table.
 
@@ -114,16 +114,16 @@ concrete tool, carry it through `toolExecResult` in a later PR.
 
 ## Upstream parity matrix (honest status)
 
-These numbers compare Graycode against the real deepseek-harness source, not the
+These numbers compare Hawk against the real deepseek-harness source, not the
 plan's own scoped promises. The clone inspected was
 `deepseek-ai/deepseek-harness` at `dsh-0.1.0-rc.7`.
 
-Graycode is a **deliberate subset**. It ports the session-log spine, the fail-closed
+Hawk is a **deliberate subset**. It ports the session-log spine, the fail-closed
 approval waterfall, and the interceptor/disposer seams; it does not port the
-product-wide plugin catalogue. Measured head-to-head, Graycode has roughly **20–30%**
+product-wide plugin catalogue. Measured head-to-head, Hawk has roughly **20–30%**
 of upstream by feature surface, and roughly **80–90%** of the plan's stated scope.
 
-| Surface | DSH | Graycode today | Gap |
+| Surface | DSH | Hawk today | Gap |
 | --- | --- | --- | --- |
 | Known event types | 44 (dsh known-event-types.ts) | **44** (internal/eventlog/event.go) | **Closed** — all 26 new DSH event types added with typed payloads, wire decode, and Append helpers |
 | Session spine code | ~3,156 non-test TS lines | ~868 non-test Go lines | Focused core, not full parity |
@@ -234,7 +234,7 @@ surface operations, ignorable markers, format version enforcement, and session
 header parity. The port is functionally complete. Remaining optional depth:
 - ~~DSH `surface.ts` `SurfaceManager`/`SurfaceReplacePlan` (live correction protocol — replacement operations).~~ Delivered: `internal/eventlog/surface.go` — `FoldSurface` (complete replay → surface nodes + replacement history) and an incremental `SurfaceManager` (bound to a `*Log`, with `Nodes`/`ReplaceGeneration`/`ValidateNext` atomic pre-flight), mirroring DSH's surface provenance, replacement-range, contiguity, and tool-result-rewrite invariants.
 - ~~Zstd compression in persistence (DSH `session-persistence-jsonl/src/zstd.ts`).~~ Delivered: `internal/eventlog/zstdz/zstd.go` + `internal/session/session.go` (`.jsonl.zstd` saves) — see Phase 9.
-- DSH `packages/llm/llm/src/assembler.ts` (response normalization — covered by GraycodeRouter facade).
+- DSH `packages/llm/llm/src/assembler.ts` (response normalization — covered by Eyrie facade).
 
 This matrix is the honest anchor: the skeleton is ported; the deep fidelity is
 the actual remaining work.
@@ -429,4 +429,4 @@ UI additions (Safari support, outside pointer handling) or ACP content admission
 
 ## Gates
 
-Each phase: `make ci` + `graycode verify`; no direct commits to `main`.
+Each phase: `make ci` + `hawk verify`; no direct commits to `main`.

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func TestMarshalModelListJSONCompatibilityGolden(t *testing.T) {
@@ -72,7 +72,7 @@ func TestMarshalModelListJSONCompatibilityGolden(t *testing.T) {
 }
 
 func TestModelListJSONEntryFromEnginePreservesLegacyFieldMapping(t *testing.T) {
-	model := graycodeconfig.EngineModel{
+	model := hawkconfig.EngineModel{
 		ID:               "vendor/model",
 		DisplayName:      "Model",
 		Description:      "Description",
@@ -97,7 +97,7 @@ func TestModelListJSONEntryFromEnginePreservesLegacyFieldMapping(t *testing.T) {
 		t.Fatalf("ServerTools = %v, want %v", entry.ServerTools, model.Capabilities)
 	}
 
-	out, err := marshalModelListJSON([]graycodeconfig.EngineModel{model}, false, false)
+	out, err := marshalModelListJSON([]hawkconfig.EngineModel{model}, false, false)
 	if err != nil {
 		t.Fatalf("marshalModelListJSON() error = %v", err)
 	}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 func TestAutonomyTierNames(t *testing.T) {

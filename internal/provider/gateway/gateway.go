@@ -1,9 +1,9 @@
-// Package gateway is Graycode's single boundary to GraycodeRouter's provider runtime. It is
-// the only package that imports GraycodeRouter; everything else speaks the graycode-owned
+// Package gateway is Hawk's single boundary to Eyrie's provider runtime. It is
+// the only package that imports Eyrie; everything else speaks the hawk-owned
 // Provider interface and the internal/types DTOs.
 //
-// graycode = product face (UX/agent/sessions) · graycode-router = provider engine
-// One-way dependency only: graycode-router never imports graycode. See README ecosystems.
+// hawk = product face (UX/agent/sessions) · eyrie = provider engine
+// One-way dependency only: eyrie never imports hawk. See README ecosystems.
 package gateway
 
 import (
@@ -11,21 +11,21 @@ import (
 	"log/slog"
 	"sync"
 
-	graycoderouterengine "github.com/GrayCodeAI/graycode-router/engine"
-	"github.com/GrayCodeAI/graycode-router/llm"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	"github.com/GrayCodeAI/eyrie/llm"
 )
 
-// Gateway is Graycode's single boundary to the GraycodeRouter provider runtime. It embeds
+// Gateway is Hawk's single boundary to the Eyrie provider runtime. It embeds
 // Provider so every engine method is forwarded, and it is the only type that
-// constructs one (via New). All other Graycode packages hold a *Gateway or speak
-// the Provider interface — never an *graycoderouterengine.Engine.
+// constructs one (via New). All other Hawk packages hold a *Gateway or speak
+// the Provider interface — never an *eyrieengine.Engine.
 //
-// Construction is centralized here: New is the only call to graycoderouterengine.New and
-// the place Graycode declares its identity to the credential store.
-// Gateway is Graycode's single boundary to the GraycodeRouter provider runtime. It embeds the
+// Construction is centralized here: New is the only call to eyrieengine.New and
+// the place Hawk declares its identity to the credential store.
+// Gateway is Hawk's single boundary to the Eyrie provider runtime. It embeds the
 // Provider roles so every engine method is forwarded, and it is the only type
-// that constructs one (via New). All other Graycode packages hold a *Gateway or speak
-// the Provider interface — never an *graycoderouterengine.Engine. *Gateway satisfies the
+// that constructs one (via New). All other Hawk packages hold a *Gateway or speak
+// the Provider interface — never an *eyrieengine.Engine. *Gateway satisfies the
 // composite Provider interface.
 type Gateway struct {
 	Generator
@@ -37,32 +37,32 @@ type Gateway struct {
 	CatalogMaintenance
 }
 
-// declareGraycodeIdentity sets GraycodeRouter's OS keychain service name to "graycode" so existing
-// credentials (filed under "graycode") stay readable under GraycodeRouter's now host-neutral
+// declareHawkIdentity sets Eyrie's OS keychain service name to "hawk" so existing
+// credentials (filed under "hawk") stay readable under Eyrie's now host-neutral
 // default. It is idempotent and runs exactly once. Called from New so the
 // identity is always declared before any credential read, no matter which New
 // path runs first.
-var declareGraycodeIdentity = sync.OnceFunc(func() {
-	graycoderouterengine.SetSecretStoreServiceName("graycode")
+var declareHawkIdentity = sync.OnceFunc(func() {
+	eyrieengine.SetSecretStoreServiceName("hawk")
 })
 
-// New composes the GraycodeRouter engine for one effective settings snapshot and wraps it
-// as a Provider. It is the single composition root — every graycoderouterengine.New call
-// in Graycode flows through here.
+// New composes the Eyrie engine for one effective settings snapshot and wraps it
+// as a Provider. It is the single composition root — every eyrieengine.New call
+// in Hawk flows through here.
 func New(ctx context.Context, providers []CustomProviderConfig) (*Gateway, error) {
-	// Declare graycode's identity to the credential store FIRST, before
+	// Declare hawk's identity to the credential store FIRST, before
 	// constructing the engine, so no credential read ever happens under
-	// GraycodeRouter's host-neutral default service name. The OnceFunc makes this
+	// Eyrie's host-neutral default service name. The OnceFunc makes this
 	// safe to call from every construction path.
-	declareGraycodeIdentity()
+	declareHawkIdentity()
 
 	gateways := customGatewaysFromSettings(providers)
-	eng, err := graycoderouterengine.New(graycoderouterengine.Options{CustomGateways: gateways})
+	eng, err := eyrieengine.New(eyrieengine.Options{CustomGateways: gateways})
 	if err != nil {
 		return nil, err
 	}
 	// Gap-05: env-gated opt-in wiring of media/STT backends to the router
-	// facade. No-op unless GRAYCODE_MEDIA=1 / GRAYCODE_STT=1.
+	// facade. No-op unless HAWK_MEDIA=1 / HAWK_STT=1.
 	wireOptionalBackends(eng)
 	p := newEngineProvider(eng)
 	return &Gateway{
@@ -76,17 +76,17 @@ func New(ctx context.Context, providers []CustomProviderConfig) (*Gateway, error
 	}, nil
 }
 
-// BuildCustomGateways maps Graycode's OpenAI-compatible provider config onto
-// GraycodeRouter's CustomGateway spec. Shared by gateway.New, config.graycode_router_engine, and
+// BuildCustomGateways maps Hawk's OpenAI-compatible provider config onto
+// Eyrie's CustomGateway spec. Shared by gateway.New, config.eyrie_engine, and
 // engine.session_factory so a new CustomProviderConfig field only needs wiring
 // in one place.
-func BuildCustomGateways(providers []CustomProviderConfig) []graycoderouterengine.CustomGateway {
-	gateways := make([]graycoderouterengine.CustomGateway, 0, len(providers))
+func BuildCustomGateways(providers []CustomProviderConfig) []eyrieengine.CustomGateway {
+	gateways := make([]eyrieengine.CustomGateway, 0, len(providers))
 	for _, provider := range providers {
 		if provider.Name == "" && provider.BaseURL == "" {
 			continue
 		}
-		gateways = append(gateways, graycoderouterengine.CustomGateway{
+		gateways = append(gateways, eyrieengine.CustomGateway{
 			ID: provider.Name, BaseURL: provider.BaseURL,
 			CredentialEnv: provider.APIKeyEnv, DefaultModel: provider.Model,
 		})
@@ -95,11 +95,11 @@ func BuildCustomGateways(providers []CustomProviderConfig) []graycoderouterengin
 }
 
 // customGatewaysFromSettings is the internal alias kept for backward compat.
-func customGatewaysFromSettings(providers []CustomProviderConfig) []graycoderouterengine.CustomGateway {
+func customGatewaysFromSettings(providers []CustomProviderConfig) []eyrieengine.CustomGateway {
 	return BuildCustomGateways(providers)
 }
 
-// CustomProviderConfig is Graycode's spec for a user-defined OpenAI-compatible
+// CustomProviderConfig is Hawk's spec for a user-defined OpenAI-compatible
 // provider. Kept here (rather than reusing config.CustomProviderConfig) so the
 // gateway package does not import config and create an import cycle.
 type CustomProviderConfig struct {
@@ -109,7 +109,7 @@ type CustomProviderConfig struct {
 	Model     string
 }
 
-// ModelInfo is Graycode's product-facing view of GraycodeRouter model metadata.
+// ModelInfo is Hawk's product-facing view of Eyrie model metadata.
 type ModelInfo struct {
 	Name        string  `json:"name"`
 	Provider    string  `json:"provider"`
@@ -120,7 +120,7 @@ type ModelInfo struct {
 	Recommended bool    `json:"recommended,omitempty"`
 }
 
-func fromEngineModel(model graycoderouterengine.Model) ModelInfo {
+func fromEngineModel(model eyrieengine.Model) ModelInfo {
 	return ModelInfo{
 		Name: model.ID, Provider: model.ProviderID,
 		ContextSize: model.ContextWindow,
@@ -129,7 +129,7 @@ func fromEngineModel(model graycoderouterengine.Model) ModelInfo {
 	}
 }
 
-// ChatClient returns a graycode ChatClient bound to this gateway's Provider.
+// ChatClient returns a hawk ChatClient bound to this gateway's Provider.
 func (g *Gateway) ChatClient() *translateProvider {
 	return newChatClientProvider(g)
 }
@@ -142,10 +142,10 @@ func (g *Gateway) MustSelectProvider() Provider {
 	return g
 }
 
-// NewFromEngine wraps an existing *graycoderouterengine.Engine as a Gateway. Tests that
-// inject an GraycodeRouter SecretStore (e.g. compaction-support detection) use it so the
-// rest of Graycode still speaks the Gateway boundary.
-func NewFromEngine(eng *graycoderouterengine.Engine) *Gateway {
+// NewFromEngine wraps an existing *eyrieengine.Engine as a Gateway. Tests that
+// inject an Eyrie SecretStore (e.g. compaction-support detection) use it so the
+// rest of Hawk still speaks the Gateway boundary.
+func NewFromEngine(eng *eyrieengine.Engine) *Gateway {
 	if eng == nil {
 		return nil
 	}
@@ -162,8 +162,8 @@ func NewFromEngine(eng *graycoderouterengine.Engine) *Gateway {
 }
 
 // --- Stateless package-level lookups -------------------------------------
-// These delegate GraycodeRouter reads to one shared default gateway so graycode-owned
-// policy packages (routing, config) never import GraycodeRouter themselves. graycode-router's
+// These delegate Eyrie reads to one shared default gateway so hawk-owned
+// policy packages (routing, config) never import Eyrie themselves. eyrie's
 // Engine reloads its catalog and provider config from disk on every method
 // call, so a single long-lived gateway returns identical freshness to
 // constructing one per call — this just avoids redundant construction. It
@@ -277,7 +277,7 @@ func ProviderForModel(ctx context.Context, modelName string) string {
 	return g.ProviderForModel(ctx, modelName)
 }
 
-// PreferredModel returns GraycodeRouter's tier-preferred model for a provider.
+// PreferredModel returns Eyrie's tier-preferred model for a provider.
 func PreferredModel(ctx context.Context, provider string, class ModelClass, fallback string) string {
 	g := defaultGateway(ctx)
 	if g == nil {
@@ -322,46 +322,46 @@ func ModelNames(ctx context.Context) []string {
 	return g.ModelNames(ctx)
 }
 
-// --- graycode-owned mirror of GraycodeRouter's ModelClass tier enum -------------------
+// --- hawk-owned mirror of Eyrie's ModelClass tier enum -------------------
 // Kept here (rather than importing neutral constants) so the boundary stays
-// one-way; values match graycoderouterengine.ModelClass.
-type ModelClass = graycoderouterengine.ModelClass
+// one-way; values match eyrieengine.ModelClass.
+type ModelClass = eyrieengine.ModelClass
 
 const (
 	ModelClassEconomical = llm.ModelClassEconomical
 	ModelClassBalanced   = llm.ModelClassBalanced
 	ModelClassPremium    = llm.ModelClassPremium
-	CheckFail            = graycoderouterengine.CheckFail
+	CheckFail            = eyrieengine.CheckFail
 )
 
 // NormalizeProviderID canonicalizes a host-facing provider/gateway id.
 func NormalizeProviderID(id string) string {
-	return graycoderouterengine.NormalizeProviderID(id)
+	return eyrieengine.NormalizeProviderID(id)
 }
 
-// --- GraycodeRouter report/type re-exports config internals consume ----------------
-// These alias GraycodeRouter types that a few config-only report paths return. They
-// live in gateway (the single GraycodeRouter importer) rather than config.
+// --- Eyrie report/type re-exports config internals consume ----------------
+// These alias Eyrie types that a few config-only report paths return. They
+// live in gateway (the single Eyrie importer) rather than config.
 
 type (
-	PreflightReport         = graycoderouterengine.PreflightReport
-	PreflightOptions        = graycoderouterengine.PreflightOptions
-	ProviderStateSecurity   = graycoderouterengine.ProviderStateSecurity
-	DeploymentSummary       = graycoderouterengine.DeploymentSummary
-	CredentialStorageReport = graycoderouterengine.CredentialStorageReport
-	CredentialStatus        = graycoderouterengine.CredentialStatus
-	CredentialResolution    = graycoderouterengine.CredentialResolution
-	CredentialProvider      = graycoderouterengine.CredentialProvider
-	GatewayDefs             = graycoderouterengine.Gateway
-	CatalogSnapshot         = graycoderouterengine.CatalogSnapshot
-	Model                   = graycoderouterengine.Model
-	StatePaths              = graycoderouterengine.StatePaths
-	SelectionOptions        = graycoderouterengine.SelectionOptions
-	Selection               = graycoderouterengine.Selection
-	NativeCompactionRequest = graycoderouterengine.NativeCompactionRequest
+	PreflightReport         = eyrieengine.PreflightReport
+	PreflightOptions        = eyrieengine.PreflightOptions
+	ProviderStateSecurity   = eyrieengine.ProviderStateSecurity
+	DeploymentSummary       = eyrieengine.DeploymentSummary
+	CredentialStorageReport = eyrieengine.CredentialStorageReport
+	CredentialStatus        = eyrieengine.CredentialStatus
+	CredentialResolution    = eyrieengine.CredentialResolution
+	CredentialProvider      = eyrieengine.CredentialProvider
+	GatewayDefs             = eyrieengine.Gateway
+	CatalogSnapshot         = eyrieengine.CatalogSnapshot
+	Model                   = eyrieengine.Model
+	StatePaths              = eyrieengine.StatePaths
+	SelectionOptions        = eyrieengine.SelectionOptions
+	Selection               = eyrieengine.Selection
+	NativeCompactionRequest = eyrieengine.NativeCompactionRequest
 )
 
-// Package-level GraycodeRouter helpers that config delegates to (gateway stays the only importer).
+// Package-level Eyrie helpers that config delegates to (gateway stays the only importer).
 
 func PreflightReportWithOptions(ctx context.Context, opts PreflightOptions) PreflightReport {
 	return PreflightWithProviders(ctx, nil, opts)
@@ -379,76 +379,76 @@ func PreflightWithProviders(ctx context.Context, providers []CustomProviderConfi
 }
 
 func FormatPreflight(report PreflightReport) string {
-	return graycoderouterengine.FormatPreflight(report)
+	return eyrieengine.FormatPreflight(report)
 }
 
 func IsCatalogCacheRequired(err error) bool {
-	return graycoderouterengine.IsCatalogCacheRequired(err)
+	return eyrieengine.IsCatalogCacheRequired(err)
 }
 
-// RegisteredProviderCount exposes GraycodeRouter's first-class provider count through
-// Graycode's single provider-runtime boundary. The count derives from GraycodeRouter's
-// provider registry, so adding a provider in GraycodeRouter never requires a Graycode edit.
+// RegisteredProviderCount exposes Eyrie's first-class provider count through
+// Hawk's single provider-runtime boundary. The count derives from Eyrie's
+// provider registry, so adding a provider in Eyrie never requires a Hawk edit.
 func RegisteredProviderCount() int {
-	return graycoderouterengine.RegisteredGatewayCount()
+	return eyrieengine.RegisteredGatewayCount()
 }
 
-func SecretStoreName() string { return graycoderouterengine.SecretStoreName() }
+func SecretStoreName() string { return eyrieengine.SecretStoreName() }
 
 func CredentialStorage(ctx context.Context) CredentialStorageReport {
-	return graycoderouterengine.CredentialStorage(ctx)
+	return eyrieengine.CredentialStorage(ctx)
 }
 
 func MigrateEnvFileCredentials(ctx context.Context) (int, error) {
-	return graycoderouterengine.MigrateEnvFileCredentials(ctx)
+	return eyrieengine.MigrateEnvFileCredentials(ctx)
 }
 
 func CredentialGuidance(providerID, secret string) string {
-	return graycoderouterengine.CredentialGuidance(providerID, secret)
+	return eyrieengine.CredentialGuidance(providerID, secret)
 }
 
 func FormatSetupError(providerID string, err error) string {
-	return graycoderouterengine.FormatSetupError(providerID, err)
+	return eyrieengine.FormatSetupError(providerID, err)
 }
 
 // ParseInlineToolCalls extracts inline tool-call markup from model output.
-func ParseInlineToolCalls(content string) (string, []graycoderouterengine.ToolCall) {
-	return graycoderouterengine.ParseInlineToolCalls(content)
+func ParseInlineToolCalls(content string) (string, []eyrieengine.ToolCall) {
+	return eyrieengine.ParseInlineToolCalls(content)
 }
 
 func DefaultThinkingDisabled(providerID string) bool {
-	return graycoderouterengine.DefaultThinkingDisabled(providerID)
+	return eyrieengine.DefaultThinkingDisabled(providerID)
 }
 
 func ThinkingToggleSupported(providerID string) bool {
-	return graycoderouterengine.ThinkingToggleSupported(providerID)
+	return eyrieengine.ThinkingToggleSupported(providerID)
 }
 
 func (g *Gateway) DefaultThinkingDisabled(providerID string) bool {
-	return graycoderouterengine.DefaultThinkingDisabled(providerID)
+	return eyrieengine.DefaultThinkingDisabled(providerID)
 }
 
 func (g *Gateway) ThinkingToggleSupported(providerID string) bool {
-	return graycoderouterengine.ThinkingToggleSupported(providerID)
+	return eyrieengine.ThinkingToggleSupported(providerID)
 }
 
 // --- Test fixtures -----------------------------------------------------
-// Re-exported from engine so graycode tests inject credential fixtures through the
+// Re-exported from engine so hawk tests inject credential fixtures through the
 // single gateway+engine boundary. These are thin aliases only.
 
 // SetDefaultStore replaces the process-wide credential store (for tests).
-var SetDefaultStore = graycoderouterengine.SetDefaultStore
+var SetDefaultStore = eyrieengine.SetDefaultStore
 
 // DefaultStore returns the process-wide credential store (for tests).
-var DefaultStore = graycoderouterengine.DefaultStore
+var DefaultStore = eyrieengine.DefaultStore
 
 // MapStore is the in-memory credential store for tests (alias).
-type MapStore = graycoderouterengine.MapStore
+type MapStore = eyrieengine.MapStore
 
 // AccountForEnv returns the keychain account name for an env var.
-func AccountForEnv(envVar string) string { return graycoderouterengine.AccountForEnv(envVar) }
+func AccountForEnv(envVar string) string { return eyrieengine.AccountForEnv(envVar) }
 
 // HasSecret reports whether a secret exists for an env var (for tests).
 func HasSecret(ctx context.Context, envKey string) bool {
-	return graycoderouterengine.HasSecret(ctx, envKey)
+	return eyrieengine.HasSecret(ctx, envKey)
 }

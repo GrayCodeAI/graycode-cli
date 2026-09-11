@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/minify"
+	"github.com/GrayCodeAI/hawk/internal/minify"
 )
 
 const maxFileSize = 10 << 20 // 10 MiB

@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	contracts "github.com/GrayCodeAI/hawk/internal/contracts/types"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 var reviewStatusCmd = &cobra.Command{
@@ -72,7 +72,7 @@ func runReviewStatus(_ *cobra.Command, _ []string) error {
 		total += v
 	}
 	if total == 0 {
-		fmt.Println(auditTint("No reviews yet. Run 'graycode review init' to start.", textMuted))
+		fmt.Println(auditTint("No reviews yet. Run 'hawk review init' to start.", textMuted))
 		return nil
 	}
 

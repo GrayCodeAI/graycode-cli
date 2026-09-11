@@ -5,14 +5,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/branching"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/token"
-	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
-	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
-	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
-	"github.com/GrayCodeAI/graycode-cli/internal/prompts"
-	"github.com/GrayCodeAI/graycode-cli/internal/smartrouting"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/engine/branching"
+	"github.com/GrayCodeAI/hawk/internal/engine/token"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/prompts"
+	"github.com/GrayCodeAI/hawk/internal/smartrouting"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // LifecycleService is the Session's view of the self-improvement and
@@ -151,7 +151,7 @@ func (s *LifecycleService) StartContext(ctx context.Context, lastUserMsg string)
 // Finalize performs lifecycle bookkeeping from immutable session snapshots.
 // It intentionally accepts data rather than *Session so the lifecycle layer
 // cannot reach through the god object for unrelated state.
-func (s *LifecycleService) Finalize(ctx context.Context, messages []types.GraycodeRouterMessage, success bool, duration time.Duration, totalCost float64) {
+func (s *LifecycleService) Finalize(ctx context.Context, messages []types.EyrieMessage, success bool, duration time.Duration, totalCost float64) {
 	if s == nil {
 		return
 	}

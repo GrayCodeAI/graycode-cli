@@ -4,11 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-pattern='github\.com/GrayCodeAI/graycode-cli/(internal/|shared/types)'
+pattern='github\.com/GrayCodeAI/hawk/(internal/|shared/types)'
 violations=""
 
 while IFS= read -r repo; do
-  [[ "${repo}" == "graycode-cli" ]] && continue
+  [[ "${repo}" == "hawk" ]] && continue
   dir="../${repo}"
   if [[ -d "${dir}" ]]; then
     repo_hits="$(
@@ -21,10 +21,10 @@ while IFS= read -r repo; do
 done < <(./scripts/ecosystem-manifest.sh list workspace)
 
 if [[ -n "${violations}" ]]; then
-      echo "forbidden Graycode imports found in sibling ecosystem repos:"
+      echo "forbidden Hawk imports found in sibling ecosystem repos:"
   echo "${violations}"
   echo
-  echo "support repos must use their own contracts, not graycode/internal or removed graycode/shared/types"
+  echo "support repos must use their own contracts, not hawk/internal or removed hawk/shared/types"
   exit 1
 fi
 

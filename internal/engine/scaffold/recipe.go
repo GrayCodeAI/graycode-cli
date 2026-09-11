@@ -62,19 +62,19 @@ func (r *RecipeRegistry) Create(recipe *Recipe) string {
 }
 
 // Encode serializes a recipe to JSON, base64url-encodes it, and returns
-// a graycode:// deeplink URL.
+// a hawk:// deeplink URL.
 func (r *RecipeRegistry) Encode(recipe *Recipe) string {
 	data, _ := json.Marshal(recipe)
 	encoded := base64.URLEncoding.EncodeToString(data)
-	return "graycode://recipe/" + encoded
+	return "hawk://recipe/" + encoded
 }
 
-// Decode parses a graycode:// deeplink URL, base64url-decodes the payload,
+// Decode parses a hawk:// deeplink URL, base64url-decodes the payload,
 // and deserializes it into a Recipe.
 func (r *RecipeRegistry) Decode(deeplink string) (*Recipe, error) {
-	const prefix = "graycode://recipe/"
+	const prefix = "hawk://recipe/"
 	if !strings.HasPrefix(deeplink, prefix) {
-		return nil, errors.New("invalid deeplink: must start with graycode://recipe/")
+		return nil, errors.New("invalid deeplink: must start with hawk://recipe/")
 	}
 
 	encoded := strings.TrimPrefix(deeplink, prefix)
@@ -161,7 +161,7 @@ func (r *RecipeRegistry) Share(recipe *Recipe) string {
 	return r.Encode(minimal)
 }
 
-// ImportFromURL decodes a graycode:// deeplink URL and imports the recipe into
+// ImportFromURL decodes a hawk:// deeplink URL and imports the recipe into
 // the registry.
 func (r *RecipeRegistry) ImportFromURL(url string) (*Recipe, error) {
 	recipe, err := r.Decode(url)

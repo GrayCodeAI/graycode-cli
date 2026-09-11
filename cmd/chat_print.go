@@ -14,12 +14,12 @@ import (
 	"unicode/utf8"
 
 	lipgloss "charm.land/lipgloss/v2"
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
-	aiwatch "github.com/GrayCodeAI/graycode-cli/internal/engine/io"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/lifecycle"
-	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
-	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	aiwatch "github.com/GrayCodeAI/hawk/internal/engine/io"
+	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
+	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/session"
 )
 
 // Print mode and session persistence functions extracted from chat.go
@@ -40,7 +40,7 @@ func runPrint(text string) error {
 		return err
 	}
 
-	sess, cfgErr := newConfiguredGraycodeSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error))
+	sess, cfgErr := newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error))
 	if cfgErr != nil {
 		return cfgErr
 	}
@@ -144,7 +144,7 @@ func runPrint(text string) error {
 				writePrintResult(printed.String(), sessionID, sess, false, nil)
 			}
 			if !noSessionPersistence {
-				saveGraycodeRouterSession(sessionID, sess)
+				saveEyrieSession(sessionID, sess)
 			}
 			return nil
 		}
@@ -159,7 +159,7 @@ func runPrint(text string) error {
 		writePrintResult(printed.String(), sessionID, sess, false, nil)
 	}
 	if !noSessionPersistence {
-		saveGraycodeRouterSession(sessionID, sess)
+		saveEyrieSession(sessionID, sess)
 	}
 	return nil
 }
@@ -294,7 +294,7 @@ func writePrintEvent(sessionID, eventType, content, toolName string) {
 	fmt.Println(string(data))
 }
 
-func saveGraycodeRouterSession(id string, sess *engine.Session) {
+func saveEyrieSession(id string, sess *engine.Session) {
 	raw := sess.RawMessages()
 	if len(raw) == 0 {
 		return
@@ -310,7 +310,7 @@ func saveGraycodeRouterSession(id string, sess *engine.Session) {
 
 // runRepl starts an interactive REPL mode for multi-turn conversation without TUI.
 func runRepl() error {
-	fmt.Fprintln(os.Stderr, auditTint("Graycode REPL", textPrimary)+auditTint(" — type 'exit' or 'quit' to leave, 'help' for commands", textMuted))
+	fmt.Fprintln(os.Stderr, auditTint("Hawk REPL", textPrimary)+auditTint(" — type 'exit' or 'quit' to leave, 'help' for commands", textMuted))
 	fmt.Fprintln(os.Stderr)
 
 	systemPrompt, err := buildSystemPrompt()
@@ -329,7 +329,7 @@ func runRepl() error {
 		return err
 	}
 
-	sess, cfgErr := newConfiguredGraycodeSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error))
+	sess, cfgErr := newConfiguredHawkSession(settings, effectiveProvider, effectiveModel, systemPrompt, registry, logger.New(io.Discard, logger.Error))
 	if cfgErr != nil {
 		return cfgErr
 	}
@@ -474,14 +474,14 @@ func runRepl() error {
 					writePrintResult(printed.String(), sessionID, sess, false, nil)
 				}
 				if !noSessionPersistence {
-					saveGraycodeRouterSession(sessionID, sess)
+					saveEyrieSession(sessionID, sess)
 				}
 			}
 		}
 	}
 }
 
-func replBuiltinResponse(input string, sess *engine.Session, settings graycodeconfig.Settings, sessionID string) (string, bool, error) {
+func replBuiltinResponse(input string, sess *engine.Session, settings hawkconfig.Settings, sessionID string) (string, bool, error) {
 	switch strings.TrimSpace(input) {
 	case "/tools":
 		return builtInToolsSummary(), true, nil
@@ -500,12 +500,12 @@ func replBuiltinResponse(input string, sess *engine.Session, settings graycodeco
 	}
 }
 
-func replModelsSummary(settings graycodeconfig.Settings, sessionProvider string) (string, bool, error) {
+func replModelsSummary(settings hawkconfig.Settings, sessionProvider string) (string, bool, error) {
 	providerName := effectiveProviderForREPL(settings, sessionProvider)
 	if providerName == "" {
-		return "No active provider selected. Set one with `graycode config provider <name>` or start REPL with `--provider`.", true, nil
+		return "No active provider selected. Set one with `hawk config provider <name>` or start REPL with `--provider`.", true, nil
 	}
-	models, err := graycodeconfig.FetchModelsForProvider(providerName)
+	models, err := hawkconfig.FetchModelsForProvider(providerName)
 	if err != nil {
 		return "", true, err
 	}
@@ -531,7 +531,7 @@ func replModelsSummary(settings graycodeconfig.Settings, sessionProvider string)
 	return b.String(), true, nil
 }
 
-func effectiveProviderForREPL(settings graycodeconfig.Settings, sessionProvider string) string {
+func effectiveProviderForREPL(settings hawkconfig.Settings, sessionProvider string) string {
 	if provider != "" {
 		return strings.TrimSpace(provider)
 	}
@@ -556,7 +556,7 @@ func formatModelTablePlain(rows []modelTableRow) string {
 }
 
 // watchIgnoreDirs are directory names skipped when scanning for AI directives.
-var watchIgnoreDirs = []string{".git", "node_modules", "vendor", "__pycache__", ".graycode"}
+var watchIgnoreDirs = []string{".git", "node_modules", "vendor", "__pycache__", ".hawk"}
 
 // runWatch watches the working directory for AI!/AI? comment directives and
 // dispatches a targeted LLM edit for each one as files change (Aider-style

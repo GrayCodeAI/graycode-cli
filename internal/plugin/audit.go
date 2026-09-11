@@ -9,8 +9,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/theme"
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	"github.com/GrayCodeAI/hawk/internal/theme"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // AuditSeverity indicates how dangerous a finding is.
@@ -144,7 +144,7 @@ func FormatAuditResult(r AuditResult) string {
 }
 
 // FormatAuditResultColored formats audit findings with semantic severity
-// colors for direct terminal display (e.g. `graycode skills audit`). Prefer
+// colors for direct terminal display (e.g. `hawk skills audit`). Prefer
 // FormatAuditResult when embedding the result inside another styled surface
 // (e.g. chat system messages) to avoid nested ANSI codes.
 func FormatAuditResultColored(r AuditResult) string {

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
-	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
+	graphcontracts "github.com/GrayCodeAI/hawk/internal/contracts/graph"
+	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 	kestrelLib "github.com/GrayCodeAI/kestrel"
 )
 
@@ -15,7 +15,7 @@ func TestReviewContractsObservedRecordsQualityGraph(t *testing.T) {
 	if strings.Contains(kestrelLib.Version, "stub") {
 		t.Skip("kestrel engine is the build-harness stub; skipping quality-graph integration test")
 	}
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	bridge := &Bridge{}
 	at := time.Date(2026, time.July, 25, 13, 0, 0, 0, time.UTC)
 	result, err := bridge.ReviewContractsObserved(
@@ -88,11 +88,11 @@ func TestBridge_ImproveNotReady(t *testing.T) {
 	}
 }
 
-func TestGraycodeRouterAdapter_Chat(t *testing.T) {
-	// Test that GraycodeRouterAdapter correctly translates kestrel messages.
-	// We can't easily test with a real graycode-router client, but we verify the adapter
+func TestEyrieAdapter_Chat(t *testing.T) {
+	// Test that EyrieAdapter correctly translates kestrel messages.
+	// We can't easily test with a real eyrie client, but we verify the adapter
 	// struct is properly constructed.
-	adapter := NewGraycodeRouterAdapter(nil, "openai")
+	adapter := NewEyrieAdapter(nil, "openai")
 	if adapter.provider != "openai" {
 		t.Fatalf("expected provider openai, got %s", adapter.provider)
 	}

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
-	"github.com/GrayCodeAI/graycode-cli/internal/tool"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestParseIsolationProfile(t *testing.T) {
@@ -71,19 +71,19 @@ func TestWorkModePlanFiltersToolsAndBash(t *testing.T) {
 	}
 }
 
-func TestLazyGraycodeRouterToolsAndPromote(t *testing.T) {
+func TestLazyEyrieToolsAndPromote(t *testing.T) {
 	reg := tool.NewRegistry(tool.FileReadTool{}, tool.ImpactTool{})
 	reg.EnableLazyModelSurface([]string{"Read"})
-	graycodeRouter := reg.GraycodeRouterTools()
-	if len(graycodeRouter) != 1 || graycodeRouter[0].Name != "Read" {
-		t.Fatalf("GraycodeRouterTools = %#v, want only Read", graycodeRouter)
+	eyrie := reg.EyrieTools()
+	if len(eyrie) != 1 || eyrie[0].Name != "Read" {
+		t.Fatalf("EyrieTools = %#v, want only Read", eyrie)
 	}
 	if !reg.PromoteModelTool("Impact") {
 		t.Fatal("promote Impact failed")
 	}
-	graycodeRouter = reg.GraycodeRouterTools()
-	if len(graycodeRouter) != 2 {
-		t.Fatalf("after promote GraycodeRouterTools len = %d", len(graycodeRouter))
+	eyrie = reg.EyrieTools()
+	if len(eyrie) != 2 {
+		t.Fatalf("after promote EyrieTools len = %d", len(eyrie))
 	}
 }
 

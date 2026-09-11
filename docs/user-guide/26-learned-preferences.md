@@ -1,6 +1,6 @@
 # Learned Preferences
 
-Graycode can learn coding-style tendencies from feedback through its taste system.
+Hawk can learn coding-style tendencies from feedback through its taste system.
 These preferences are advisory context, not policy.
 
 ## Policy Boundaries

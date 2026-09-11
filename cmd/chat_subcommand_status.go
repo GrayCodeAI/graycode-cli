@@ -6,8 +6,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // statusSubcommand implements the /status slash command. It prints
@@ -35,7 +35,7 @@ func buildStatusInfo(m *chatModel) string {
 	visible := 0
 	if m.registry != nil {
 		toolCount = len(m.registry.PrimaryTools())
-		visible = len(m.registry.GraycodeRouterTools())
+		visible = len(m.registry.EyrieTools())
 	}
 	work := m.session.WorkMode()
 	if work == "" {

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
-// IsolationProfile is the single user-facing story for how Graycode isolates
+// IsolationProfile is the single user-facing story for how Hawk isolates
 // tool execution. It unifies:
 //
 //   - OS sandbox policy (seatbelt / unshare) used by Bash WrapCommand

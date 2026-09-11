@@ -52,22 +52,22 @@ func DefaultDisclosureConfig() DisclosureConfig {
 
 // BeginnerHelp returns a simplified help message for new users.
 func BeginnerHelp() string {
-	return `Getting Started with graycode
+	return `Getting Started with hawk
 
-  Type your question or task and graycode will help.
-  graycode reads your project and understands your code.
+  Type your question or task and hawk will help.
+  hawk reads your project and understands your code.
 
 Essential Commands:
   /help     Show all commands
   /test     Run your project's tests
   /diff     See what you've changed
   /commit   Save your work with a smart message
-  /review   Have graycode review your code
+  /review   Have hawk review your code
   /clear    Start a fresh conversation
 
 Tips:
   - Just describe what you want in plain English
-  - graycode will read files, run commands, and make changes
+  - hawk will read files, run commands, and make changes
   - Use /help to discover more features as you get comfortable
 
 Type anything to get started!`
@@ -75,7 +75,7 @@ Type anything to get started!`
 
 // IntermediateHelp returns the standard help message.
 func IntermediateHelp() string {
-	return `graycode Commands
+	return `hawk Commands
 
 Workflow:
   /test        Run tests and fix failures
@@ -110,7 +110,7 @@ Use /help all for the complete list.`
 
 // AdvancedHelp returns the full command reference.
 func AdvancedHelp() string {
-	return `graycode Full Command Reference
+	return `hawk Full Command Reference
 
 Workflow:
   /test [cmd]        Run tests (default: go test ./...)

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 func TestTokenStore(t *testing.T) {
@@ -119,12 +119,12 @@ func TestGenerateNonce(t *testing.T) {
 func TestSecureStorage(t *testing.T) {
 	t.Run("new secure storage", func(t *testing.T) {
 		t.Parallel()
-		ss := NewSecureStorage("graycode-test")
+		ss := NewSecureStorage("hawk-test")
 		if ss == nil {
 			t.Fatal("NewSecureStorage returned nil")
 		}
-		if ss.service != "graycode-test" {
-			t.Errorf("service = %q, want %q", ss.service, "graycode-test")
+		if ss.service != "hawk-test" {
+			t.Errorf("service = %q, want %q", ss.service, "hawk-test")
 		}
 	})
 
@@ -132,7 +132,7 @@ func TestSecureStorage(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
 
-		ss := NewSecureStorage("graycode-test")
+		ss := NewSecureStorage("hawk-test")
 		_, err := ss.getFile("nonexistent")
 		if err == nil {
 			t.Error("getFile() should return error for missing file")
@@ -143,7 +143,7 @@ func TestSecureStorage(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
 
-		ss := NewSecureStorage("graycode-test")
+		ss := NewSecureStorage("hawk-test")
 		if err := ss.setFile("anthropic", "sk-test-token"); err != nil {
 			t.Fatalf("setFile() error = %v", err)
 		}
@@ -161,7 +161,7 @@ func TestSecureStorage(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
 
-		ss := NewSecureStorage("graycode-test")
+		ss := NewSecureStorage("hawk-test")
 		if err := ss.setFile("provider", "old-token"); err != nil {
 			t.Fatal(err)
 		}
@@ -182,7 +182,7 @@ func TestSecureStorage(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
 
-		ss := NewSecureStorage("graycode-test")
+		ss := NewSecureStorage("hawk-test")
 		if err := ss.setFile("test", "secret"); err != nil {
 			t.Fatal(err)
 		}
@@ -202,7 +202,7 @@ func TestSecureStorage(t *testing.T) {
 		dir := t.TempDir()
 		t.Setenv("HOME", dir)
 
-		ss := NewSecureStorage("graycode-test")
+		ss := NewSecureStorage("hawk-test")
 		if err := ss.setFile("provider1", "token1"); err != nil {
 			t.Fatal(err)
 		}

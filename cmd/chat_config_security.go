@@ -4,7 +4,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 var (

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // SelfReview implements "rubber duck debugging" -- asking the model to explain
@@ -102,8 +102,8 @@ SUGGESTIONS: <comma-separated list of improvements, or "none">`)
 }
 
 // buildReviewMessages wraps the review prompt in a message slice.
-func buildReviewMessages(prompt string) []types.GraycodeRouterMessage {
-	return []types.GraycodeRouterMessage{
+func buildReviewMessages(prompt string) []types.EyrieMessage {
+	return []types.EyrieMessage{
 		{Role: "user", Content: prompt},
 	}
 }

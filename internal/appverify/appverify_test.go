@@ -116,7 +116,7 @@ func TestManifestRoundTripAndPriority(t *testing.T) {
 
 func TestLoadManifestCorruptIsError(t *testing.T) {
 	root := writeProject(t, map[string]string{
-		".graycode/verify/environment.json": "{not json",
+		".hawk/verify/environment.json": "{not json",
 	})
 	if _, err := LoadManifest(root); err == nil {
 		t.Fatal("expected error for corrupt manifest")

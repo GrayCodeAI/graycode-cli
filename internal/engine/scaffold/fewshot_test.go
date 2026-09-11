@@ -3,7 +3,7 @@ package scaffold
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestFewShotStore_RecordAndRetrieve(t *testing.T) {

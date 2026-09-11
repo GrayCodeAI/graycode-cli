@@ -6,16 +6,16 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/session"
-	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
-	contracts "github.com/GrayCodeAI/graycode-router/tools"
+	contracts "github.com/GrayCodeAI/eyrie/tools"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 // saveTestSession isolates session storage to a temp dir and persists a
 // session with the given messages, returning its ID.
 func saveTestSession(t *testing.T, id string, messages []session.Message) {
 	t.Helper()
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 
 	sess := &session.Session{
 		ID:       id,
@@ -144,7 +144,7 @@ func TestDaemon_GetMessages_NoPaginationParams(t *testing.T) {
 }
 
 func TestDaemon_GetMessages_MissingSession(t *testing.T) {
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
 	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
@@ -190,7 +190,7 @@ func TestDaemon_DeleteSession_Success(t *testing.T) {
 }
 
 func TestDaemon_DeleteSession_InvalidID(t *testing.T) {
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
 	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())
@@ -211,7 +211,7 @@ func TestDaemon_DeleteSession_InvalidID(t *testing.T) {
 }
 
 func TestDaemon_DeleteSession_NotFound(t *testing.T) {
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	srv := New(Config{Port: 0, Host: testutil.LoopbackHost}, nil)
 	addr := startTestDaemon(t, srv)
 	defer srv.Stop(context.Background())

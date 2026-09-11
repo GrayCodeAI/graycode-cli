@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
-	"github.com/GrayCodeAI/graycode-router/llm"
+	"github.com/GrayCodeAI/eyrie/llm"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 type recordingChatClient struct {
@@ -14,14 +14,14 @@ type recordingChatClient struct {
 	streamOptions types.ChatOptions
 }
 
-func (c *recordingChatClient) Chat(_ context.Context, _ []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error) {
+func (c *recordingChatClient) Chat(_ context.Context, _ []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
 	c.chatOptions = opts
-	return &types.GraycodeRouterResponse{Content: "ok"}, nil
+	return &types.EyrieResponse{Content: "ok"}, nil
 }
 
-func (c *recordingChatClient) StreamChatContinue(_ context.Context, _ []types.GraycodeRouterMessage, opts types.ChatOptions, _ types.ContinuationConfig) (*types.StreamResult, error) {
+func (c *recordingChatClient) StreamChatContinue(_ context.Context, _ []types.EyrieMessage, opts types.ChatOptions, _ types.ContinuationConfig) (*types.StreamResult, error) {
 	c.streamOptions = opts
-	events := make(chan types.GraycodeRouterStreamEvent)
+	events := make(chan types.EyrieStreamEvent)
 	close(events)
 	return llm.NewStreamResult(events, "", nil), nil
 }

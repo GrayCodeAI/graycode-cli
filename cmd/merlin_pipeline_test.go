@@ -3,8 +3,8 @@ package cmd
 import (
 	"testing"
 
-	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
-	verifycontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/verify"
+	contracts "github.com/GrayCodeAI/hawk/internal/contracts/types"
+	verifycontracts "github.com/GrayCodeAI/hawk/internal/contracts/verify"
 )
 
 func TestMerlinToReviewFindings_NilReport(t *testing.T) {

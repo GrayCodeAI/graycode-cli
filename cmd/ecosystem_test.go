@@ -4,17 +4,17 @@ import (
 	"strings"
 	"testing"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func TestEcosystemCmdRuns(t *testing.T) {
-	settings := graycodeconfig.Settings{}
+	settings := hawkconfig.Settings{}
 	model, provider := effectiveModelAndProvider(settings)
 	if provider == "" {
 		provider = "auto"
 	}
-	out := graycodeconfig.FormatEcosystemPanel(t.Context(), provider, model)
-	if !strings.Contains(out, "Ecosystem (graycode-router · harrier · shrike)") {
+	out := hawkconfig.FormatEcosystemPanel(t.Context(), provider, model)
+	if !strings.Contains(out, "Ecosystem (eyrie · harrier · shrike)") {
 		t.Fatalf("unexpected panel: %q", out)
 	}
 	if err := ecosystemCmd.RunE(ecosystemCmd, nil); err != nil {

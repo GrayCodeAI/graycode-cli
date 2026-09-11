@@ -53,7 +53,7 @@ func TestEnsureAgentBranch_FromMain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(name, "graycode/agent-") {
+	if !strings.HasPrefix(name, "hawk/agent-") {
 		t.Fatalf("branch = %q", name)
 	}
 	info2 := InspectGitBranch(dir)

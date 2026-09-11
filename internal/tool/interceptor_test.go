@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestChainRunsInOrder(t *testing.T) {

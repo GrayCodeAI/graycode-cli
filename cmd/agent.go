@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/multiagent/agents"
-	"github.com/GrayCodeAI/graycode-cli/internal/theme"
+	"github.com/GrayCodeAI/hawk/internal/multiagent/agents"
+	"github.com/GrayCodeAI/hawk/internal/theme"
 	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -16,7 +16,7 @@ import (
 var agentCmd = &cobra.Command{
 	Use:   "agent",
 	Short: "Manage custom agent personas",
-	Long:  "Create, list, and manage custom agent personas stored in Graycode user state.",
+	Long:  "Create, list, and manage custom agent personas stored in Hawk user state.",
 }
 
 var agentListJSON bool
@@ -81,7 +81,7 @@ func runAgentList(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 	if len(all) == 0 {
-		fmt.Printf("%s\n", auditTint("No agents found. Create one with: graycode agent create <name>", textMuted))
+		fmt.Printf("%s\n", auditTint("No agents found. Create one with: hawk agent create <name>", textMuted))
 		fmt.Printf("%s\n", auditTint("Agent directory: "+agents.DefaultDir(), textPrimary))
 		return nil
 	}
@@ -164,7 +164,7 @@ func runAgentShow(_ *cobra.Command, args []string) error {
 	}
 	fmt.Printf("%s %s\n", auditTint("Model:", textMuted), auditTint(model, textPrimary))
 	fmt.Printf("%s %s\n", auditTint("File:", textMuted), auditTint(a.FilePath, textPrimary))
-	fmt.Printf("\n%s\n%s\n", auditTint("--- Prompt ---", graycodeColor), a.Prompt)
+	fmt.Printf("\n%s\n%s\n", auditTint("--- Prompt ---", hawkColor), a.Prompt)
 	return nil
 }
 

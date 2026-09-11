@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 func TestNormalizePermissionTier(t *testing.T) {
@@ -34,7 +34,7 @@ func TestNormalizePermissionSandbox(t *testing.T) {
 }
 
 func TestEffectivePermissionRules(t *testing.T) {
-	settings := graycodeconfig.Settings{
+	settings := hawkconfig.Settings{
 		AutoAllow:       []string{"Read"},
 		AllowedTools:    []string{"Bash(git:*)", "Read"},
 		DisallowedTools: []string{"Bash(rm -rf *)"},
@@ -55,7 +55,7 @@ func TestAutonomyCenterSummary(t *testing.T) {
 	sess.PermSvc().SetSpecStage(engine.SpecStageSpecify)
 	model := &chatModel{
 		session: sess,
-		settings: graycodeconfig.Settings{
+		settings: hawkconfig.Settings{
 			Sandbox:         "workspace",
 			AllowedTools:    []string{"Bash(git:*)"},
 			DisallowedTools: []string{"Bash(rm -rf *)"},
@@ -138,7 +138,7 @@ func TestResetPermissionCenter(t *testing.T) {
 	sess.PermSvc().SetDryRun(true)
 	model := &chatModel{
 		session: sess,
-		settings: graycodeconfig.Settings{
+		settings: hawkconfig.Settings{
 			Autonomy:        permissionTierSettingValue(engine.AutonomyYOLO),
 			Sandbox:         "strict",
 			AutoAllow:       []string{"Read"},

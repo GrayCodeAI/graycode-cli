@@ -12,7 +12,7 @@ var skipDirs = map[string]struct{}{
 	".git":         {},
 	"node_modules": {},
 	"vendor":       {},
-	".graycode":    {},
+	".hawk":        {},
 	"dist":         {},
 	"build":        {},
 	"target":       {},

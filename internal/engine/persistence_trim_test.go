@@ -3,18 +3,18 @@ package engine
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestTrimIncompleteTurn_NoopOnCompleteTurn(t *testing.T) {
 	t.Parallel()
 	p := &PersistenceService{}
-	p.AppendAssistantJournaled(types.GraycodeRouterMessage{
+	p.AppendAssistantJournaled(types.EyrieMessage{
 		Role:    "assistant",
 		Content: " ",
 		ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash"}},
 	})
-	p.AppendUserJournaled(types.GraycodeRouterMessage{
+	p.AppendUserJournaled(types.EyrieMessage{
 		Role:        "user",
 		Content:     "out",
 		ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "out"}},
@@ -32,7 +32,7 @@ func TestTrimIncompleteTurn_DropsUnansweredAssistantToolUse(t *testing.T) {
 	t.Parallel()
 	p := &PersistenceService{}
 	p.AddUser("do the thing")
-	p.AppendAssistantJournaled(types.GraycodeRouterMessage{
+	p.AppendAssistantJournaled(types.EyrieMessage{
 		Role:    "assistant",
 		Content: " ",
 		ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash"}},
@@ -56,7 +56,7 @@ func TestTrimIncompleteTurn_DropsOrphanedToolResults(t *testing.T) {
 	p.AddUser("do the thing")
 	// Simulate a transcript where results landed but the owning assistant
 	// tool_use is missing (e.g. partial restore).
-	p.AppendUserJournaled(types.GraycodeRouterMessage{
+	p.AppendUserJournaled(types.EyrieMessage{
 		Role:        "user",
 		Content:     "out",
 		ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "out"}},
@@ -77,14 +77,14 @@ func TestTrimIncompleteTurn_DropsMultipleDanglingLayers(t *testing.T) {
 	t.Parallel()
 	p := &PersistenceService{}
 	p.AddUser("first")
-	p.AppendAssistantJournaled(types.GraycodeRouterMessage{Role: "assistant", Content: "done"})
+	p.AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: "done"})
 	// Then a new turn started and was cancelled mid-flight:
-	p.AppendUserJournaled(types.GraycodeRouterMessage{
+	p.AppendUserJournaled(types.EyrieMessage{
 		Role:        "user",
 		Content:     "orphan result",
 		ToolResults: []types.ToolResult{{ToolUseID: "x9", Content: "r"}},
 	})
-	p.AppendAssistantJournaled(types.GraycodeRouterMessage{
+	p.AppendAssistantJournaled(types.EyrieMessage{
 		Role:    "assistant",
 		Content: " ",
 		ToolUse: []types.ToolCall{{ID: "x8", Name: "Read"}},
@@ -104,12 +104,12 @@ func TestTrimIncompleteTurn_DropsMultipleDanglingLayers(t *testing.T) {
 func TestTrimIncompleteTurn_KeepsResultsWhenOwnerPresent(t *testing.T) {
 	t.Parallel()
 	p := &PersistenceService{}
-	p.AppendAssistantJournaled(types.GraycodeRouterMessage{
+	p.AppendAssistantJournaled(types.EyrieMessage{
 		Role:    "assistant",
 		Content: " ",
 		ToolUse: []types.ToolCall{{ID: "t1", Name: "Bash"}, {ID: "t2", Name: "Read"}},
 	})
-	p.AppendUserJournaled(types.GraycodeRouterMessage{
+	p.AppendUserJournaled(types.EyrieMessage{
 		Role:        "user",
 		Content:     "out1",
 		ToolResults: []types.ToolResult{{ToolUseID: "t1", Content: "out1"}},

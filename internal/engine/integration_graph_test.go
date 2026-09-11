@@ -4,14 +4,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/token"
+	"github.com/GrayCodeAI/hawk/internal/token"
 )
 
 func TestPostResponseReportsTokOnlyRedactions(t *testing.T) {
 	if !token.ShrikeAvailable() {
 		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
 	}
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	pipeline := NewIntegrationPipeline()
 	secret := "github_pat_abcdefghijklmnopqrstuvwxyz1234567890"
 

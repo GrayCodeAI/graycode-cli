@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/executiongraph"
+	"github.com/GrayCodeAI/hawk/internal/executiongraph"
 )
 
 func getGraphRead(t *testing.T, addr, path string) *http.Response {
@@ -49,8 +49,8 @@ func TestDaemon_GraphRead_Empty(t *testing.T) {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
 	out := decodeGraphRead(t, resp)
-	if out.Graph.SchemaVersion != "graycode-local.graph/v1" {
-		t.Errorf("schema_version = %q, want graycode-local.graph/v1", out.Graph.SchemaVersion)
+	if out.Graph.SchemaVersion != "hawk-local.graph/v1" {
+		t.Errorf("schema_version = %q, want hawk-local.graph/v1", out.Graph.SchemaVersion)
 	}
 	if out.Graph.Scope["project_id"] != "proj" {
 		t.Errorf("scope.project_id = %q, want proj", out.Graph.Scope["project_id"])

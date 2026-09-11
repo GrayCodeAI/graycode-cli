@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -12,8 +12,8 @@ var ecosystemJSON bool
 
 var ecosystemCmd = &cobra.Command{
 	Use:   "ecosystem",
-	Short: "Show graycode-router, harrier, and shrike integration status",
-	Long:  "Print the ecosystem panel summarizing LLM provider (graycode-router), memory graph (harrier), and token pipeline (shrike). Same block as the top of graycode doctor.",
+	Short: "Show eyrie, harrier, and shrike integration status",
+	Long:  "Print the ecosystem panel summarizing LLM provider (eyrie), memory graph (harrier), and token pipeline (shrike). Same block as the top of hawk doctor.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		settings, err := loadEffectiveSettings()
 		if err != nil {
@@ -24,12 +24,12 @@ var ecosystemCmd = &cobra.Command{
 			providerName = "auto"
 		}
 		if ecosystemJSON {
-			report := graycodeconfig.BuildEcosystemReport(context.Background(), providerName, modelName)
+			report := hawkconfig.BuildEcosystemReport(context.Background(), providerName, modelName)
 			enc := json.NewEncoder(cmd.OutOrStdout())
 			enc.SetIndent("", "  ")
 			return enc.Encode(report)
 		}
-		cmd.Println(graycodeconfig.FormatEcosystemPanel(context.Background(), providerName, modelName))
+		cmd.Println(hawkconfig.FormatEcosystemPanel(context.Background(), providerName, modelName))
 		return nil
 	},
 }

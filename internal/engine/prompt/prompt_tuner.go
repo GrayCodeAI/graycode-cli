@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 type PromptTuner struct {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/observability/metrics"
+	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
 )
 
 // handleMetrics handles GET /v1/metrics. It exposes daemon-level metrics in
@@ -76,16 +76,16 @@ func (s *Server) emitRuntimeMetrics(sb *strings.Builder) {
 		return true
 	})
 
-	sb.WriteString("# TYPE graycode_daemon_active_sessions gauge\n")
-	sb.WriteString(fmt.Sprintf("graycode_daemon_active_sessions %d\n", activeSessions))
+	sb.WriteString("# TYPE hawk_daemon_active_sessions gauge\n")
+	sb.WriteString(fmt.Sprintf("hawk_daemon_active_sessions %d\n", activeSessions))
 
 	// Concurrency slots used
-	sb.WriteString("# TYPE graycode_daemon_chat_concurrency_used gauge\n")
-	sb.WriteString(fmt.Sprintf("graycode_daemon_chat_concurrency_used %d\n", len(s.concurrencySem)))
+	sb.WriteString("# TYPE hawk_daemon_chat_concurrency_used gauge\n")
+	sb.WriteString(fmt.Sprintf("hawk_daemon_chat_concurrency_used %d\n", len(s.concurrencySem)))
 
 	// Uptime
-	sb.WriteString("# TYPE graycode_daemon_uptime_seconds gauge\n")
-	sb.WriteString(fmt.Sprintf("graycode_daemon_uptime_seconds %.0f\n", time.Since(s.startedAt).Seconds()))
+	sb.WriteString("# TYPE hawk_daemon_uptime_seconds gauge\n")
+	sb.WriteString(fmt.Sprintf("hawk_daemon_uptime_seconds %.0f\n", time.Since(s.startedAt).Seconds()))
 }
 
 // sanitizeMetricName converts a dotted metric name to Prometheus naming

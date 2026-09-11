@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/policy"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	contracts "github.com/GrayCodeAI/hawk/internal/contracts/policy"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/session"
-	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -68,14 +68,14 @@ func TestIntegration_FullSessionFlow(t *testing.T) {
 
 	// Simulate the engine receiving an assistant text reply + tool call + tool result
 	// by manually building the message sequence that agentLoop would produce.
-	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.GraycodeRouterMessage{
+	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.EyrieMessage{
 		Role:    "assistant",
 		Content: "Sure, let me check that file.",
 		ToolUse: []types.ToolCall{
 			{ID: "tc-1", Name: "Bash", Arguments: map[string]interface{}{"command": "echo hello"}},
 		},
 	}))
-	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.GraycodeRouterMessage{
+	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.EyrieMessage{
 		Role: "user",
 		ToolResults: []types.ToolResult{{
 			ToolUseID: "tc-1",
@@ -83,7 +83,7 @@ func TestIntegration_FullSessionFlow(t *testing.T) {
 			IsError:   false,
 		}},
 	}))
-	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.GraycodeRouterMessage{
+	sess.Persistence().SetRawMessages(append(sess.Persistence().RawMessages(), types.EyrieMessage{
 		Role:    "assistant",
 		Content: "The command ran successfully and returned 'hello'.",
 	}))

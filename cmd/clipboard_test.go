@@ -30,7 +30,7 @@ func TestClipboardRoundTrip(t *testing.T) {
 		t.Skip("skipping clipboard test on linux (requires xclip/xsel)")
 	}
 
-	text := "graycode clipboard test"
+	text := "hawk clipboard test"
 	if err := copyToClipboardNative(text); err != nil {
 		t.Skipf("native clipboard unavailable: %v", err)
 	}

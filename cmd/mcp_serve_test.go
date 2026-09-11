@@ -30,15 +30,15 @@ func TestMCPConfigEmitsValidServerBlock(t *testing.T) {
 		t.Fatalf("emitted config is not valid JSON: %v\n%s", err, buf.String())
 	}
 
-	graycode, ok := cfg.MCPServers["graycode"]
+	hawk, ok := cfg.MCPServers["hawk"]
 	if !ok {
-		t.Fatal(`config missing "graycode" server entry`)
+		t.Fatal(`config missing "hawk" server entry`)
 	}
-	if graycode.Command == "" {
-		t.Error("graycode server entry missing command")
+	if hawk.Command == "" {
+		t.Error("hawk server entry missing command")
 	}
-	if len(graycode.Args) != 2 || graycode.Args[0] != "mcp" || graycode.Args[1] != "serve" {
-		t.Errorf(`args = %v, want ["mcp" "serve"]`, graycode.Args)
+	if len(hawk.Args) != 2 || hawk.Args[0] != "mcp" || hawk.Args[1] != "serve" {
+		t.Errorf(`args = %v, want ["mcp" "serve"]`, hawk.Args)
 	}
 }
 

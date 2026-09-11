@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 func TestPermissionService_CheckTool(t *testing.T) {

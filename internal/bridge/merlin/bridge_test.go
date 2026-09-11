@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
-	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
+	graphcontracts "github.com/GrayCodeAI/hawk/internal/contracts/graph"
+	"github.com/GrayCodeAI/hawk/internal/graphjournal"
 	merlinLib "github.com/GrayCodeAI/merlin"
 )
 
@@ -44,7 +44,7 @@ func TestRunContractsObservedRecordsQualityGraph(t *testing.T) {
 	if strings.Contains(merlinLib.Version, "stub") {
 		t.Skip("merlin engine is the build-harness stub; skipping quality-graph integration test")
 	}
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	observedAt := time.Date(2026, time.July, 25, 12, 0, 0, 0, time.UTC)
 	b := &Bridge{}
 

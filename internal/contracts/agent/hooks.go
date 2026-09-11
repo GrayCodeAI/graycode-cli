@@ -1,13 +1,13 @@
 // Vendored from github.com/GrayCodeAI/eagle/agent at v0.0.0-20260902153929-5877bed17503 (MIT, Copyright (c) 2026 GrayCode AI).
-// The upstream repository no longer exists; this copy is owned by Graycode as its contract surface.
+// The upstream repository no longer exists; this copy is owned by Hawk as its contract surface.
 package agent
 
 import "strings"
 
 // Hook event names for lifecycle and tool gates.
 //
-// Graycode may accept vendor aliases (Claude/Cursor); normalize to these
-// canonical names at the boundary. Constants are shared so graycode, plugins,
+// Hawk may accept vendor aliases (Claude/Cursor); normalize to these
+// canonical names at the boundary. Constants are shared so hawk, plugins,
 // and SDKs agree on wire/event vocabulary without importing engines.
 const (
 	HookPreToolUse        = "PreToolUse"
@@ -24,7 +24,7 @@ const (
 	HookFailure           = "Failure"
 )
 
-// VendorHookAliases maps common third-party hook names to canonical Graycode names.
+// VendorHookAliases maps common third-party hook names to canonical Hawk names.
 // Keys are lower-case for case-insensitive lookup.
 var VendorHookAliases = map[string]string{
 	"pretooluse":         HookPreToolUse,
@@ -52,7 +52,7 @@ var VendorHookAliases = map[string]string{
 	"on_error":           HookFailure,
 }
 
-// CanonicalHookEvent returns the Graycode canonical event name for s, or "" if unknown.
+// CanonicalHookEvent returns the Hawk canonical event name for s, or "" if unknown.
 func CanonicalHookEvent(s string) string {
 	if s == "" {
 		return ""

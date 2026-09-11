@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
-	"github.com/GrayCodeAI/graycode-cli/internal/executiongraph"
+	graphcontracts "github.com/GrayCodeAI/hawk/internal/contracts/graph"
+	"github.com/GrayCodeAI/hawk/internal/executiongraph"
 )
 
 // POST /v1/graph/sync lets a producer (a future ecosystem repo) push portable
-// `*.graph/v1` facts into Graycode. It mirrors the cloud plane's /v1/graph/sync
+// `*.graph/v1` facts into Hawk. It mirrors the cloud plane's /v1/graph/sync
 // contract so a producer can target either surface with the same payload.
 // The daemon is a localhost consumer surface: it validates the graph, rejects
 // malformed or non-portable facts, and acknowledges with an idempotency digest.

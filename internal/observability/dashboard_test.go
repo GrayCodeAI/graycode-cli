@@ -176,7 +176,7 @@ func TestRenderOverview(t *testing.T) {
 
 	// Check that key elements are present
 	checks := []string{
-		"graycode Analytics Dashboard",
+		"hawk Analytics Dashboard",
 		"Total Sessions:",
 		"Active Days:",
 		"Total Tokens:",

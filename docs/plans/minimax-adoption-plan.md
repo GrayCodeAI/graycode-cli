@@ -1,40 +1,40 @@
-# MiniMax-AI → graycode Adoption Plan
+# MiniMax-AI → hawk Adoption Plan
 
 Status: Implemented in working tree; sibling-repository PRs and skills curation remain follow-ups
 Date: 2026-08-21
 Scope: Adopt the high-value, verified concepts from MiniMax-AI's open-source
-repos into the Graycode ecosystem (Graycode plus independent repositories: GraycodeRouter, Eagle,
+repos into the Hawk ecosystem (Hawk plus independent repositories: Eyrie, Eagle,
 Falcon, Kestrel, and Merlin).
 
 ## Findings summary
 
-Deep code review of 6 MiniMax-AI repos against Graycode's existing sibling
+Deep code review of 6 MiniMax-AI repos against Hawk's existing sibling
 repositories and
 internals produced these adoptions, ordered by value:
 
 | # | MiniMax repo | Adopt into | Action |
 |---|---|---|---|
-| 1 | MiniMax-Provider-Verifier | sibling `graycode-router` | Add provider-conformance metrics + wire the orphaned `verify` harness into CI |
+| 1 | MiniMax-Provider-Verifier | sibling `eyrie` | Add provider-conformance metrics + wire the orphaned `verify` harness into CI |
 | 2 | MiniMax/skills | `starling` | Curate high-quality skill content (content, not mechanism) |
-| 3 | MiniMax-Coding-Plan-MCP | graycode / `falcon` | MCP v2 no-network test pattern + image-source normalization (patterns only) |
-| 4 | minimax_search | graycode tooling | Jina page→Markdown browse extractor + evidence-extraction prompt (pattern) |
-| 5 | Mini-Agent | graycode engine | Cooperative-cancellation-with-cleanup + token-aware lossy summarization (patterns) |
+| 3 | MiniMax-Coding-Plan-MCP | hawk / `falcon` | MCP v2 no-network test pattern + image-source normalization (patterns only) |
+| 4 | minimax_search | hawk tooling | Jina page→Markdown browse extractor + evidence-extraction prompt (pattern) |
+| 5 | Mini-Agent | hawk engine | Cooperative-cancellation-with-cleanup + token-aware lossy summarization (patterns) |
 | 6 | MiniMax-MCP / JS | — | Not adoptable (media generation, out of scope) |
 
-## 1. GraycodeRouter provider-conformance metrics + CI wiring (highest value)
+## 1. Eyrie provider-conformance metrics + CI wiring (highest value)
 
-### Verified current state (graycode-router repository)
+### Verified current state (eyrie repository)
 
-- `graycode-router/verify/verify.go` — a complete behavioral conformance harness
+- `eyrie/verify/verify.go` — a complete behavioral conformance harness
   exists: `Case`/`CaseResult`/`Expectation`/`Report`, `Run()`, `scoreResponse()`,
   `ToolCallF1()`, `DiffBaseline()`, `Markdown()`.
-- `graycode-router/verify/cases.go` — `CanonicalCases()` with 3 cases:
+- `eyrie/verify/cases.go` — `CanonicalCases()` with 3 cases:
   `basic-chat`, `deterministic-answer`, `tool-call`.
-- `graycode-router/verify/metrics.go` — `ToolCallF1()` already implemented.
+- `eyrie/verify/metrics.go` — `ToolCallF1()` already implemented.
 - **Confirmed gap:** the `verify` package is referenced ONLY by its own tests.
   It is not wired into any CLI, Makefile target, CI job, or provider-registration
   gate. Only structural registry/parity tests are enforced.
-- graycode-router already ships MiniMax providers (`minimax_token_plan`, `minimax_payg`)
+- eyrie already ships MiniMax providers (`minimax_token_plan`, `minimax_payg`)
   as OpenAI-compatible adapters with `ThinkingFormat: "minimax"`.
 - `client/structured.go` already has `ValidateStructuredOutput()` — a recursive
   JSON-schema validator (`validateValue`, `validateObject`, `validateArray`)
@@ -43,7 +43,7 @@ internals produced these adoptions, ordered by value:
 ### What to implement
 
 **A. Add a `SchemaValidate` helper (argument-level) — new file
-`graycode-router/verify/schema.go`**
+`eyrie/verify/schema.go`**
 
 Add `SchemaValidate(args map[string]any, schema map[string]any) error` that
 checks tool-call arguments against the tool's `Parameters` JSON schema:
@@ -52,7 +52,7 @@ checks tool-call arguments against the tool's `Parameters` JSON schema:
 
 This is the `ToolCalls-Schema-Accuracy` dimension from MiniMax-Provider-Verifier.
 
-**B. Add `MatchRate` to `Report` — edit `graycode-router/verify/verify.go`**
+**B. Add `MatchRate` to `Report` — edit `eyrie/verify/verify.go`**
 
 Compute the `ToolCalls-Match-Rate` (trigger-vs-stop correctness) alongside F1.
 Extend `CaseResult` already has `ExpectedTool`/`CalledAnyTool`/`CorrectTool`, so
@@ -63,9 +63,9 @@ tool_calls_match_rate = (TP + TN) / expected_tool_call_total_count
 mirroring MiniMax's confusion-matrix metric.
 
 **C. Add a `verify` CLI entrypoint — new file
-`graycode-router/cmd/verify/main.go`**
+`eyrie/cmd/verify/main.go`**
 
-A small `go run`-able binary (or a `verify` subcommand if graycode-router has a cmd/) that
+A small `go run`-able binary (or a `verify` subcommand if eyrie has a cmd/) that
 runs `verify.Run` against a provider endpoint (live or cassette) and exits
 non-zero on unmet thresholds:
 - `--model`, `--base-url`, `--api-key`, `--provider`
@@ -74,8 +74,8 @@ non-zero on unmet thresholds:
 
 This makes the orphaned harness operational and enables CI gating.
 
-**D. Add a Makefile target + CI job — edit `graycode-router/Makefile` and
-`graycode-router/.github/workflows/ci.yml`**
+**D. Add a Makefile target + CI job — edit `eyrie/Makefile` and
+`eyrie/.github/workflows/ci.yml`**
 
 - Makefile: `verify` target that runs the harness in cassette mode (no tokens)
   and `verify-live` for manual live runs.
@@ -83,27 +83,27 @@ This makes the orphaned harness operational and enables CI gating.
   on PRs, ensuring the harness is exercised and providers don't regress.
 
 ### Files
-- `graycode-router/verify/schema.go` (new)
-- `graycode-router/verify/schema_test.go` (new)
-- `graycode-router/verify/verify.go` (add MatchRate)
-- `graycode-router/verify/verify_test.go` (add tests)
-- `graycode-router/cmd/verify/main.go` (new)
-- `graycode-router/Makefile` (verify target)
-- `graycode-router/.github/workflows/ci.yml` (verify job)
+- `eyrie/verify/schema.go` (new)
+- `eyrie/verify/schema_test.go` (new)
+- `eyrie/verify/verify.go` (add MatchRate)
+- `eyrie/verify/verify_test.go` (add tests)
+- `eyrie/cmd/verify/main.go` (new)
+- `eyrie/Makefile` (verify target)
+- `eyrie/.github/workflows/ci.yml` (verify job)
 
 ## 2. Curate MiniMax/skills content into starling
 
-### Verified current state (graycode)
-- graycode's skills system (`internal/plugin`) reads markdown+YAML-frontmatter skills
-  from dirs (`~/.graycode/skills`, `.claude/skills`, `.zero/skills`, `skills`) with a
-  registry (`starling` repo, `graycode skills search/install/list/remove`).
+### Verified current state (hawk)
+- hawk's skills system (`internal/plugin`) reads markdown+YAML-frontmatter skills
+  from dirs (`~/.hawk/skills`, `.claude/skills`, `.zero/skills`, `skills`) with a
+  registry (`starling` repo, `hawk skills search/install/list/remove`).
 - MiniMax/skills (13.4k★) has 18 high-quality skills in the same format
   (frontmatter `name`/`description`/`license`/`metadata`), especially
   `frontend-dev`, `fullstack-dev`, `shader-dev`, mobile guides, `vision-analysis`.
 
 ### What to implement
 - Port the best MiniMax skills into `GrayCodeAI/starling` (separate
-  repo), adapting frontmatter to graycode's convention (`globs`, `alwaysApply`).
+  repo), adapting frontmatter to hawk's convention (`globs`, `alwaysApply`).
 - This is a content curation task in a separate repo; tracked here for
   completeness but implemented as a follow-up PR in `starling`.
 
@@ -113,10 +113,10 @@ This makes the orphaned harness operational and enables CI gating.
 
 ## 3. MCP v2 no-network test pattern + image-source normalization
 
-### Verified current state (graycode)
+### Verified current state (hawk)
 - `internal/mcp` implements its own JSON-RPC client + server and does NOT use the
   shared `falcon` scaffolding (architectural divergence).
-- graycode has `internal/attachment/image.go` for image decode, and `ScreenshotTool`
+- hawk has `internal/attachment/image.go` for image decode, and `ScreenshotTool`
   / `BrowserTool`. No image-source (URL/file/data-URL) normalization helper.
 - MiniMax-Coding-Plan-MCP shows: MCP v2 tool registration + no-network test
   harness (in-process `Client` + stdio `ClientSession` asserting exact payloads)
@@ -135,8 +135,8 @@ This makes the orphaned harness operational and enables CI gating.
 
 ## 4. Jina page→Markdown browse extractor
 
-### Verified current state (graycode)
-- graycode has `WebSearchTool` (6-provider cascade: Brave/SearXNG/DeepSeek/Exa/
+### Verified current state (hawk)
+- hawk has `WebSearchTool` (6-provider cascade: Brave/SearXNG/DeepSeek/Exa/
   Perplexity/DDG), `AgenticFetchTool`, `WebFetchTool`, `DownloadTool`,
   `engine/search/url_scraper.go`.
 - No lightweight "URL → Markdown" extractor (Jina Reader pattern).
@@ -155,14 +155,14 @@ This makes the orphaned harness operational and enables CI gating.
 
 ## 5. Agent-loop robustness patterns (reference)
 
-### Verified current state (graycode)
-- graycode's `Session.agentLoop` (`internal/engine/stream.go:133`) is a complete
+### Verified current state (hawk)
+- hawk's `Session.agentLoop` (`internal/engine/stream.go:133`) is a complete
   think→act→observe loop with memory, 70+ tools, sub-agents, multi-agent.
 - No cooperative-cancellation-with-history-cleanup, and long-session compaction
   uses truncation rather than "summarize between user turns".
 
 ### What to implement (small, low-risk)
-- Add `_cleanup_incomplete_messages` equivalent to graycode's loop: on cancellation
+- Add `_cleanup_incomplete_messages` equivalent to hawk's loop: on cancellation
   at a safe checkpoint, trim the partial assistant message + orphaned tool
   results so message history stays valid.
 - Add a token-limit-driven lossy summarization option (keep user intents,
@@ -175,27 +175,27 @@ This makes the orphaned harness operational and enables CI gating.
 
 ## Out of scope (not adopted)
 - MiniMax-MCP / MiniMax-MCP-JS: media generation (TTS/image/video) — no
-  relevance to code intelligence; graycode has no TTS and that is a product decision.
-- minimax_search's search layer: redundant (graycode has more providers).
-- Mini-Agent's core loop: outclassed by graycode.
+  relevance to code intelligence; hawk has no TTS and that is a product decision.
+- minimax_search's search layer: redundant (hawk has more providers).
+- Mini-Agent's core loop: outclassed by hawk.
 - The `verify` harness's live-token path: optional, off by default.
 
 ## Execution order
-1. GraycodeRouter verify metrics + schema validation + tests (highest value)
-2. GraycodeRouter verify CLI + Makefile + CI wiring
-3. graycode image-source normalization helper + tests
-4. graycode Jina browse extractor + tests
+1. Eyrie verify metrics + schema validation + tests (highest value)
+2. Eyrie verify CLI + Makefile + CI wiring
+3. hawk image-source normalization helper + tests
+4. hawk Jina browse extractor + tests
 5. Agent-loop cancellation/summarization patterns
 6. starling content curation (follow-up PR in separate repo)
 
 ## Implementation status
 
-- [x] GraycodeRouter schema-accuracy validation and tool-call match-rate metrics.
-- [x] GraycodeRouter verification CLI, deterministic Makefile target, and CI job.
-- [x] Graycode image-source normalization for data URIs, URLs, local files, and raw base64.
-- [x] Graycode Jina Reader page-to-Markdown client with opt-in configuration and tests.
-- [x] Graycode cancellation cleanup for incomplete assistant tool-use/tool-result turns.
-- [x] Confirmed graycode's existing `internal/engine/compact` already provides token-triggered
+- [x] Eyrie schema-accuracy validation and tool-call match-rate metrics.
+- [x] Eyrie verification CLI, deterministic Makefile target, and CI job.
+- [x] Hawk image-source normalization for data URIs, URLs, local files, and raw base64.
+- [x] Hawk Jina Reader page-to-Markdown client with opt-in configuration and tests.
+- [x] Hawk cancellation cleanup for incomplete assistant tool-use/tool-result turns.
+- [x] Confirmed hawk's existing `internal/engine/compact` already provides token-triggered
   compaction; no duplicate summarizer was added.
-- [ ] Publish the GraycodeRouter repository changes through its own feature branch and PR.
+- [ ] Publish the Eyrie repository changes through its own feature branch and PR.
 - [ ] Curate MiniMax skills into `starling` through its own feature branch and PR.

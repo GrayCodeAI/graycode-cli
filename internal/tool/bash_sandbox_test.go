@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
 )
 
 // TestBashTool_SandboxFailClosed verifies that when a sandbox mode is set in

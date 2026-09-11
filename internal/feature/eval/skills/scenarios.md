@@ -1,4 +1,4 @@
-# Graycode Skills Eval Scenarios
+# Hawk Skills Eval Scenarios
 
 ## Scenario 1 — Go review activation
 
@@ -20,7 +20,7 @@
 
 ## Scenario 3 — Namespaced invocation
 
-**User:** `/graycode:changelog`
+**User:** `/hawk:changelog`
 **Expected:** Skill activates immediately, reads git log, produces grouped changelog
 **Score:** Pass=correct format+grouping | Partial=wrong grouping | Fail=no activation
 

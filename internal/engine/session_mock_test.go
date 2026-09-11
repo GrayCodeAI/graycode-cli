@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestSession_PersistenceLazyInitIsSynchronized(t *testing.T) {
@@ -116,7 +116,7 @@ func TestSession_LoadMessages(t *testing.T) {
 	mc := newMockClient()
 	s := newMockSession(mc)
 
-	msgs := []types.GraycodeRouterMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "msg1"},
 		{Role: "assistant", Content: "msg2"},
 		{Role: "user", Content: "msg3"},

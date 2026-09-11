@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
-	"github.com/GrayCodeAI/graycode-cli/internal/testutil"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/hawk/internal/testutil"
 )
 
 func TestLoadAgentsMD(t *testing.T) {
@@ -169,8 +169,8 @@ func TestLoadSettingsUsesUserConfigOnly(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	configDir := filepath.Join(home, "config")
-	t.Setenv("GRAYCODE_CONFIG_DIR", configDir)
-	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", filepath.Join(home, "graycode-router"))
+	t.Setenv("HAWK_CONFIG_DIR", configDir)
+	t.Setenv("EYRIE_CONFIG_DIR", filepath.Join(home, "eyrie"))
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -180,10 +180,10 @@ func TestLoadSettingsUsesUserConfigOnly(t *testing.T) {
 
 	settings := LoadSettings()
 	if got := ActiveModel(context.TODO()); got != "openai/gpt-4o" {
-		t.Fatalf("expected global model in graycode-router, got %q (settings.model=%q)", got, settings.Model)
+		t.Fatalf("expected global model in eyrie, got %q (settings.model=%q)", got, settings.Model)
 	}
 	if settings.Model != "" {
-		t.Fatalf("model must not remain in graycode settings.json, got %q", settings.Model)
+		t.Fatalf("model must not remain in hawk settings.json, got %q", settings.Model)
 	}
 	if len(settings.AllowedTools) != 1 || settings.AllowedTools[0] != "Read" {
 		t.Fatalf("expected global allowedTools, got %v", settings.AllowedTools)
@@ -207,7 +207,7 @@ func TestSetGlobalSettingAndSettingValue(t *testing.T) {
 	if err := SetGlobalSetting("maxBudgetUSD", "2.5"); err != nil {
 		t.Fatal(err)
 	}
-	// Graycode: API keys rejected from settings file
+	// Hawk: API keys rejected from settings file
 	if err := SetGlobalSetting("apiKey.openai", "sk-test"); err == nil {
 		t.Fatal("expected error setting api key in settings")
 	}
@@ -242,8 +242,8 @@ func TestLoadSettingsPreservesRejectedLegacySelection(t *testing.T) {
 	home := t.TempDir()
 	configDir := filepath.Join(home, "config")
 	t.Setenv("HOME", home)
-	t.Setenv("GRAYCODE_CONFIG_DIR", configDir)
-	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", filepath.Join(home, "graycode-router"))
+	t.Setenv("HAWK_CONFIG_DIR", configDir)
+	t.Setenv("EYRIE_CONFIG_DIR", filepath.Join(home, "eyrie"))
 	if err := os.MkdirAll(configDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +264,7 @@ func TestLoadSettingsPreservesRejectedLegacySelection(t *testing.T) {
 		t.Fatalf("rejected legacy selection was removed from disk: %s", data)
 	}
 	if got := ActiveModel(context.Background()); got != "" {
-		t.Fatalf("rejected legacy model reached GraycodeRouter state: %q", got)
+		t.Fatalf("rejected legacy model reached Eyrie state: %q", got)
 	}
 }
 

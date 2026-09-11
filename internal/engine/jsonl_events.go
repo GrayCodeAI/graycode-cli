@@ -1,7 +1,7 @@
 // Package engine — headless JSONL event output for CI.
 //
 // The daemon already streams SSE events over its HTTP API. This file exposes
-// the same shaped event on stdout as newline-delimited JSON so that `graycode
+// the same shaped event on stdout as newline-delimited JSON so that `hawk
 // print`/`-p` (and any future `--output-format jsonl` invocation) can feed
 // machine-readable transcript lines into CI pipelines, mirroring
 // `codex exec --json` / `claude -p --output-format json`.

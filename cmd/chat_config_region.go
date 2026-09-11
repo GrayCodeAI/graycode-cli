@@ -7,7 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func gatewayRegionOptionIndex(providerID, region string) int {
@@ -15,7 +15,7 @@ func gatewayRegionOptionIndex(providerID, region string) int {
 	if region == "" {
 		return 0
 	}
-	opts := graycodeconfig.GatewayRegionOptions(providerID)
+	opts := hawkconfig.GatewayRegionOptions(providerID)
 	for i, r := range opts {
 		if strings.EqualFold(r.Value, region) {
 			return i
@@ -32,23 +32,23 @@ func (m chatModel) closeConfigEntry() chatModel {
 
 func (m chatModel) startConfigGatewayRegion(providerID string) chatModel {
 	switch providerID {
-	case graycodeconfig.ProviderXiaomiTokenPlan:
+	case hawkconfig.ProviderXiaomiTokenPlan:
 		m.configEntry = configEntryXiaomiRegion
-	case graycodeconfig.ProviderZAICoding, graycodeconfig.ProviderZAIPayg:
+	case hawkconfig.ProviderZAICoding, hawkconfig.ProviderZAIPayg:
 		m.configEntry = configEntryZAIRegion
 	default:
 		m.configEntry = configEntryGatewayRegion
 	}
 	m.configProvider = providerID
 	idx := 0
-	if !graycodeconfig.NeedsGatewayRegion(providerID) {
-		idx = gatewayRegionOptionIndex(providerID, graycodeconfig.GatewayRegionLabel(providerID))
+	if !hawkconfig.NeedsGatewayRegion(providerID) {
+		idx = gatewayRegionOptionIndex(providerID, hawkconfig.GatewayRegionLabel(providerID))
 	}
 	m.configGatewayRegionSel = idx
 	m.configZAIRegionSel = idx
-	name := graycodeconfig.GatewayDisplayName(providerID)
+	name := hawkconfig.GatewayDisplayName(providerID)
 	notice := fmt.Sprintf("Select %s region (↑↓ · enter · esc cancel)", name)
-	if saved := graycodeconfig.GatewayRegionLabel(providerID); saved != "" {
+	if saved := hawkconfig.GatewayRegionLabel(providerID); saved != "" {
 		notice = fmt.Sprintf("%s region · current %s (↑↓ · enter · esc cancel)", name, saved)
 	}
 	m.configNotice = notice
@@ -61,9 +61,9 @@ func (m chatModel) configGatewayRegionView() string {
 	rowStyle := configRowStyle()
 	var b strings.Builder
 	prov := m.configProvider
-	name := graycodeconfig.GatewayDisplayName(prov)
+	name := hawkconfig.GatewayDisplayName(prov)
 	b.WriteString(renderConfigBreadcrumb(name+" region") + "\n\n")
-	opts := graycodeconfig.GatewayRegionOptions(prov)
+	opts := hawkconfig.GatewayRegionOptions(prov)
 	for i, r := range opts {
 		prefix := "  "
 		if i == m.configGatewayRegionSel {
@@ -84,7 +84,7 @@ func (m chatModel) configGatewayRegionView() string {
 }
 
 func (m chatModel) handleConfigGatewayRegionKey(msg tea.KeyMsg) (chatModel, tea.Cmd) {
-	opts := graycodeconfig.GatewayRegionOptions(m.configProvider)
+	opts := hawkconfig.GatewayRegionOptions(m.configProvider)
 	count := len(opts)
 	if count == 0 {
 		return m.closeConfigEntry(), nil
@@ -105,7 +105,7 @@ func (m chatModel) handleConfigGatewayRegionKey(msg tea.KeyMsg) (chatModel, tea.
 	case "enter":
 		if m.configGatewayRegionSel >= 0 && m.configGatewayRegionSel < count {
 			chosen := opts[m.configGatewayRegionSel]
-			if err := graycodeconfig.SetGatewayRegion(m.configProvider, chosen.Value); err != nil {
+			if err := hawkconfig.SetGatewayRegion(m.configProvider, chosen.Value); err != nil {
 				m.configNotice = "Error saving region: " + err.Error()
 				return m, nil
 			}
@@ -116,8 +116,8 @@ func (m chatModel) handleConfigGatewayRegionKey(msg tea.KeyMsg) (chatModel, tea.
 				m.configPostSaveKeysProvider = ""
 				return m.startConfigKeyReplace(m.configProvider)
 			}
-			if graycodeconfig.HasStoredCredentialForProvider(ctx, m.configProvider) {
-				m.configNotice = "Saved region for " + graycodeconfig.GatewayDisplayName(m.configProvider)
+			if hawkconfig.HasStoredCredentialForProvider(ctx, m.configProvider) {
+				m.configNotice = "Saved region for " + hawkconfig.GatewayDisplayName(m.configProvider)
 				if idx := m.configGatewayRowIndex(m.configProvider); idx >= 0 {
 					m.configSel = idx
 				}

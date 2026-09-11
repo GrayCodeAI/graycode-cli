@@ -246,17 +246,17 @@ func TestStripDangerousChars(t *testing.T) {
 
 func TestDefaultSkillDirsCrossAgent(t *testing.T) {
 	dirs := DefaultSkillDirs()
-	foundGraycode := false
+	foundHawk := false
 	for _, d := range dirs {
 		if strings.Contains(d, "skills") {
-			foundGraycode = true
+			foundHawk = true
 			break
 		}
 	}
-	if !foundGraycode {
-		t.Error("expected graycode skills directory")
+	if !foundHawk {
+		t.Error("expected hawk skills directory")
 	}
 	if len(dirs) < 1 {
-		t.Errorf("expected at least 1 user-level Graycode skills dir, got %d", len(dirs))
+		t.Errorf("expected at least 1 user-level Hawk skills dir, got %d", len(dirs))
 	}
 }

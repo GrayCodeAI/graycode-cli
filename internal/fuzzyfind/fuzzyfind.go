@@ -41,7 +41,7 @@ func New(dir string) (*Finder, error) {
 
 var skipDirs = map[string]bool{
 	".git": true, "node_modules": true, "vendor": true,
-	".graycode": true, "__pycache__": true, "dist": true,
+	".hawk": true, "__pycache__": true, "dist": true,
 	"target": true, ".next": true, "build": true,
 }
 

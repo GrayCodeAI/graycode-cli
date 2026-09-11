@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // DecisionPoint captures a point in the conversation where the agent made a
 // choice that can potentially be rolled back if it leads to failure.
 type DecisionPoint struct {
 	TurnIndex    int
-	Description  string                        // what was decided
-	Alternatives []string                      // other options available
-	Outcome      string                        // "success", "failure", or "" (pending)
-	Messages     []types.GraycodeRouterMessage // conversation state at this point
+	Description  string               // what was decided
+	Alternatives []string             // other options available
+	Outcome      string               // "success", "failure", or "" (pending)
+	Messages     []types.EyrieMessage // conversation state at this point
 }
 
 // BacktrackEngine records decision points during agent execution and provides
@@ -36,9 +36,9 @@ func NewBacktrackEngine() *BacktrackEngine {
 // RecordDecision saves a decision point with the current conversation state.
 // If the number of recorded points exceeds the maximum, the oldest point is
 // removed.
-func (be *BacktrackEngine) RecordDecision(turnIdx int, desc string, alternatives []string, msgs []types.GraycodeRouterMessage) {
+func (be *BacktrackEngine) RecordDecision(turnIdx int, desc string, alternatives []string, msgs []types.EyrieMessage) {
 	// Copy messages to avoid mutation from caller
-	snapshot := make([]types.GraycodeRouterMessage, len(msgs))
+	snapshot := make([]types.EyrieMessage, len(msgs))
 	copy(snapshot, msgs)
 
 	// Copy alternatives
@@ -110,12 +110,12 @@ func (be *BacktrackEngine) GenerateRetryPrompt(dp *DecisionPoint) string {
 // RestoreState returns the conversation messages captured at the given decision
 // point, representing the state just before (not including) the failed
 // decision. This allows the agent to retry from that point.
-func (be *BacktrackEngine) RestoreState(dp *DecisionPoint) []types.GraycodeRouterMessage {
+func (be *BacktrackEngine) RestoreState(dp *DecisionPoint) []types.EyrieMessage {
 	if dp == nil {
 		return nil
 	}
 	// Return a copy to prevent mutation
-	restored := make([]types.GraycodeRouterMessage, len(dp.Messages))
+	restored := make([]types.EyrieMessage, len(dp.Messages))
 	copy(restored, dp.Messages)
 	return restored
 }

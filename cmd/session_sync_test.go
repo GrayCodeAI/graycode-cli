@@ -5,26 +5,26 @@ import (
 	"strings"
 	"testing"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 func TestSyncSessionFromPersistedSelection_FillsEmptySessionModel(t *testing.T) {
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
 	_ = store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
-	graycodeconfig.InvalidateConfigUICache()
-	_ = graycodeconfig.SetActiveProvider(ctx, "openrouter")
-	_ = graycodeconfig.SetActiveModel(ctx, "gpt-4o")
+	hawkconfig.InvalidateConfigUICache()
+	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
+	_ = hawkconfig.SetActiveModel(ctx, "gpt-4o")
 
 	sess := engine.NewSession("", "", "test", nil)
 	syncSessionFromPersistedSelection(sess)
@@ -38,20 +38,20 @@ func TestSyncSessionFromPersistedSelection_FillsEmptySessionModel(t *testing.T) 
 }
 
 func TestEnsureSessionReadyForChat_UsesPersistedModel(t *testing.T) {
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
 	_ = store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
-	graycodeconfig.InvalidateConfigUICache()
-	_ = graycodeconfig.SetActiveProvider(ctx, "openrouter")
-	_ = graycodeconfig.SetActiveModel(ctx, "gpt-4o")
+	hawkconfig.InvalidateConfigUICache()
+	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
+	_ = hawkconfig.SetActiveModel(ctx, "gpt-4o")
 
 	m := &chatModel{session: engine.NewSession("", "", "test", nil)}
 	if err := m.ensureSessionReadyForChat(); err != nil {
@@ -63,18 +63,18 @@ func TestEnsureSessionReadyForChat_UsesPersistedModel(t *testing.T) {
 }
 
 func TestEnsureSessionReadyForChat_NoModel(t *testing.T) {
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
-	graycodeconfig.InvalidateConfigUICache()
-	_ = graycodeconfig.ClearActiveSelection(ctx)
+	hawkconfig.InvalidateConfigUICache()
+	_ = hawkconfig.ClearActiveSelection(ctx)
 
 	m := &chatModel{session: engine.NewSession("", "", "test", nil)}
 	if err := m.ensureSessionReadyForChat(); err == nil {
@@ -83,20 +83,20 @@ func TestEnsureSessionReadyForChat_NoModel(t *testing.T) {
 }
 
 func TestEnsureSessionReadyForChat_AppliesDeferredSystemContextOnce(t *testing.T) {
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	isolateCredentialHome(t)
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
 	_ = store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890")
-	graycodeconfig.InvalidateConfigUICache()
-	_ = graycodeconfig.SetActiveProvider(ctx, "openrouter")
-	_ = graycodeconfig.SetActiveModel(ctx, "gpt-4o")
+	hawkconfig.InvalidateConfigUICache()
+	_ = hawkconfig.SetActiveProvider(ctx, "openrouter")
+	_ = hawkconfig.SetActiveModel(ctx, "gpt-4o")
 
 	m := &chatModel{
 		session:                    engine.NewSession("", "", "base", nil),

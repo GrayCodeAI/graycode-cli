@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/codegraph"
-	"github.com/GrayCodeAI/graycode-cli/internal/lsp"
+	"github.com/GrayCodeAI/hawk/internal/codegraph"
+	"github.com/GrayCodeAI/hawk/internal/lsp"
 )
 
 type LSPTool struct {

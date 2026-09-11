@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/harness"
+	"github.com/GrayCodeAI/hawk/internal/harness"
 	"github.com/spf13/cobra"
 )
 
@@ -84,7 +84,7 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 			if fixErr != nil {
 				return fmt.Errorf("harness auto-fix failed: %w", fixErr)
 			}
-			fmt.Printf("%s\n", auditTint("[FIX] Graycode Harness Auto-Repair Results:", warnAmber))
+			fmt.Printf("%s\n", auditTint("[FIX] Hawk Harness Auto-Repair Results:", warnAmber))
 			for _, repair := range fixResult.RepairsPerformed {
 				fmt.Printf("%s\n", auditTint("   + "+repair, doneGreen))
 			}
@@ -95,7 +95,7 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 
 		outDir := harnessOutDir
 		if outDir == "" {
-			outDir = filepath.Join(targetDir, ".graycode", "harness")
+			outDir = filepath.Join(targetDir, ".hawk", "harness")
 		}
 
 		if mkdirErr := os.MkdirAll(outDir, 0o750); mkdirErr != nil {
@@ -132,11 +132,11 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 			return fmt.Errorf("failed to write findings.json: %w", writeErr)
 		}
 
-		// Journal quality observation to Graycode execution graph
+		// Journal quality observation to Hawk execution graph
 		_ = harness.JournalHarnessReport(report, "")
 
 		finish()
-		fmt.Printf("%s\n", auditTint("[GRAYCODE] Graycode Harness Evaluation Complete", graycodeColor))
+		fmt.Printf("%s\n", auditTint("[HAWK] Hawk Harness Evaluation Complete", hawkColor))
 		fmt.Printf("   %s : %s (%s)\n",
 			auditTint("Overall Score", textPrimary),
 			auditTint(fmt.Sprintf("%d/100", report.OverallScore), textPrimary),
@@ -151,7 +151,7 @@ Use --fix to automatically repair missing AGENTS.md, skills, or spec directories
 }
 
 func init() {
-	harnessCmd.Flags().StringVar(&harnessOutDir, "out-dir", "", "Directory to save harness reports (default: .graycode/harness)")
+	harnessCmd.Flags().StringVar(&harnessOutDir, "out-dir", "", "Directory to save harness reports (default: .hawk/harness)")
 	harnessCmd.Flags().StringVar(&harnessFormat, "format", "all", "Report output format (html, markdown, json, all)")
 	harnessCmd.Flags().BoolVar(&harnessFix, "fix", false, "Automatically repair missing harness assets (AGENTS.md, skills, specs)")
 }

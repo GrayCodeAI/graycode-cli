@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/smartrouting"
+	"github.com/GrayCodeAI/hawk/internal/smartrouting"
 )
 
 func TestLifecycleServiceSmartRouting(t *testing.T) {

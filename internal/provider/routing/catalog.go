@@ -1,20 +1,20 @@
-// Package routing provides Graycode-owned task routing and health policy. Model
+// Package routing provides Hawk-owned task routing and health policy. Model
 // discovery, pricing, provider ownership, and catalog policy are delegated to
-// GraycodeRouter's engine facade through the gateway package (the single GraycodeRouter boundary).
+// Eyrie's engine facade through the gateway package (the single Eyrie boundary).
 package routing
 
 import (
 	"context"
 	"sort"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
-// ModelInfo is Graycode's product-facing view of GraycodeRouter model metadata (the gateway
-// layer owns the GraycodeRouter conversation that produces it).
+// ModelInfo is Hawk's product-facing view of Eyrie model metadata (the gateway
+// layer owns the Eyrie conversation that produces it).
 type ModelInfo = gateway.ModelInfo
 
-// Find looks up a model by id or alias through GraycodeRouter.
+// Find looks up a model by id or alias through Eyrie.
 func Find(name string) (ModelInfo, bool) {
 	return gateway.ModelInfoLookup(context.Background(), name)
 }

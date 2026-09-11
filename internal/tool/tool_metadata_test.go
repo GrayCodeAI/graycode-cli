@@ -118,17 +118,17 @@ func TestRegistry_WithTools(t *testing.T) {
 	}
 }
 
-func TestRegistry_GraycodeRouterTools_WithTools(t *testing.T) {
+func TestRegistry_EyrieTools_WithTools(t *testing.T) {
 	t.Parallel()
 	registry := NewRegistry(&BashTool{}, &FileReadTool{})
-	graycodeRouterTools := registry.GraycodeRouterTools()
+	eyrieTools := registry.EyrieTools()
 
-	if len(graycodeRouterTools) != 2 {
-		t.Errorf("GraycodeRouterTools() returned %d, want 2", len(graycodeRouterTools))
+	if len(eyrieTools) != 2 {
+		t.Errorf("EyrieTools() returned %d, want 2", len(eyrieTools))
 	}
-	for _, et := range graycodeRouterTools {
+	for _, et := range eyrieTools {
 		if et.Name == "" {
-			t.Error("GraycodeRouterTool.Name should not be empty")
+			t.Error("EyrieTool.Name should not be empty")
 		}
 	}
 }

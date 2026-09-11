@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // BackupFile creates a backup of a file before modification.

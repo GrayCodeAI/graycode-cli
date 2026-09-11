@@ -5,22 +5,22 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 func TestConfigGatewaysView_KeyHintsWithCredentials(t *testing.T) {
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 	if err := store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatalf("store.Set: %v", err)
 	}
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 
 	m := chatModel{configTab: configTabGateways}
 	view := m.configGatewaysView()
@@ -30,17 +30,17 @@ func TestConfigGatewaysView_KeyHintsWithCredentials(t *testing.T) {
 }
 
 func TestConfigGatewaysKeyView_OpenWithK(t *testing.T) {
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 	if err := store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatalf("store.Set: %v", err)
 	}
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 
 	rows := chatModel{}.configGatewayRows()
 	sel := 0
@@ -61,17 +61,17 @@ func TestConfigGatewaysKeyView_OpenWithK(t *testing.T) {
 }
 
 func TestConfigGatewaysDelete_PendingRemove(t *testing.T) {
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 	if err := store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatalf("store.Set: %v", err)
 	}
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 
 	rows := chatModel{}.configGatewayRows()
 	sel := 0
@@ -92,17 +92,17 @@ func TestConfigGatewaysDelete_PendingRemove(t *testing.T) {
 }
 
 func TestConfigGatewaysDelete_DoubleConfirm(t *testing.T) {
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 	if err := store.Set(t.Context(), gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatalf("store.Set: %v", err)
 	}
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 
 	rows := chatModel{}.configGatewayRows()
 	sel := 0
@@ -131,12 +131,12 @@ func TestConfigGatewaysDelete_DoubleConfirm(t *testing.T) {
 }
 
 func TestOpenConfigRemoveKeyPanel_OpensGatewaysTab(t *testing.T) {
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 
 	m := chatModel{}

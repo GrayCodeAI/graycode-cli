@@ -1,9 +1,9 @@
 package compact
 
 import (
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/token"
+	"github.com/GrayCodeAI/hawk/internal/engine/token"
 )
 
 type APICompactConfig struct {
@@ -30,7 +30,7 @@ var mutatingTools = map[string]bool{
 	"NotebookEdit": true,
 }
 
-func APICompactMessages(msgs []types.GraycodeRouterMessage, cfg APICompactConfig) []types.GraycodeRouterMessage {
+func APICompactMessages(msgs []types.EyrieMessage, cfg APICompactConfig) []types.EyrieMessage {
 	totalTokens := token.EstimateTokens(msgs)
 	if totalTokens < cfg.TriggerTokens {
 		return msgs
@@ -41,7 +41,7 @@ func APICompactMessages(msgs []types.GraycodeRouterMessage, cfg APICompactConfig
 		return msgs
 	}
 
-	result := make([]types.GraycodeRouterMessage, len(msgs))
+	result := make([]types.EyrieMessage, len(msgs))
 	copy(result, msgs)
 
 	freed := 0
@@ -101,7 +101,7 @@ func APICompactMessages(msgs []types.GraycodeRouterMessage, cfg APICompactConfig
 	return result
 }
 
-func CountClearableToolResults(msgs []types.GraycodeRouterMessage) int {
+func CountClearableToolResults(msgs []types.EyrieMessage) int {
 	count := 0
 	for _, m := range msgs {
 		if len(m.ToolResults) > 0 && m.ToolResults[0].Content != "[Old tool result content cleared]" {
@@ -114,6 +114,6 @@ func CountClearableToolResults(msgs []types.GraycodeRouterMessage) int {
 	return count
 }
 
-func isThinkingMessage(m types.GraycodeRouterMessage) bool {
+func isThinkingMessage(m types.EyrieMessage) bool {
 	return len(m.Content) > 0 && m.Content[0] == '<' && len(m.ToolUse) == 0
 }

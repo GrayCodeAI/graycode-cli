@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/session"
 	"github.com/spf13/cobra"
 )
 
 // checkpointCmd groups named session-checkpoint operations: snapshot the current
 // (or latest) session under a label, list snapshots, restore one, or delete one.
 // This is additive on top of `--resume <id>`; named checkpoints let you save a
-// labeled point you can come back to with `graycode resume <name>`.
+// labeled point you can come back to with `hawk resume <name>`.
 var checkpointCmd = &cobra.Command{
 	Use:   "checkpoint",
 	Short: "Save and restore named session checkpoints",
 	Long: `checkpoint snapshots a session under a human-friendly label so you can
-return to it later with "graycode resume <name>".
+return to it later with "hawk resume <name>".
 
 Subcommands:
   save <name>      Snapshot the latest session in this directory under <name>
@@ -49,7 +49,7 @@ var checkpointSaveCmd = &cobra.Command{
 			return err
 		}
 		cmd.Printf("%s\n", auditTint("Saved checkpoint ", doneGreen)+auditTint(cp.Name, textPrimary)+auditTint(fmt.Sprintf(" (session %s, %d messages, %s/%s)", cp.Session.ID, len(cp.Session.Messages), cp.Session.Provider, cp.Session.Model), textMuted))
-		cmd.Printf("%s\n", auditTint("Resume with: graycode resume "+name, textMuted))
+		cmd.Printf("%s\n", auditTint("Resume with: hawk resume "+name, textMuted))
 		return nil
 	},
 }
@@ -121,12 +121,12 @@ var checkpointDeleteCmd = &cobra.Command{
 	},
 }
 
-// resumeCmd is a top-level convenience for `graycode resume <name>`: it restores a
+// resumeCmd is a top-level convenience for `hawk resume <name>`: it restores a
 // named checkpoint into a session file and tells the user how to continue it.
 var resumeCmd = &cobra.Command{
 	Use:   "resume <name>",
 	Short: "Restore a named session checkpoint and resume it",
-	Long: `resume restores a session previously saved with "graycode checkpoint save"
+	Long: `resume restores a session previously saved with "hawk checkpoint save"
 into a resumable session, then prints the command to continue the conversation.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -150,7 +150,7 @@ func restoreNamedCheckpoint(cmd *cobra.Command, name string) error {
 		return fmt.Errorf("restore session: %w", err)
 	}
 	cmd.Printf("%s\n", auditTint("Restored checkpoint ", doneGreen)+auditTint(cp.Name, textPrimary)+auditTint(fmt.Sprintf(" into session %s (%d messages, %s/%s)", cp.Session.ID, len(cp.Session.Messages), cp.Session.Provider, cp.Session.Model), textMuted))
-	cmd.Printf("%s\n", auditTint("Continue with: graycode --resume "+cp.Session.ID, textMuted))
+	cmd.Printf("%s\n", auditTint("Continue with: hawk --resume "+cp.Session.ID, textMuted))
 	return nil
 }
 

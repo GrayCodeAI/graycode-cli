@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 // investigateSubcommand implements the /investigate slash command.

@@ -3,7 +3,7 @@ package cmd
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 func TestValidateRootFlagsRejectsInvalidSandbox(t *testing.T) {

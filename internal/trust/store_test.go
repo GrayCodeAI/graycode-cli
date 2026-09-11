@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/flags"
+	"github.com/GrayCodeAI/hawk/internal/flags"
 )
 
 func TestTrustRoundTrip(t *testing.T) {
@@ -69,10 +69,10 @@ func TestAllowProjectAutomationFlag(t *testing.T) {
 
 func TestRequiresFolderTrustMarkers(t *testing.T) {
 	dir := t.TempDir()
-	plugins := filepath.Join(dir, ".graycode", "plugins")
+	plugins := filepath.Join(dir, ".hawk", "plugins")
 	_ = os.MkdirAll(plugins, 0o755)
 	if !RequiresFolderTrust(plugins) {
-		t.Fatal("project .graycode/plugins should require trust")
+		t.Fatal("project .hawk/plugins should require trust")
 	}
 	generic := filepath.Join(dir, "plugins")
 	_ = os.MkdirAll(generic, 0o755)
@@ -87,7 +87,7 @@ func TestAllowLoadPathProjectPlugins(t *testing.T) {
 	flags.SetForTest(flags.EnvFolderTrust, true)
 
 	dir := t.TempDir()
-	plugins := filepath.Join(dir, ".graycode", "plugins")
+	plugins := filepath.Join(dir, ".hawk", "plugins")
 	_ = os.MkdirAll(plugins, 0o755)
 	// Default store is empty → deny
 	if err := AllowLoadPath(plugins); err == nil {

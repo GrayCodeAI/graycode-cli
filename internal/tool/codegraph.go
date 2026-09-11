@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/codegraph"
+	"github.com/GrayCodeAI/hawk/internal/codegraph"
 )
 
 // CodeGraphTool provides tree-sitter based code intelligence.

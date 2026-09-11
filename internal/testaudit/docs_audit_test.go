@@ -14,15 +14,15 @@ func TestArchitectureDocsDoNotContainStaleContractsLanguage(t *testing.T) {
 		"README.md",
 		"AGENTS.md",
 		"docs/architecture/README.md",
-		"docs/architecture/graycode-product-architecture.md",
-		"docs/architecture/graycode-contract-spec.md",
-		"docs/plans/graycode-contracts-migration-backlog.md",
+		"docs/architecture/hawk-product-architecture.md",
+		"docs/architecture/hawk-contract-spec.md",
+		"docs/plans/hawk-contracts-migration-backlog.md",
 	}
 
 	forbiddenPhrases := []string{
 		"eagle` (to add)",
 		"planned shared contracts layer",
-		"runtime still uses `graycode-router/client` provider interfaces and config types",
+		"runtime still uses `eyrie/client` provider interfaces and config types",
 	}
 
 	for _, rel := range files {
@@ -48,11 +48,11 @@ func TestArchitectureDocsMentionCurrentReviewVerifyContracts(t *testing.T) {
 			"contracts/review",
 			"contracts/verify",
 		},
-		"docs/architecture/graycode-product-architecture.md": {
+		"docs/architecture/hawk-product-architecture.md": {
 			"contracts/review",
 			"contracts/verify",
 		},
-		"docs/architecture/graycode-contract-spec.md": {
+		"docs/architecture/hawk-contract-spec.md": {
 			"contracts/review",
 			"contracts/verify",
 		},

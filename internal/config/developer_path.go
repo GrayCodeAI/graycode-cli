@@ -8,15 +8,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/home"
-	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
-	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
-	"github.com/GrayCodeAI/graycode-cli/internal/theme"
-	"github.com/GrayCodeAI/graycode-cli/internal/token"
-	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/home"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/theme"
+	"github.com/GrayCodeAI/hawk/internal/token"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // PathCheckStatus is pass, warn, or fail for one readiness row.
@@ -64,7 +64,7 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 		checks = append(checks, PathCheck{
 			Section: "Setup", Name: "credentials", Status: PathFail,
 			Detail:   "No provider credentials configured",
-			FixHint:  "Run graycode and /config to paste an API key (or configure Ollama)",
+			FixHint:  "Run hawk and /config to paste an API key (or configure Ollama)",
 			Blocking: true,
 		})
 	}
@@ -95,13 +95,13 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 		checks = append(checks, PathCheck{
 			Section: "Setup", Name: "catalog", Status: PathWarn,
 			Detail:  "Catalog file present but empty",
-			FixHint: "Run graycode models refresh after adding credentials",
+			FixHint: "Run hawk models refresh after adding credentials",
 		})
 	default:
 		checks = append(checks, PathCheck{
 			Section: "Setup", Name: "catalog", Status: PathWarn,
 			Detail:  CatalogEmptyHint(ctx),
-			FixHint: "Add credentials then run graycode models refresh",
+			FixHint: "Add credentials then run hawk models refresh",
 		})
 	}
 
@@ -125,7 +125,7 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 		checks = append(checks, PathCheck{
 			Section: "Security", Name: "provider.json", Status: PathFail,
 			Detail:   detail,
-			FixHint:  "Run graycode start once (MigrateProviderSecrets) or remove secret fields manually",
+			FixHint:  "Run hawk start once (MigrateProviderSecrets) or remove secret fields manually",
 			Blocking: true,
 		})
 	} else {
@@ -140,20 +140,20 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 		checks = append(checks, PathCheck{
 			Section: "Security", Name: "plaintext env", Status: PathWarn,
 			Detail:  "Plaintext credential files: " + strings.Join(paths, ", "),
-			FixHint: "Run graycode credentials migrate",
+			FixHint: "Run hawk credentials migrate",
 		})
 	} else {
 		checks = append(checks, PathCheck{
 			Section: "Security", Name: "plaintext env", Status: PathPass,
-			Detail:   "No ~/.graycode/env or ~/.graycode/.env files",
+			Detail:   "No ~/.hawk/env or ~/.hawk/.env files",
 			Blocking: true,
 		})
 	}
 
-	graycodeDir := home.MustDir()
+	hawkDir := home.MustDir()
 	provPath := ProviderStateSecurityStatus().Path
 	if provPath == "" {
-		provPath = filepath.Join(graycodeDir, ".graycode", "provider.json")
+		provPath = filepath.Join(hawkDir, ".hawk", "provider.json")
 	}
 	if reason := tool.IsSensitivePath(provPath); reason != "" {
 		checks = append(checks, PathCheck{
@@ -194,7 +194,7 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 	pre := EnginePreflightReport(ctx)
 	if pre.Ready {
 		checks = append(checks, PathCheck{
-			Section: "Ecosystem", Name: "graycode-router", Status: PathPass,
+			Section: "Ecosystem", Name: "eyrie", Status: PathPass,
 			Detail:   "Preflight ready to chat",
 			Blocking: true,
 		})
@@ -207,8 +207,8 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 			}
 		}
 		checks = append(checks, PathCheck{
-			Section: "Ecosystem", Name: "graycode-router", Status: status,
-			Detail:   "Preflight not ready — see graycode preflight",
+			Section: "Ecosystem", Name: "eyrie", Status: status,
+			Detail:   "Preflight not ready — see hawk preflight",
 			FixHint:  "Complete /config (credentials + model)",
 			Blocking: true,
 		})
@@ -229,7 +229,7 @@ func EvaluateDeveloperPath(ctx context.Context) DeveloperPathReport {
 		})
 	}
 
-	sample := token.CountTokensFast("graycode developer path readiness")
+	sample := token.CountTokensFast("hawk developer path readiness")
 	checks = append(checks, PathCheck{
 		Section: "Ecosystem", Name: "shrike", Status: PathPass,
 		Detail: fmt.Sprintf("Embedded token/compress pipeline OK (sample=%d tokens)", sample),
@@ -254,10 +254,10 @@ func anyBlockingFail(checks []PathCheck, section string) bool {
 
 func developerPathNextStep(r DeveloperPathReport, setup SetupState) string {
 	if r.Ready {
-		return "Ready — run graycode and start chatting"
+		return "Ready — run hawk and start chatting"
 	}
 	if !setup.HasCredentials {
-		return "Run graycode → /config → paste API key (or Ollama local)"
+		return "Run hawk → /config → paste API key (or Ollama local)"
 	}
 	if !setup.HasModel {
 		return "Run /config → pick a model from the catalog"
@@ -265,7 +265,7 @@ func developerPathNextStep(r DeveloperPathReport, setup SetupState) string {
 	if !r.SecureReady {
 		return "Fix security items above (provider.json secrets, read guard)"
 	}
-	return "Run graycode preflight for details, then /config if needed"
+	return "Run hawk preflight for details, then /config if needed"
 }
 
 // pathStatusColor maps a readiness status to a semantic report color.
@@ -286,7 +286,7 @@ func pathStatusColor(s PathCheckStatus) color.Color {
 func FormatDeveloperPathReport(ctx context.Context) string {
 	r := EvaluateDeveloperPath(ctx)
 	var b strings.Builder
-	b.WriteString(theme.Tint("Developer path (graycode · graycode-router · shrike · harrier)", theme.ReportInfo) + "\n\n")
+	b.WriteString(theme.Tint("Developer path (hawk · eyrie · shrike · harrier)", theme.ReportInfo) + "\n\n")
 
 	status := "NEEDS SETUP"
 	statusColor := theme.ReportWarn
@@ -322,7 +322,7 @@ func FormatDeveloperPathReport(ctx context.Context) string {
 	}
 
 	b.WriteString(theme.Tint("Next:", theme.ReportMuted) + " " + r.NextStep + "\n")
-	b.WriteString("\n" + theme.Tint("Docs: docs/DEVELOPER-PATH.md · docs/SECURITY-DEVELOPER.md · graycode doctor · graycode preflight", theme.ReportMuted) + "\n")
+	b.WriteString("\n" + theme.Tint("Docs: docs/DEVELOPER-PATH.md · docs/SECURITY-DEVELOPER.md · hawk doctor · hawk preflight", theme.ReportMuted) + "\n")
 	return strings.TrimRight(b.String(), "\n")
 }
 
@@ -348,12 +348,12 @@ func providerJSONHasSecretsOnDisk() (bool, string) {
 }
 
 func plaintextCredentialFilesPresent() (bool, []string) {
-	graycodeDir := filepath.Join(home.MustDir(), ".graycode")
+	hawkDir := filepath.Join(home.MustDir(), ".hawk")
 	var paths []string
 	for _, name := range []string{"env", ".env"} {
-		p := filepath.Join(graycodeDir, name)
+		p := filepath.Join(hawkDir, name)
 		if _, err := os.Stat(p); err == nil {
-			paths = append(paths, "~/.graycode/"+name)
+			paths = append(paths, "~/.hawk/"+name)
 		}
 	}
 	return len(paths) > 0, paths

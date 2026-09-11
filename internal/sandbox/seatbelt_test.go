@@ -108,9 +108,9 @@ func TestGenerateSeatbeltProfile_Sysctl(t *testing.T) {
 	}
 }
 
-func TestDefaultGraycodePolicy_IncludesWorkDir(t *testing.T) {
+func TestDefaultHawkPolicy_IncludesWorkDir(t *testing.T) {
 	workDir := "/Users/dev/myproject"
-	policy := DefaultGraycodePolicy(workDir, TierOff)
+	policy := DefaultHawkPolicy(workDir, TierOff)
 
 	found := false
 	for _, p := range policy.ReadablePaths {
@@ -120,7 +120,7 @@ func TestDefaultGraycodePolicy_IncludesWorkDir(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Error("DefaultGraycodePolicy should include workDir in ReadablePaths")
+		t.Error("DefaultHawkPolicy should include workDir in ReadablePaths")
 	}
 
 	found = false
@@ -131,27 +131,27 @@ func TestDefaultGraycodePolicy_IncludesWorkDir(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Error("DefaultGraycodePolicy should include workDir in WritablePaths")
+		t.Error("DefaultHawkPolicy should include workDir in WritablePaths")
 	}
 }
 
-func TestDefaultGraycodePolicy_NetworkAllowed(t *testing.T) {
-	policy := DefaultGraycodePolicy("/tmp/work", TierOff)
+func TestDefaultHawkPolicy_NetworkAllowed(t *testing.T) {
+	policy := DefaultHawkPolicy("/tmp/work", TierOff)
 	if !policy.AllowNetwork {
-		t.Error("DefaultGraycodePolicy should allow network by default")
+		t.Error("DefaultHawkPolicy should allow network by default")
 	}
 }
 
-func TestDefaultGraycodePolicy_ProcessAllowed(t *testing.T) {
-	policy := DefaultGraycodePolicy("/tmp/work", TierOff)
+func TestDefaultHawkPolicy_ProcessAllowed(t *testing.T) {
+	policy := DefaultHawkPolicy("/tmp/work", TierOff)
 	if !policy.AllowProcess {
-		t.Error("DefaultGraycodePolicy should allow process execution by default")
+		t.Error("DefaultHawkPolicy should allow process execution by default")
 	}
 }
 
-func TestDefaultGraycodePolicy_ProfileProducesValidSBPL(t *testing.T) {
+func TestDefaultHawkPolicy_ProfileProducesValidSBPL(t *testing.T) {
 	workDir := "/tmp/testproject"
-	policy := DefaultGraycodePolicy(workDir, TierOff)
+	policy := DefaultHawkPolicy(workDir, TierOff)
 	profile := GenerateSeatbeltProfile(policy)
 
 	// Check SBPL structure requirements

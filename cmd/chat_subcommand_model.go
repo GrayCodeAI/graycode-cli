@@ -6,7 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 // modelSubcommand implements the /model slash command. It shows the
@@ -60,15 +60,15 @@ func (mo *modelSubcommand) Handle(m *chatModel, args []string, text string) (tea
 			return m, nil
 		}
 	}
-	if graycodeconfig.DeploymentRoutingEnabled(m.settings) {
-		arg = graycodeconfig.ResolveCanonicalModel(arg)
+	if hawkconfig.DeploymentRoutingEnabled(m.settings) {
+		arg = hawkconfig.ResolveCanonicalModel(arg)
 	}
 	prevModel := m.session.Model()
 	if strings.EqualFold(strings.TrimSpace(prevModel), strings.TrimSpace(arg)) {
 		m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf("Already using %s — no change.", prevModel)})
 		return m, nil
 	}
-	if err := graycodeconfig.SetGlobalSetting("model", arg); err != nil {
+	if err := hawkconfig.SetGlobalSetting("model", arg); err != nil {
 		m.messages = append(m.messages, displayMsg{role: "error", content: err.Error()})
 		return m, nil
 	}
@@ -81,15 +81,15 @@ func (mo *modelSubcommand) Handle(m *chatModel, args []string, text string) (tea
 		if m.session != nil {
 			provider = m.session.Provider()
 		}
-		m.session.SetThinkingEnabled(graycodeconfig.ResolveThinkingForModel(graycodeconfig.LoadSettings(), arg, provider))
+		m.session.SetThinkingEnabled(hawkconfig.ResolveThinkingForModel(hawkconfig.LoadSettings(), arg, provider))
 	}
-	thinkLabel := graycodeconfig.FormatModelThinkingLabel(
-		selected != nil && graycodeconfig.ModelCapabilitySupportsThinking(selected.Capabilities),
-		graycodeconfig.ThinkingPrefForModel(graycodeconfig.LoadSettings(), arg),
+	thinkLabel := hawkconfig.FormatModelThinkingLabel(
+		selected != nil && hawkconfig.ModelCapabilitySupportsThinking(selected.Capabilities),
+		hawkconfig.ThinkingPrefForModel(hawkconfig.LoadSettings(), arg),
 		m.session.Provider(),
 	)
 	m.messages = append(m.messages, displayMsg{role: "system", content: fmt.Sprintf(
-		"Model switched: %s → %s (Think: %s)\nConversation history preserved (%d messages); new requests use the new model.\nSaved in graycode-router (provider.json). Use /model and press t to toggle Think.",
+		"Model switched: %s → %s (Think: %s)\nConversation history preserved (%d messages); new requests use the new model.\nSaved in eyrie (provider.json). Use /model and press t to toggle Think.",
 		prevModel, m.session.Model(), thinkLabel, msgCount,
 	)})
 	return m, nil

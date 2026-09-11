@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
-	graphcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/graph"
-	policycontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/policy"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/token"
-	"github.com/GrayCodeAI/graycode-cli/internal/graphjournal"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
-	graycoderouterengine "github.com/GrayCodeAI/graycode-router/engine"
-	graycoderoutergraph "github.com/GrayCodeAI/graycode-router/graph"
+	eyrieengine "github.com/GrayCodeAI/eyrie/engine"
+	eyriegraph "github.com/GrayCodeAI/eyrie/graph"
+	graphcontracts "github.com/GrayCodeAI/hawk/internal/contracts/graph"
+	policycontracts "github.com/GrayCodeAI/hawk/internal/contracts/policy"
+	"github.com/GrayCodeAI/hawk/internal/engine/token"
+	"github.com/GrayCodeAI/hawk/internal/graphjournal"
+	"github.com/GrayCodeAI/hawk/internal/types"
 	shrikegraph "github.com/GrayCodeAI/shrike/graph"
 )
 
@@ -30,10 +30,10 @@ func (s *Session) recordPolicyObservation(tc types.ToolCall, stage string, allow
 	}
 	verdict := policycontracts.Allow(reason)
 	verdict.Rule = strings.TrimSpace(stage)
-	verdict.Source = "graycode." + strings.TrimSpace(stage)
+	verdict.Source = "hawk." + strings.TrimSpace(stage)
 	if !allowed {
 		verdict = policycontracts.Deny(reason, strings.TrimSpace(stage))
-		verdict.Source = "graycode." + strings.TrimSpace(stage)
+		verdict.Source = "hawk." + strings.TrimSpace(stage)
 	}
 	if err := graphjournal.AppendPolicy(sessionID, tc.ID, stage, verdict, time.Now()); err != nil {
 		s.Logger().Warn("graph observation append failed", map[string]interface{}{
@@ -120,7 +120,7 @@ func (s *Session) SessionID() string {
 }
 
 // ConfigureContextGraphObservation binds Harrier recall projections to this
-// persisted Graycode session. It is safe to call before either side is configured.
+// persisted Hawk session. It is safe to call before either side is configured.
 func (s *Session) ConfigureContextGraphObservation(repositoryDir string) {
 	if s == nil || s.MemorySvc() == nil || s.MemorySvc().Harrier() == nil {
 		return
@@ -291,10 +291,10 @@ func (s *Session) shrikeUsageCanProceed() (bool, string) {
 	return tracker.CanProceed()
 }
 
-func (s *Session) recordGraycodeRouterOperationObservation(
+func (s *Session) recordEyrieOperationObservation(
 	provider, model, finishReason, content string,
 	toolCallCount int,
-	usage *types.GraycodeRouterUsage,
+	usage *types.EyrieUsage,
 ) {
 	sessionID := s.executionGraphSessionID()
 	if sessionID == "" || usage == nil {
@@ -310,19 +310,19 @@ func (s *Session) recordGraycodeRouterOperationObservation(
 	}
 	observedAt := time.Now().UTC()
 	route := types.ResolvedRoute{Provider: provider, Model: model}
-	export, err := graycoderouterengine.BuildOperationsGraph(graycoderouterengine.OperationsGraphInput{
+	export, err := eyrieengine.BuildOperationsGraph(eyrieengine.OperationsGraphInput{
 		Route:         &route,
 		Usage:         usage,
 		FinishReason:  finishReason,
 		Content:       content,
 		ToolCallCount: toolCallCount,
 		ObservedAt:    observedAt,
-		Scope:         graycoderoutergraph.Scope{RepositoryID: repositoryID},
+		Scope:         eyriegraph.Scope{RepositoryID: repositoryID},
 		CorrelationID: sessionID,
 	})
 	if err == nil {
 		err = graphjournal.AppendRuntimeGraph(
-			sessionID, "", "model-generation", "graycode-router",
+			sessionID, "", "model-generation", "eyrie",
 			toContractNodes(export.Nodes), toContractEdges(export.Edges), toContractEvents(export.Events), observedAt,
 		)
 	}
@@ -334,11 +334,11 @@ func (s *Session) recordGraycodeRouterOperationObservation(
 	}
 }
 
-// The following helpers convert GraycodeRouter's vendored graph contract types into
-// Graycode's contracts/graph contract types. The definitions are byte-identical, so
+// The following helpers convert Eyrie's vendored graph contract types into
+// Hawk's contracts/graph contract types. The definitions are byte-identical, so
 // conversion is a field-by-field copy at the sibling boundary.
 
-func toContractNodes(nodes []graycoderoutergraph.Node) []graphcontracts.Node {
+func toContractNodes(nodes []eyriegraph.Node) []graphcontracts.Node {
 	out := make([]graphcontracts.Node, len(nodes))
 	for i, n := range nodes {
 		out[i] = toContractNode(n)
@@ -346,7 +346,7 @@ func toContractNodes(nodes []graycoderoutergraph.Node) []graphcontracts.Node {
 	return out
 }
 
-func toContractNode(n graycoderoutergraph.Node) graphcontracts.Node {
+func toContractNode(n eyriegraph.Node) graphcontracts.Node {
 	return graphcontracts.Node{
 		ID:          n.ID,
 		Kind:        graphcontracts.NodeKind(n.Kind),
@@ -358,7 +358,7 @@ func toContractNode(n graycoderoutergraph.Node) graphcontracts.Node {
 	}
 }
 
-func toContractEdges(edges []graycoderoutergraph.Edge) []graphcontracts.Edge {
+func toContractEdges(edges []eyriegraph.Edge) []graphcontracts.Edge {
 	out := make([]graphcontracts.Edge, len(edges))
 	for i, e := range edges {
 		out[i] = toContractEdge(e)
@@ -366,7 +366,7 @@ func toContractEdges(edges []graycoderoutergraph.Edge) []graphcontracts.Edge {
 	return out
 }
 
-func toContractEdge(e graycoderoutergraph.Edge) graphcontracts.Edge {
+func toContractEdge(e eyriegraph.Edge) graphcontracts.Edge {
 	return graphcontracts.Edge{
 		ID:          e.ID,
 		Kind:        graphcontracts.EdgeKind(e.Kind),
@@ -380,7 +380,7 @@ func toContractEdge(e graycoderoutergraph.Edge) graphcontracts.Edge {
 	}
 }
 
-func toContractEvents(events []graycoderoutergraph.Event) []graphcontracts.Event {
+func toContractEvents(events []eyriegraph.Event) []graphcontracts.Event {
 	out := make([]graphcontracts.Event, len(events))
 	for i, ev := range events {
 		out[i] = toContractEvent(ev)
@@ -388,7 +388,7 @@ func toContractEvents(events []graycoderoutergraph.Event) []graphcontracts.Event
 	return out
 }
 
-func toContractEvent(ev graycoderoutergraph.Event) graphcontracts.Event {
+func toContractEvent(ev eyriegraph.Event) graphcontracts.Event {
 	return graphcontracts.Event{
 		ID:             ev.ID,
 		Type:           graphcontracts.EventType(ev.Type),
@@ -402,15 +402,15 @@ func toContractEvent(ev graycoderoutergraph.Event) graphcontracts.Event {
 	}
 }
 
-func toContractRef(r graycoderoutergraph.Ref) graphcontracts.Ref {
+func toContractRef(r eyriegraph.Ref) graphcontracts.Ref {
 	return graphcontracts.Ref{Kind: graphcontracts.NodeKind(r.Kind), ID: r.ID}
 }
 
-func toContractScope(s graycoderoutergraph.Scope) graphcontracts.Scope {
+func toContractScope(s eyriegraph.Scope) graphcontracts.Scope {
 	return graphcontracts.Scope{TenantID: s.TenantID, ProjectID: s.ProjectID, RepositoryID: s.RepositoryID}
 }
 
-func toContractProvenance(p graycoderoutergraph.Provenance) graphcontracts.Provenance {
+func toContractProvenance(p eyriegraph.Provenance) graphcontracts.Provenance {
 	evidence := make([]graphcontracts.ArtifactRef, len(p.Evidence))
 	for i, a := range p.Evidence {
 		evidence[i] = graphcontracts.ArtifactRef{URI: a.URI, Digest: a.Digest, MediaType: a.MediaType}

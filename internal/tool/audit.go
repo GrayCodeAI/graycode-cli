@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // AuditEntry records a file modification event.

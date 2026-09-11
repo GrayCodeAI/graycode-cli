@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // ContextDecay manages context entries with time-based importance decay.

@@ -1,4 +1,4 @@
-// Package acp implements an Agent Client Protocol (ACP) server for graycode, exposing
+// Package acp implements an Agent Client Protocol (ACP) server for hawk, exposing
 // the agent over newline-delimited JSON-RPC 2.0 on stdio so editors (e.g. Zed)
 // can drive it. It mirrors the framing of internal/mcp and the session-driving
 // pattern of internal/daemon.
@@ -6,7 +6,7 @@
 // Scope (first cut): the core agent-side methods (initialize, session/new,
 // session/prompt, session/cancel), streamed session/update notifications, and
 // client-routed tool approvals via session/request_permission. File reads/writes
-// use graycode's local tools; client fs routing is intentionally out of scope.
+// use hawk's local tools; client fs routing is intentionally out of scope.
 package acp
 
 import (
@@ -20,10 +20,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/attachment"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
-	"github.com/GrayCodeAI/graycode-cli/internal/session"
-	statussnapshot "github.com/GrayCodeAI/graycode-cli/internal/status"
+	"github.com/GrayCodeAI/hawk/internal/attachment"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	statussnapshot "github.com/GrayCodeAI/hawk/internal/status"
 )
 
 // ProtocolVersion is the ACP protocol version this server implements.
@@ -186,8 +186,8 @@ func (s *Server) handle(ctx context.Context, msg rpcMessage) {
 					"audio": false,
 				},
 			},
-			// Graycode control-plane metadata for IDE clients that want it.
-			"graycodeCapabilities": map[string]any{
+			// Hawk control-plane metadata for IDE clients that want it.
+			"hawkCapabilities": map[string]any{
 				"workModes":       []string{"plan", "act", "review"},
 				"isolation":       []string{"dev", "workspace", "strict", "container"},
 				"folderTrust":     true,
@@ -357,8 +357,8 @@ func (s *Server) handleSessionNew(msg rpcMessage) {
 
 	s.reply(msg.ID, map[string]any{
 		"sessionId": id,
-		// Graycode extensions (ignored by clients that only read sessionId).
-		"graycode": map[string]any{
+		// Hawk extensions (ignored by clients that only read sessionId).
+		"hawk": map[string]any{
 			"workMode":   string(sess.WorkMode()),
 			"isolation":  sess.Isolation().String(),
 			"autoCommit": sess.AutoCommit(),

@@ -1,4 +1,4 @@
-// Package tui provides terminal UI helpers for graycode. graphics.go adds
+// Package tui provides terminal UI helpers for hawk. graphics.go adds
 // Kitty graphics protocol image display with capability detection and a safe
 // text fallback. It is isolated from the Bubble Tea render loop so the escape
 // sequences it emits never pass through content sanitization.
@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/tui/kitty"
+	"github.com/GrayCodeAI/hawk/internal/tui/kitty"
 )
 
 // Capability describes whether the current terminal supports Kitty graphics.

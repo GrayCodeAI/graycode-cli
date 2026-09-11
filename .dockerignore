@@ -5,8 +5,8 @@
 .factory
 Dockerfile
 .dockerignore
-graycode_bin
-graycode_test_bin
+hawk_bin
+hawk_test_bin
 coverage.out
 coverage.html
 go.work

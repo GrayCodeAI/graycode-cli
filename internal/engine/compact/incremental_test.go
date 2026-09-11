@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestBuildIncrementalCompactPromptIncludesPriorSummary(t *testing.T) {
@@ -32,7 +32,7 @@ func TestBuildIncrementalCompactPromptEmptyPriorFallsBack(t *testing.T) {
 }
 
 func TestExtractPriorSummaryFound(t *testing.T) {
-	msgs := []types.GraycodeRouterMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "[Conversation summary]\n## Goal\n- build\n\n[Continue from the recent messages below.]"},
 		{Role: "assistant", Content: "ok"},
 	}
@@ -43,7 +43,7 @@ func TestExtractPriorSummaryFound(t *testing.T) {
 }
 
 func TestExtractPriorSummaryNone(t *testing.T) {
-	msgs := []types.GraycodeRouterMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "hello"},
 	}
 	if got := ExtractPriorSummary(msgs); got != "" {
@@ -52,7 +52,7 @@ func TestExtractPriorSummaryNone(t *testing.T) {
 }
 
 func TestExtractPriorSummaryIgnoresNonSummaryFirst(t *testing.T) {
-	msgs := []types.GraycodeRouterMessage{
+	msgs := []types.EyrieMessage{
 		{Role: "user", Content: "[Session memory summary]\nstuff"},
 		{Role: "user", Content: "[Conversation summary]\n## Goal\n- x"},
 	}

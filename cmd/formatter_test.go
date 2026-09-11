@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 func TestDetectColorSupport_NonTTYStdout(t *testing.T) {

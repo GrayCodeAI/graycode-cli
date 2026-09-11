@@ -115,11 +115,11 @@ pre-push:
     boundary-shared-types:
       run: bash scripts/check-shared-types-imports.sh
 
-    boundary-graycode-router-client:
-      run: bash scripts/check-graycode-router-client-imports.sh
+    boundary-eyrie-client:
+      run: bash scripts/check-eyrie-client-imports.sh
 
-    boundary-graycode-router-engine:
-      run: bash scripts/check-graycode-router-engine-boundary.sh
+    boundary-eyrie-engine:
+      run: bash scripts/check-eyrie-engine-boundary.sh
 
     boundary-support-repo:
       run: bash scripts/check-support-repo-coupling.sh

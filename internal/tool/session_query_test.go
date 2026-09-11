@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/session"
-	"github.com/GrayCodeAI/graycode-cli/internal/sessionquery"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/sessionquery"
 )
 
 func TestSessionQueryTool_Execute(t *testing.T) {
 	tmpDir := t.TempDir()
-	t.Setenv("GRAYCODE_STATE_DIR", tmpDir)
+	t.Setenv("HAWK_STATE_DIR", tmpDir)
 	sessDir := filepath.Join(tmpDir, "sessions")
 	_ = os.MkdirAll(sessDir, 0o755)
 

@@ -5,12 +5,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/token"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/token"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
-func bloatedTools() []types.GraycodeRouterTool {
-	return []types.GraycodeRouterTool{
+func bloatedTools() []types.EyrieTool {
+	return []types.EyrieTool{
 		{
 			Name: "read_file",
 			Description: strings.Repeat("Reads a file from disk quickly and safely. ", 30) +
@@ -33,23 +33,23 @@ func bloatedTools() []types.GraycodeRouterTool {
 	}
 }
 
-func TestShrinkGraycodeRouterToolsDisabledByDefault(t *testing.T) {
-	t.Setenv("GRAYCODE_TOOL_SHRINK", "")
+func TestShrinkEyrieToolsDisabledByDefault(t *testing.T) {
+	t.Setenv("HAWK_TOOL_SHRINK", "")
 	in := bloatedTools()
-	out := shrinkGraycodeRouterTools(in)
+	out := shrinkEyrieTools(in)
 	if len(out) != len(in) || out[0].Description != in[0].Description {
 		t.Fatal("shrink must be a no-op when disabled")
 	}
 }
 
-func TestShrinkGraycodeRouterToolsEnabledReducesAndPreservesNames(t *testing.T) {
+func TestShrinkEyrieToolsEnabledReducesAndPreservesNames(t *testing.T) {
 	if !token.ShrikeAvailable() {
 		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
 	}
-	t.Setenv("GRAYCODE_TOOL_SHRINK", "1")
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+	t.Setenv("HAWK_TOOL_SHRINK", "1")
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	in := bloatedTools()
-	out := shrinkGraycodeRouterTools(in)
+	out := shrinkEyrieTools(in)
 	if len(out) != 2 {
 		t.Fatalf("tool count changed: %d", len(out))
 	}
@@ -72,8 +72,8 @@ func TestBuildOptionsAppliesShrink(t *testing.T) {
 	if !token.ShrikeAvailable() {
 		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
 	}
-	t.Setenv("GRAYCODE_TOOL_SHRINK", "1")
-	t.Setenv("GRAYCODE_STATE_DIR", t.TempDir())
+	t.Setenv("HAWK_TOOL_SHRINK", "1")
+	t.Setenv("HAWK_STATE_DIR", t.TempDir())
 	c := &ChatService{}
 	opts := c.BuildOptions("sys", "m", 100, bloatedTools())
 	if len(opts.Tools) != 2 || opts.Tools[0].Name != "read_file" {
@@ -89,10 +89,10 @@ func TestOriginalCatalogPersistedForRecovery(t *testing.T) {
 		t.Skip("shrike engine is the build-harness stub; skipping engine-dependent test")
 	}
 	stateDir := t.TempDir()
-	t.Setenv("GRAYCODE_TOOL_SHRINK", "1")
-	t.Setenv("GRAYCODE_STATE_DIR", stateDir)
+	t.Setenv("HAWK_TOOL_SHRINK", "1")
+	t.Setenv("HAWK_STATE_DIR", stateDir)
 	in := bloatedTools()
-	_ = shrinkGraycodeRouterTools(in)
+	_ = shrinkEyrieTools(in)
 	matches, err := filepath.Glob(stateDir + "/tool-catalog-originals/*.json")
 	if err != nil || len(matches) == 0 {
 		t.Fatalf("original catalog not persisted: %v %v", matches, err)

@@ -4,11 +4,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 type CompactResult struct {
-	Messages     []types.GraycodeRouterMessage
+	Messages     []types.EyrieMessage
 	Summary      string
 	TokensBefore int
 	TokensAfter  int
@@ -52,7 +52,7 @@ func IsCompactableTool(name string) bool {
 	return compactableTools[name]
 }
 
-func AdjustIndexToPreserveAPIInvariants(msgs []types.GraycodeRouterMessage, startIdx int) int {
+func AdjustIndexToPreserveAPIInvariants(msgs []types.EyrieMessage, startIdx int) int {
 	if startIdx <= 0 {
 		return 0
 	}
@@ -87,7 +87,7 @@ func AdjustIndexToPreserveAPIInvariants(msgs []types.GraycodeRouterMessage, star
 	return idx
 }
 
-func HasTextContent(m types.GraycodeRouterMessage) bool {
+func HasTextContent(m types.EyrieMessage) bool {
 	if len(m.ToolResults) > 0 {
 		return false
 	}

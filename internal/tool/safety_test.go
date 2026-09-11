@@ -234,9 +234,9 @@ func TestIsSensitivePath(t *testing.T) {
 		filepath.Join(home, ".ssh", "config"),
 		filepath.Join(home, ".ssh", "authorized_keys"),
 		filepath.Join(home, ".aws", "credentials"),
-		filepath.Join(home, ".graycode", "provider.json"),
-		filepath.Join(home, ".graycode", "env"),
-		filepath.Join(home, ".graycode", ".env"),
+		filepath.Join(home, ".hawk", "provider.json"),
+		filepath.Join(home, ".hawk", "env"),
+		filepath.Join(home, ".hawk", ".env"),
 		filepath.Join(home, ".env"),
 		"/some/project/.env",
 		"/tmp/app/credentials.json",
@@ -260,33 +260,32 @@ func TestIsSensitivePath(t *testing.T) {
 	}
 }
 
-func TestIsSensitivePath_GraycodeConfigDir(t *testing.T) {
+func TestIsSensitivePath_HawkConfigDir(t *testing.T) {
 	cfgDir := t.TempDir()
-	t.Setenv("GRAYCODE_CONFIG_DIR", cfgDir)
-	prov := filepath.Join(cfgDir, "provider.json")
-	if reason := IsSensitivePath(prov); reason == "" {
-		t.Fatalf("expected custom GRAYCODE_CONFIG_DIR provider.json blocked, got empty")
+	t.Setenv("HAWK_CONFIG_DIR", cfgDir)
+	if reason := IsSensitivePath(filepath.Join(cfgDir, "env")); reason == "" {
+		t.Fatalf("expected custom HAWK_CONFIG_DIR env file blocked, got empty")
 	}
 }
 
-func TestIsSensitivePath_GraycodeRouterConfigDirTakesPrecedence(t *testing.T) {
-	graycodeDir := filepath.Join(t.TempDir(), "graycode")
-	graycodeRouterDir := filepath.Join(t.TempDir(), "graycode-router")
-	t.Setenv("GRAYCODE_CONFIG_DIR", graycodeDir)
-	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", graycodeRouterDir)
+func TestIsSensitivePath_EyrieConfigDir(t *testing.T) {
+	hawkDir := filepath.Join(t.TempDir(), "hawk")
+	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
+	t.Setenv("HAWK_CONFIG_DIR", hawkDir)
+	t.Setenv("EYRIE_CONFIG_DIR", eyrieDir)
 
-	if reason := IsSensitivePath(filepath.Join(graycodeRouterDir, "provider.json")); reason == "" {
-		t.Fatal("expected GRAYCODE_ROUTER_CONFIG_DIR/provider.json to be blocked")
+	if reason := IsSensitivePath(filepath.Join(eyrieDir, "provider.json")); reason == "" {
+		t.Fatal("expected EYRIE_CONFIG_DIR/provider.json to be blocked")
 	}
-	if reason := IsSensitivePath(filepath.Join(graycodeDir, "settings.json")); reason != "" {
-		t.Fatalf("expected Graycode settings path to remain allowed, got %q", reason)
+	if reason := IsSensitivePath(filepath.Join(hawkDir, "settings.json")); reason != "" {
+		t.Fatalf("expected Hawk settings path to remain allowed, got %q", reason)
 	}
 }
 
-func TestFileToolsBlockGraycodeRouterProviderConfig(t *testing.T) {
-	graycodeRouterDir := filepath.Join(t.TempDir(), "graycode-router")
-	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", graycodeRouterDir)
-	providerPath := filepath.Join(graycodeRouterDir, "provider.json")
+func TestFileToolsBlockEyrieProviderConfig(t *testing.T) {
+	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
+	t.Setenv("EYRIE_CONFIG_DIR", eyrieDir)
+	providerPath := filepath.Join(eyrieDir, "provider.json")
 
 	readInput, _ := json.Marshal(map[string]string{"path": providerPath})
 	editInput, _ := json.Marshal(map[string]string{
@@ -323,18 +322,18 @@ func TestFileToolsBlockGraycodeRouterProviderConfig(t *testing.T) {
 	}
 }
 
-func TestIsSensitivePath_GraycodeConfigDirEnv(t *testing.T) {
+func TestIsSensitivePath_HawkConfigDirEnv(t *testing.T) {
 	cfgDir := t.TempDir()
-	t.Setenv("GRAYCODE_CONFIG_DIR", cfgDir)
+	t.Setenv("HAWK_CONFIG_DIR", cfgDir)
 
 	envPath := filepath.Join(cfgDir, "env")
 	if reason := IsSensitivePath(envPath); reason == "" {
-		t.Error("expected GRAYCODE_CONFIG_DIR/env to be blocked")
+		t.Error("expected HAWK_CONFIG_DIR/env to be blocked")
 	}
 
 	dotEnvPath := filepath.Join(cfgDir, ".env")
 	if reason := IsSensitivePath(dotEnvPath); reason == "" {
-		t.Error("expected GRAYCODE_CONFIG_DIR/.env to be blocked")
+		t.Error("expected HAWK_CONFIG_DIR/.env to be blocked")
 	}
 }
 
@@ -342,12 +341,12 @@ func TestIsSensitivePath_GraycodeConfigDirEnv(t *testing.T) {
 // symlinks before opening (M13): reading through a symlink that points at a
 // sensitive target is blocked, while a symlink to an ordinary file works.
 func TestFileRead_BlocksSymlinkToSensitiveFile(t *testing.T) {
-	graycodeRouterDir := filepath.Join(t.TempDir(), "graycode-router")
-	if err := os.MkdirAll(graycodeRouterDir, 0o755); err != nil {
+	eyrieDir := filepath.Join(t.TempDir(), "eyrie")
+	if err := os.MkdirAll(eyrieDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", graycodeRouterDir)
-	providerPath := filepath.Join(graycodeRouterDir, "provider.json")
+	t.Setenv("EYRIE_CONFIG_DIR", eyrieDir)
+	providerPath := filepath.Join(eyrieDir, "provider.json")
 	if err := os.WriteFile(providerPath, []byte(`{"key":"x"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -835,7 +834,7 @@ func TestCommandReferencesSensitivePath(t *testing.T) {
 		"cat .npmrc",
 		"less ~/.netrc",
 		"tar czf out.tgz ~/.ssh",
-		"cat ~/.graycode/provider.json",
+		"cat ~/.hawk/provider.json",
 		"grep key credentials.json",
 	}
 	for _, cmd := range blocked {
@@ -862,17 +861,17 @@ func TestCommandReferencesSensitivePath(t *testing.T) {
 	}
 }
 
-func TestCommandReferencesSensitivePath_GraycodeRouterConfigDir(t *testing.T) {
-	graycodeRouterDir := filepath.Join(t.TempDir(), "graycode-router config with spaces")
-	t.Setenv("GRAYCODE_ROUTER_CONFIG_DIR", graycodeRouterDir)
+func TestCommandReferencesSensitivePath_EyrieConfigDir(t *testing.T) {
+	eyrieDir := filepath.Join(t.TempDir(), "eyrie config with spaces")
+	t.Setenv("EYRIE_CONFIG_DIR", eyrieDir)
 
 	commands := []string{
-		`cat "` + filepath.Join(graycodeRouterDir, "provider.json") + `"`,
-		`cat "$GRAYCODE_ROUTER_CONFIG_DIR/provider.json"`,
-		`cat "${GRAYCODE_ROUTER_CONFIG_DIR}/provider.json"`,
-		`cat "${GRAYCODE_ROUTER_CONFIG_DIR%/}/provider.json"`,
-		`printf '%s\n' "$GRAYCODE_ROUTER_CONFIG_DIR"`,
-		"cat " + strings.ReplaceAll(filepath.Join(graycodeRouterDir, "provider.json"), " ", `\ `),
+		`cat "` + filepath.Join(eyrieDir, "provider.json") + `"`,
+		`cat "$EYRIE_CONFIG_DIR/provider.json"`,
+		`cat "${EYRIE_CONFIG_DIR}/provider.json"`,
+		`cat "${EYRIE_CONFIG_DIR%/}/provider.json"`,
+		`printf '%s\n' "$EYRIE_CONFIG_DIR"`,
+		"cat " + strings.ReplaceAll(filepath.Join(eyrieDir, "provider.json"), " ", `\ `),
 	}
 	for _, command := range commands {
 		if reason := CommandReferencesSensitivePath(command); reason == "" {

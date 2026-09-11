@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/spec"
+	"github.com/GrayCodeAI/hawk/internal/spec"
 )
 
 type SpecMasterTool struct{}

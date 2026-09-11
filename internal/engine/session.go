@@ -10,23 +10,23 @@ import (
 	"sync"
 	"time"
 
-	agentcontracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/agent"
-	"github.com/GrayCodeAI/graycode-cli/internal/conversationarc"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/planning"
-	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
-	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
-	"github.com/GrayCodeAI/graycode-cli/internal/observability/metrics"
-	"github.com/GrayCodeAI/graycode-cli/internal/observability/oteltrace"
-	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
-	"github.com/GrayCodeAI/graycode-cli/internal/prompts"
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
-	"github.com/GrayCodeAI/graycode-cli/internal/resilience/ratelimit"
-	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
-	"github.com/GrayCodeAI/graycode-cli/internal/schedule"
-	"github.com/GrayCodeAI/graycode-cli/internal/session"
-	"github.com/GrayCodeAI/graycode-cli/internal/snapshot"
-	"github.com/GrayCodeAI/graycode-cli/internal/tool"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	agentcontracts "github.com/GrayCodeAI/hawk/internal/contracts/agent"
+	"github.com/GrayCodeAI/hawk/internal/conversationarc"
+	"github.com/GrayCodeAI/hawk/internal/engine/planning"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
+	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/observability/metrics"
+	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/prompts"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/hawk/internal/resilience/ratelimit"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/schedule"
+	"github.com/GrayCodeAI/hawk/internal/session"
+	"github.com/GrayCodeAI/hawk/internal/snapshot"
+	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // MemoryRecaller abstracts memory recall/remember so engine avoids importing memory directly.
@@ -44,7 +44,7 @@ type SnapshotTracker interface {
 	TrackCtx(ctx context.Context, message string) (string, error)
 }
 
-// Session manages a conversation with an LLM via graycode-router.
+// Session manages a conversation with an LLM via eyrie.
 // The mu RWMutex protects the remaining session metadata for concurrent
 // access. Transcript and system-context state are owned by PersistenceService.
 //
@@ -86,7 +86,7 @@ type Session struct {
 	// milestones/phase) loaded per session. See conversationarc package.
 	arc *conversationarc.Arc
 	// incremental is the opt-in incremental system-context reconciler for
-	// dynamic sections (e.g. memories). Nil unless GRAYCODE_INCREMENTAL_CONTEXT=1.
+	// dynamic sections (e.g. memories). Nil unless HAWK_INCREMENTAL_CONTEXT=1.
 	// See incremental.go.
 	incremental *memoryIncremental
 	// learnFn persists structured lessons produced by failure reflection to a
@@ -163,9 +163,9 @@ type Session struct {
 	isolation IsolationProfile
 }
 
-// NewSession creates a conversation session through GraycodeRouter's engine facade.
+// NewSession creates a conversation session through Eyrie's engine facade.
 func NewSession(provider, model, systemPrompt string, registry *tool.Registry) *Session {
-	return NewGraycodeSession(context.Background(), gateway.Selection{
+	return NewHawkSession(context.Background(), gateway.Selection{
 		Provider: provider,
 		Model:    model,
 	}, provider, model, systemPrompt, registry)
@@ -686,10 +686,10 @@ func (s *Session) ForkConversation(nodeID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	msgs := make([]types.GraycodeRouterMessage, 0, len(history))
+	msgs := make([]types.EyrieMessage, 0, len(history))
 	for _, node := range history {
 		if node.Role == "user" || node.Role == "assistant" {
-			msgs = append(msgs, types.GraycodeRouterMessage{Role: node.Role, Content: node.Content})
+			msgs = append(msgs, types.EyrieMessage{Role: node.Role, Content: node.Content})
 		}
 	}
 	p.SetRawMessages(msgs)
@@ -713,10 +713,10 @@ func (s *Session) SwitchBranch(nodeID string) error {
 	if err != nil {
 		return err
 	}
-	msgs := make([]types.GraycodeRouterMessage, 0, len(history))
+	msgs := make([]types.EyrieMessage, 0, len(history))
 	for _, node := range history {
 		if node.Role == "user" || node.Role == "assistant" {
-			msgs = append(msgs, types.GraycodeRouterMessage{Role: node.Role, Content: node.Content})
+			msgs = append(msgs, types.EyrieMessage{Role: node.Role, Content: node.Content})
 		}
 	}
 	p.SetRawMessages(msgs)
@@ -899,7 +899,7 @@ func (s *Session) EscalatePermission(requestID string) bool {
 	return s.perms.EscalatePermission(requestID)
 }
 
-// SetConversationGraph attaches Graycode's product-owned conversation graph and
+// SetConversationGraph attaches Hawk's product-owned conversation graph and
 // seeds it from an already-resumed linear transcript when the graph is new.
 func (s *Session) SetConversationGraph(graph *session.ConversationGraph) {
 	if s.persist != nil {
@@ -1014,7 +1014,7 @@ func (s *Session) Cwd() string {
 // effective policy change. Unchanged requests add nothing. System prompt is
 // unchanged across mode switches (KV-cache stability).
 func (s *Session) EnsureSandboxPolicyStatement() string {
-	if s == nil || s.tools == nil || s.tools.Registry() == nil || len(s.tools.Registry().GraycodeRouterTools()) == 0 {
+	if s == nil || s.tools == nil || s.tools.Registry() == nil || len(s.tools.Registry().EyrieTools()) == 0 {
 		return ""
 	}
 
@@ -1047,7 +1047,7 @@ func (s *Session) EnsureSandboxPolicyStatement() string {
 
 	if stmt != last {
 		if p := s.Persistence(); p != nil {
-			p.AppendUserJournaled(types.GraycodeRouterMessage{Role: "user", Content: stmt})
+			p.AppendUserJournaled(types.EyrieMessage{Role: "user", Content: stmt})
 		}
 		s.mu.Lock()
 		s.lastSandboxStatement = stmt
@@ -1113,7 +1113,7 @@ func (s *Session) EnsureSkillCatalogStatement() string {
 	if digest != last {
 		msg := plugin.RenderSkillCatalogMessage(invocable, digest)
 		if p := s.Persistence(); p != nil {
-			p.AppendUserJournaled(types.GraycodeRouterMessage{Role: "user", Content: msg})
+			p.AppendUserJournaled(types.EyrieMessage{Role: "user", Content: msg})
 		}
 		s.mu.Lock()
 		s.lastSkillCatalogDigest = digest
@@ -1130,7 +1130,7 @@ func (s *Session) CostValue() *Cost {
 	return &s.Cost
 }
 
-func (s *Session) LoadMessages(msgs []types.GraycodeRouterMessage) {
+func (s *Session) LoadMessages(msgs []types.EyrieMessage) {
 	s.Persistence().SetRawMessages(msgs)
 }
 
@@ -1144,7 +1144,7 @@ func (s *Session) MessageCount() int {
 // AddUser/AddAssistant and the agent loop (stream.go) all write through it,
 // and compaction/governor paths read it. Delegating here means TUI/CLI
 // consumers — notably saveSession — see the real, populated transcript.
-func (s *Session) RawMessages() []types.GraycodeRouterMessage {
+func (s *Session) RawMessages() []types.EyrieMessage {
 	if p := s.Persistence(); p != nil {
 		return p.RawMessages()
 	}
@@ -1153,7 +1153,7 @@ func (s *Session) RawMessages() []types.GraycodeRouterMessage {
 
 // Chat implements the LLMClient interface by delegating to the underlying client.
 // This allows Session to be passed to components that need LLM access (e.g. Reflector, SelfReview).
-func (s *Session) Chat(ctx context.Context, msgs []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error) {
+func (s *Session) Chat(ctx context.Context, msgs []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
 	if s.ChatLLM() == nil {
 		return nil, fmt.Errorf("session: no LLM client configured")
 	}
@@ -1182,7 +1182,7 @@ func (s *Session) Schedule() *schedule.Manager {
 						Priority: 1,
 					})
 				} else {
-					p.AppendUserJournaled(types.GraycodeRouterMessage{
+					p.AppendUserJournaled(types.EyrieMessage{
 						Role:    "user",
 						Content: content,
 					})

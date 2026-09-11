@@ -1,5 +1,5 @@
 // Vendored from github.com/GrayCodeAI/eagle/review at v0.0.0-20260902153929-5877bed17503 (MIT, Copyright (c) 2026 GrayCode AI).
-// The upstream repository no longer exists; this copy is owned by Graycode as its contract surface.
+// The upstream repository no longer exists; this copy is owned by Hawk as its contract surface.
 package review
 
 import (
@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
+	contracts "github.com/GrayCodeAI/hawk/internal/contracts/types"
 )
 
-// Finding is the neutral review finding contract shared across Graycode and review engines.
+// Finding is the neutral review finding contract shared across Hawk and review engines.
 type Finding struct {
 	Concern    string             `json:"concern"`
 	Severity   contracts.Severity `json:"severity"`

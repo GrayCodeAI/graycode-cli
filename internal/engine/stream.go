@@ -8,20 +8,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
-	"github.com/GrayCodeAI/graycode-cli/internal/smartrouting"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
+	"github.com/GrayCodeAI/hawk/internal/smartrouting"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/branching"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/lifecycle"
-	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
-	"github.com/GrayCodeAI/graycode-cli/internal/hooks"
-	"github.com/GrayCodeAI/graycode-cli/internal/observability/oteltrace"
-	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
-	"github.com/GrayCodeAI/graycode-cli/internal/prompt"
-	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/engine/branching"
+	"github.com/GrayCodeAI/hawk/internal/engine/lifecycle"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
+	"github.com/GrayCodeAI/hawk/internal/hooks"
+	"github.com/GrayCodeAI/hawk/internal/observability/oteltrace"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/prompt"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/ui/icons"
+	"github.com/GrayCodeAI/hawk/internal/ui/icons"
 )
 
 // turnContext carries the per-turn, pre-compute values that buildTurnOptions
@@ -125,7 +125,7 @@ func (s *Session) buildTurnOptions(tc turnContext) types.ChatOptions {
 			s.Tools().Registry().PromoteForIntent(lastUserMsg)
 		}
 		if !smallTalk {
-			opts.Tools = s.Tools().Registry().GraycodeRouterTools()
+			opts.Tools = s.Tools().Registry().EyrieTools()
 		}
 	}
 	return opts
@@ -293,7 +293,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				// Cache hit: short-circuit the LLM call
 				if preResult.CacheHit && preResult.CachedResponse != "" {
 					emit(StreamEvent{Type: "content", Content: preResult.CachedResponse})
-					s.Persistence().AppendAssistantJournaled(types.GraycodeRouterMessage{Role: "assistant", Content: preResult.CachedResponse})
+					s.Persistence().AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: preResult.CachedResponse})
 					emit(StreamEvent{Type: "done"})
 					return
 				}
@@ -466,8 +466,8 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		// Issue the LLM call via the ChatService. The service handles
 		// rate limit, retry, and emergency compact internally; the
 		// api.requests counter is incremented inside ChatService.Stream.
-		// Graycode records product-level latency; provider health and circuit
-		// breaking are owned by GraycodeRouter's routed transport.
+		// Hawk records product-level latency; provider health and circuit
+		// breaking are owned by Eyrie's routed transport.
 		apiStart := time.Now()
 		managesResilience := clientManagesResilience(s.ChatLLM().Client())
 		result, err := s.ChatLLM().Stream(ctx, s.Persistence().RawMessages(), opts)
@@ -490,14 +490,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		var textContent strings.Builder
 		var toolCalls []types.ToolCall
 		var stopReason string
-		var lastUsage *types.GraycodeRouterUsage
+		var lastUsage *types.EyrieUsage
 		var usageLedger streamUsageLedger
 		resolvedProvider := strings.TrimSpace(s.ChatLLM().Provider())
 		resolvedModel := strings.TrimSpace(activeModel)
 
-		// Compatibility clients retain Graycode's historical stream retry and
-		// reasoning-only recovery. GraycodeRouter facade clients already normalize and
-		// recover provider streams, so Graycode must consume their result exactly once.
+		// Compatibility clients retain Hawk's historical stream retry and
+		// reasoning-only recovery. Eyrie facade clients already normalize and
+		// recover provider streams, so Hawk must consume their result exactly once.
 		const maxStreamRetries = 2
 		var streamErr error
 		var sawThinking bool
@@ -679,7 +679,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			completionEst := estimateStreamCompletionTokens(textContent.String(), toolCalls)
 			if inputTokens > 0 || completionEst > 0 {
 				s.recordStreamUsage(ch, inputTokens, completionEst, resolvedProvider, resolvedModel, taskType, apiStart)
-				lastUsage = &types.GraycodeRouterUsage{
+				lastUsage = &types.EyrieUsage{
 					PromptTokens:     inputTokens,
 					CompletionTokens: completionEst,
 				}
@@ -698,7 +698,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			if j := s.Persistence().Journal(); j != nil {
 				j.AppendRequestContext(resolvedProvider, resolvedModel, s.ContextWindowSize())
 			}
-			s.recordGraycodeRouterOperationObservation(
+			s.recordEyrieOperationObservation(
 				resolvedProvider,
 				resolvedModel,
 				stopReason,
@@ -760,14 +760,14 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 			oteltrace.EndSpanWithError(loopSpan, nil)
 		}
 
-		// Compatibility-only max_tokens recovery. GraycodeRouter's engine facade owns
-		// continuation and exposes one normalized stream to Graycode. Legacy clients
+		// Compatibility-only max_tokens recovery. Eyrie's engine facade owns
+		// continuation and exposes one normalized stream to Hawk. Legacy clients
 		// retain the historical synthetic turn so injected integrations do not
 		// change behavior while they migrate to the facade.
 		if !managesResilience && stopReason == "max_tokens" && len(toolCalls) == 0 && recoveryCount < maxRecoveryRetries {
 			recoveryCount++
-			s.Persistence().AppendAssistantJournaled(types.GraycodeRouterMessage{Role: "assistant", Content: textContent.String()})
-			s.Persistence().AppendUserJournaled(types.GraycodeRouterMessage{Role: "user", Content: "Continue from where you left off."})
+			s.Persistence().AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: textContent.String()})
+			s.Persistence().AppendUserJournaled(types.EyrieMessage{Role: "user", Content: "Continue from where you left off."})
 			continue
 		}
 
@@ -790,7 +790,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				}
 			}
 			if textContent.Len() > 0 {
-				s.Persistence().AppendAssistantJournaled(types.GraycodeRouterMessage{Role: "assistant", Content: textContent.String()})
+				s.Persistence().AppendAssistantJournaled(types.EyrieMessage{Role: "assistant", Content: textContent.String()})
 				// Auto-remember corrections and learnings. Best-effort
 				// fire-and-forget, bounded so a hung backend cannot leak.
 				if s.MemorySvc().Memory() != nil && shouldRemember(textContent.String()) {
@@ -823,7 +823,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					// Use timeout context to prevent goroutine leak if LLM hangs
 					sCtx, sCancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Minute)
 					defer sCancel()
-					resp, err := s.ChatLLM().Chat(sCtx, []types.GraycodeRouterMessage{
+					resp, err := s.ChatLLM().Chat(sCtx, []types.EyrieMessage{
 						{Role: "user", Content: prompt},
 					}, types.ChatOptions{Provider: s.ChatLLM().Provider(), Model: s.ChatLLM().Model(), MaxTokens: 2048})
 					if err != nil || resp == nil {
@@ -864,7 +864,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 					// Use timeout context to prevent goroutine leak if LLM hangs
 					dCtx, dCancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Minute)
 					defer dCancel()
-					resp, err := s.ChatLLM().Chat(dCtx, []types.GraycodeRouterMessage{
+					resp, err := s.ChatLLM().Chat(dCtx, []types.EyrieMessage{
 						{Role: "user", Content: prompt},
 					}, types.ChatOptions{Provider: s.ChatLLM().Provider(), Model: s.ChatLLM().Model(), MaxTokens: 2048})
 					if err != nil || resp == nil {
@@ -1026,7 +1026,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		if assistContent == "" && len(toolCalls) > 0 {
 			assistContent = " " // non-empty to satisfy APIs that reject empty content
 		}
-		s.Persistence().AppendAssistantJournaled(types.GraycodeRouterMessage{
+		s.Persistence().AppendAssistantJournaled(types.EyrieMessage{
 			Role:    "assistant",
 			Content: assistContent,
 			ToolUse: toolCalls,
@@ -1040,7 +1040,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 				resultContent = "(no output)"
 			}
 			resultContent = s.redactToolResult(resultContent)
-			msg := types.GraycodeRouterMessage{
+			msg := types.EyrieMessage{
 				Role:    "user",
 				Content: resultContent,
 				ToolResults: []types.ToolResult{{
@@ -1062,7 +1062,7 @@ func (s *Session) agentLoop(ctx context.Context, ch chan<- StreamEvent) {
 		steerCount := 0
 		if s.Persistence().Steering() != nil && s.Persistence().Steering().HasPending() {
 			for _, steer := range s.Persistence().Steering().Drain() {
-				s.Persistence().AppendUserJournaled(types.GraycodeRouterMessage{
+				s.Persistence().AppendUserJournaled(types.EyrieMessage{
 					Role:    "user",
 					Content: "[User guidance during execution]: " + steer.Content,
 				})
@@ -1176,7 +1176,7 @@ var smallTalkPhrases = []string{
 // executed a tool. Once tools are in play, later turns keep the full prompt
 // and tool surface even if they read like small talk ("thanks"), so the
 // follow-up context is not lost.
-func sessionHasToolUse(msgs []types.GraycodeRouterMessage) bool {
+func sessionHasToolUse(msgs []types.EyrieMessage) bool {
 	for _, m := range msgs {
 		if len(m.ToolResults) > 0 {
 			return true

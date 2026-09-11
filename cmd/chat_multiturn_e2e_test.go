@@ -6,35 +6,35 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 func configureReadyChatState(t *testing.T) {
 	t.Helper()
 	isolateChatCommandSweepEnv(t)
 
-	graycodeconfig.InvalidateConfigUICache()
+	hawkconfig.InvalidateConfigUICache()
 	store := &gateway.MapStore{}
 	gateway.SetDefaultStore(store)
 	t.Cleanup(func() {
 		gateway.SetDefaultStore(nil)
-		graycodeconfig.InvalidateConfigUICache()
+		hawkconfig.InvalidateConfigUICache()
 	})
 
 	ctx := context.Background()
 	if err := store.Set(ctx, gateway.AccountForEnv("OPENROUTER_API_KEY"), "sk-or-test-key-1234567890"); err != nil {
 		t.Fatal(err)
 	}
-	if err := graycodeconfig.SetActiveProvider(ctx, "openrouter"); err != nil {
+	if err := hawkconfig.SetActiveProvider(ctx, "openrouter"); err != nil {
 		t.Fatal(err)
 	}
-	if err := graycodeconfig.SetActiveModel(ctx, "gpt-4o"); err != nil {
+	if err := hawkconfig.SetActiveModel(ctx, "gpt-4o"); err != nil {
 		t.Fatal(err)
 	}
-	graycodeconfig.InvalidateConfigUICache()
-	graycodeconfig.RefreshConfigCredSnapshot(ctx)
+	hawkconfig.InvalidateConfigUICache()
+	hawkconfig.RefreshConfigCredSnapshot(ctx)
 }
 
 func countMessagesByRole(msgs []displayMsg, role string) int {

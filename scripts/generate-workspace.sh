@@ -9,11 +9,11 @@ ECO_DIR="$(cd "${ROOT_DIR}/.." && pwd)"
 rm -f "${ECO_DIR}/go.work" "${ECO_DIR}/go.work.sum"
 (
   cd "${ECO_DIR}"
-  go work init ./graycode-cli
+  go work init ./hawk
   go_version="$(awk '$1 == "go" { print $2; exit }' "${ROOT_DIR}/go.mod")"
   go work edit -go="${go_version}"
   while IFS= read -r repo; do
-    [[ "${repo}" == "graycode-cli" ]] && continue
+    [[ "${repo}" == "hawk" ]] && continue
     if [[ ! -f "${repo}/go.mod" ]]; then
       echo "WARNING: ${repo} is not checked out; skipping workspace entry"
       continue

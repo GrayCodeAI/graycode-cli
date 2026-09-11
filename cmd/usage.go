@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/usage"
+	"github.com/GrayCodeAI/hawk/internal/usage"
 	"github.com/spf13/cobra"
 )
 
@@ -65,7 +65,7 @@ func runUsage(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	cmd.Println(auditTint(fmt.Sprintf("Usage (last %s)", usagePeriod), graycodeColor))
+	cmd.Println(auditTint(fmt.Sprintf("Usage (last %s)", usagePeriod), hawkColor))
 	cmd.Println(auditTint(fmt.Sprintf("%-28s %10s %10s %8s %12s", "model", "in", "out", "gen", "cost"), textMuted))
 	for _, m := range sum.ByModel {
 		// Pad the cost to its column width first, then colorize, so the

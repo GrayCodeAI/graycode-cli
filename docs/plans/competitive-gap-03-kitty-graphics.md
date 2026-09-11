@@ -3,7 +3,7 @@
 Status: Implemented (2026-09-09)
 Source: `https://github.com/kovidgoyal/kitty` (GPL-3.0; protocol only, no code copy), Ghostty compat; extends `docs/plans/pi-adoption-plan.md:25` (already proposed there — this file scopes the TUI work, it does not re-propose).
 
-## Existing graycode capabilities (verified)
+## Existing hawk capabilities (verified)
 
 - Vision input path: `internal/engine/vision.go`; image command: `cmd/image.go`.
 - Terminal detection covers kitty/ghostty/wezterm/alacritty names (`internal/ui/icons/detect_test.go:56`).

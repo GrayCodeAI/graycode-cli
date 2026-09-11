@@ -1,10 +1,10 @@
 # MCP Server Configuration
 
-graycode supports connecting to external MCP (Model Context Protocol) servers to extend its capabilities with additional tools, resources, and prompts.
+hawk supports connecting to external MCP (Model Context Protocol) servers to extend its capabilities with additional tools, resources, and prompts.
 
 ## Configuration
 
-MCP servers are configured in `settings.json` (global: `~/.graycode/settings.json`, project: `.graycode/settings.json`).
+MCP servers are configured in `settings.json` (global: `~/.hawk/settings.json`, project: `.hawk/settings.json`).
 
 ```json
 {
@@ -42,7 +42,7 @@ My-Jogyo provides 12 MCP tools for scientific research workflows, including Pyth
 # Install My-Jogyo
 npm install -g my-jogyo
 
-# Add to graycode settings
+# Add to hawk settings
 ```
 
 **settings.json:**
@@ -76,7 +76,7 @@ npm install -g my-jogyo
 
 ### harrier (Memory Engine)
 
-graycode's built-in memory engine. Configured automatically when harrier is installed.
+hawk's built-in memory engine. Configured automatically when harrier is installed.
 
 ```json
 {
@@ -93,7 +93,7 @@ graycode's built-in memory engine. Configured automatically when harrier is inst
 
 ### kestrel (Code Review)
 
-graycode's built-in code review engine.
+hawk's built-in code review engine.
 
 ```json
 {
@@ -110,7 +110,7 @@ graycode's built-in code review engine.
 
 ### merlin (Security Audit)
 
-graycode's built-in security scanner.
+hawk's built-in security scanner.
 
 ```json
 {
@@ -129,16 +129,16 @@ graycode's built-in security scanner.
 
 ```bash
 # Add an MCP server
-graycode mcp add <name> <command> [args...]
+hawk mcp add <name> <command> [args...]
 
 # List configured servers
-graycode mcp list
+hawk mcp list
 
 # Remove a server
-graycode mcp remove <name>
+hawk mcp remove <name>
 
 # Test a server connection
-graycode mcp test <name>
+hawk mcp test <name>
 ```
 
 ## Troubleshooting
@@ -149,8 +149,8 @@ graycode mcp test <name>
 - Run the command manually to check for errors
 
 **Tools not appearing:**
-- Restart graycode after adding a new server
-- Check `graycode mcp test <name>` for connection errors
+- Restart hawk after adding a new server
+- Check `hawk mcp test <name>` for connection errors
 - Verify the server's tools/list response is valid JSON-RPC
 
 **Timeout errors:**

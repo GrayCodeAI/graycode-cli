@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/intelligence/memory"
-	"github.com/GrayCodeAI/graycode-cli/internal/observability/logger"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/intelligence/memory"
+	"github.com/GrayCodeAI/hawk/internal/observability/logger"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // MemoryService is the Session's view of the memory layer: harrier bridge,
@@ -129,7 +129,7 @@ func (s *MemoryService) OnSessionEnd(success bool) {
 
 // Finalize performs memory-side session bookkeeping from a transcript
 // snapshot. The agent loop does not need to know which backend is installed.
-func (s *MemoryService) Finalize(messages []types.GraycodeRouterMessage, success bool) {
+func (s *MemoryService) Finalize(messages []types.EyrieMessage, success bool) {
 	if s == nil {
 		return
 	}

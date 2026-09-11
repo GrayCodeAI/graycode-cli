@@ -341,7 +341,7 @@ func BuiltinPersonas() []*Persona {
 			},
 			CreatedAt: now,
 		},
-		// --- Cavecrew personas (built into GrayCode Graycode) ---
+		// --- Cavecrew personas (built into GrayCode Hawk) ---
 		// Three compact, opinionated personas for multi-agent crews.
 		// Each enforces a strict output format so downstream agents
 		// can parse the output mechanically.
@@ -417,7 +417,7 @@ func BuiltinPersonas() []*Persona {
 }
 
 // CavecrewPersonas returns just the three cavecrew personas
-// (investigator, builder, reviewer) built into GrayCode Graycode.
+// (investigator, builder, reviewer) built into GrayCode Hawk.
 // These are a strict, format-driven subset of the full BuiltinPersonas
 // list; callers that want only the cavecrew subset can use this
 // function instead of BuiltinPersonas.

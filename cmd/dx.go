@@ -10,19 +10,19 @@ import (
 	"strings"
 	"time"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
-	"github.com/GrayCodeAI/graycode-cli/internal/plugin"
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/plugin"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // startTime records when the process started, used by debugOutput for uptime.
 var startTime = time.Now()
 
 // doctorOutput returns a comprehensive system diagnostics string.
-func doctorOutput(settings graycodeconfig.Settings) string {
+func doctorOutput(settings hawkconfig.Settings) string {
 	var b strings.Builder
-	b.WriteString("=== Graycode Doctor ===\n\n")
+	b.WriteString("=== Hawk Doctor ===\n\n")
 
 	// Go version, OS, arch
 	b.WriteString("System:\n")
@@ -49,12 +49,12 @@ func doctorOutput(settings graycodeconfig.Settings) string {
 	b.WriteString(fmt.Sprintf("  TERM:        %s\n", termVal))
 	b.WriteString(fmt.Sprintf("  COLORTERM:   %s\n", colorTerm))
 
-	// Graycode version
+	// Hawk version
 	v := version
 	if v == "" {
 		v = "(dev)"
 	}
-	b.WriteString("\nGraycode:\n")
+	b.WriteString("\nHawk:\n")
 	b.WriteString(fmt.Sprintf("  Version:     %s\n", v))
 	if buildDate != "" && buildDate != "unknown" {
 		b.WriteString(fmt.Sprintf("  Build date:  %s\n", buildDate))
@@ -67,10 +67,10 @@ func doctorOutput(settings graycodeconfig.Settings) string {
 	}
 	b.WriteString("\nProvider:\n")
 	b.WriteString(fmt.Sprintf("  Provider:    %s\n", effectiveProvider))
-	b.WriteString(fmt.Sprintf("  API key:     %s\n", maskedKeyStatus(graycodeconfig.ActiveProvider(context.Background()))))
+	b.WriteString(fmt.Sprintf("  API key:     %s\n", maskedKeyStatus(hawkconfig.ActiveProvider(context.Background()))))
 
-	// Model configured (graycode-router provider.json)
-	effectiveModel := strings.TrimSpace(graycodeconfig.ActiveModel(context.Background()))
+	// Model configured (eyrie provider.json)
+	effectiveModel := strings.TrimSpace(hawkconfig.ActiveModel(context.Background()))
 	if effectiveModel == "" {
 		effectiveModel = "(not configured)"
 	}
@@ -111,7 +111,7 @@ func doctorOutput(settings graycodeconfig.Settings) string {
 	}
 
 	// AGENTS.md found
-	agentsMD := graycodeconfig.LoadAgentsMD()
+	agentsMD := hawkconfig.LoadAgentsMD()
 	if agentsMD != "" {
 		b.WriteString("AGENTS.md:       found\n")
 	} else {
@@ -146,7 +146,7 @@ func doctorOutput(settings graycodeconfig.Settings) string {
 
 // doctorJSON returns the doctor diagnostics as indented JSON, mirroring the
 // fields of doctorOutput but as machine-parseable structured data.
-func doctorJSON(settings graycodeconfig.Settings) string {
+func doctorJSON(settings hawkconfig.Settings) string {
 	type sessionDirInfo struct {
 		Path     string `json:"path"`
 		Status   string `json:"status"`
@@ -165,7 +165,7 @@ func doctorJSON(settings graycodeconfig.Settings) string {
 	if effectiveProvider == "" {
 		effectiveProvider = "(not configured)"
 	}
-	effectiveModel := strings.TrimSpace(graycodeconfig.ActiveModel(context.Background()))
+	effectiveModel := strings.TrimSpace(hawkconfig.ActiveModel(context.Background()))
 	if effectiveModel == "" {
 		effectiveModel = "(not configured)"
 	}
@@ -219,7 +219,7 @@ func doctorJSON(settings graycodeconfig.Settings) string {
 		plugins = len(manifests)
 	}
 
-	agentsMD := graycodeconfig.LoadAgentsMD()
+	agentsMD := hawkconfig.LoadAgentsMD()
 	agentsState := "not found"
 	if agentsMD != "" {
 		agentsState = "found"
@@ -274,7 +274,7 @@ func doctorJSON(settings graycodeconfig.Settings) string {
 		Version:    v,
 		BuildDate:  buildDate,
 		Provider:   effectiveProvider,
-		APIKey:     maskedKeyStatus(graycodeconfig.ActiveProvider(context.Background())),
+		APIKey:     maskedKeyStatus(hawkconfig.ActiveProvider(context.Background())),
 		Model:      effectiveModel,
 		SessionDir: sessDir,
 		MCPServers: mcpCount,
@@ -293,7 +293,7 @@ func maskedKeyStatus(provider string) string {
 	if provider == "" {
 		return "(no provider set)"
 	}
-	status := graycodeconfig.EnvKeyStatus(provider)
+	status := hawkconfig.EnvKeyStatus(provider)
 	if status == "set" {
 		return "configured (masked)"
 	}
@@ -414,7 +414,7 @@ func countOpenFDs() int {
 // Returns the file path and any error.
 func exportMarkdown(messages []displayMsg, sessionID string) (string, error) {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("# Graycode Session: %s\n\n", sessionID))
+	b.WriteString(fmt.Sprintf("# Hawk Session: %s\n\n", sessionID))
 	b.WriteString(fmt.Sprintf("Exported: %s\n\n", time.Now().Format(time.RFC3339)))
 	b.WriteString("---\n\n")
 
@@ -443,7 +443,7 @@ func exportMarkdown(messages []displayMsg, sessionID string) (string, error) {
 		}
 	}
 
-	filename := fmt.Sprintf("graycode-session-%s.md", sessionID)
+	filename := fmt.Sprintf("hawk-session-%s.md", sessionID)
 	if err := os.WriteFile(filename, []byte(b.String()), 0o600); err != nil {
 		return "", fmt.Errorf("failed to write %s: %w", filename, err)
 	}
@@ -490,7 +490,7 @@ func exportJSON(messages []displayMsg, sessionID string) (string, error) {
 		return "", fmt.Errorf("failed to marshal session: %w", err)
 	}
 
-	filename := fmt.Sprintf("graycode-session-%s.json", sessionID)
+	filename := fmt.Sprintf("hawk-session-%s.json", sessionID)
 	if err := os.WriteFile(filename, data, 0o600); err != nil {
 		return "", fmt.Errorf("failed to write %s: %w", filename, err)
 	}

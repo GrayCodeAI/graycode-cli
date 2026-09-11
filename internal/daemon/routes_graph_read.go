@@ -17,7 +17,7 @@ import (
 const (
 	defaultGraphReadLimit  = 100
 	maxGraphReadLimit      = 250
-	graphReadSchemaVersion = "graycode-local.graph/v1"
+	graphReadSchemaVersion = "hawk-local.graph/v1"
 )
 
 // GraphReadResponse is the JSON response for GET /v1/projects/:projectId/graph.

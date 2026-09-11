@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/engine"
 )
 
 // captureStderr runs fn with os.Stderr redirected to a pipe and returns the
@@ -38,7 +38,7 @@ func TestPrintTextUsageFooter(t *testing.T) {
 			printTextUsageFooter(&engine.StreamUsage{
 				PromptTokens:     100,
 				CompletionTokens: 50,
-			}, started, 3, "graycode-pro")
+			}, started, 3, "hawk-pro")
 		})
 		if !strings.Contains(got, "100 in · 50 out") {
 			t.Errorf("footer missing token counts: %q", got)
@@ -49,7 +49,7 @@ func TestPrintTextUsageFooter(t *testing.T) {
 		if !strings.Contains(got, "3 turn(s)") {
 			t.Errorf("footer missing turn count: %q", got)
 		}
-		if !strings.Contains(got, "graycode-pro") {
+		if !strings.Contains(got, "hawk-pro") {
 			t.Errorf("footer missing model: %q", got)
 		}
 		if !strings.Contains(got, "2s") {
@@ -90,7 +90,7 @@ func TestPrintTextUsageFooter(t *testing.T) {
 				CompletionTokens: 5,
 			}, started, 1, "")
 		})
-		if strings.Contains(got, "graycode-pro") {
+		if strings.Contains(got, "hawk-pro") {
 			t.Errorf("footer should omit empty model: %q", got)
 		}
 	})

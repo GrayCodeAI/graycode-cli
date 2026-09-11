@@ -395,7 +395,7 @@ func TestIncrementalMap_IgnoresDefaultPatterns(t *testing.T) {
 }
 
 func TestIncrementalMap_SaveCreatesDirectory(t *testing.T) {
-	cacheDir := filepath.Join(t.TempDir(), "nested", ".graycode")
+	cacheDir := filepath.Join(t.TempDir(), "nested", ".hawk")
 
 	im, err := NewIncrementalMap(cacheDir)
 	if err != nil {

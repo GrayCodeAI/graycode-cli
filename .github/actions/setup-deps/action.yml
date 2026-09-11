@@ -28,7 +28,7 @@ runs:
         ws_parent="$(cd "${GITHUB_WORKSPACE}/.." && pwd)"
         mkdir -p "$ws_parent"
         while IFS= read -r repo; do
-          [ "$repo" = graycode-cli ] && continue
+          [ "$repo" = hawk ] && continue
           dest="$ws_parent/$repo"
           if [ -d "$dest/.git" ]; then
             echo "$repo already present at $dest"

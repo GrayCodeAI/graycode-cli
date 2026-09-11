@@ -1,5 +1,5 @@
 // Package recipe also provides declarative provider configuration.
-// This file implements YAML-based provider definitions compatible with graycode-router.
+// This file implements YAML-based provider definitions compatible with eyrie.
 package recipe
 
 import (
@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 	"gopkg.in/yaml.v3"
 )
 

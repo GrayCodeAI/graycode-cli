@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/toolset"
+	"github.com/GrayCodeAI/hawk/internal/toolset"
 )
 
 // ToolsetTool lists and resolves named, composable tool groups (research,

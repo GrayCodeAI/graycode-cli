@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestSessionMemoryStrategy_ShouldTrigger(t *testing.T) {
@@ -100,14 +100,14 @@ func TestTurnTokenBudget(t *testing.T) {
 		t.Errorf("turnTokenBudget(nil) = %d, want 0", got)
 	}
 
-	small := []types.GraycodeRouterMessage{{Role: "user", Content: "short"}}
+	small := []types.EyrieMessage{{Role: "user", Content: "short"}}
 	if got := turnTokenBudget(small); got != 2000 {
 		t.Errorf("turnTokenBudget(small) = %d, want minimum floor 2000", got)
 	}
 
-	big := make([]types.GraycodeRouterMessage, 10)
+	big := make([]types.EyrieMessage, 10)
 	for i := range big {
-		big[i] = types.GraycodeRouterMessage{Role: "user", Content: strings.Repeat("x", 10000)}
+		big[i] = types.EyrieMessage{Role: "user", Content: strings.Repeat("x", 10000)}
 	}
 	avg := EstimateMessageTokens(big[0])
 	if avg*3 <= 2000 {
@@ -118,13 +118,13 @@ func TestTurnTokenBudget(t *testing.T) {
 	}
 }
 
-func makeMessages(n int) []types.GraycodeRouterMessage {
-	msgs := make([]types.GraycodeRouterMessage, n)
+func makeMessages(n int) []types.EyrieMessage {
+	msgs := make([]types.EyrieMessage, n)
 	for i := range msgs {
 		if i%2 == 0 {
-			msgs[i] = types.GraycodeRouterMessage{Role: "user", Content: strings.Repeat("message ", 50)}
+			msgs[i] = types.EyrieMessage{Role: "user", Content: strings.Repeat("message ", 50)}
 		} else {
-			msgs[i] = types.GraycodeRouterMessage{Role: "assistant", Content: strings.Repeat("response ", 50)}
+			msgs[i] = types.EyrieMessage{Role: "assistant", Content: strings.Repeat("response ", 50)}
 		}
 	}
 	return msgs

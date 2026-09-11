@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/tool"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/tool"
 )
 
 type registryTestTool struct {
@@ -72,8 +72,8 @@ func TestLoadStartupMCPToolSets_UsesTimeoutAndPreservesOrder(t *testing.T) {
 }
 
 func TestConfiguredStartupMCPServers_DispatchesByType(t *testing.T) {
-	settings := graycodeconfig.Settings{
-		MCPServers: []graycodeconfig.MCPServerConfig{
+	settings := hawkconfig.Settings{
+		MCPServers: []hawkconfig.MCPServerConfig{
 			{Name: "stdio-default", Command: "stdio-mcp"},
 			{Name: "stdio-explicit", Type: "stdio", Command: "stdio-mcp-2"},
 			{Name: "http-server", Type: "http", URL: "https://example.com/mcp"},
@@ -176,7 +176,7 @@ func TestLoadStartupMCPToolSets_DispatchesRemoteSpecsToRemoteLoader(t *testing.T
 }
 
 func TestMergedMCPHeaders_ConfiguredAuthorizationTakesPrecedence(t *testing.T) {
-	cfg := graycodeconfig.MCPServerConfig{
+	cfg := hawkconfig.MCPServerConfig{
 		Name:    "svc",
 		Headers: map[string]string{"Authorization": "Bearer static-token", "X-Other": "1"},
 	}
@@ -220,8 +220,8 @@ func TestDefaultRegistry_SkipsFailedStartupMCPServers(t *testing.T) {
 		return nil, errors.New("boom")
 	}
 
-	registry, err := defaultRegistry(graycodeconfig.Settings{
-		MCPServers: []graycodeconfig.MCPServerConfig{{Name: "demo", Command: "demo-mcp"}},
+	registry, err := defaultRegistry(hawkconfig.Settings{
+		MCPServers: []hawkconfig.MCPServerConfig{{Name: "demo", Command: "demo-mcp"}},
 	})
 	if err != nil {
 		t.Fatalf("defaultRegistry returned error: %v", err)

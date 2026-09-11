@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/hooks"
+	"github.com/GrayCodeAI/hawk/internal/hooks"
 )
 
 func TestCheckTool_PreToolUseDenyBeforeAutonomy(t *testing.T) {

@@ -3,63 +3,63 @@ package token
 import (
 	"encoding/json"
 
-	graycodetoken "github.com/GrayCodeAI/graycode-cli/internal/token"
+	hawktoken "github.com/GrayCodeAI/hawk/internal/token"
 )
 
-// Stats is the compression result consumed by Graycode's runtime observations.
+// Stats is the compression result consumed by Hawk's runtime observations.
 // The alias preserves the external shrike schema while keeping Shrike imports inside
 // this package.
-type Stats = graycodetoken.Stats
+type Stats = hawktoken.Stats
 
-// UsageTracker and UsageLimits expose the session budget API through Graycode's
+// UsageTracker and UsageLimits expose the session budget API through Hawk's
 // token boundary without changing Shrike's accounting behavior.
 type (
-	UsageTracker       = graycodetoken.UsageTracker
-	UsageLimits        = graycodetoken.UsageLimits
-	CodeChunk          = graycodetoken.CodeChunk
-	ChunkOptions       = graycodetoken.ChunkOptions
-	SecretMatch        = graycodetoken.SecretMatch
-	SecretDetector     = graycodetoken.SecretDetector
-	BudgetDecision     = graycodetoken.BudgetDecision
-	RedactionSummary   = graycodetoken.RedactionSummary
-	RuntimeGraphInput  = graycodetoken.RuntimeGraphInput
-	RuntimeGraphExport = graycodetoken.RuntimeGraphExport
+	UsageTracker       = hawktoken.UsageTracker
+	UsageLimits        = hawktoken.UsageLimits
+	CodeChunk          = hawktoken.CodeChunk
+	ChunkOptions       = hawktoken.ChunkOptions
+	SecretMatch        = hawktoken.SecretMatch
+	SecretDetector     = hawktoken.SecretDetector
+	BudgetDecision     = hawktoken.BudgetDecision
+	RedactionSummary   = hawktoken.RedactionSummary
+	RuntimeGraphInput  = hawktoken.RuntimeGraphInput
+	RuntimeGraphExport = hawktoken.RuntimeGraphExport
 )
 
 // NewUsageTracker creates an in-memory usage tracker with Shrike's defaults.
-func NewUsageTracker() *UsageTracker { return graycodetoken.NewUsageTracker() }
+func NewUsageTracker() *UsageTracker { return hawktoken.NewUsageTracker() }
 
 // ChunkCode splits source into semantically meaningful token-bounded chunks.
 func ChunkCode(source string, opts ChunkOptions) []CodeChunk {
-	return graycodetoken.ChunkCode(source, opts)
+	return hawktoken.ChunkCode(source, opts)
 }
 
 // DefaultSecretDetector returns Shrike's concurrency-safe built-in detector.
-func DefaultSecretDetector() *SecretDetector { return graycodetoken.DefaultSecretDetector() }
+func DefaultSecretDetector() *SecretDetector { return hawktoken.DefaultSecretDetector() }
 
 func BuildRuntimeGraph(input RuntimeGraphInput) (*RuntimeGraphExport, error) {
-	return graycodetoken.BuildRuntimeGraph(input)
+	return hawktoken.BuildRuntimeGraph(input)
 }
 
 // Compress applies Shrike's context compression with a fixed token budget.
 func Compress(text string, budget int) (string, Stats) {
-	return graycodetoken.Compress(text, budget)
+	return hawktoken.Compress(text, budget)
 }
 
 // JSONInvariants renders verified-fact summaries for elided JSON records.
-func JSONInvariants(dropped []json.RawMessage) string { return graycodetoken.JSONInvariants(dropped) }
+func JSONInvariants(dropped []json.RawMessage) string { return hawktoken.JSONInvariants(dropped) }
 
 // ShrinkToolCatalog compresses an OpenAI-style function-tool catalog,
 // preserving the selection surface byte-for-byte. Fail-open: unchanged input
 // with ok=false when nothing can be safely reduced.
 func ShrinkToolCatalog(catalog string) (string, bool) {
-	return graycodetoken.ShrinkToolCatalog(catalog)
+	return hawktoken.ShrinkToolCatalog(catalog)
 }
 
 // LintToolCatalog reports per-tool reductions without committing.
-func LintToolCatalog(catalog string) ([]graycodetoken.ToolShrinkStats, bool) {
-	return graycodetoken.LintToolCatalog(catalog)
+func LintToolCatalog(catalog string) ([]hawktoken.ToolShrinkStats, bool) {
+	return hawktoken.LintToolCatalog(catalog)
 }
 
 // LogInvariants renders the level distribution of elided log lines.
-func LogInvariants(lines []string) string { return graycodetoken.LogInvariants(lines) }
+func LogInvariants(lines []string) string { return hawktoken.LogInvariants(lines) }

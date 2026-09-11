@@ -1,6 +1,6 @@
 # Dashboard and HUD
 
-The Graycode dashboard provides system status and monitoring information.
+The Hawk dashboard provides system status and monitoring information.
 
 ---
 
@@ -9,7 +9,7 @@ The Graycode dashboard provides system status and monitoring information.
 In the TUI:
 
 ```
-/ecosystem         # Ecosystem status (GraycodeRouter, harrier, shrike)
+/ecosystem         # Ecosystem status (Eyrie, harrier, shrike)
 /path              # Developer path readiness
 /preflight         # Quick health check
 ```
@@ -18,11 +18,11 @@ In the TUI:
 
 ## Ecosystem Status
 
-Shows the status of all Graycode components:
+Shows the status of all Hawk components:
 
 | Component | Status |
 |-----------|--------|
-| GraycodeRouter (providers) | Ready / Error |
+| Eyrie (providers) | Ready / Error |
 | harrier (memory) | Connected / Offline |
 | shrike (tokenizer) | Available |
 | swift (session capture) | Ready |
@@ -34,7 +34,7 @@ Shows the status of all Graycode components:
 Check readiness to chat:
 
 ```bash
-graycode path
+hawk path
 ```
 
 This verifies:

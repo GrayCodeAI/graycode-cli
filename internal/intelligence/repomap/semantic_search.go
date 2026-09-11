@@ -2,7 +2,7 @@
 // engine over the Document set produced by the navigation index. It
 // tokenises queries, expands them with ExpandQuery, and returns SearchHit
 // results with snippet extraction. This is the search backend used by the
-// Graycode CLI's "find" subcommand.
+// Hawk CLI's "find" subcommand.
 package repomap
 
 import (
@@ -16,7 +16,7 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/scoring"
+	"github.com/GrayCodeAI/hawk/internal/scoring"
 )
 
 // Document represents a single indexable unit (function, type, file, or block).

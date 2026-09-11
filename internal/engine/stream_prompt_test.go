@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 func TestIsSmallTalkPrompt(t *testing.T) {
@@ -31,8 +31,8 @@ func TestIsSmallTalkPrompt(t *testing.T) {
 }
 
 func TestSessionHasToolUse(t *testing.T) {
-	plain := []types.GraycodeRouterMessage{{Role: "user", Content: "hi"}}
-	used := []types.GraycodeRouterMessage{
+	plain := []types.EyrieMessage{{Role: "user", Content: "hi"}}
+	used := []types.EyrieMessage{
 		{Role: "user", Content: "read stream.go"},
 		{Role: "assistant", ToolUse: []types.ToolCall{{Name: "Read"}}},
 		{Role: "user", Content: "thanks", ToolResults: []types.ToolResult{{}}},

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // mockProvider returns canned expand/score responses keyed by the user content.
@@ -14,7 +14,7 @@ type mockProvider struct {
 	scores map[string]string
 }
 
-func (m *mockProvider) Chat(ctx context.Context, msgs []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.GraycodeRouterResponse, error) {
+func (m *mockProvider) Chat(ctx context.Context, msgs []types.EyrieMessage, opts types.ChatOptions) (*types.EyrieResponse, error) {
 	user := ""
 	for _, mm := range msgs {
 		if mm.Role == "user" {
@@ -22,15 +22,15 @@ func (m *mockProvider) Chat(ctx context.Context, msgs []types.GraycodeRouterMess
 		}
 	}
 	if e, ok := m.expand[user]; ok {
-		return &types.GraycodeRouterResponse{Content: e}, nil
+		return &types.EyrieResponse{Content: e}, nil
 	}
 	if s, ok := m.scores[user]; ok {
-		return &types.GraycodeRouterResponse{Content: s}, nil
+		return &types.EyrieResponse{Content: s}, nil
 	}
-	return &types.GraycodeRouterResponse{Content: "0.5"}, nil
+	return &types.EyrieResponse{Content: "0.5"}, nil
 }
 
-func (m *mockProvider) StreamChat(ctx context.Context, msgs []types.GraycodeRouterMessage, opts types.ChatOptions) (*types.StreamResult, error) {
+func (m *mockProvider) StreamChat(ctx context.Context, msgs []types.EyrieMessage, opts types.ChatOptions) (*types.StreamResult, error) {
 	return nil, nil
 }
 func (m *mockProvider) Ping(ctx context.Context) error { return nil }

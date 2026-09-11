@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine"
-	"github.com/GrayCodeAI/graycode-cli/internal/sandbox"
-	"github.com/GrayCodeAI/graycode-cli/internal/tool"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/engine"
+	"github.com/GrayCodeAI/hawk/internal/sandbox"
+	"github.com/GrayCodeAI/hawk/internal/tool"
+	"github.com/GrayCodeAI/hawk/internal/types"
 )
 
 // EngineWorker returns a WorkerFunc that runs an actual engine session
@@ -54,11 +54,11 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 
 		// Create engine session with tools
 		registry := tool.NewRegistry(baseWorkerTools()...)
-		selection := graycodeconfig.EffectiveSelection(ctx, graycodeconfig.SelectionOptions{
+		selection := hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{
 			ProviderOverride: provider,
 			ModelOverride:    model,
 		})
-		sess := engine.NewGraycodeSession(ctx, selection, provider, model, systemPrompt, registry)
+		sess := engine.NewHawkSession(ctx, selection, provider, model, systemPrompt, registry)
 
 		// DSH 2.4: Inherit delegated sandbox policy from parent if configured.
 		if cfg.ParentSession != nil {
@@ -111,7 +111,7 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 		defer func() { _ = writer.Close() }()
 
 		// Persist the initial user prompt.
-		_ = writer.Write(types.GraycodeRouterMessage{Role: "user", Content: workerPrompt})
+		_ = writer.Write(types.EyrieMessage{Role: "user", Content: workerPrompt})
 		sess.AddUser(workerPrompt)
 
 		events, err := sess.Stream(ctx)
@@ -125,9 +125,9 @@ func EngineWorker(provider, model, systemPrompt string) WorkerFunc {
 			switch ev.Type {
 			case "content":
 				response.WriteString(ev.Content)
-				_ = writer.Write(types.GraycodeRouterMessage{Role: "assistant", Content: ev.Content})
+				_ = writer.Write(types.EyrieMessage{Role: "assistant", Content: ev.Content})
 			case "tool_use":
-				_ = writer.Write(types.GraycodeRouterMessage{
+				_ = writer.Write(types.EyrieMessage{
 					Role: "assistant", Content: "",
 					ToolUse: []types.ToolCall{{Name: ev.ToolName, ID: ev.ToolID}},
 				})
@@ -174,7 +174,7 @@ func checkExistingTranscript(path string) *Handoff {
 // incompleteTranscriptMessages returns the messages from an incomplete
 // transcript (one without a completion marker). Returns false if the transcript
 // is missing or complete.
-func incompleteTranscriptMessages(path string) ([]types.GraycodeRouterMessage, bool) {
+func incompleteTranscriptMessages(path string) ([]types.EyrieMessage, bool) {
 	exists, complete, err := IsTranscriptComplete(path)
 	if err != nil || !exists || complete {
 		return nil, false
@@ -250,11 +250,11 @@ func ReadOnlyValidationWorker(provider, model, systemPrompt string) WorkerFunc {
 		)
 
 		registry := tool.NewRegistry(readOnlyWorkerTools()...)
-		selection := graycodeconfig.EffectiveSelection(ctx, graycodeconfig.SelectionOptions{
+		selection := hawkconfig.EffectiveSelection(ctx, hawkconfig.SelectionOptions{
 			ProviderOverride: provider,
 			ModelOverride:    model,
 		})
-		sess := engine.NewGraycodeSession(ctx, selection, provider, model, systemPrompt, registry)
+		sess := engine.NewHawkSession(ctx, selection, provider, model, systemPrompt, registry)
 
 		level := engine.AutonomyLevel(cfg.AutonomyLevel)
 		if level < engine.AutonomyFull {
@@ -397,7 +397,7 @@ func truncate(s string, max int) string {
 }
 
 // attemptFromBranch extracts the attempt number from an attempt-suffixed
-// mission branch ("graycode-mission/<id>/<feat>/attempt-N"), or 0 when the
+// mission branch ("hawk-mission/<id>/<feat>/attempt-N"), or 0 when the
 // branch does not carry an attempt suffix.
 func attemptFromBranch(branch string) int {
 	idx := strings.LastIndex(branch, "/attempt-")

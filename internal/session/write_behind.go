@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/eventlog"
+	"github.com/GrayCodeAI/hawk/internal/eventlog"
 )
 
 // WriteBehindOptions configures one session's write-behind controller,

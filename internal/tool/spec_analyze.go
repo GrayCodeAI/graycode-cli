@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/spec"
+	"github.com/GrayCodeAI/hawk/internal/spec"
 )
 
 // AnalyzeTool performs cross-artifact consistency and quality analysis on the

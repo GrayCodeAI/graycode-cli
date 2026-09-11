@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	analytics "github.com/GrayCodeAI/graycode-cli/internal/observability"
+	analytics "github.com/GrayCodeAI/hawk/internal/observability"
 	"github.com/spf13/cobra"
 )
 
@@ -85,7 +85,7 @@ func runStats(cmd *cobra.Command, args []string) error {
 
 	if len(filtered) == 0 {
 		cmd.Println(auditTint("No session data found for the specified time period.", textMuted))
-		cmd.Println(auditTint("Sessions are recorded automatically when you use graycode.", textMuted))
+		cmd.Println(auditTint("Sessions are recorded automatically when you use hawk.", textMuted))
 		return nil
 	}
 
@@ -180,7 +180,7 @@ func printStatsText(cmd *cobra.Command, out *statsOutput) {
 
 	_, _ = fmt.Fprintf(w, "\n")
 	_, _ = fmt.Fprintf(w, "══════════════════════════════════════════════════\n")
-	_, _ = fmt.Fprintf(w, "  %s\n", auditTint(fmt.Sprintf("Graycode Usage Statistics (%s)", out.Period), graycodeColor))
+	_, _ = fmt.Fprintf(w, "  %s\n", auditTint(fmt.Sprintf("Hawk Usage Statistics (%s)", out.Period), hawkColor))
 	_, _ = fmt.Fprintf(w, "══════════════════════════════════════════════════\n")
 
 	// Overview section

@@ -340,9 +340,9 @@ func homePath() string {
 func defaultManagedPaths() []string {
 	switch runtime.GOOS {
 	case "darwin":
-		return []string{"/Library/Application Support/Graycode/security_policy.json"}
+		return []string{"/Library/Application Support/Hawk/security_policy.json"}
 	default:
-		return []string{"/etc/graycode/security_policy.json"}
+		return []string{"/etc/hawk/security_policy.json"}
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/provider/gateway"
+	"github.com/GrayCodeAI/hawk/internal/provider/gateway"
 )
 
 func TestCatalogEmptyHint_NoCredentials(t *testing.T) {
@@ -43,7 +43,7 @@ func TestCatalogEmptyHint_WithCredentials(t *testing.T) {
 
 func TestEnsureCatalogAvailable_MissingCache(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", dir+"/missing.json")
+	t.Setenv("EYRIE_MODEL_CATALOG_PATH", dir+"/missing.json")
 
 	err := EnsureCatalogAvailable(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "/config") {
@@ -53,7 +53,7 @@ func TestEnsureCatalogAvailable_MissingCache(t *testing.T) {
 
 func TestCatalogStatusLine_Empty(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("GRAYCODE_ROUTER_MODEL_CATALOG_PATH", dir+"/missing.json")
+	t.Setenv("EYRIE_MODEL_CATALOG_PATH", dir+"/missing.json")
 
 	line := CatalogStatusLine(context.Background())
 	if !strings.Contains(line, "missing") && !strings.Contains(line, "empty") {

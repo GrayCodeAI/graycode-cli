@@ -5,7 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func (m chatModel) openConfigPanel() (chatModel, tea.Cmd) {
@@ -69,7 +69,7 @@ func catalogPricesAreStale(opts []configModelOption) bool {
 }
 
 func providerHasLiveFetcher(providerID string) bool {
-	return graycodeconfig.GatewaySupportsLiveDiscovery(providerID)
+	return hawkconfig.GatewaySupportsLiveDiscovery(providerID)
 }
 
 func (m chatModel) returnToOllamaURLAfterError(err error) (chatModel, tea.Cmd) {
@@ -80,7 +80,7 @@ func (m chatModel) returnToOllamaURLAfterError(err error) (chatModel, tea.Cmd) {
 		url = configDefaultOllamaURL
 	}
 	if err != nil {
-		m.configNotice = graycodeconfig.FormatConfigProviderError(configProviderOllama, err)
+		m.configNotice = hawkconfig.FormatConfigProviderError(configProviderOllama, err)
 	}
 	return m.startConfigOllamaURLWithValue(url)
 }

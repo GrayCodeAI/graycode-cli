@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/providers"
+	"github.com/GrayCodeAI/hawk/internal/providers"
 )
 
 func TestProbesParse_Command(t *testing.T) {

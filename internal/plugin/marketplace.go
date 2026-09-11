@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/flags"
-	"github.com/GrayCodeAI/graycode-cli/internal/fsutil"
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	"github.com/GrayCodeAI/hawk/internal/flags"
+	"github.com/GrayCodeAI/hawk/internal/fsutil"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // MarketplaceEntry is one installable plugin package in a marketplace index.
@@ -44,8 +44,8 @@ type MarketplaceSource struct {
 //
 // There are none. No repository in the GrayCode ecosystem generates a
 // plugins-registry.json, so shipping a built-in source only produced a 404
-// on every `graycode plugin marketplace list`. Users register real sources
-// with `graycode plugin marketplace add <name> <url>`.
+// on every `hawk plugin marketplace list`. Users register real sources
+// with `hawk plugin marketplace add <name> <url>`.
 func DefaultMarketplaceSources() []MarketplaceSource {
 	return nil
 }
@@ -200,7 +200,7 @@ func (mc *MarketplaceClient) Find(name string) (*MarketplaceEntry, error) {
 // Requires flags.Marketplace() to be enabled.
 func (mc *MarketplaceClient) Install(entry MarketplaceEntry) (string, error) {
 	if !flags.Marketplace() {
-		return "", fmt.Errorf("marketplace installs disabled — set GRAYCODE_Y0_MARKETPLACE=1 to enable")
+		return "", fmt.Errorf("marketplace installs disabled — set HAWK_Y0_MARKETPLACE=1 to enable")
 	}
 	if entry.Repo == "" {
 		return "", fmt.Errorf("marketplace entry %q has no repo", entry.Name)

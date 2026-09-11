@@ -1,6 +1,6 @@
 # Headless Mode and Scripting
 
-Headless mode runs Graycode non-interactively from the command line. It accepts a prompt, executes tools, and returns results — ideal for automation and CI/CD.
+Headless mode runs Hawk non-interactively from the command line. It accepts a prompt, executes tools, and returns results — ideal for automation and CI/CD.
 
 ---
 
@@ -9,10 +9,10 @@ Headless mode runs Graycode non-interactively from the command line. It accepts 
 Pass a prompt to run headless:
 
 ```bash
-graycode -p "Your prompt here"
+hawk -p "Your prompt here"
 ```
 
-Graycode processes the prompt and prints the result to stdout.
+Hawk processes the prompt and prints the result to stdout.
 
 ---
 
@@ -23,7 +23,7 @@ Graycode processes the prompt and prints the result to stdout.
 Human-readable text:
 
 ```bash
-graycode -p "Summarize this codebase"
+hawk -p "Summarize this codebase"
 ```
 
 ### json
@@ -31,7 +31,7 @@ graycode -p "Summarize this codebase"
 Single JSON object after completion:
 
 ```bash
-graycode -p "Summarize this codebase" --output-format json | jq -r '.response'
+hawk -p "Summarize this codebase" --output-format json | jq -r '.response'
 ```
 
 Output includes:
@@ -44,7 +44,7 @@ Output includes:
 NDJSON events in real time:
 
 ```bash
-graycode -p "Summarize" --output-format stream-json | jq -r 'select(.type=="content") | .content'
+hawk -p "Summarize" --output-format stream-json | jq -r 'select(.type=="content") | .content'
 ```
 
 Event types:
@@ -59,20 +59,20 @@ Event types:
 
 ### Named Session
 
-Each `graycode -p` creates a fresh session by default. To continue a session:
+Each `hawk -p` creates a fresh session by default. To continue a session:
 
 ```bash
 # Get session ID
-graycode -p "Initial prompt" --output-format json | jq -r '.sessionId'
+hawk -p "Initial prompt" --output-format json | jq -r '.sessionId'
 
 # Resume the session
-graycode -p "Follow-up" --resume <session-id>
+hawk -p "Follow-up" --resume <session-id>
 ```
 
 ### Continue Most Recent
 
 ```bash
-graycode -p "Continue" --continue
+hawk -p "Continue" --continue
 ```
 
 ---
@@ -83,10 +83,10 @@ Restrict available tools:
 
 ```bash
 # Allow only read tools
-graycode -p "Explain this" --tools "Read,Grep,LS"
+hawk -p "Explain this" --tools "Read,Grep,LS"
 
 # Deny specific tools
-graycode -p "Review" --disallowed-tools "Bash,WebSearch"
+hawk -p "Review" --disallowed-tools "Bash,WebSearch"
 ```
 
 ---
@@ -97,10 +97,10 @@ Control tool permissions:
 
 ```bash
 # Allow shell commands through the explicit tool policy flag
-graycode -p "Build" --allowed-tools "Bash(git:*) Bash(npm:*)"
+hawk -p "Build" --allowed-tools "Bash(git:*) Bash(npm:*)"
 
 # Deny dangerous commands
-graycode -p "Clean" --disallowed-tools "Bash(rm:*) Bash(sudo:*)"
+hawk -p "Clean" --disallowed-tools "Bash(rm:*) Bash(sudo:*)"
 ```
 
 ---
@@ -110,8 +110,8 @@ graycode -p "Clean" --disallowed-tools "Bash(rm:*) Bash(sudo:*)"
 Use `--auto` for fully automated runs:
 
 ```bash
-graycode -p "Format all files" --dangerously-skip-permissions
-graycode exec --auto full "Add error handling"
+hawk -p "Format all files" --dangerously-skip-permissions
+hawk exec --auto full "Add error handling"
 ```
 
 **Warning:** This grants full autonomy. Use only in trusted environments.
@@ -124,14 +124,14 @@ graycode exec --auto full "Add error handling"
 
 ```bash
 #!/bin/bash
-graycode -p "Review staged changes for bugs. Reply OK if fine." \
+hawk -p "Review staged changes for bugs. Reply OK if fine." \
   --dangerously-skip-permissions --output-format json | jq -r '.response' | grep -q "^OK" || exit 1
 ```
 
 ### Code Review
 
 ```bash
-graycode -p "Review PR for security issues" \
+hawk -p "Review PR for security issues" \
   --output-format json --dangerously-skip-permissions | jq -r '.response' > review.md
 ```
 
@@ -139,7 +139,7 @@ graycode -p "Review PR for security issues" \
 
 ```bash
 for file in src/*.go; do
-  graycode -p "Format $file" --auto
+  hawk -p "Format $file" --auto
 done
 ```
 
@@ -149,8 +149,8 @@ done
 
 ```bash
 export XAI_API_KEY="xai-..."     # API key
-export GRAYCODE_HOME="/path"          # Custom config location
-export GRAYCODE_LOG_FILE="/tmp/graycode.log"  # Log file
+export HAWK_HOME="/path"          # Custom config location
+export HAWK_LOG_FILE="/tmp/hawk.log"  # Log file
 ```
 
 ---

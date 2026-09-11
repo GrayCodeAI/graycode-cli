@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/compact"
-	"github.com/GrayCodeAI/graycode-cli/internal/engine/token"
-	"github.com/GrayCodeAI/graycode-cli/internal/types"
+	"github.com/GrayCodeAI/hawk/internal/engine/compact"
+	"github.com/GrayCodeAI/hawk/internal/engine/token"
+	"github.com/GrayCodeAI/hawk/internal/types"
 
-	modelPkg "github.com/GrayCodeAI/graycode-cli/internal/provider/routing"
+	modelPkg "github.com/GrayCodeAI/hawk/internal/provider/routing"
 )
 
 // ShouldAutoCompact returns true if the conversation is approaching context limits.
@@ -104,22 +104,22 @@ func (s *Session) smartCompactBody(ctx context.Context) {
 	// segment before they leave the live context. Best-effort: a persistence
 	// failure must never block or corrupt compaction itself.
 	if sessionID := s.executionGraphSessionID(); sessionID != "" && len(compactedMsgs) > 0 {
-		detail, _ := compact.ParseCompactionDetail(os.Getenv("GRAYCODE_COMPACTION_SEGMENT_DETAIL"))
+		detail, _ := compact.ParseCompactionDetail(os.Getenv("HAWK_COMPACTION_SEGMENT_DETAIL"))
 		if _, err := compact.WriteCompactionSegment(sessionID, compactedMsgs, detail); err != nil {
 			slog.Debug("compaction segment persistence skipped", "error", err)
 		}
 	}
 
 	tail := raw[len(raw)-keepEnd:]
-	keep := make([]types.GraycodeRouterMessage, 0, len(tail)+2)
-	keep = append(keep, types.GraycodeRouterMessage{
+	keep := make([]types.EyrieMessage, 0, len(tail)+2)
+	keep = append(keep, types.EyrieMessage{
 		Role:    "user",
 		Content: "[Conversation summary]\n" + summary + "\n\n[Continue from the recent messages below.]",
 	})
 	// Only emit the assistant ack when the tail starts with a user message;
 	// two adjacent assistant messages are rejected by OpenAI-compat providers.
 	if len(tail) == 0 || tail[0].Role != "assistant" {
-		keep = append(keep, types.GraycodeRouterMessage{
+		keep = append(keep, types.EyrieMessage{
 			Role:    "assistant",
 			Content: "Understood. I have the context from the summary above. Continuing.",
 		})
@@ -133,7 +133,7 @@ func (s *Session) smartCompactBody(ctx context.Context) {
 // window on very long transcripts.
 const summaryInputRuneCap = 32_000
 
-func (s *Session) generateSummary(ctx context.Context, raw []types.GraycodeRouterMessage) string {
+func (s *Session) generateSummary(ctx context.Context, raw []types.EyrieMessage) string {
 	// Incremental compaction: if a prior summary was persisted by an earlier
 	// compaction, merge the NEW messages into it rather than re-summarizing the
 	// entire conversation from scratch. This preserves already-captured context
@@ -152,9 +152,9 @@ func (s *Session) generateSummary(ctx context.Context, raw []types.GraycodeRoute
 
 	// Build a compact version of the conversation for summarization
 	// using the structured compaction prompt from compact_prompt.go
-	var summaryMsgs []types.GraycodeRouterMessage
+	var summaryMsgs []types.EyrieMessage
 	compactPrompt := BuildIncrementalCompactPrompt(prior)
-	summaryMsgs = append(summaryMsgs, types.GraycodeRouterMessage{
+	summaryMsgs = append(summaryMsgs, types.EyrieMessage{
 		Role:    "user",
 		Content: compactPrompt + "\n\nConversation:\n",
 	})
@@ -267,7 +267,7 @@ func CompressMessageContent(content string, maxTokens int) string {
 }
 
 // compactModel returns the cheapest available model for the current provider.
-// Queries graycode-router's catalog at runtime — no hardcoded model names.
+// Queries eyrie's catalog at runtime — no hardcoded model names.
 // Summarization doesn't need frontier reasoning, so the cheapest model suffices.
 func (s *Session) compactModel() string {
 	provider := strings.ToLower(s.ChatLLM().Provider())

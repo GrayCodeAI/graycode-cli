@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
-	"github.com/GrayCodeAI/graycode-cli/internal/storage"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
+	"github.com/GrayCodeAI/hawk/internal/storage"
 )
 
 // friendlyError translates a raw error into a user-friendly message with an
@@ -25,7 +25,7 @@ func friendlyError(err error) string {
 
 // ─── panicRecovery ────────────────────────────────────────────────────────────
 // Catches panics, saves the current session state, logs the stack trace to
-// Graycode's user state crash log, and exits with a user-friendly message.
+// Hawk's user state crash log, and exits with a user-friendly message.
 
 // panicSaveFn is set by runChat to a closure that persists the active session
 // and stops the container sandbox. panicRecovery invokes it on an unexpected
@@ -51,7 +51,7 @@ func panicRecovery(saveFn func()) {
 		stack := string(debug.Stack())
 
 		// Generate a short, unique error ID for support reference.
-		// Format: graycode-YYMMDD-<6 hex chars from stack hash>
+		// Format: hawk-YYMMDD-<6 hex chars from stack hash>
 		errorID := generateErrorID(stack)
 
 		// Attempt to save session
@@ -84,14 +84,14 @@ func panicRecovery(saveFn func()) {
 		}
 
 		// Print user-friendly message
-		_, _ = fmt.Fprintf(os.Stderr, "\ngraycode encountered an unexpected error and needs to exit.\n")
+		_, _ = fmt.Fprintf(os.Stderr, "\nhawk encountered an unexpected error and needs to exit.\n")
 		if saveFn != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "Your session has been saved.\n")
 		} else {
 			_, _ = fmt.Fprintf(os.Stderr, "Session messages are persisted incrementally; the in-flight message may be lost.\n")
 		}
 		_, _ = fmt.Fprintf(os.Stderr, "Details logged to %s\n", filepath.Join(storage.StateDir(), "crash.log"))
-		_, _ = fmt.Fprintf(os.Stderr, "Please report this at: https://github.com/GrayCodeAI/graycode-cli/issues\n")
+		_, _ = fmt.Fprintf(os.Stderr, "Please report this at: https://github.com/GrayCodeAI/hawk/issues\n")
 		_, _ = fmt.Fprintf(os.Stderr, "Include this error ID: %s\n\n", errorID)
 		_, _ = fmt.Fprintf(os.Stderr, "panic: %v\n", r)
 		os.Exit(1) // os.Exit intentional: panic recovery, defer already unwound
@@ -99,7 +99,7 @@ func panicRecovery(saveFn func()) {
 }
 
 // generateErrorID creates a short, unique error ID from the stack trace.
-// Format: graycode-YYMMDD-<6 hex chars> — enough to correlate with crash.log
+// Format: hawk-YYMMDD-<6 hex chars> — enough to correlate with crash.log
 // entries without requiring a random source.
 func generateErrorID(stack string) string {
 	// Simple hash of the stack trace for uniqueness.
@@ -107,18 +107,18 @@ func generateErrorID(stack string) string {
 	for i := 0; i < len(stack) && i < 2000; i++ {
 		hash = ((hash << 5) + hash) ^ uint32(stack[i])
 	}
-	return fmt.Sprintf("graycode-%s-%06x", time.Now().Format("060102"), hash&0xFFFFFF)
+	return fmt.Sprintf("hawk-%s-%06x", time.Now().Format("060102"), hash&0xFFFFFF)
 }
 
 // ─── errorLogger ──────────────────────────────────────────────────────────────
-// Writes errors to Graycode's user state error log with timestamps. Thread-safe.
+// Writes errors to Hawk's user state error log with timestamps. Thread-safe.
 
 type errorLoggerT struct {
 	mu   sync.Mutex
 	path string
 }
 
-// LogError writes a timestamped error entry to the Graycode error log.
+// LogError writes a timestamped error entry to the Hawk error log.
 func (l *errorLoggerT) LogError(context string, err error) {
 	if l == nil || err == nil {
 		return
@@ -142,7 +142,7 @@ func (l *errorLoggerT) LogError(context string, err error) {
 	_, _ = f.WriteString(entry)
 }
 
-// LogErrorf writes a formatted, timestamped error entry to the Graycode error log.
+// LogErrorf writes a formatted, timestamped error entry to the Hawk error log.
 func (l *errorLoggerT) LogErrorf(format string, args ...interface{}) {
 	if l == nil {
 		return
@@ -181,24 +181,24 @@ func (w StartupWarning) String() string {
 	return fmt.Sprintf("[%s] %s", w.Check, w.Message)
 }
 
-func validateStartup(settings graycodeconfig.Settings) []StartupWarning {
+func validateStartup(settings hawkconfig.Settings) []StartupWarning {
 	var warnings []StartupWarning
 
 	// 1. Check API key for configured provider.
-	// Graycode reads credentials from the OS secret store (macOS Keychain /
+	// Hawk reads credentials from the OS secret store (macOS Keychain /
 	// Linux Keyring), not just env vars — so we must check there too.
 	providerName := strings.TrimSpace(settings.Provider)
 	if providerName == "" {
-		providerName = strings.TrimSpace(graycodeconfig.ActiveProvider(context.Background()))
+		providerName = strings.TrimSpace(hawkconfig.ActiveProvider(context.Background()))
 	}
 	if providerName != "" && providerName != "ollama" {
 		hasEnv := false
-		if envKey := graycodeconfig.ProviderAPIKeyEnv(providerName); envKey != "" {
+		if envKey := hawkconfig.ProviderAPIKeyEnv(providerName); envKey != "" {
 			hasEnv = os.Getenv(envKey) != ""
 		}
-		hasStored := graycodeconfig.HasStoredCredentialForProvider(context.Background(), providerName)
+		hasStored := hawkconfig.HasStoredCredentialForProvider(context.Background(), providerName)
 		if !hasEnv && !hasStored {
-			envKey := graycodeconfig.ProviderAPIKeyEnv(providerName)
+			envKey := hawkconfig.ProviderAPIKeyEnv(providerName)
 			warnings = append(warnings, StartupWarning{
 				Check:   "api_key",
 				Message: fmt.Sprintf("No API key found for %s. Set %s in your environment or run /config.", providerName, envKey),
@@ -234,10 +234,10 @@ func validateStartup(settings graycodeconfig.Settings) []StartupWarning {
 // post-first-paint (background), not on the TUI startup critical path where an
 // offline machine would stall the UI for seconds. Returns a warning message, or
 // "" when reachable/not applicable.
-func checkNetworkReachability(settings graycodeconfig.Settings) string {
+func checkNetworkReachability(settings hawkconfig.Settings) string {
 	providerName := strings.TrimSpace(settings.Provider)
 	if providerName == "" {
-		providerName = strings.TrimSpace(graycodeconfig.ActiveProvider(context.Background()))
+		providerName = strings.TrimSpace(hawkconfig.ActiveProvider(context.Background()))
 	}
 	if providerName == "" || providerName == "ollama" {
 		return ""
@@ -254,5 +254,5 @@ func checkNetworkReachability(settings graycodeconfig.Settings) string {
 
 // providerDNSHost returns a hostname to check DNS resolution for a provider.
 func providerDNSHost(provider string) string {
-	return graycodeconfig.GatewayDNSHost(provider)
+	return hawkconfig.GatewayDNSHost(provider)
 }

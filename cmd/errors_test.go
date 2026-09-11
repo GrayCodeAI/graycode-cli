@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	graycodeconfig "github.com/GrayCodeAI/graycode-cli/internal/config"
+	hawkconfig "github.com/GrayCodeAI/hawk/internal/config"
 )
 
 func TestFriendlyErrorNil(t *testing.T) {
@@ -151,7 +151,7 @@ func TestFriendlyErrorInvalidModel(t *testing.T) {
 			if !strings.Contains(got, "/model") {
 				t.Errorf("friendlyError(%q) = %q, should suggest /model", tt.errMsg, got)
 			}
-			example1, example2 := graycodeconfig.ExampleModelHints()
+			example1, example2 := hawkconfig.ExampleModelHints()
 			if !strings.Contains(got, example1) || !strings.Contains(got, example2) {
 				t.Errorf("friendlyError(%q) = %q, should suggest valid model names", tt.errMsg, got)
 			}
@@ -582,7 +582,7 @@ func TestFriendlyErrorBackwardCompat(t *testing.T) {
 		err      string
 		contains string
 	}{
-		{"rate limit 429", "graycode-router: openai stream request failed: max retries (3) exceeded: HTTP 429", "Rate limited"},
+		{"rate limit 429", "eyrie: openai stream request failed: max retries (3) exceeded: HTTP 429", "Rate limited"},
 		{"unauthorized 401", "HTTP 401 Unauthorized", "Authentication failed"},
 		{"forbidden 403", "HTTP 403 Forbidden", "Access denied"},
 		{"not found 404", "model not found", "/model"},
@@ -604,8 +604,8 @@ func TestFriendlyErrorBackwardCompat(t *testing.T) {
 }
 
 // helper for tests
-func emptySettings() graycodeconfig.Settings {
-	return graycodeconfig.Settings{}
+func emptySettings() hawkconfig.Settings {
+	return hawkconfig.Settings{}
 }
 
 // ── signalHandler test ────────────────────────────────────────────────────────

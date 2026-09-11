@@ -1,11 +1,11 @@
 // Vendored from github.com/GrayCodeAI/eagle/harness at v0.0.0-20260902153929-5877bed17503 (MIT, Copyright (c) 2026 GrayCode AI).
-// The upstream repository no longer exists; this copy is owned by Graycode as its contract surface.
+// The upstream repository no longer exists; this copy is owned by Hawk as its contract surface.
 package harness
 
 import (
 	"time"
 
-	contracts "github.com/GrayCodeAI/graycode-cli/internal/contracts/types"
+	contracts "github.com/GrayCodeAI/hawk/internal/contracts/types"
 )
 
 // Dimension represents one of the 5 core Agent Work Loop dimensions.
@@ -70,7 +70,7 @@ type AssetsDetected struct {
 	KestrelBridge bool     `json:"kestrel_bridge"`
 }
 
-// Report is the neutral cross-repo contract for Graycode Agent Harness evaluations.
+// Report is the neutral cross-repo contract for Hawk Agent Harness evaluations.
 type Report struct {
 	TargetPath    string                       `json:"target_path"`
 	GeneratedAt   time.Time                    `json:"generated_at"`

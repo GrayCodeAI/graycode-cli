@@ -1,12 +1,12 @@
 # Hooks
 
-Hooks let you run code at key moments in a Graycode session. Use them to automate tasks, enforce safety checks, log activity, and integrate custom tools.
+Hooks let you run code at key moments in a Hawk session. Use them to automate tasks, enforce safety checks, log activity, and integrate custom tools.
 
 ---
 
 ## What Are Hooks?
 
-A hook is a shell command or HTTP endpoint that Graycode calls when a specific lifecycle event occurs. Hooks can:
+A hook is a shell command or HTTP endpoint that Hawk calls when a specific lifecycle event occurs. Hooks can:
 
 - **Block actions** — A `PreToolUse` hook can deny a dangerous command before it runs
 - **React to events** — A `PostToolUse` hook can log every tool execution
@@ -36,7 +36,7 @@ Only `PreToolUse` can block a tool call. All other events are passive.
 
 ## Hook Configuration
 
-Create hooks in `.graycode/hooks/hooks.json`:
+Create hooks in `.hawk/hooks/hooks.json`:
 
 ```json
 {
@@ -100,8 +100,8 @@ Exit code `2` also signals denial. Any other exit code is fail-open (tool is all
 
 ## Trust Model
 
-- **User hooks** (`~/.graycode/hooks/`) — Always trusted
-- **Project hooks** (`.graycode/hooks/`) — Require folder trust
+- **User hooks** (`~/.hawk/hooks/`) — Always trusted
+- **Project hooks** (`.hawk/hooks/`) — Require folder trust
 
 Project hooks are blocked until you trust the folder:
 
@@ -114,15 +114,15 @@ Project hooks are blocked until you trust the folder:
 
 ## Environment Variables
 
-Graycode sets these variables for every hook:
+Hawk sets these variables for every hook:
 
 | Variable | Description |
 |----------|-------------|
-| `GRAYCODE_HOOK_EVENT` | Event name (e.g., `PreToolUse`) |
-| `GRAYCODE_SESSION_ID` | Current session ID |
-| `GRAYCODE_WORKSPACE_ROOT` | Project root path |
-| `GRAYCODE_PLUGIN_ROOT` | Plugin directory (for plugin hooks) |
-| `GRAYCODE_PLUGIN_DATA` | Plugin data directory |
+| `HAWK_HOOK_EVENT` | Event name (e.g., `PreToolUse`) |
+| `HAWK_SESSION_ID` | Current session ID |
+| `HAWK_WORKSPACE_ROOT` | Project root path |
+| `HAWK_PLUGIN_ROOT` | Plugin directory (for plugin hooks) |
+| `HAWK_PLUGIN_DATA` | Plugin data directory |
 
 ---
 
@@ -130,20 +130,20 @@ Graycode sets these variables for every hook:
 
 ```bash
 # List hooks
-graycode hooks list
+hawk hooks list
 
 # Trust project hooks
-graycode hooks trust
+hawk hooks trust
 
 # Untrust project hooks
-graycode hooks untrust
+hawk hooks untrust
 ```
 
 ---
 
 ## Example: Safe Shell Guard
 
-Create `.graycode/hooks/safety.json`:
+Create `.hawk/hooks/safety.json`:
 
 ```json
 {
